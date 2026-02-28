@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Search, CheckCircle2, ShieldAlert, X } from "lucide-react"
+import { Loader2, Search, CheckCircle2, ShieldAlert, X, Building2, User } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
@@ -24,7 +24,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   const { user } = useUser()
   const [loadingCep, setLoadingCep] = useState(false)
   
-  // Busca clientes existentes para validar duplicidade
   const clientsQuery = useMemoFirebase(() => {
     if (!user) return null
     return query(collection(db, "clients"))
@@ -34,16 +33,16 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   const [formData, setFormData] = useState({
     registrationStatus: "Ativo",
     personType: "Pessoa Física",
-    cpf: "",
-    firstName: "",
-    lastName: "",
+    cpf: "", // Usado para CPF ou CNPJ conforme personType
+    firstName: "", // Nome ou Razão Social
+    lastName: "", // Sobrenome ou Nome Fantasia
     nationality: "Brasileiro(a)",
     maritalStatus: "Solteiro(a)",
     profession: "",
-    rg: "",
-    rgIssuer: "",
+    rg: "", // RG ou Inscrição Estadual
+    rgIssuer: "", // Órgão Emissor ou Inscrição Municipal
     rgIssueDate: "",
-    motherName: "",
+    motherName: "", // Nome da Mãe ou Representante Legal
     ctps: "",
     pisPasep: "",
     legalArea: "Trabalhista",
@@ -96,9 +95,11 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
   const isDocumentValid = () => {
     const doc = formData.cpf.replace(/\D/g, "");
-    if (doc.length === 11) return validateCPF(doc);
-    if (doc.length === 14) return validateCNPJ(doc);
-    return false;
+    if (formData.personType === "Pessoa Física") {
+      return doc.length === 11 && validateCPF(doc);
+    } else {
+      return doc.length === 14 && validateCNPJ(doc);
+    }
   }
 
   const checkDuplicate = () => {
@@ -109,11 +110,12 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
   const handleSubmit = () => {
     if (!formData.firstName || !formData.cpf) {
-      toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome e CPF/CNPJ são necessários." })
+      toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome/Razão e CPF/CNPJ são necessários." })
       return
     }
     if (!isDocumentValid()) {
-      toast({ variant: "destructive", title: "Documento Inválido", description: "O CPF ou CNPJ informado não é matematicamente válido." })
+      const type = formData.personType === "Pessoa Física" ? "CPF" : "CNPJ";
+      toast({ variant: "destructive", title: `${type} Inválido`, description: `O ${type} informado não é matematicamente válido.` })
       return
     }
     if (checkDuplicate()) {
@@ -131,12 +133,19 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   const inputLabelClass = "text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.15em] mb-2 block"
   const inputClass = "bg-[#0d121f] border-white/10 h-12 text-white text-sm focus:ring-1 focus:ring-primary/50"
 
+  const isPJ = formData.personType === "Pessoa Jurídica";
+
   return (
     <div className="flex flex-col h-full bg-[#0a0f1e]">
       <ScrollArea className="flex-1 px-10 py-8 max-h-[80vh]">
         <div className="space-y-12">
+          {/* SEÇÃO I: IDENTIDADE E TIPO */}
           <section>
-            <h2 className={sectionLabelClass}>Dados Pessoais</h2>
+            <h2 className={sectionLabelClass}>
+              {isPJ ? <Building2 className="h-6 w-6 text-primary" /> : <User className="h-6 w-6 text-primary" />}
+              {isPJ ? "Dados da Pessoa Jurídica" : "Dados da Pessoa Física"}
+            </h2>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
                 <Label className={inputLabelClass}>Status do Cadastro *</Label>
@@ -149,6 +158,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="space-y-1">
                 <Label className={inputLabelClass}>Tipo de Pessoa *</Label>
                 <Select value={formData.personType} onValueChange={(v) => handleInputChange("personType", v)}>
@@ -159,11 +169,14 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-1 md:col-span-2">
-                <Label className={inputLabelClass}>CPF / CNPJ *</Label>
+                <Label className={cn(inputLabelClass, formData.cpf.length > 5 && (isDocumentValid() ? "text-emerald-500" : "text-rose-500"))}>
+                  {isPJ ? "CNPJ *" : "CPF *"}
+                </Label>
                 <div className="relative">
                   <Input 
-                    placeholder="000.000.000-00 ou 00.000.000/0000-00" 
+                    placeholder={isPJ ? "00.000.000/0000-00" : "000.000.000-00"} 
                     className={cn(
                       inputClass, 
                       formData.cpf.length >= 11 && (isDocumentValid() ? "border-emerald-500/50" : "border-rose-500/50")
@@ -181,63 +194,84 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                     )}
                   </div>
                 </div>
-                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
-                  * VALIDAÇÃO ESTRUTURAL OFFLINE ATIVA PARA ECONOMIA DE CUSTOS.
-                </p>
               </div>
+
               <div className="space-y-1">
-                <Label className={inputLabelClass}>Nome / Razão Social *</Label>
-                <Input placeholder="Nome oficial" className={inputClass} value={formData.firstName} onChange={(e) => handleInputChange("firstName", e.target.value.toUpperCase())} />
+                <Label className={inputLabelClass}>{isPJ ? "Razão Social *" : "Nome *"}</Label>
+                <Input placeholder={isPJ ? "Razão Social Oficial" : "Nome oficial"} className={inputClass} value={formData.firstName} onChange={(e) => handleInputChange("firstName", e.target.value.toUpperCase())} />
               </div>
+
               <div className="space-y-1">
-                <Label className={inputLabelClass}>Sobrenome / Nome Fantasia</Label>
-                <Input placeholder="Complemento do nome" className={inputClass} value={formData.lastName} onChange={(e) => handleInputChange("lastName", e.target.value.toUpperCase())} />
+                <Label className={inputLabelClass}>{isPJ ? "Nome Fantasia" : "Sobrenome"}</Label>
+                <Input placeholder={isPJ ? "Nome Fantasia" : "Complemento do nome"} className={inputClass} value={formData.lastName} onChange={(e) => handleInputChange("lastName", e.target.value.toUpperCase())} />
               </div>
+
+              {!isPJ ? (
+                <>
+                  <div className="space-y-1">
+                    <Label className={inputLabelClass}>Nacionalidade</Label>
+                    <Input placeholder="brasileiro(a)" className={inputClass} value={formData.nationality} onChange={(e) => handleInputChange("nationality", e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className={inputLabelClass}>Estado Civil</Label>
+                    <Select value={formData.maritalStatus} onValueChange={(v) => handleInputChange("maritalStatus", v)}>
+                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                        <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                        <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                        <SelectItem value="União Estável">União Estável</SelectItem>
+                        <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                        <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label className={inputLabelClass}>Profissão</Label>
+                    <Input placeholder="Ex: ajudante geral" className={inputClass} value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value)} />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1 md:col-span-2">
+                  <Label className={inputLabelClass}>Data de Fundação</Label>
+                  <Input type="date" className={inputClass} value={formData.rgIssueDate} onChange={(e) => handleInputChange("rgIssueDate", e.target.value)} />
+                </div>
+              )}
+
               <div className="space-y-1">
-                <Label className={inputLabelClass}>Nacionalidade</Label>
-                <Input placeholder="brasileiro(a)" className={inputClass} value={formData.nationality} onChange={(e) => handleInputChange("nationality", e.target.value)} />
+                <Label className={inputLabelClass}>{isPJ ? "Inscrição Estadual" : "RG"}</Label>
+                <Input placeholder={isPJ ? "ISENTO ou Número" : "00.000.000-0"} className={inputClass} value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value)} />
               </div>
+
               <div className="space-y-1">
-                <Label className={inputLabelClass}>Estado Civil</Label>
-                <Select value={formData.maritalStatus} onValueChange={(v) => handleInputChange("maritalStatus", v)}>
-                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                    <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
-                    <SelectItem value="Casado(a)">Casado(a)</SelectItem>
-                    <SelectItem value="União Estável">União Estável</SelectItem>
-                    <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
-                    <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className={inputLabelClass}>{isPJ ? "Inscrição Municipal" : "Órgão Emissor"}</Label>
+                <Input placeholder={isPJ ? "Nº Inscrição Municipal" : "Ex: SSP/SP"} className={inputClass} value={formData.rgIssuer} onChange={(e) => handleInputChange("rgIssuer", e.target.value.toUpperCase())} />
               </div>
+
+              {!isPJ && (
+                <div className="space-y-1">
+                  <Label className={inputLabelClass}>Data Expedição</Label>
+                  <Input type="date" className={inputClass} value={formData.rgIssueDate} onChange={(e) => handleInputChange("rgIssueDate", e.target.value)} />
+                </div>
+              )}
+
               <div className="space-y-1 md:col-span-2">
-                <Label className={inputLabelClass}>Profissão</Label>
-                <Input placeholder="Ex: ajudante geral" className={inputClass} value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value)} />
+                <Label className={inputLabelClass}>{isPJ ? "Representante Legal / Sócio Responsável" : "Nome da Mãe"}</Label>
+                <Input placeholder={isPJ ? "Nome do Sócio/Representante" : "Nome completo da mãe"} className={inputClass} value={formData.motherName} onChange={(e) => handleInputChange("motherName", e.target.value.toUpperCase())} />
               </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>RG</Label>
-                <Input placeholder="00.000.000-0" className={inputClass} value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>Órgão Emissor</Label>
-                <Input placeholder="Ex: SSP/SP" className={inputClass} value={formData.rgIssuer} onChange={(e) => handleInputChange("rgIssuer", e.target.value.toUpperCase())} />
-              </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>Data Expedição</Label>
-                <Input type="date" className={inputClass} value={formData.rgIssueDate} onChange={(e) => handleInputChange("rgIssueDate", e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>Nome da Mãe</Label>
-                <Input placeholder="Nome completo da mãe" className={inputClass} value={formData.motherName} onChange={(e) => handleInputChange("motherName", e.target.value.toUpperCase())} />
-              </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>CTPS</Label>
-                <Input placeholder="Nº da Carteira de Trabalho" className={inputClass} value={formData.ctps} onChange={(e) => handleInputChange("ctps", e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>PIS/PASEP</Label>
-                <Input placeholder="Nº do PIS/PASEP" className={inputClass} value={formData.pisPasep} onChange={(e) => handleInputChange("pisPasep", e.target.value)} />
-              </div>
+
+              {!isPJ && (
+                <>
+                  <div className="space-y-1">
+                    <Label className={inputLabelClass}>CTPS</Label>
+                    <Input placeholder="Nº da Carteira de Trabalho" className={inputClass} value={formData.ctps} onChange={(e) => handleInputChange("ctps", e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className={inputLabelClass}>PIS/PASEP</Label>
+                    <Input placeholder="Nº do PIS/PASEP" className={inputClass} value={formData.pisPasep} onChange={(e) => handleInputChange("pisPasep", e.target.value)} />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-1 md:col-span-2">
                 <Label className={inputLabelClass}>Área Jurídica de Atendimento</Label>
                 <Select value={formData.legalArea} onValueChange={(v) => handleInputChange("legalArea", v)}>
@@ -254,6 +288,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
             </div>
           </section>
 
+          {/* SEÇÃO II: CONTATO & ENDEREÇO */}
           <section>
             <h2 className={sectionLabelClass}>Contato & Endereço</h2>
             <div className="space-y-6">
@@ -307,6 +342,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
             </div>
           </section>
 
+          {/* SEÇÃO III: FINANCEIRO */}
           <section>
             <h2 className={sectionLabelClass}>Dados Bancários p/ Recebimento</h2>
             <div className="space-y-6">
