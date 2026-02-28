@@ -50,12 +50,12 @@ export default function StaffPage() {
     ctps: "",
     birthDate: "",
     oab: "",
-    role: "Advogado",
+    role: "Secretária",
     email: "",
     phone: "",
-    hiringDate: new Date().toISOString().split('T')[0],
+    hiringDate: "2026-02-28",
     status: "Ativo",
-    specialty: "Trabalhista",
+    specialty: "Trabalhista / Cível",
     zipCode: "",
     address: "",
     number: "",
@@ -94,12 +94,12 @@ export default function StaffPage() {
       ctps: "",
       birthDate: "",
       oab: "",
-      role: "Advogado",
+      role: "Secretária",
       email: "",
       phone: "",
       hiringDate: new Date().toISOString().split('T')[0],
       status: "Ativo",
-      specialty: "Trabalhista",
+      specialty: "",
       zipCode: "",
       address: "",
       number: "",
@@ -282,51 +282,51 @@ export default function StaffPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
+              <DialogTitle className="text-white font-headline text-5xl uppercase tracking-tighter">
                 {editingStaff ? "Editar Colaborador" : "Novo Colaborador"}
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] mt-1 opacity-60">Ficha técnica para o Departamento Pessoal RGMJ.</p>
+              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] mt-2 opacity-60">Ficha técnica para o Departamento Pessoal RGMJ.</p>
             </DialogHeader>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="bg-[#0a0f1e] px-8 pt-4">
-              <TabsList className="bg-white/5 border border-white/5 h-12 p-1 gap-1 w-full justify-start rounded-xl">
-                <TabsTrigger value="geral" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase tracking-widest h-full px-6 gap-2">
-                  <User className="h-3.5 w-3.5" /> Informações Iniciais
+            <div className="bg-[#0a0f1e] px-8 pt-6">
+              <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl">
+                <TabsTrigger value="geral" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all">
+                  <User className="h-4 w-4" /> Informações Iniciais
                 </TabsTrigger>
-                <TabsTrigger value="documentos" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase tracking-widest h-full px-6 gap-2">
-                  <Fingerprint className="h-3.5 w-3.5" /> Documentação
+                <TabsTrigger value="documentos" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all">
+                  <Fingerprint className="h-4 w-4" /> Documentação
                 </TabsTrigger>
-                <TabsTrigger value="endereco" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase tracking-widest h-full px-6 gap-2">
-                  <MapPin className="h-3.5 w-3.5" /> Endereço & Contato
+                <TabsTrigger value="endereco" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all">
+                  <MapPin className="h-4 w-4" /> Endereço & Contato
                 </TabsTrigger>
               </TabsList>
             </div>
 
             <ScrollArea className="max-h-[500px]">
               <div className="p-10">
-                <TabsContent value="geral" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <TabsContent value="geral" className="mt-0 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">NOME COMPLETO *</Label>
                       <Input 
                         value={formData.name} 
                         onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})}
-                        className="glass border-white/10 h-14 text-white text-base focus:ring-primary/50"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50"
                         placeholder="EX: DR. REINALDO GONÇALVES"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CARGO / FUNÇÃO *</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">CARGO / FUNÇÃO *</Label>
                       <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
-                        <SelectTrigger className="glass border-white/10 h-14 text-white text-base">
+                        <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="glass border-white/10">
+                        <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                           <SelectItem value="Advogado">Advogado</SelectItem>
                           <SelectItem value="Estagiário">Estagiário</SelectItem>
                           <SelectItem value="Secretária">Secretária</SelectItem>
@@ -337,39 +337,39 @@ export default function StaffPage() {
                       </Select>
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ESPECIALIDADE JURÍDICA</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">ESPECIALIDADE JURÍDICA</Label>
                       <Input 
                         value={formData.specialty} 
                         onChange={(e) => setFormData({...formData, specialty: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="Ex: Trabalhista / Cível"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">INSCRIÇÃO OAB</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">INSCRIÇÃO OAB</Label>
                       <Input 
                         value={formData.oab} 
                         onChange={(e) => setFormData({...formData, oab: e.target.value.toUpperCase()})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="SP 000.000"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA DE ADMISSÃO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">DATA DE ADMISSÃO</Label>
                       <Input 
                         value={formData.hiringDate} 
                         onChange={(e) => setFormData({...formData, hiringDate: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         type="date"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">STATUS CONTRATUAL</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">STATUS CONTRATUAL</Label>
                       <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
-                        <SelectTrigger className="glass border-white/10 h-14 text-white">
+                        <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="glass border-white/10">
+                        <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                           <SelectItem value="Ativo">Ativo</SelectItem>
                           <SelectItem value="Férias">Férias</SelectItem>
                           <SelectItem value="Afastado">Afastado</SelectItem>
@@ -380,127 +380,127 @@ export default function StaffPage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="documentos" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <TabsContent value="documentos" className="mt-0 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">CPF</Label>
                       <Input 
                         value={formData.cpf} 
                         onChange={(e) => setFormData({...formData, cpf: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="000.000.000-00"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">RG / ÓRGÃO EMISSOR</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">RG / ÓRGÃO EMISSOR</Label>
                       <Input 
                         value={formData.rg} 
                         onChange={(e) => setFormData({...formData, rg: e.target.value.toUpperCase()})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="00.000.000-0"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PIS / PASEP</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">PIS / PASEP</Label>
                       <Input 
                         value={formData.pis} 
                         onChange={(e) => setFormData({...formData, pis: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="000.00000.00-0"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CARTEIRA DE TRABALHO (CTPS)</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">CARTEIRA DE TRABALHO (CTPS)</Label>
                       <Input 
                         value={formData.ctps} 
                         onChange={(e) => setFormData({...formData, ctps: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="0000000 / 000-0"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA DE NASCIMENTO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">DATA DE NASCIMENTO</Label>
                       <Input 
                         value={formData.birthDate} 
                         onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         type="date"
                       />
                     </div>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="endereco" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <TabsContent value="endereco" className="mt-0 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-MAIL INSTITUCIONAL</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">E-MAIL INSTITUCIONAL</Label>
                       <Input 
                         value={formData.email} 
                         onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         type="email"
                         placeholder="contato@rgmj.adv.br"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">WHATSAPP / CELULAR</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">WHATSAPP / CELULAR</Label>
                       <Input 
                         value={formData.phone} 
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="(11) 99999-9999"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2">
                         CEP {loadingCep && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                       </Label>
                       <Input 
                         value={formData.zipCode} 
                         onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
                         onBlur={handleCepBlur}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         placeholder="00000-000"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">LOGRADOURO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">LOGRADOURO</Label>
                       <Input 
                         value={formData.address} 
                         onChange={(e) => setFormData({...formData, address: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO / COMPLEMENTO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">NÚMERO / COMPLEMENTO</Label>
                       <Input 
                         value={formData.number} 
                         onChange={(e) => setFormData({...formData, number: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">BAIRRO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">BAIRRO</Label>
                       <Input 
                         value={formData.neighborhood} 
                         onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CIDADE</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">CIDADE</Label>
                       <Input 
                         value={formData.city} 
                         onChange={(e) => setFormData({...formData, city: e.target.value})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">UF</Label>
                       <Input 
                         value={formData.state} 
                         onChange={(e) => setFormData({...formData, state: e.target.value.toUpperCase()})}
-                        className="glass border-white/10 h-14 text-white"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
                         maxLength={2}
                       />
                     </div>
@@ -510,12 +510,12 @@ export default function StaffPage() {
             </ScrollArea>
           </Tabs>
 
-          <DialogFooter className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">
-              Cancelar Operação
+          <DialogFooter className="p-10 bg-black/40 border-t border-white/5 flex flex-row items-center justify-between gap-4">
+            <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-bold text-[11px] tracking-[0.1em] hover:text-white transition-colors">
+              CANCELAR OPERAÇÃO
             </Button>
-            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-12 h-16 rounded-xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5" /> Confirmar Registro
+            <Button onClick={handleSave} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black uppercase text-[12px] tracking-widest px-12 h-16 rounded-xl shadow-2xl transition-all flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5" /> CONFIRMAR REGISTRO
             </Button>
           </DialogFooter>
         </DialogContent>
