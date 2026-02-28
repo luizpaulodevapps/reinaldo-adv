@@ -24,16 +24,9 @@ export default function DashboardPage() {
   const db = useFirestore()
   const { user, role } = useUser()
 
-  // Sincroniza perfil para evitar race condition nas queries de admin
-  const profileRef = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return doc(db, 'staff_profiles', user.uid)
-  }, [user, db])
-  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef)
-
   // O dono (e-mail específico) ou qualquer um com role na sessão pode disparar as queries
   const isOwner = user?.email === 'luizao16@gmail.com'
-  const canQuery = !!(user && (isOwner || role || profile?.role))
+  const canQuery = !!(user && (isOwner || role))
 
   const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
   const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])
@@ -60,7 +53,7 @@ export default function DashboardPage() {
     ]
   }, [leads, cases, deadlines, financial])
 
-  if (loadingLeads || loadingCases || loadingHearings || isProfileLoading || !canQuery) {
+  if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

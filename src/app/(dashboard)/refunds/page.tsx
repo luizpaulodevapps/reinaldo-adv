@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -25,29 +24,49 @@ import { cn } from "@/lib/utils"
 export default function RefundsPage() {
   const [activeTab, setActiveTab] = useState("meus-pedidos")
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, role } = useUser()
+
+  // O dono ou qualquer um com role na sessão pode disparar as queries
+  const isOwner = user?.email === 'luizao16@gmail.com'
+  const canQuery = !!(user && (isOwner || role))
 
   // Sincroniza dados reais de reembolso
   const refundsQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!canQuery) return null
+    
+    // Se for o dono ou admin, vê todos os reembolsos. Caso contrário, vê apenas os seus.
+    // Para simplificar e evitar o erro de permissão, o dono sempre pode listar tudo.
+    const baseQuery = collection(db, "financial_titles")
+    
+    if (isOwner || role === 'admin' || role === 'financial') {
+      return query(
+        baseQuery, 
+        where("type", "==", "Reembolso"), 
+        orderBy("dueDate", "desc")
+      )
+    }
+
     return query(
-      collection(db, "financial_titles"), 
-      where("type", "==", "Reembolso"), 
+      baseQuery, 
+      where("type", "==", "Reembolso"),
+      where("processResponsibleStaffId", "==", user?.uid),
       orderBy("dueDate", "desc")
     )
-  }, [db, user])
+  }, [db, canQuery, isOwner, role, user?.uid])
 
-  const { data: refunds, isLoading } = useCollection(refundsQuery)
+  const { data: refunds, isLoading: loadingRefunds } = useCollection(refundsQuery)
 
   // Cálculos de métricas baseados na pauta real
   const stats = useMemo(() => {
     if (!refunds) return { solicitado: 0, pendente: 0, pago: 0 }
     return {
-      solicitado: refunds.reduce((acc, r) => acc + (r.value || 0), 0),
-      pendente: refunds.filter(r => r.status === 'Pendente').reduce((acc, r) => acc + (r.value || 0), 0),
-      pago: refunds.filter(r => r.status === 'Recebido').reduce((acc, r) => acc + (r.value || 0), 0),
+      solicitado: refunds.reduce((acc, r) => acc + (Number(r.value) || 0), 0),
+      pendente: refunds.filter(r => r.status === 'Pendente').reduce((acc, r) => acc + (Number(r.value) || 0), 0),
+      pago: refunds.filter(r => r.status === 'Recebido').reduce((acc, r) => acc + (Number(r.value) || 0), 0),
     }
   }, [refunds])
+
+  const isLoading = loadingRefunds || !canQuery
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -65,7 +84,7 @@ export default function RefundsPage() {
             <span className="text-primary text-3xl">$</span> Gestão de Reembolsos
           </h1>
           <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-70">
-            Controle de despesas e solicitações de ressarcimento.
+            Controle de despesas e solicitações de ressarcimento para a banca RGMJ.
           </p>
         </div>
         
@@ -74,7 +93,7 @@ export default function RefundsPage() {
         </Button>
       </div>
 
-      {/* Grid de Métricas (Screenshot Style) */}
+      {/* Grid de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Solicitado */}
         <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center">
@@ -131,12 +150,14 @@ export default function RefundsPage() {
           >
             Meus Pedidos
           </TabsTrigger>
-          <TabsTrigger 
-            value="fila-administrativa" 
-            className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2 transition-all rounded-lg"
-          >
-            Fila Administrativa (Todos)
-          </TabsTrigger>
+          {(isOwner || role === 'admin' || role === 'financial') && (
+            <TabsTrigger 
+              value="fila-administrativa" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2 transition-all rounded-lg"
+            >
+              Fila Administrativa (Todos)
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <div className="glass rounded-3xl border-white/5 min-h-[450px] flex flex-col items-center justify-center relative border-dashed border-2">
@@ -162,7 +183,7 @@ export default function RefundsPage() {
                   </div>
                   <div className="flex items-center gap-8">
                     <div className="text-right">
-                      <div className="text-lg font-black text-white">R$ {ref.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                      <div className="text-lg font-black text-white">R$ {(Number(ref.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                       <Badge 
                         variant={ref.status === 'Recebido' ? 'default' : 'outline'}
                         className={cn(
