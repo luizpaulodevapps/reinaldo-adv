@@ -37,7 +37,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
@@ -530,13 +530,13 @@ export default function LeadsPage() {
                                       </div>
                                     </div>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-[300px] p-0 bg-[#0a0f1e] border-primary/40 shadow-2xl z-50" align="start">
+                                  <PopoverContent className="w-[320px] p-0 bg-[#0a0f1e] border-[#2d3748] shadow-2xl z-50 rounded-lg overflow-hidden" align="start">
                                     <div className="p-6 space-y-6">
                                       <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Escolher Data</Label>
                                         <Input 
                                           type="date" 
-                                          className="bg-[#1a1f2e] border-[#2d3748] h-11 text-white" 
+                                          className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
                                           value={scheduledDate ? format(scheduledDate, "yyyy-MM-dd") : ""}
                                           onChange={(e) => {
                                             const date = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
@@ -547,7 +547,7 @@ export default function LeadsPage() {
                                       <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
                                         <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                                          <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-11 text-white">
+                                          <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
@@ -559,7 +559,7 @@ export default function LeadsPage() {
                                       </div>
                                       <Button 
                                         onClick={handleConfirmSchedule}
-                                        className="w-full gold-gradient text-background font-bold h-12 shadow-lg rounded-lg"
+                                        className="w-full bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold h-14 shadow-lg rounded-lg uppercase tracking-wider text-[12px]"
                                       >
                                         Confirmar Agendamento
                                       </Button>
