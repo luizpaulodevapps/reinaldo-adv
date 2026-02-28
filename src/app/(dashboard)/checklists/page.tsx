@@ -15,16 +15,15 @@ import {
   Edit3, 
   CheckCircle2, 
   AlertCircle,
-  MoreVertical,
   X,
   Star,
   DollarSign,
   MessageSquare,
   Megaphone,
   Shield,
-  Scale,
-  PlusCircle,
-  FileText
+  Type,
+  Hash,
+  ToggleLeft
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -52,18 +51,27 @@ const CATEGORIES = [
   { id: "Gestão", label: "Gestão", icon: Shield, color: "text-blue-400" },
 ]
 
+const ITEM_TYPES = [
+  { id: "checkbox", label: "Checklist Simples", icon: CheckCircle2 },
+  { id: "boolean", label: "Sim / Não", icon: ToggleLeft },
+  { id: "ternary", label: "Sim / Não / Parcial", icon: AlertCircle },
+  { id: "text", label: "Resposta em Texto", icon: Type },
+  { id: "number", label: "Valor Numérico", icon: Hash },
+]
+
 export default function ChecklistsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
 
-  // Estados do Formulário conforme imagem de referência
+  // Estados do Formulário
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Operacional")
   const [description, setDescription] = useState("")
-  const [legalArea, setLegalArea] = useState("Geral")
-  const [items, setItems] = useState<{ text: string; completed: boolean }[]>([])
+  const [legalArea, setLegalArea] = useState("Trabalhista")
+  const [items, setItems] = useState<{ text: string; type: string; completed: boolean }[]>([])
   const [newItemText, setNewItemText] = useState("")
+  const [newItemType, setNewItemType] = useState("checkbox")
 
   const db = useFirestore()
   const { user } = useUser()
@@ -86,7 +94,7 @@ export default function ChecklistsPage() {
 
   const handleAddItem = () => {
     if (!newItemText.trim()) return
-    setItems([...items, { text: newItemText.toUpperCase(), completed: false }])
+    setItems([...items, { text: newItemText.toUpperCase(), type: newItemType, completed: false }])
     setNewItemText("")
   }
 
@@ -99,7 +107,7 @@ export default function ChecklistsPage() {
     setTitle("")
     setCategory("Operacional")
     setDescription("")
-    setLegalArea("Geral")
+    setLegalArea("Trabalhista")
     setItems([])
     setIsDialogOpen(true)
   }
@@ -109,7 +117,7 @@ export default function ChecklistsPage() {
     setTitle(list.title)
     setCategory(list.category)
     setDescription(list.description || "")
-    setLegalArea(list.legalArea || "Geral")
+    setLegalArea(list.legalArea || "Trabalhista")
     setItems(list.items || [])
     setIsDialogOpen(true)
   }
@@ -150,17 +158,6 @@ export default function ChecklistsPage() {
       deleteDocumentNonBlocking(doc(db, "checklists", id))
       toast({ variant: "destructive", title: "Template Removido" })
     }
-  }
-
-  const toggleItemCompletion = (list: any, itemIndex: number) => {
-    const newItems = [...list.items]
-    newItems[itemIndex].completed = !newItems[itemIndex].completed
-    const progress = Math.round((newItems.filter(i => i.completed).length / newItems.length) * 100)
-    updateDocumentNonBlocking(doc(db, "checklists", list.id), {
-      items: newItems,
-      progress,
-      updatedAt: serverTimestamp()
-    })
   }
 
   return (
@@ -229,10 +226,9 @@ export default function ChecklistsPage() {
                     </Badge>
                   )}
                   <div className="flex items-center justify-between mt-4">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{list.progress}% CONCLUÍDO</span>
-                    {list.progress === 100 && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{list.items?.length} REQUISITOS</span>
+                    <span className="text-[9px] text-muted-foreground font-bold uppercase">Multimodal</span>
                   </div>
-                  <Progress value={list.progress} className="h-1 bg-secondary/30 mt-2" />
                 </CardHeader>
 
                 <CardContent className="space-y-3 flex-1">
@@ -240,21 +236,17 @@ export default function ChecklistsPage() {
                     {list.description || "Sem descrição definida."}
                   </p>
                   <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                    {list.items?.map((item: any, i: number) => (
-                      <div key={i} className="flex items-start gap-3 py-3 first:pt-0 group/item">
-                        <Checkbox 
-                          checked={item.completed} 
-                          onCheckedChange={() => toggleItemCompletion(list, i)}
-                          className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary" 
-                        />
-                        <span className={cn(
-                          "text-[11px] font-bold uppercase tracking-wide transition-all leading-relaxed",
-                          item.completed ? 'text-muted-foreground/40 line-through' : 'text-white/80'
-                        )}>
-                          {item.text}
-                        </span>
-                      </div>
-                    ))}
+                    {list.items?.map((item: any, i: number) => {
+                      const TypeIcon = ITEM_TYPES.find(t => t.id === item.type)?.icon || CheckCircle2
+                      return (
+                        <div key={i} className="flex items-center gap-3 py-3 first:pt-0 group/item">
+                          <TypeIcon className="h-3.5 w-3.5 text-primary/40" />
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-white/80 leading-relaxed truncate">
+                            {item.text}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -274,15 +266,14 @@ export default function ChecklistsPage() {
         )}
       </div>
 
-      {/* DIALOG: EDITOR DE MODELO (REFERÊNCIA DE IMAGEM) */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-3">
-                <Edit3 className="h-7 w-7 text-[#f5d030]" /> Editor de Modelo
+                <Edit3 className="h-7 w-7 text-[#f5d030]" /> Editor de Modelo Multimodal
               </DialogTitle>
-              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">Desenvolva o passo a passo padrão para as rotinas do escritório.</p>
+              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">Crie protocolos com diferentes tipos de respostas para auditoria técnica.</p>
             </DialogHeader>
           </div>
 
@@ -324,11 +315,11 @@ export default function ChecklistsPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Descreva quando e por quem este checklist deve ser executado..."
-                  className="bg-[#0d121f] border-white/10 min-h-[120px] text-white focus:ring-1 focus:ring-[#f5d030]/50 resize-none"
+                  className="bg-[#0d121f] border-white/10 min-h-[100px] text-white focus:ring-1 focus:ring-[#f5d030]/50 resize-none"
                 />
               </div>
               {category === "Entrevista de Triagem" && (
-                <div className="md:col-span-4 space-y-3 animate-in fade-in slide-in-from-right-2">
+                <div className="md:col-span-4 space-y-3">
                   <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">ÁREA JURÍDICA</Label>
                   <Select value={legalArea} onValueChange={setLegalArea}>
                     <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
@@ -348,48 +339,68 @@ export default function ChecklistsPage() {
             </div>
 
             <div className="space-y-6 pt-6 border-t border-white/5">
-              <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-black text-[#f5d030] uppercase tracking-[0.3em] flex items-center gap-3">
-                  <ClipboardList className="h-5 w-5" /> Itens de Verificação
-                </Label>
-                <Button 
-                  onClick={handleAddItem}
-                  variant="outline"
-                  className="glass border-white/10 text-white font-black text-[10px] uppercase h-10 px-6 gap-2"
-                >
-                  <Plus className="h-3 w-3" /> Adicionar Passo
-                </Button>
-              </div>
+              <Label className="text-[11px] font-black text-[#f5d030] uppercase tracking-[0.3em] flex items-center gap-3">
+                <ClipboardList className="h-5 w-5" /> Configurar Perguntas / Passos
+              </Label>
               
-              <div className="flex gap-3">
-                <Input 
-                  value={newItemText} 
-                  onChange={(e) => setNewItemText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-                  className="bg-[#0d121f] border-white/10 h-14 text-white flex-1"
-                  placeholder="Digite o novo passo ou pergunta da entrevista..."
-                />
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-7">
+                  <Input 
+                    value={newItemText} 
+                    onChange={(e) => setNewItemText(e.target.value)}
+                    className="bg-[#0d121f] border-white/10 h-14 text-white"
+                    placeholder="Enunciado da pergunta ou passo..."
+                  />
+                </div>
+                <div className="md:col-span-4">
+                  <Select value={newItemType} onValueChange={setNewItemType}>
+                    <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                      {ITEM_TYPES.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <t.icon className="h-4 w-4" />
+                            {t.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-1">
+                  <Button 
+                    onClick={handleAddItem}
+                    className="w-full h-14 gold-gradient rounded-lg"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3">
-                {items.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-5 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-[#f5d030]/30 transition-all">
-                    <div className="flex items-center gap-4">
-                      <span className="w-6 h-6 rounded-full bg-[#f5d030]/10 text-[#f5d030] text-[11px] font-black flex items-center justify-center border border-[#f5d030]/20">
-                        {index + 1}
-                      </span>
-                      <span className="text-sm font-bold text-white/90 uppercase tracking-tight">{item.text}</span>
+                {items.map((item, index) => {
+                  const TypeIcon = ITEM_TYPES.find(t => t.id === item.type)?.icon || CheckCircle2
+                  return (
+                    <div key={index} className="flex items-center justify-between p-5 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-[#f5d030]/30 transition-all">
+                      <div className="flex items-center gap-4">
+                        <span className="w-6 h-6 rounded-full bg-[#f5d030]/10 text-[#f5d030] text-[11px] font-black flex items-center justify-center border border-[#f5d030]/20">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-white/90 uppercase tracking-tight">{item.text}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase font-black flex items-center gap-1 mt-1">
+                            <TypeIcon className="h-2.5 w-2.5" /> Tipo: {ITEM_TYPES.find(t => t.id === item.type)?.label}
+                          </p>
+                        </div>
+                      </div>
+                      <button onClick={() => handleRemoveItem(index)} className="text-muted-foreground hover:text-destructive p-2 transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button onClick={() => handleRemoveItem(index)} className="text-muted-foreground hover:text-destructive p-2 transition-colors">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-                {items.length === 0 && (
-                  <div className="text-center py-16 text-muted-foreground text-[10px] uppercase font-bold tracking-[0.4em] opacity-30 border-2 border-dashed border-white/5 rounded-2xl">
-                    Nenhum requisito configurado.
-                  </div>
-                )}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -402,7 +413,7 @@ export default function ChecklistsPage() {
               onClick={handleSave} 
               className="w-full md:w-auto gold-gradient h-16 px-16 rounded-xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 font-black uppercase text-[12px] tracking-[0.2em]"
             >
-              <CheckCircle2 className="h-5 w-5" /> Salvar e Disponibilizar na Banca
+              <CheckCircle2 className="h-5 w-5" /> Salvar Modelo de Elite
             </Button>
           </DialogFooter>
         </DialogContent>
