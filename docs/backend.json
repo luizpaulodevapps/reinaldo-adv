@@ -63,65 +63,22 @@
       },
       "required": ["id", "clientId", "processNumber", "caseType", "status", "description", "court", "responsibleStaffId", "startDate", "createdAt"]
     },
-    "Lead": {
+    "FinancialTitle": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Lead",
+      "title": "FinancialTitle",
       "type": "object",
-      "description": "Represents a potential client undergoing the initial CRM triaging process.",
+      "description": "Financial records including revenue (honoraries) and expenses (administrative costs).",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "phone": { "type": "string" },
-        "status": { "type": "string" },
-        "legalArea": { "type": "string" },
-        "notes": { "type": "string" },
-        "assignedStaffId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "email", "phone", "status", "legalArea", "assignedStaffId", "createdAt"]
-    },
-    "Checklist": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Checklist",
-      "type": "object",
-      "description": "Strategic or operational checklist template (The Blueprint).",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["Entrada (Receita)", "Saída (Despesa)"] },
+        "category": { "type": "string" },
         "description": { "type": "string" },
-        "category": { "type": "string", "enum": ["Operacional", "Financeiro", "Entrevista de Triagem", "Comercial", "Gestão"] },
-        "legalArea": { "type": "string" },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "text": { "type": "string" },
-              "type": { "type": "string", "enum": ["checkbox", "boolean", "ternary", "text", "number"] }
-            }
-          }
-        },
+        "value": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pendente", "Recebido", "Pago"] },
+        "dueDate": { "type": "string", "format": "date" },
+        "processId": { "type": "string" },
+        "isRecurring": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "ChecklistInstance": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ChecklistInstance",
-      "type": "object",
-      "description": "A specific execution of a checklist template (The Audit).",
-      "properties": {
-        "id": { "type": "string" },
-        "templateId": { "type": "string" },
-        "title": { "type": "string" },
-        "executorId": { "type": "string" },
-        "relatedEntityId": { "type": "string", "description": "Can be a ProcessId or LeadId" },
-        "status": { "type": "string", "enum": ["Em Execução", "Finalizado"] },
-        "progress": { "type": "number" },
-        "responses": { "type": "object" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
       }
     }
   },
@@ -133,9 +90,7 @@
       { "path": "/staff_profiles/{staffId}", "definition": { "entityName": "StaffProfile", "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." } },
       { "path": "/clients/{clientId}", "definition": { "entityName": "Client", "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." } },
       { "path": "/processes/{processId}", "definition": { "entityName": "Process", "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." } },
-      { "path": "/leads/{leadId}", "definition": { "entityName": "Lead", "schema": { "$ref": "#/backend/entities/Lead" }, "description": "Lead triaging data." } },
-      { "path": "/checklists/{checklistId}", "definition": { "entityName": "Checklist", "schema": { "$ref": "#/backend/entities/Checklist" }, "description": "Firm standardization templates." } },
-      { "path": "/checklist_executions/{executionId}", "definition": { "entityName": "ChecklistInstance", "schema": { "$ref": "#/backend/entities/ChecklistInstance" }, "description": "Active audits and filled protocols." } }
+      { "path": "/financial_titles/{titleId}", "definition": { "entityName": "FinancialTitle", "schema": { "$ref": "#/backend/entities/FinancialTitle" }, "description": "Cash flow records." } }
     ]
   }
 }

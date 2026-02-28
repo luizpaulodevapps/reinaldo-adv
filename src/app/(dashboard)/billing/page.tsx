@@ -21,7 +21,10 @@ import {
   DollarSign,
   AlertCircle,
   X,
-  Printer
+  Printer,
+  TrendingUp,
+  Building2,
+  Users
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,41 +44,40 @@ export default function BillingPage() {
   const { user, isUserLoading } = useUser()
   const { toast } = useToast()
 
-  const canQuery = !!user
-
   const financialQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
+    if (!user) return null
     return query(collection(db, "financial_titles"), orderBy("dueDate", "desc"))
-  }, [db, canQuery])
+  }, [db, user])
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
 
   const isLoading = isUserLoading || isLoadingTransactions
 
   const stats = useMemo(() => {
-    if (!transactions) return { real: 0, bruto: 0, pendente: 0, acordos: 0 }
+    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, admin: 0 }
     
-    const bruto = transactions
-      .filter(t => t.status === 'Recebido' && (t.type === 'Entrada (Receita)' || t.type === 'Honorário'))
+    const entradas = transactions
+      .filter(t => t.type?.includes('Entrada'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const pendente = transactions
-      .filter(t => t.status === 'Pendente' && t.type?.includes('Entrada'))
+    const saídas = transactions
+      .filter(t => t.type?.includes('Saída'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const acordos = transactions
-      .filter(t => t.category?.includes('Acordo') || t.category?.includes('Sentença'))
+    const admin = transactions
+      .filter(t => t.type?.includes('Saída') && (t.category?.includes('Aluguel') || t.category?.includes('Software') || t.category?.includes('Marketing')))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const real = bruto * 0.7 // Simulando 70% para a banca
+    const saldo = entradas - saídas
 
-    return { real, bruto, pendente, acordos }
+    return { entradas, saídas, saldo, admin }
   }, [transactions])
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return []
     return transactions.filter(t => 
       t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.processNumber?.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [transactions, searchTerm])
@@ -85,7 +87,6 @@ export default function BillingPage() {
 
     const newTitle = {
       ...data,
-      clientId: data.clientId || "AUTO",
       value: data.numericValue,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -95,8 +96,8 @@ export default function BillingPage() {
       .then(() => {
         setIsNewTitleOpen(false)
         toast({
-          title: "Lançamento Confirmado",
-          description: `O título de R$ ${data.value} foi registrado no caixa.`
+          title: "Operação Registrada",
+          description: `O lançamento de R$ ${data.value} foi injetado no fluxo.`
         })
       })
   }
@@ -110,7 +111,7 @@ export default function BillingPage() {
               "w-12 h-12 rounded-xl flex items-center justify-center border",
               t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
             )}>
-              <Receipt className="h-6 w-6" />
+              {t.type?.includes("Saída") ? <ArrowDownRight className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
             </div>
             <div>
               <div className="flex items-center gap-3">
@@ -118,7 +119,7 @@ export default function BillingPage() {
                 <Badge variant="outline" className="text-[8px] font-black border-white/10 text-muted-foreground">{t.category?.toUpperCase()}</Badge>
               </div>
               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1 flex items-center gap-2">
-                Vencimento: {t.dueDate} • Proc: {t.processNumber || "N/A"}
+                Vencimento: {t.dueDate} {t.processNumber ? `• Proc: ${t.processNumber}` : "• Despesa Admin"}
               </p>
             </div>
           </div>
@@ -131,14 +132,14 @@ export default function BillingPage() {
                 {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <Badge 
-                variant={t.status === 'Recebido' ? 'default' : 'outline'}
-                className={cn("text-[9px] font-black uppercase h-5", t.status === 'Recebido' ? "bg-emerald-500 text-white" : "border-white/10")}
+                variant={t.status === 'Recebido' || t.status === 'Pago' ? 'default' : 'outline'}
+                className={cn("text-[9px] font-black uppercase h-5", (t.status === 'Recebido' || t.status === 'Pago') ? "bg-emerald-500 text-white" : "border-white/10")}
               >
                 {t.status}
               </Badge>
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" title="Gerar Recibo" onClick={() => window.print()}>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => window.print()}>
                 <Printer className="h-5 w-5" />
               </Button>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
@@ -160,11 +161,11 @@ export default function BillingPage() {
             <ChevronRight className="h-2 w-2" />
             <span>Dashboard</span>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white">Faturamento</span>
+            <span className="text-white">Central Financeira</span>
           </div>
-          <h1 className="text-4xl font-headline font-bold text-white tracking-tight">Faturamento & Caixa</h1>
+          <h1 className="text-4xl font-headline font-bold text-white tracking-tight">Gestão Financeira Central</h1>
           <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-70">
-            Controle de honorários, acordos, sentenças e fluxo de capitais.
+            Controle 360º: Honorários, Despesas de Backoffice e Folha de Pagamento.
           </p>
         </div>
         
@@ -172,7 +173,7 @@ export default function BillingPage() {
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar por processo ou descrição..." 
+              placeholder="Pesquisar transação..." 
               className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -192,10 +193,10 @@ export default function BillingPage() {
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <Scale className="h-3 w-3" /> Receita da Banca (70%)
+              <TrendingUp className="h-3 w-3" /> Saldo Operacional (Líquido)
             </p>
-            <div className="text-3xl font-black text-white tabular-nums">
-              R$ {stats.real.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div className={cn("text-3xl font-black tabular-nums", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>
+              R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -203,21 +204,10 @@ export default function BillingPage() {
         <Card className="glass border-emerald-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <DollarSign className="h-3 w-3" /> Bruto Recebido
+              <ArrowUpRight className="h-3 w-3" /> Receita Bruta
             </p>
             <div className="text-3xl font-black text-white tabular-nums">
-              R$ {stats.bruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass border-amber-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
-          <CardContent className="p-6">
-            <p className="text-[9px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <Gavel className="h-3 w-3" /> Acordos & Sentenças
-            </p>
-            <div className="text-3xl font-black text-white tabular-nums">
-              R$ {stats.acordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -225,10 +215,21 @@ export default function BillingPage() {
         <Card className="glass border-rose-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-rose-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <AlertCircle className="h-3 w-3" /> Receitas Pendentes
+              <ArrowDownRight className="h-3 w-3" /> Total Despesas (OPEX)
             </p>
             <div className="text-3xl font-black text-white tabular-nums">
-              R$ {stats.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
+          <CardContent className="p-6">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <Building2 className="h-3 w-3" /> Custo de Estrutura
+            </p>
+            <div className="text-3xl font-black text-white tabular-nums">
+              R$ {stats.admin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -237,16 +238,16 @@ export default function BillingPage() {
       <Tabs defaultValue="todos" className="space-y-0">
         <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-t-xl rounded-b-none border-b-0 overflow-x-auto scrollbar-hide">
           <TabsTrigger value="todos" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <Calculator className="h-3.5 w-3.5" /> Todos
+            <Calculator className="h-3.5 w-3.5" /> Tudo
           </TabsTrigger>
-          <TabsTrigger value="acordos" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <Gavel className="h-3.5 w-3.5" /> Acordos & Sentenças
+          <TabsTrigger value="receitas" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
+            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Receitas Jurídicas
           </TabsTrigger>
-          <TabsTrigger value="honorarios" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <Scale className="h-3.5 w-3.5" /> Honorários
+          <TabsTrigger value="administrativo" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
+            <Building2 className="h-3.5 w-3.5 text-primary" /> Administrativo & Backoffice
           </TabsTrigger>
-          <TabsTrigger value="diligencias" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <FileText className="h-3.5 w-3.5" /> Diligências & Atos
+          <TabsTrigger value="folha" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
+            <Users className="h-3.5 w-3.5 text-blue-400" /> Folha de Pagamento
           </TabsTrigger>
         </TabsList>
 
@@ -254,7 +255,7 @@ export default function BillingPage() {
           {isLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-4">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Caixa RGMJ...</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Auditando Fluxo RGMJ...</span>
             </div>
           ) : (
             <>
@@ -266,16 +267,16 @@ export default function BillingPage() {
                 )}
               </TabsContent>
               
-              <TabsContent value="acordos" className="w-full m-0 p-0">
-                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Acordo') || t.category?.includes('Sentença'))} />
+              <TabsContent value="receitas" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.type?.includes('Entrada'))} />
               </TabsContent>
 
-              <TabsContent value="honorarios" className="w-full m-0 p-0">
-                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Honorário'))} />
+              <TabsContent value="administrativo" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.type?.includes('Saída') && !t.category?.includes('Folha'))} />
               </TabsContent>
 
-              <TabsContent value="diligencias" className="w-full m-0 p-0">
-                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Diligência') || t.category?.includes('Custas'))} />
+              <TabsContent value="folha" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Folha'))} />
               </TabsContent>
             </>
           )}
@@ -287,9 +288,9 @@ export default function BillingPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                Novo Título Financeiro
+                Novo Lançamento Financeiro
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Lançamento manual de entrada ou saída para controle de caixa.</p>
+              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Gestão de caixa, despesas fixas e recebíveis.</p>
             </DialogHeader>
           </div>
           <div className="px-10 py-8 bg-[#0a0f1e]/50">
@@ -305,7 +306,7 @@ function EmptyState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
       <Calculator className="h-16 w-16 text-muted-foreground" />
-      <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum lançamento no radar</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum registro financeiro no radar</p>
     </div>
   )
 }

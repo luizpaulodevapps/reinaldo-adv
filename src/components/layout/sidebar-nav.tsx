@@ -23,7 +23,8 @@ import {
   LogOut,
   User as UserIcon,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  DollarSign
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -79,15 +80,15 @@ const menuGroups = [
   {
     title: "FINANCEIRO",
     items: [
-      { name: "CAIXA", href: "/billing", icon: Receipt },
-      { name: "REPASSES", href: "/financial", icon: Wallet },
+      { name: "CENTRAL FINANCEIRA", href: "/billing", icon: DollarSign },
+      { name: "CARTEIRA & REPASSES", href: "/financial", icon: Wallet },
     ]
   },
   {
     title: "GESTÃO",
     items: [
-      { name: "D.P.", href: "/staff", icon: Users2 },
-      { name: "EQUIPE", href: "/team", icon: UserCheck },
+      { name: "D.P. (INTERNO)", href: "/staff", icon: Users2 },
+      { name: "EQUIPE (ACESSO)", href: "/team", icon: UserCheck },
       { name: "CONFIGURAÇÕES", href: "/settings", icon: Settings },
     ]
   }
