@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -42,7 +41,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
-import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -532,22 +530,24 @@ export default function LeadsPage() {
                                       </div>
                                     </div>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0 bg-[#0a0f1e] border-primary/40 shadow-2xl z-50" align="start">
-                                    <div className="p-4 space-y-4">
-                                      <div className="space-y-2">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sugestão de Data</Label>
-                                        <Calendar
-                                          mode="single"
-                                          selected={scheduledDate}
-                                          onSelect={setScheduledDate}
-                                          className="rounded-md border border-primary/10 bg-[#0d121f]"
-                                          locale={ptBR}
+                                  <PopoverContent className="w-[300px] p-0 bg-[#0a0f1e] border-primary/40 shadow-2xl z-50" align="start">
+                                    <div className="p-6 space-y-6">
+                                      <div className="space-y-3">
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Escolher Data</Label>
+                                        <Input 
+                                          type="date" 
+                                          className="bg-[#1a1f2e] border-[#2d3748] h-11 text-white" 
+                                          value={scheduledDate ? format(scheduledDate, "yyyy-MM-dd") : ""}
+                                          onChange={(e) => {
+                                            const date = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
+                                            setScheduledDate(date);
+                                          }}
                                         />
                                       </div>
-                                      <div className="space-y-2">
+                                      <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
                                         <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                                          <SelectTrigger className="glass bg-[#1a1f2e] border-[#2d3748]">
+                                          <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-11 text-white">
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
@@ -559,7 +559,7 @@ export default function LeadsPage() {
                                       </div>
                                       <Button 
                                         onClick={handleConfirmSchedule}
-                                        className="w-full gold-gradient text-background font-bold h-10 shadow-lg"
+                                        className="w-full gold-gradient text-background font-bold h-12 shadow-lg rounded-lg"
                                       >
                                         Confirmar Agendamento
                                       </Button>
