@@ -73,12 +73,12 @@ export function SidebarNav() {
 
   return (
     <nav className="flex flex-col h-full bg-[#020617] border-r border-white/5">
-      {/* Logo Bueno Gois */}
+      {/* Logo RGMJ */}
       <div className="flex items-center gap-3 px-6 py-8">
         <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center shadow-lg shadow-primary/20">
           <Scale className="text-background h-6 w-6" />
         </div>
-        <span className="font-headline text-2xl font-bold tracking-tight text-white">Bueno Gois</span>
+        <span className="font-headline text-2xl font-bold tracking-tight text-white uppercase tracking-tighter">RGMJ</span>
       </div>
       
       <ScrollArea className="flex-1 px-4">
@@ -123,7 +123,7 @@ export function SidebarNav() {
       <div className="p-4 border-t border-white/5 bg-black/20">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/30 border border-white/5">
           <Avatar className="h-10 w-10 border border-primary/20">
-            <AvatarFallback className="bg-primary/10 text-primary font-bold">RG</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary font-bold">RGMJ</AvatarFallback>
           </Avatar>
           <div className="flex flex-col overflow-hidden">
             <span className="text-sm font-bold truncate text-white">Dr. Reinaldo G.</span>
