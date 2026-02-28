@@ -348,12 +348,20 @@ export default function StaffPage() {
                       <>
                         <div className="space-y-3 animate-in slide-in-from-left-2">
                           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">ESPECIALIDADE JURÍDICA</Label>
-                          <Input 
-                            value={formData.specialty} 
-                            onChange={(e) => setFormData({...formData, specialty: e.target.value})}
-                            className="bg-[#0d121f] border-white/10 h-14 text-white"
-                            placeholder="Ex: Trabalhista / Cível"
-                          />
+                          <Select value={formData.specialty} onValueChange={(v) => setFormData({...formData, specialty: v})}>
+                            <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50">
+                              <SelectValue placeholder="Selecione a área" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                              <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                              <SelectItem value="Cível">Cível</SelectItem>
+                              <SelectItem value="Criminal">Criminal</SelectItem>
+                              <SelectItem value="Previdenciário">Previdenciário</SelectItem>
+                              <SelectItem value="Família">Família</SelectItem>
+                              <SelectItem value="Tributário">Tributário</SelectItem>
+                              <SelectItem value="Empresarial">Empresarial</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-3 animate-in slide-in-from-right-2">
                           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">INSCRIÇÃO OAB</Label>
