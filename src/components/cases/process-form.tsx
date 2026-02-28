@@ -179,8 +179,11 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
 
       const docRef = await addDocumentNonBlocking(collection(db, "clients"), newClient)
       
-      handleInputChange("clientId", docRef.id)
-      handleInputChange("clientName", newClient.name)
+      if (docRef) {
+        handleInputChange("clientId", docRef.id)
+        handleInputChange("clientName", newClient.name)
+      }
+      
       setIsQuickClientOpen(false)
       setSearchTerm("")
       toast({ 
@@ -567,7 +570,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
                 <ShieldAlert className="h-6 w-6 text-primary" /> Injeção de Dados RGMJ
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] mt-1">Conexão com Cadastro Oficial (Gov.br / Receita).</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] mt-1">Conexão com Cadastro Oficial (Gov.br / Receita).</DialogDescription>
             </DialogHeader>
           </div>
           

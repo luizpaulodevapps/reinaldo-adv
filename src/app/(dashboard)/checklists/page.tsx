@@ -25,7 +25,8 @@ import {
   Hash,
   ToggleLeft,
   Settings2,
-  BookOpen
+  BookOpen,
+  ChevronRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
