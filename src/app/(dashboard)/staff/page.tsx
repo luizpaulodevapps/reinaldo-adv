@@ -15,13 +15,14 @@ import {
   Loader2, 
   Trash2,
   Settings2,
-  FileText,
   MapPin,
   ShieldCheck,
   Fingerprint,
   User,
   Heart,
-  Users
+  Users,
+  ChevronRight,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsUserDialogOpen] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("geral")
   const [loadingCep, setLoadingCep] = useState(false)
@@ -132,14 +133,14 @@ export default function StaffPage() {
       childrenInfo: ""
     })
     setActiveTab("geral")
-    setIsUserDialogOpen(true)
+    setIsDialogOpen(true)
   }
 
   const handleOpenEdit = (staff: any) => {
     setEditingStaff(staff)
     setFormData({ ...staff })
     setActiveTab("geral")
-    setIsUserDialogOpen(true)
+    setIsDialogOpen(true)
   }
 
   const handleCepBlur = async () => {
@@ -190,7 +191,7 @@ export default function StaffPage() {
       })
       toast({ title: "Novo Colaborador", description: `${formData.name} foi adicionado ao DP.` })
     }
-    setIsUserDialogOpen(false)
+    setIsDialogOpen(false)
   }
 
   const handleDelete = (id: string) => {
@@ -207,7 +208,7 @@ export default function StaffPage() {
   const isLegalRole = formData.role === 'Advogado' || formData.role === 'Sócio' || formData.role === 'Estagiário'
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-20 relative">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-5xl font-headline font-bold text-white tracking-tight">Departamento Pessoal</h1>
@@ -221,15 +222,20 @@ export default function StaffPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar por nome ou CPF..." 
-              className="pl-12 glass border-white/5 h-12 text-xs text-white"
+              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          {/* Botão Tático Amarelo (Conforme Referência) */}
           {canManage && (
-            <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-lg shadow-primary/10">
-              <Plus className="h-4 w-4" /> Novo Colaborador
-            </Button>
+            <button 
+              onClick={handleOpenCreate}
+              className="w-12 h-12 rounded-xl bg-[#f5d030] flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all border-2 border-[#f5d030] ring-offset-2 ring-offset-[#0a0f1e] ring-1 ring-[#f5d030]/50"
+              title="Novo Colaborador"
+            >
+              <Plus className="h-6 w-6 text-[#0a0f1e]" />
+            </button>
           )}
         </div>
       </div>
@@ -266,7 +272,7 @@ export default function StaffPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors tracking-tight uppercase">
+                  <h3 className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors tracking-tight uppercase truncate">
                     {staff.name}
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
@@ -313,14 +319,15 @@ export default function StaffPage() {
             </div>
             {canManage && (
               <Button onClick={handleOpenCreate} className="gold-gradient text-background font-bold gap-2">
-                Cadastrar Primeiro Funcionário
+                <Plus className="h-4 w-4" /> Cadastrar Primeiro Funcionário
               </Button>
             )}
           </div>
         )}
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsUserDialogOpen}>
+      {/* MODAL DE CRUD PERSONALIZADO */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
@@ -358,7 +365,7 @@ export default function StaffPage() {
                       <Input 
                         value={formData.name} 
                         onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})}
-                        className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50"
+                        className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50"
                         placeholder="EX: DR. REINALDO GONÇALVES"
                       />
                     </div>
@@ -682,7 +689,7 @@ export default function StaffPage() {
           </Tabs>
 
           <DialogFooter className="p-6 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-            <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-bold text-[11px] tracking-[0.1em] hover:text-white transition-colors">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-bold text-[11px] tracking-[0.1em] hover:text-white transition-colors">
               CANCELAR OPERAÇÃO
             </Button>
             <Button onClick={handleSave} className="w-full md:w-auto bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black uppercase text-[12px] tracking-widest px-12 h-16 rounded-xl shadow-2xl transition-all flex items-center justify-center gap-3">
