@@ -30,8 +30,9 @@ export default function DashboardPage() {
   }, [user, db])
   const { data: profile } = useDoc(profileRef)
 
-  // As queries só disparam quando o perfil de admin é confirmado no cliente
-  const canQuery = !!(user && profile?.role)
+  // O dono (e-mail específico) ou qualquer um com role pode disparar as queries
+  const isOwner = user?.email === 'luizao16@gmail.com'
+  const canQuery = !!(user && (isOwner || profile?.role))
 
   const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
   const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])
@@ -48,7 +49,7 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const totalRepasses = (financial || [])
       .filter(f => f.type === 'Repasse' && f.status === 'Pendente')
-      .reduce((acc, f) => acc + (f.value || 0), 0)
+      .reduce((acc, f) => acc + (Number(f.value) || 0), 0)
 
     return [
       { label: "Pipeline (Leads)", value: leads?.length || 0, icon: Zap, color: "text-amber-500" },
@@ -67,11 +68,13 @@ export default function DashboardPage() {
     )
   }
 
+  const displayName = user?.displayName || "Dr. Reinaldo Gonçalves"
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div>
         <h1 className="text-4xl font-headline font-bold text-white mb-2">
-          Bem-vindo, <span className="text-primary">Dr. Reinaldo Gonçalves</span>
+          Bem-vindo, <span className="text-primary">{displayName}</span>
         </h1>
         <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Centro de Comando Estratégico RGMJ</p>
       </div>

@@ -24,24 +24,26 @@ export default function DashboardLayout({
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
+  // Identifica se é o administrador principal pelo e-mail
+  const isOwner = user?.email === 'luizao16@gmail.com';
+
   useEffect(() => {
-    // Se o e-mail for o do administrador, garantimos que o perfil exista com role admin
+    // Se o usuário logar, garantimos que o perfil exista
     if (user && db && profile === null && !isProfileLoading) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
-      const isOwnerEmail = user.email === 'luizao16@gmail.com';
       
       setDocumentNonBlocking(newProfileRef, {
         id: user.uid,
         googleId: user.uid,
         name: user.displayName || 'Membro da Equipe',
         email: user.email || '',
-        role: isOwnerEmail ? 'admin' : 'lawyer',
+        role: isOwner ? 'admin' : 'lawyer',
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
     }
-  }, [user, db, profile, isProfileLoading]);
+  }, [user, db, profile, isProfileLoading, isOwner]);
 
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -65,7 +67,7 @@ export default function DashboardLayout({
         </div>
         <div className="flex items-center gap-2 text-primary font-bold tracking-widest uppercase text-xs">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Autenticando Dr. Reinaldo...
+          Sincronizando...
         </div>
       </div>
     );
@@ -126,10 +128,7 @@ export default function DashboardLayout({
   }
 
   // 3. Aguarda Perfil do Usuário
-  // Para o administrador principal (e-mail luizao16@gmail.com), permitimos o acesso mesmo se o documento de perfil Firestore estiver carregando,
-  // pois as regras de segurança agora validam o e-mail diretamente no token.
-  const isOwner = user.email === 'luizao16@gmail.com';
-  
+  // Para o administrador principal, permitimos o acesso imediato pois as regras de segurança validam o e-mail diretamente.
   if (!isOwner && (isProfileLoading || !profile || !profile.role)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
@@ -138,7 +137,7 @@ export default function DashboardLayout({
         </div>
         <div className="flex items-center gap-2 text-primary font-bold tracking-widest uppercase text-xs">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Sincronizando Perfil de Elite...
+          Validando Credenciais de Elite...
         </div>
       </div>
     );
