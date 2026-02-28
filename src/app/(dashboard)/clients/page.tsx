@@ -1,12 +1,11 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query, orderBy } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { 
   Search, 
@@ -17,15 +16,21 @@ import {
   FolderOpen, 
   FileText,
   Loader2,
-  Users
+  Users,
+  X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { LeadForm } from "@/components/leads/lead-form"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [isNewClientOpen, setIsNewClientOpen] = useState(false)
   const db = useFirestore()
   const { user } = useUser()
+  const { toast } = useToast()
 
   const clientsQuery = useMemoFirebase(() => {
     if (!user) return null
@@ -43,9 +48,37 @@ export default function ClientsPage() {
     )
   }, [clientsData, searchTerm])
 
+  const handleCreateClient = (data: any) => {
+    if (!user) return
+
+    const newClient = {
+      id: crypto.randomUUID(),
+      name: data.name,
+      documentNumber: data.cpf,
+      email: data.email || "",
+      phone: data.phone || "",
+      address: data.address || "",
+      city: data.city || "",
+      state: data.state || "",
+      zipCode: data.zipCode || "",
+      type: data.mode === 'complete' ? 'corporate' : 'individual',
+      responsibleStaffIds: [user.uid],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    addDocumentNonBlocking(collection(db, "clients"), newClient)
+      .then(() => {
+        setIsNewClientOpen(false)
+        toast({
+          title: "Cliente Cadastrado",
+          description: `${data.name} agora faz parte da base RGMJ.`
+        })
+      })
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header Estratégico */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-headline font-bold text-white mb-2">Clientes</h1>
@@ -62,13 +95,15 @@ export default function ClientsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button className="gold-gradient text-background font-bold gap-2 px-6 h-10 uppercase text-[10px] tracking-widest rounded-lg">
+          <Button 
+            onClick={() => setIsNewClientOpen(true)}
+            className="gold-gradient text-background font-bold gap-2 px-6 h-10 uppercase text-[10px] tracking-widest rounded-lg"
+          >
             <UserPlus className="h-4 w-4" /> Novo
           </Button>
         </div>
       </div>
 
-      {/* Grid de Cards de Elite */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4 glass rounded-3xl border-dashed">
@@ -77,17 +112,14 @@ export default function ClientsPage() {
           </div>
         ) : filteredClients.length > 0 ? (
           filteredClients.map((client) => {
-            // Mock de integridade baseado no ID para visual fixo porém diferente entre cards
             const integrity = Math.floor((client.id.charCodeAt(0) % 30) + 70); 
             const statusColor = integrity > 85 ? "bg-emerald-500" : integrity > 75 ? "bg-primary" : "bg-destructive";
 
             return (
               <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col">
-                {/* Indicador Superior de Status */}
                 <div className={cn("h-1.5 w-full", statusColor)} />
                 
                 <CardContent className="p-6 space-y-6">
-                  {/* Top Section */}
                   <div className="flex items-start justify-between">
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-[9px] border-primary/20 text-primary uppercase font-bold px-2">
@@ -102,7 +134,6 @@ export default function ClientsPage() {
                     </Button>
                   </div>
 
-                  {/* Nome e Documento */}
                   <div>
                     <h3 className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors leading-tight">
                       {client.name.toUpperCase()}
@@ -112,7 +143,6 @@ export default function ClientsPage() {
                     </p>
                   </div>
 
-                  {/* Contact Action Grid */}
                   <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" className="glass border-primary/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-[9px] font-bold uppercase gap-2 h-10 group/btn">
                       <MessageCircle className="h-3 w-3 text-emerald-500 group-hover/btn:scale-110 transition-transform" /> WhatsApp
@@ -122,7 +152,6 @@ export default function ClientsPage() {
                     </Button>
                   </div>
 
-                  {/* Stats Section */}
                   <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/5">
                     <div className="space-y-1">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Processos</p>
@@ -137,7 +166,6 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* Footer Links */}
                   <div className="flex items-center justify-between pt-2">
                     <button className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest">
                       <FileText className="h-3 w-3" /> Abrir Prontuário
@@ -159,12 +187,34 @@ export default function ClientsPage() {
               <p className="text-sm font-bold text-white uppercase tracking-widest">Base de Clientes Vazia</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">Nenhum cliente foi encontrado na base de dados estratégica da banca RGMJ.</p>
             </div>
-            <Button className="gold-gradient text-background font-bold gap-2">
+            <Button onClick={() => setIsNewClientOpen(true)} className="gold-gradient text-background font-bold gap-2">
               Cadastrar Primeiro Cliente
             </Button>
           </div>
         )}
       </div>
+
+      <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
+        <DialogContent className="glass border-[#2d3748] sm:max-w-[800px] p-0 overflow-hidden bg-[#0a0f1e]">
+          <div className="p-6 bg-[#0a0f1e] border-b border-[#1a1f2e] flex justify-between items-center">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl flex items-center gap-4 uppercase tracking-tighter">
+                <FileText className="h-7 w-7 text-primary" /> Ficha de Cliente
+              </DialogTitle>
+            </DialogHeader>
+            <Button variant="ghost" size="icon" onClick={() => setIsNewClientOpen(false)} className="text-muted-foreground hover:text-white">
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <LeadForm 
+            existingLeads={clientsData || []} 
+            onSubmit={handleCreateClient}
+            onSelectExisting={() => {}}
+            initialMode="complete"
+            lockMode={true}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

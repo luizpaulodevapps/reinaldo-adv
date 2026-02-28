@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Loader2, AlertCircle, Target, X, Plus } from "lucide-react"
+import { Search, Loader2, AlertCircle, Target, X, Plus, ShieldAlert } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -19,6 +19,7 @@ interface Lead {
   phone: string
   type: string
   cpf?: string
+  documentNumber?: string
   [key: string]: any
 }
 
@@ -63,7 +64,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     value: ""
   })
 
-  // Dados para o Cadastro Rápido (Modal de Inspiração)
+  // Dados para o Cadastro Rápido
   const [quickRegData, setQuickRegData] = useState({
     firstName: "",
     lastName: "",
@@ -87,7 +88,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     return existingLeads.filter(l => 
       l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (l.phone && l.phone.includes(searchTerm)) ||
-      (l.cpf && l.cpf.includes(searchTerm))
+      (l.cpf && l.cpf.includes(searchTerm)) ||
+      (l.documentNumber && l.documentNumber.includes(searchTerm))
     )
   }, [searchTerm, existingLeads])
 
@@ -130,13 +132,12 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       ...prev, 
       name: lead.name, 
       phone: lead.phone || "",
-      cpf: lead.cpf || "",
+      cpf: lead.cpf || lead.documentNumber || "",
       type: lead.type || "Trabalhista"
     }))
   }
 
   const handleOpenQuickReg = () => {
-    // Tentar separar nome e sobrenome da busca para facilitar
     const names = searchTerm.split(" ")
     setQuickRegData({
       ...quickRegData,
@@ -152,6 +153,23 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     if (!fullName) {
       toast({ variant: "destructive", title: "Nome obrigatório" })
       return
+    }
+
+    // Validação de Duplicidade no Cadastro Rápido
+    const cleanDoc = quickRegData.cpfCnpj.replace(/\D/g, "")
+    if (cleanDoc) {
+      const duplicate = existingLeads.find(l => {
+        const existingDoc = (l.cpf || l.documentNumber || "").replace(/\D/g, "")
+        return existingDoc === cleanDoc
+      })
+      if (duplicate) {
+        toast({ 
+          variant: "destructive", 
+          title: "Documento Duplicado", 
+          description: `O documento ${quickRegData.cpfCnpj} já pertence a ${duplicate.name}.`
+        })
+        return
+      }
     }
 
     setFormData(prev => ({
@@ -176,6 +194,24 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       toast({ variant: "destructive", title: "Selecione ou busque um cliente." })
       return
     }
+
+    // Validação de Duplicidade no Submit Final
+    const cleanDoc = formData.cpf.replace(/\D/g, "")
+    if (cleanDoc) {
+      const duplicate = existingLeads.find(l => {
+        const existingDoc = (l.cpf || l.documentNumber || "").replace(/\D/g, "")
+        return existingDoc === cleanDoc
+      })
+      if (duplicate) {
+        toast({ 
+          variant: "destructive", 
+          title: "Bloqueio de Cadastro", 
+          description: `O CPF/CNPJ ${formData.cpf} já está registrado no sistema para ${duplicate.name}.`
+        })
+        return
+      }
+    }
+
     onSubmit({ ...formData, name: finalName, mode })
   }
 
@@ -197,7 +233,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             </div>
           )}
 
-          {/* Cliente Principal / Busca */}
           <div className="relative space-y-2" ref={searchRef}>
             <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
               CLIENTE PRINCIPAL <span className="text-destructive">*</span>
@@ -241,7 +276,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                         >
                           <div className="text-left">
                             <div className="font-bold text-white">{lead.name}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono">{lead.phone || lead.cpf}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{lead.phone || lead.cpf || lead.documentNumber}</div>
                           </div>
                           <Badge variant="outline" className="text-[9px] uppercase border-primary/40 text-primary">Selecionar</Badge>
                         </button>
@@ -268,7 +303,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             )}
           </div>
 
-          {/* Título da Demanda */}
           <div className="space-y-2">
             <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
               TÍTULO DA DEMANDA <span className="text-destructive">*</span>
@@ -366,22 +400,32 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             />
           </div>
 
-          {mode === "complete" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#1a1f2e] animate-in fade-in slide-in-from-top-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CPF / CNPJ</Label>
-                <Input placeholder="000.000.000-00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CEP</Label>
-                <Input placeholder="00000-000" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} onBlur={handleCepBlur} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">Endereço</Label>
-                <Input className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#1a1f2e] animate-in fade-in slide-in-from-top-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CPF / CNPJ <span className="text-destructive">*</span></Label>
+              <Input placeholder="000.000.000-00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CEP</Label>
+              <Input placeholder="00000-000" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} onBlur={handleCepBlur} />
+            </div>
+            {mode === "complete" && (
+              <>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">Endereço</Label>
+                  <Input className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">Profissão</Label>
+                  <Input className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">Valor Estimado</Label>
+                  <Input placeholder="R$ 0,00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.value} onChange={(e) => handleInputChange("value", e.target.value)} />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </ScrollArea>
 
@@ -390,19 +434,18 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
           Cancelar
         </Button>
         <Button onClick={handleSubmit} className="w-full md:w-[240px] gold-gradient text-background font-bold h-14 text-[12px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex items-center justify-center gap-3">
-          <Target className="h-5 w-5" /> Iniciar Triagem
+          <Target className="h-5 w-5" /> Confirmar Cadastro
         </Button>
       </div>
 
-      {/* MODAL DE CADASTRO RÁPIDO - INSPIRADO NO MODELO */}
       <Dialog open={isQuickRegOpen} onOpenChange={setIsQuickRegOpen}>
         <DialogContent className="bg-[#0a0f1e] border-[#1a1f2e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 space-y-2">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-2xl flex items-center gap-2">
-                <Plus className="h-6 w-6 text-primary" /> Cadastro Rápido
+                <ShieldAlert className="h-6 w-6 text-primary" /> Cadastro Exclusivo
               </DialogTitle>
-              <p className="text-[#4a5568] text-sm">Preencha os dados essenciais para o novo atendimento.</p>
+              <p className="text-[#4a5568] text-sm">Validando unicidade de CPF/CNPJ no ecossistema RGMJ.</p>
             </DialogHeader>
           </div>
 
@@ -434,7 +477,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CPF / CNPJ</Label>
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CPF / CNPJ <span className="text-destructive">*</span></Label>
                 <Input 
                   placeholder="000.000.000-00" 
                   className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
