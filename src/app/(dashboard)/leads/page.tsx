@@ -23,7 +23,8 @@ import {
   FileCheck,
   Zap,
   Copy,
-  ArrowRight
+  ArrowRight,
+  X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -112,17 +116,48 @@ export default function LeadsPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const { toast } = useToast()
 
+  // Ferramentas State
+  const [calcValue, setCalcValue] = useState("")
+  const [calcProb, setCalcProb] = useState("70")
+  const [calcResult, setCalcResult] = useState<any>(null)
+  
+  const [checklistArea, setChecklistArea] = useState("Trabalhista")
+  const [generatedChecklist, setGeneratedChecklist] = useState<string[]>([])
+
   const handleOpenLead = (lead: any) => {
     setSelectedLead(lead)
     setIsSheetOpen(true)
   }
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, title: string = "Copiado!") => {
     navigator.clipboard.writeText(text)
     toast({
-      title: "Copiado para a área de transferência",
-      description: "O script está pronto para ser enviado.",
+      title,
+      description: "O conteúdo está pronto para ser enviado.",
     })
+  }
+
+  const handleCalculate = () => {
+    const val = parseFloat(calcValue.replace(/\D/g, "")) || 0
+    const prob = parseInt(calcProb) || 0
+    const fee = val * 0.3 // 30% base honorários
+    const successExpected = fee * (prob / 100)
+    
+    setCalcResult({
+      fee: fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      expected: successExpected.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      risk: prob < 50 ? "Alto" : prob < 80 ? "Moderado" : "Baixo"
+    })
+  }
+
+  const handleGenerateChecklist = () => {
+    const lists: Record<string, string[]> = {
+      Trabalhista: ["CTPS (Original ou Digital)", "TRCT (Termo de Rescisão)", "3 últimos holerites", "Extrato FGTS", "Documentos de identificação"],
+      Civil: ["RG/CPF", "Comprovante de residência", "Contratos relacionados", "Provas documentais (fotos/prints)", "Rol de testemunhas"],
+      Previdenciário: ["CNIS atualizado", "Laudos médicos", "PPP (Perfil Profissiográfico)", "CTPS", "Comprovante de períodos especiais"],
+      Empresarial: ["Contrato Social", "Cartão CNPJ", "Balanços contábeis", "Contratos com fornecedores", "Certidões negativas"]
+    }
+    setGeneratedChecklist(lists[checklistArea] || [])
   }
 
   const totalValue = initialLeads.reduce((acc, lead) => acc + lead.value, 0)
@@ -173,20 +208,79 @@ export default function LeadsPage() {
           <Wrench className="h-5 w-5" /> Caixa de Ferramentas de Conversão
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="glass border-primary/20 hover:border-primary/50 transition-all group">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-primary" /> Calculadora de Viabilidade
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">Estime honorários e probabilidade de êxito em segundos.</p>
-              <Button variant="outline" size="sm" className="w-full glass text-[10px] font-bold uppercase group-hover:bg-primary group-hover:text-background transition-colors">
-                Abrir Simulador <ArrowRight className="h-3 w-3 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Calculadora de Viabilidade */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="glass border-primary/20 hover:border-primary/50 transition-all group cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Calculator className="h-4 w-4 text-primary" /> Calculadora de Viabilidade
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Estime honorários e probabilidade de êxito em segundos.</p>
+                  <Button className="w-full gold-gradient text-background font-bold uppercase py-5">
+                    Abrir Simulador <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="glass border-primary/20 sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="text-primary font-headline text-2xl">Simulador de Viabilidade Técnica</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Valor Estimado da Causa (R$)</Label>
+                  <Input 
+                    placeholder="Ex: 50000" 
+                    className="glass" 
+                    value={calcValue} 
+                    onChange={(e) => setCalcValue(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Probabilidade de Êxito (%)</Label>
+                  <Select value={calcProb} onValueChange={setCalcProb}>
+                    <SelectTrigger className="glass">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="90">90% - Muito Alta</SelectItem>
+                      <SelectItem value="70">70% - Alta</SelectItem>
+                      <SelectItem value="50">50% - Moderada</SelectItem>
+                      <SelectItem value="30">30% - Baixa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {calcResult && (
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2 animate-in fade-in zoom-in-95">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Honorários Estimados (30%):</span>
+                      <span className="font-bold text-primary">{calcResult.fee}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Expectativa Realista:</span>
+                      <span className="font-bold text-emerald-500">{calcResult.expected}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Risco Processual:</span>
+                      <Badge variant={calcResult.risk === "Alto" ? "destructive" : "outline"} className="font-bold uppercase text-[10px]">
+                        {calcResult.risk}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCalculate} className="gold-gradient text-background font-bold w-full py-6">
+                  Calcular Viabilidade
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
+          {/* Scripts de WhatsApp */}
           <Card className="glass border-primary/20 hover:border-primary/50 transition-all group">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -197,28 +291,85 @@ export default function LeadsPage() {
               <p className="text-xs text-muted-foreground">Modelos de mensagens de alta conversão para triagem.</p>
               <Button 
                 variant="outline" 
-                size="sm" 
-                className="w-full glass text-[10px] font-bold uppercase group-hover:bg-primary group-hover:text-background transition-colors"
-                onClick={() => copyToClipboard("Olá! Dr. Reinaldo Gonçalves aqui. Recebi seu contato sobre [Assunto] e gostaria de agendar uma breve conversa técnica...")}
+                className="w-full glass font-bold uppercase py-5 border-primary/20 hover:bg-primary/10"
+                onClick={() => copyToClipboard(
+                  "Olá! Dr. Reinaldo Gonçalves aqui. Recebi seu contato e gostaria de agendar uma breve conversa técnica para entender melhor os detalhes do seu caso e definir a melhor estratégia. Qual o melhor horário para falarmos hoje?",
+                  "Script Base Copiado!"
+                )}
               >
-                Copiar Script Base <Copy className="h-3 w-3 ml-2" />
+                Copiar Script Base <Copy className="h-4 w-4 ml-2" />
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="glass border-primary/20 hover:border-primary/50 transition-all group">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <FileCheck className="h-4 w-4 text-blue-400" /> Checklist de Documentos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">Gere a lista de documentos necessária por área do Direito.</p>
-              <Button variant="outline" size="sm" className="w-full glass text-[10px] font-bold uppercase group-hover:bg-primary group-hover:text-background transition-colors">
-                Gerar Lista <ArrowRight className="h-3 w-3 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Checklist de Documentos */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="glass border-primary/20 hover:border-primary/50 transition-all group cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-blue-400" /> Checklist de Documentos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Gere a lista de documentos necessária por área do Direito.</p>
+                  <Button variant="outline" className="w-full glass font-bold uppercase py-5 border-primary/20 hover:bg-primary/10">
+                    Gerar Lista <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="glass border-primary/20 sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="text-primary font-headline text-2xl">Gerador de Checklist</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Área do Direito</Label>
+                  <Select value={checklistArea} onValueChange={setChecklistArea}>
+                    <SelectTrigger className="glass">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                      <SelectItem value="Civil">Civil</SelectItem>
+                      <SelectItem value="Previdenciário">Previdenciário</SelectItem>
+                      <SelectItem value="Empresarial">Empresarial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {generatedChecklist.length > 0 && (
+                  <ScrollArea className="h-[200px] w-full rounded-md border border-primary/10 bg-primary/5 p-4">
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-primary uppercase">Documentos Necessários ({checklistArea}):</p>
+                      {generatedChecklist.map((doc, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          {doc}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+              <DialogFooter className="flex-col gap-2">
+                <Button onClick={handleGenerateChecklist} className="w-full glass border-primary/20">
+                  Gerar Itens
+                </Button>
+                {generatedChecklist.length > 0 && (
+                  <Button 
+                    onClick={() => copyToClipboard(
+                      `Olá! Conforme conversamos, para darmos início ao seu caso de área ${checklistArea}, preciso que me envie os seguintes documentos:\n\n${generatedChecklist.join('\n')}\n\nFico no aguardo!`,
+                      "Lista Copiada!"
+                    )} 
+                    className="gold-gradient text-background font-bold w-full"
+                  >
+                    Copiar Lista para WhatsApp
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
