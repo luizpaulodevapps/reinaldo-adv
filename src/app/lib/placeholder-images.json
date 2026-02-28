@@ -1,16 +1,23 @@
+
 {
   "placeholderImages": [
     {
-      "id": "law-office",
-      "description": "Modern Law Office with Deep Navy and Gold Accents",
-      "imageUrl": "https://picsum.photos/seed/law1/1200/800",
-      "imageHint": "law office"
+      "id": "hero-lawyer",
+      "description": "Professional Lawyer Portrait in High-End Office",
+      "imageUrl": "https://picsum.photos/seed/reinaldohero/1920/1080",
+      "imageHint": "professional lawyer"
     },
     {
-      "id": "legal-documents",
-      "description": "Professional Legal Documents and Gavel",
-      "imageUrl": "https://picsum.photos/seed/legal2/800/600",
-      "imageHint": "legal papers"
+      "id": "about-reinaldo",
+      "description": "Dr. Reinaldo in a professional setting",
+      "imageUrl": "https://picsum.photos/seed/reinaldoabout/800/1000",
+      "imageHint": "lawyer portrait"
+    },
+    {
+      "id": "office-luxury",
+      "description": "Luxury Law Office Interior",
+      "imageUrl": "https://picsum.photos/seed/officelux/1200/800",
+      "imageHint": "law office luxury"
     }
   ]
 }

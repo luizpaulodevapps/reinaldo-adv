@@ -1,34 +1,30 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 222 47% 5%;
-    --foreground: 48 100% 96%;
-    --card: 222 47% 7%;
-    --card-foreground: 48 100% 96%;
-    --popover: 222 47% 5%;
-    --popover-foreground: 48 100% 96%;
+    --background: 222 47% 2%;
+    --foreground: 48 100% 98%;
+    --card: 222 47% 4%;
+    --card-foreground: 48 100% 98%;
+    --popover: 222 47% 2%;
+    --popover-foreground: 48 100% 98%;
     --primary: 48 91% 58%;
-    --primary-foreground: 222 47% 5%;
-    --secondary: 222 47% 15%;
-    --secondary-foreground: 48 100% 96%;
-    --muted: 222 47% 15%;
+    --primary-foreground: 222 47% 2%;
+    --secondary: 222 47% 8%;
+    --secondary-foreground: 48 100% 98%;
+    --muted: 222 47% 8%;
     --muted-foreground: 215 20% 65%;
     --accent: 48 91% 58%;
-    --accent-foreground: 222 47% 5%;
-    --destructive: 345 50% 50%;
-    --destructive-foreground: 48 100% 96%;
-    --border: 222 47% 15%;
-    --input: 222 47% 15%;
+    --accent-foreground: 222 47% 2%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 48 100% 98%;
+    --border: 222 47% 12%;
+    --input: 222 47% 12%;
     --ring: 48 91% 58%;
-    --radius: 0.75rem;
-    
-    /* Custom Accents */
-    --success: 145 36% 41%;
-    --info: 202 40% 50%;
-    --warning: 48 91% 58%;
+    --radius: 0.5rem;
   }
 }
 
@@ -37,20 +33,57 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-background text-foreground font-sans;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-headline;
+    @apply font-headline tracking-tight;
   }
 }
 
+.font-sans {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-headline {
+  font-family: 'Playfair Display', serif;
+}
+
 .glass {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(245, 208, 48, 0.1);
+  background: rgba(10, 15, 30, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 208, 48, 0.15);
 }
 
 .gold-gradient {
   background: linear-gradient(135deg, #F5D030 0%, #D4AF37 100%);
+}
+
+.text-gold {
+  @apply text-primary;
+  background: linear-gradient(135deg, #F5D030 0%, #D4AF37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.scroll-reveal {
+  animation: reveal linear both;
+  animation-timeline: view();
+  animation-range: entry 20% cover 30%;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hover-gold:hover {
+  box-shadow: 0 0 20px rgba(245, 208, 48, 0.2);
+  border-color: rgba(245, 208, 48, 0.5);
 }

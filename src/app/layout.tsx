@@ -1,10 +1,11 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'LexFlow ERP | Advocacia Trabalhista de Elite',
-  description: 'Sistema de gestão jurídica de alto desempenho com IA integrada.',
+  title: 'Dr. Reinaldo Gonçalves Miguel de Jesus | Advocacia de Elite',
+  description: 'Defesa jurídica com excelência, estratégia e discrição. Especialista em Direito do Trabalho e Soluções Estratégicas.',
 };
 
 export default function RootLayout({
@@ -13,13 +14,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className="scroll-smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground min-h-screen">
+      <body className="font-sans antialiased bg-background text-foreground min-h-screen">
         {children}
         <Toaster />
       </body>
