@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Plus,
   Calendar as CalendarIcon,
-  Filter
+  Filter,
+  Loader2
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
@@ -32,14 +33,16 @@ export default function AgendaPage() {
     if (!user) return null
     return query(collection(db, "hearings"), orderBy("startDateTime", "asc"))
   }, [db, user])
-  const { data: hearings } = useCollection(hearingsQuery)
+  
+  const { data: hearings, isLoading: loadingHearings } = useCollection(hearingsQuery)
 
   // Busca Prazos - Protegido por user
   const deadlinesQuery = useMemoFirebase(() => {
     if (!user) return null
     return query(collection(db, "deadlines"), orderBy("dueDate", "asc"))
   }, [db, user])
-  const { data: deadlines } = useCollection(deadlinesQuery)
+  
+  const { data: deadlines, isLoading: loadingDeadlines } = useCollection(deadlinesQuery)
 
   // Filtra eventos para o dia selecionado
   const dailyEvents = useMemo(() => {
@@ -47,22 +50,36 @@ export default function AgendaPage() {
 
     const dayHearings = (hearings || []).filter(h => {
       if (!h.startDateTime) return false
-      const hDate = typeof h.startDateTime === 'string' ? parseISO(h.startDateTime) : h.startDateTime.toDate()
-      return isSameDay(hDate, date)
+      try {
+        const hDate = typeof h.startDateTime === 'string' 
+          ? parseISO(h.startDateTime) 
+          : (h.startDateTime.toDate ? h.startDateTime.toDate() : new Date(h.startDateTime));
+        return isSameDay(hDate, date)
+      } catch (e) {
+        return false;
+      }
     }).map(h => ({ ...h, eventType: 'audiencia' }))
 
     const dayDeadlines = (deadlines || []).filter(d => {
       if (!d.dueDate) return false
-      const dDate = typeof d.dueDate === 'string' ? parseISO(d.dueDate) : d.dueDate.toDate()
-      return isSameDay(dDate, date)
+      try {
+        const dDate = typeof d.dueDate === 'string' 
+          ? parseISO(d.dueDate) 
+          : (d.dueDate.toDate ? d.dueDate.toDate() : new Date(d.dueDate));
+        return isSameDay(dDate, date)
+      } catch (e) {
+        return false;
+      }
     }).map(d => ({ ...d, eventType: 'prazo' }))
 
     return [...dayHearings, ...dayDeadlines].sort((a, b) => {
-      const timeA = a.startDateTime || a.dueDate
-      const timeB = b.startDateTime || b.dueDate
-      return new Date(timeA).getTime() - new Date(timeB).getTime()
+      const timeA = new Date(a.startDateTime || a.dueDate).getTime();
+      const timeB = new Date(b.startDateTime || b.dueDate).getTime();
+      return timeA - timeB;
     })
   }, [date, hearings, deadlines])
+
+  const isLoading = loadingHearings || loadingDeadlines;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -121,12 +138,19 @@ export default function AgendaPage() {
               {date ? format(date, "EEEE, dd 'de' MMMM", { locale: ptBR }) : "Selecione uma data"}
             </h3>
             <Badge variant="outline" className="glass border-primary/30 text-primary">
-              {dailyEvents.length} compromissos
+              {isLoading ? "Sincronizando..." : `${dailyEvents.length} compromissos`}
             </Badge>
           </div>
 
           <div className="space-y-4">
-            {dailyEvents.length > 0 ? (
+            {isLoading ? (
+              <div className="h-[400px] flex flex-col items-center justify-center p-12 glass rounded-2xl border-dashed border-2 border-border/50 text-muted-foreground">
+                <Loader2 className="h-10 w-10 mb-4 animate-spin text-primary" />
+                <p className="text-center font-light">
+                  Acessando dossiê de compromissos...
+                </p>
+              </div>
+            ) : dailyEvents.length > 0 ? (
               dailyEvents.map((event, i) => (
                 <Card key={i} className="glass hover-gold transition-all group border-l-4 border-l-primary/50">
                   <CardContent className="p-6 flex items-center justify-between gap-6">
@@ -135,7 +159,7 @@ export default function AgendaPage() {
                         <Clock className="h-4 w-4 text-primary mb-1" />
                         <span className="text-sm font-bold">
                           {event.startDateTime 
-                            ? format(new Date(event.startDateTime), "HH:mm") 
+                            ? format(new Date(typeof event.startDateTime === 'string' ? event.startDateTime : event.startDateTime.toDate()), "HH:mm") 
                             : "--:--"}
                         </span>
                       </div>

@@ -2,11 +2,11 @@
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Scale, LogIn, ShieldCheck } from "lucide-react";
+import { doc, serverTimestamp } from 'firebase/firestore';
+import { Loader2, Scale, LogIn, ShieldCheck, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({
@@ -17,26 +17,30 @@ export default function DashboardLayout({
   const { auth, user, isUserLoading, firestore: db } = useFirebase();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  useEffect(() => {
-    if (user && db) {
-      // Garante que o perfil de Staff (Admin) exista para o usuário logado
-      const profileRef = doc(db, 'staff_profiles', user.uid);
-      getDoc(profileRef).then(snap => {
-        if (!snap.exists()) {
-          setDocumentNonBlocking(profileRef, {
-            id: user.uid,
-            googleId: user.uid,
-            name: user.displayName || 'Membro da Equipe',
-            email: user.email || '',
-            role: 'admin', // Atribui admin por padrão no modo protótipo
-            isActive: true,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        }
-      });
-    }
+  // Monitora o perfil do staff em tempo real
+  const profileRef = useMemoFirebase(() => {
+    if (!user || !db) return null;
+    return doc(db, 'staff_profiles', user.uid);
   }, [user, db]);
+
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+
+  useEffect(() => {
+    if (user && db && profile === null && !isProfileLoading) {
+      // Se o usuário está logado mas o perfil não existe, cria como admin por padrão
+      const newProfileRef = doc(db, 'staff_profiles', user.uid);
+      setDocumentNonBlocking(newProfileRef, {
+        id: user.uid,
+        googleId: user.uid,
+        name: user.displayName || 'Membro da Equipe',
+        email: user.email || '',
+        role: 'admin',
+        isActive: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  }, [user, db, profile, isProfileLoading]);
 
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -51,7 +55,7 @@ export default function DashboardLayout({
     }
   };
 
-  // Tela de Carregamento Inicial
+  // 1. Carregamento de Autenticação
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
@@ -60,13 +64,13 @@ export default function DashboardLayout({
         </div>
         <div className="flex items-center gap-2 text-primary font-bold tracking-widest uppercase text-xs">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Preparando Ambiente Jurídico...
+          Autenticando Dr. Reinaldo...
         </div>
       </div>
     );
   }
 
-  // Tela de Login (Apenas se não estiver logado)
+  // 2. Tela de Login
   if (!user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background p-6">
@@ -120,7 +124,22 @@ export default function DashboardLayout({
     );
   }
 
-  // Layout do Dashboard (Usuário Autenticado)
+  // 3. Aguarda Perfil de Administrador (Evita erro de permissão nas páginas)
+  if (isProfileLoading || !profile) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
+        <div className="w-16 h-16 rounded-2xl border border-primary/20 flex items-center justify-center animate-bounce">
+          <UserCheck className="text-primary h-8 w-8" />
+        </div>
+        <div className="flex items-center gap-2 text-primary font-bold tracking-widest uppercase text-xs">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Sincronizando Perfil de Elite...
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Layout do Dashboard (Somente após perfil estar pronto)
   return (
     <div className="flex min-h-screen">
       <aside className="w-72 glass border-r border-border/50 hidden md:block sticky top-0 h-screen overflow-y-auto">
