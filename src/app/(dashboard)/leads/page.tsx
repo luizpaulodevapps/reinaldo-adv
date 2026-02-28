@@ -457,7 +457,6 @@ export default function LeadsPage() {
         <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20 p-0 flex flex-col bg-[#0a0f1e] h-full overflow-hidden">
           {selectedLead && (
             <>
-              {/* Header Fixo */}
               <div className="p-8 pb-4 shrink-0">
                 <SheetHeader className="text-left space-y-1">
                   <div className="flex items-center gap-2 mb-2">
@@ -472,7 +471,6 @@ export default function LeadsPage() {
                 </SheetHeader>
               </div>
 
-              {/* Tabs Container - Expande e gerencia o scroll internamente */}
               <Tabs defaultValue="dossie" className="flex-1 flex flex-col min-h-0">
                 <TabsList className="px-8 bg-transparent border-b border-border/30 justify-start h-12 gap-8 p-0 rounded-none w-full shrink-0">
                   <TabsTrigger 
@@ -489,7 +487,6 @@ export default function LeadsPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Área de Scroll Única para o Conteúdo das Tabs */}
                 <ScrollArea className="flex-1 min-h-0">
                   <div className="p-8">
                     <TabsContent value="dossie" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -530,13 +527,13 @@ export default function LeadsPage() {
                                       </div>
                                     </div>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-[320px] p-0 bg-[#0a0f1e] border-[#2d3748] shadow-2xl z-50 rounded-lg overflow-hidden" align="start">
+                                  <PopoverContent className="w-[340px] p-0 bg-[#0a0f1e] border-[#2d3748] shadow-2xl z-50 rounded-xl overflow-hidden" align="start">
                                     <div className="p-6 space-y-6">
                                       <div className="space-y-3">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Escolher Data</Label>
+                                        <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">ESCOLHER DATA</Label>
                                         <Input 
                                           type="date" 
-                                          className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
+                                          className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white focus:border-primary/50 text-base" 
                                           value={scheduledDate ? format(scheduledDate, "yyyy-MM-dd") : ""}
                                           onChange={(e) => {
                                             const date = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
@@ -545,9 +542,9 @@ export default function LeadsPage() {
                                         />
                                       </div>
                                       <div className="space-y-3">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
+                                        <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">HORÁRIO COMERCIAL</Label>
                                         <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                                          <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
+                                          <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white text-base">
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
@@ -561,7 +558,7 @@ export default function LeadsPage() {
                                         onClick={handleConfirmSchedule}
                                         className="w-full bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold h-14 shadow-lg rounded-lg uppercase tracking-wider text-[12px]"
                                       >
-                                        Confirmar Agendamento
+                                        CONFIRMAR AGENDAMENTO
                                       </Button>
                                     </div>
                                   </PopoverContent>
@@ -608,7 +605,6 @@ export default function LeadsPage() {
                 </ScrollArea>
               </Tabs>
 
-              {/* Footer Fixo com Botões de Ação */}
               <div className="p-8 pt-4 border-t border-border/30 bg-[#0a0f1e] grid grid-cols-2 gap-4 shrink-0">
                 <Button 
                   className="bg-[#7f1d1d] hover:bg-[#991b1b] text-white font-bold h-14 text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
