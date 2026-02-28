@@ -7,76 +7,21 @@
       "type": "object",
       "description": "Represents a client (either individual or corporate) of the legal firm, storing their complete registration information.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Client entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The client's full name or corporate name."
-        },
-        "documentNumber": {
-          "type": "string",
-          "description": "The client's CPF (individual) or CNPJ (corporate) identification number."
-        },
-        "email": {
-          "type": "string",
-          "description": "The client's primary email address.",
-          "format": "email"
-        },
-        "phone": {
-          "type": "string",
-          "description": "The client's primary phone number."
-        },
-        "address": {
-          "type": "string",
-          "description": "The client's street address."
-        },
-        "city": {
-          "type": "string",
-          "description": "The city where the client resides."
-        },
-        "state": {
-          "type": "string",
-          "description": "The state where the client resides."
-        },
-        "zipCode": {
-          "type": "string",
-          "description": "The client's postal code (CEP)."
-        },
-        "birthDateOrFoundationDate": {
-          "type": "string",
-          "description": "The client's date of birth (for individuals) or company foundation date (for corporate clients).",
-          "format": "date"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of client, e.g., 'individual' or 'corporate'."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the client record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the client record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "documentNumber": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "zipCode": { "type": "string" },
+        "birthDateOrFoundationDate": { "type": "string", "format": "date" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "documentNumber",
-        "email",
-        "phone",
-        "address",
-        "city",
-        "state",
-        "zipCode",
-        "type",
-        "createdAt"
-      ]
+      "required": ["id", "name", "documentNumber", "email", "phone", "address", "city", "state", "zipCode", "type", "createdAt"]
     },
     "StaffProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -84,51 +29,16 @@
       "type": "object",
       "description": "Represents a legal team member with their profile information and access roles.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StaffProfile entity, typically linked to Firebase Authentication user ID."
-        },
-        "googleId": {
-          "type": "string",
-          "description": "The Google User ID used for API impersonation and real-time notifications via Google Workspace integrations."
-        },
-        "name": {
-          "type": "string",
-          "description": "The staff member's full name."
-        },
-        "email": {
-          "type": "string",
-          "description": "The staff member's email address, used for login and contact.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the staff member, defining their access permissions (e.g., 'admin', 'lawyer', 'financial', 'assistant')."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Indicates whether the staff member's account is currently active."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the staff profile was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the staff profile was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "googleId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "googleId",
-        "name",
-        "email",
-        "role",
-        "isActive",
-        "createdAt"
-      ]
+      "required": ["id", "googleId", "name", "email", "role", "isActive", "createdAt"]
     },
     "Process": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -136,143 +46,22 @@
       "type": "object",
       "description": "Details of a legal process, including its current status, associated client, and key legal information.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Process entity."
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client associated with this process. (Relationship: Client 1:N Process)"
-        },
-        "processNumber": {
-          "type": "string",
-          "description": "The unique judicial process number."
-        },
-        "caseType": {
-          "type": "string",
-          "description": "The specific area of law for the case (e.g., 'Trabalhista', 'Cível')."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the process, reflecting its position in the workflow (e.g., 'Distribuição', 'Em Andamento', 'Arquivado')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description or summary of the legal case."
-        },
-        "court": {
-          "type": "string",
-          "description": "The court where the case is being processed."
-        },
-        "vara": {
-          "type": "string",
-          "description": "The specific court division or chamber handling the case."
-        },
-        "responsibleStaffId": {
-          "type": "string",
-          "description": "Reference to the StaffProfile responsible for this process. (Relationship: StaffProfile 1:N Process)"
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The official date when the process commenced.",
-          "format": "date"
-        },
-        "lastUpdateDate": {
-          "type": "string",
-          "description": "The date of the last significant event or update in the process.",
-          "format": "date"
-        },
-        "driveFolderId": {
-          "type": "string",
-          "description": "The Google Drive folder ID where all documents related to this process are stored."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the process record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the process record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "processNumber": { "type": "string" },
+        "caseType": { "type": "string" },
+        "status": { "type": "string" },
+        "description": { "type": "string" },
+        "court": { "type": "string" },
+        "vara": { "type": "string" },
+        "responsibleStaffId": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "lastUpdateDate": { "type": "string", "format": "date" },
+        "driveFolderId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "clientId",
-        "processNumber",
-        "caseType",
-        "status",
-        "description",
-        "court",
-        "responsibleStaffId",
-        "startDate",
-        "createdAt"
-      ]
-    },
-    "Defendant": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Defendant",
-      "type": "object",
-      "description": "Represents a defendant (reclamada) involved in a legal process.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Defendant entity."
-        },
-        "processId": {
-          "type": "string",
-          "description": "Reference to the Process this defendant is associated with. (Relationship: Process 1:N Defendant)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The defendant's full name or corporate name."
-        },
-        "documentNumber": {
-          "type": "string",
-          "description": "The defendant's CPF (individual) or CNPJ (corporate) identification number, if applicable."
-        },
-        "address": {
-          "type": "string",
-          "description": "The defendant's street address."
-        },
-        "city": {
-          "type": "string",
-          "description": "The city where the defendant is located."
-        },
-        "state": {
-          "type": "string",
-          "description": "The state where the defendant is located."
-        },
-        "zipCode": {
-          "type": "string",
-          "description": "The defendant's postal code (CEP)."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Any specific notes or relevant information about the defendant."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the defendant record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the defendant record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "processId",
-        "name",
-        "address",
-        "city",
-        "state",
-        "zipCode",
-        "createdAt"
-      ]
+      "required": ["id", "clientId", "processNumber", "caseType", "status", "description", "court", "responsibleStaffId", "startDate", "createdAt"]
     },
     "Lead": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -280,392 +69,30 @@
       "type": "object",
       "description": "Represents a potential client undergoing the initial CRM triaging process.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Lead entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The lead's full name."
-        },
-        "email": {
-          "type": "string",
-          "description": "The lead's email address.",
-          "format": "email"
-        },
-        "phone": {
-          "type": "string",
-          "description": "The lead's phone number."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current Kanban status of the lead (e.g., 'NOVO', 'ATENDIMENTO', 'CONTRATUAL', 'BUROCRACIA', 'DISTRIBUIÇÃO')."
-        },
-        "source": {
-          "type": "string",
-          "description": "How the lead was acquired (e.g., 'Referral', 'Website', 'Advertisement')."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Free-form notes from initial contact with the lead."
-        },
-        "legalArea": {
-          "type": "string",
-          "description": "The intended legal area of interest for the lead (e.g., 'Trabalhista', 'Cível')."
-        },
-        "triagemQuestionnaireResponses": {
-          "type": "array",
-          "description": "An array of objects storing dynamic questionnaire responses from the triaging process. Each object represents a question/answer pair or a structured response.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "assignedStaffId": {
-          "type": "string",
-          "description": "Reference to the StaffProfile assigned to manage this lead. (Relationship: StaffProfile 1:N Lead)"
-        },
-        "convertedToProcessId": {
-          "type": "string",
-          "description": "Reference to the Process entity if this lead has been successfully converted into an active process. (Relationship: Lead 1:1 Process, optional)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the lead record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the lead record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "status": { "type": "string" },
+        "legalArea": { "type": "string" },
+        "notes": { "type": "string" },
+        "assignedStaffId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "phone",
-        "status",
-        "legalArea",
-        "assignedStaffId",
-        "createdAt"
-      ]
-    },
-    "Hearing": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Hearing",
-      "type": "object",
-      "description": "Details of a scheduled legal hearing or client appointment, integrated with Google Calendar.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Hearing entity."
-        },
-        "processId": {
-          "type": "string",
-          "description": "Reference to the Process related to this hearing. (Relationship: Process 1:N Hearing)"
-        },
-        "staffId": {
-          "type": "string",
-          "description": "Reference to the StaffProfile participating in this hearing. (Relationship: StaffProfile 1:N Hearing)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the event (e.g., 'Audiência Trabalhista', 'Atendimento ao Cliente')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the hearing or appointment."
-        },
-        "startDateTime": {
-          "type": "string",
-          "description": "The scheduled start date and time of the hearing.",
-          "format": "date-time"
-        },
-        "endDateTime": {
-          "type": "string",
-          "description": "The scheduled end date and time of the hearing.",
-          "format": "date-time"
-        },
-        "location": {
-          "type": "string",
-          "description": "The physical address or virtual meeting link for the hearing."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of event (e.g., 'Audiência', 'Atendimento', 'Reunião Interna')."
-        },
-        "googleCalendarEventId": {
-          "type": "string",
-          "description": "The unique ID of the corresponding event in Google Calendar for bidirectional synchronization."
-        },
-        "notificationSent": {
-          "type": "boolean",
-          "description": "Indicates whether a WhatsApp notification for this hearing has been sent."
-        },
-        "postActStatus": {
-          "type": "string",
-          "description": "The status after the event, used for follow-ups (e.g., 'Acordo', 'Pendente', 'Reagendado')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the hearing record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the hearing record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "processId",
-        "staffId",
-        "title",
-        "startDateTime",
-        "endDateTime",
-        "location",
-        "type",
-        "createdAt"
-      ]
-    },
-    "Deadline": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Deadline",
-      "type": "object",
-      "description": "Tracks judicial deadlines, including automated calculation and AI-parsed information from official publications.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Deadline entity."
-        },
-        "processId": {
-          "type": "string",
-          "description": "Reference to the Process to which this deadline belongs. (Relationship: Process 1:N Deadline)"
-        },
-        "staffId": {
-          "type": "string",
-          "description": "Reference to the StaffProfile responsible for this deadline. (Relationship: StaffProfile 1:N Deadline)"
-        },
-        "title": {
-          "type": "string",
-          "description": "A brief description of the deadline (e.g., 'Contestação', 'Recurso Ordinário')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A more detailed explanation of the deadline and required action."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The calculated official due date for the deadline.",
-          "format": "date"
-        },
-        "calculationType": {
-          "type": "string",
-          "description": "The method used for calculating the due date (e.g., 'Dias Úteis (CPC)', 'Dias Corridos')."
-        },
-        "publicationDate": {
-          "type": "string",
-          "description": "The date of the official publication in the DJE (Diário da Justiça Eletrônico).",
-          "format": "date"
-        },
-        "publicationText": {
-          "type": "string",
-          "description": "The raw text content from the DJE publication related to this deadline."
-        },
-        "extractedDueDate": {
-          "type": "string",
-          "description": "The due date automatically extracted by the AI parser from the publication text (for verification).",
-          "format": "date"
-        },
-        "extractedDeadlineType": {
-          "type": "string",
-          "description": "The type of deadline automatically extracted by the AI parser."
-        },
-        "googleTaskId": {
-          "type": "string",
-          "description": "The unique ID of the corresponding task in Google Tasks for staff management."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the deadline (e.g., 'Aberto', 'Concluído', 'Vencido')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the deadline record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the deadline record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "processId",
-        "staffId",
-        "title",
-        "dueDate",
-        "calculationType",
-        "publicationDate",
-        "publicationText",
-        "status",
-        "createdAt"
-      ]
-    },
-    "FinancialTitle": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FinancialTitle",
-      "type": "object",
-      "description": "Records financial movements, including honorariums, costs, and repasses, related to legal cases and clients.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FinancialTitle entity."
-        },
-        "processId": {
-          "type": "string",
-          "description": "Reference to the Process associated with this financial entry, if applicable. (Relationship: Process 0:1 FinancialTitle)"
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client associated with this financial entry. (Relationship: Client 1:N FinancialTitle)"
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of what the financial entry is for (e.g., 'Honorários iniciais', 'Custas processuais')."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of financial transaction (e.g., 'Honorário', 'Custo Processual', 'Repasse', 'Reembolso')."
-        },
-        "value": {
-          "type": "number",
-          "description": "The monetary amount of the financial entry."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The date when the payment is expected or due.",
-          "format": "date"
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date when the payment was actually received or made.",
-          "format": "date"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the financial title (e.g., 'Pendente', 'Recebido', 'Vencido', 'Estornado')."
-        },
-        "receiptGenerated": {
-          "type": "boolean",
-          "description": "Indicates whether a professional receipt for this entry has been generated."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the financial title record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the financial title record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "clientId",
-        "description",
-        "type",
-        "value",
-        "dueDate",
-        "status",
-        "createdAt"
-      ]
-    },
-    "StaffCredit": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StaffCredit",
-      "type": "object",
-      "description": "Manages the credit system for legal staff, tracking retained and available honorarium shares and payouts.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StaffCredit entity."
-        },
-        "staffId": {
-          "type": "string",
-          "description": "Reference to the StaffProfile to whom this credit belongs. (Relationship: StaffProfile 1:N StaffCredit)"
-        },
-        "financialTitleId": {
-          "type": "string",
-          "description": "Reference to the FinancialTitle from which this credit originated. (Relationship: FinancialTitle 1:N StaffCredit)"
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the credit entry (e.g., 'Share of Honorarium for Process XXX')."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the credit."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the credit (e.g., 'Retido', 'Disponível', 'Pago')."
-        },
-        "releaseDate": {
-          "type": "string",
-          "description": "The date when the credit became available for payout to the staff member, typically after client payment confirmation.",
-          "format": "date"
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date when the credit was paid out to the staff member.",
-          "format": "date"
-        },
-        "honorariumPercentage": {
-          "type": "number",
-          "description": "The percentage of the honorarium applied to calculate this credit (e.g., 30%)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the staff credit record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the staff credit record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "staffId",
-        "financialTitleId",
-        "description",
-        "amount",
-        "status",
-        "createdAt"
-      ]
+      "required": ["id", "name", "email", "phone", "status", "legalArea", "assignedStaffId", "createdAt"]
     },
     "Checklist": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Checklist",
       "type": "object",
-      "description": "Represents a strategic or operational checklist template for firm standardization.",
+      "description": "Strategic or operational checklist template, including interview models for specific legal areas.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string",
-          "description": "Title of the checklist protocol."
-        },
-        "category": {
-          "type": "string",
-          "enum": ["Estratégico", "Qualidade", "Compliance", "Operacional"]
-        },
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["Operacional", "Financeiro", "Entrevista de Triagem", "Comercial", "Gestão"] },
+        "legalArea": { "type": "string", "description": "Used specifically for Interview Models to link with Lead areas." },
         "items": {
           "type": "array",
           "items": {
@@ -676,129 +103,23 @@
             }
           }
         },
-        "progress": {
-          "type": "number"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "progress": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "category", "items", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "google"
-    ]
+    "providers": ["password", "google"]
   },
   "firestore": {
     "structure": [
-      {
-        "path": "/staff_profiles/{staffId}",
-        "definition": {
-          "entityName": "StaffProfile",
-          "schema": {
-            "$ref": "#/backend/entities/StaffProfile"
-          },
-          "description": "Stores individual staff member profiles and their assigned roles."
-        }
-      },
-      {
-        "path": "/clients/{clientId}",
-        "definition": {
-          "entityName": "Client",
-          "schema": {
-            "$ref": "#/backend/entities/Client"
-          },
-          "description": "Maintains comprehensive registration data for legal clients."
-        }
-      },
-      {
-        "path": "/processes/{processId}",
-        "definition": {
-          "entityName": "Process",
-          "schema": {
-            "$ref": "#/backend/entities/Process"
-          },
-          "description": "Contains details for each legal process."
-        }
-      },
-      {
-        "path": "/defendants/{defendantId}",
-        "definition": {
-          "entityName": "Defendant",
-          "schema": {
-            "$ref": "#/backend/entities/Defendant"
-          },
-          "description": "Registers defendants associated with legal processes."
-        }
-      },
-      {
-        "path": "/leads/{leadId}",
-        "definition": {
-          "entityName": "Lead",
-          "schema": {
-            "$ref": "#/backend/entities/Lead"
-          },
-          "description": "Manages potential client leads through a Kanban workflow."
-        }
-      },
-      {
-        "path": "/hearings/{hearingId}",
-        "definition": {
-          "entityName": "Hearing",
-          "schema": {
-            "$ref": "#/backend/entities/Hearing"
-          },
-          "description": "Schedules and tracks legal hearings and appointments."
-        }
-      },
-      {
-        "path": "/deadlines/{deadlineId}",
-        "definition": {
-          "entityName": "Deadline",
-          "schema": {
-            "$ref": "#/backend/entities/Deadline"
-          },
-          "description": "Tracks critical judicial deadlines."
-        }
-      },
-      {
-        "path": "/financial_titles/{financialTitleId}",
-        "definition": {
-          "entityName": "FinancialTitle",
-          "schema": {
-            "$ref": "#/backend/entities/FinancialTitle"
-          },
-          "description": "Records all financial transactions."
-        }
-      },
-      {
-        "path": "/staff_credits/{staffCreditId}",
-        "definition": {
-          "entityName": "StaffCredit",
-          "schema": {
-            "$ref": "#/backend/entities/StaffCredit"
-          },
-          "description": "Manages individual staff member's honorarium credits."
-        }
-      },
-      {
-        "path": "/checklists/{checklistId}",
-        "definition": {
-          "entityName": "Checklist",
-          "schema": {
-            "$ref": "#/backend/entities/Checklist"
-          },
-          "description": "Stores firm standardization protocols and compliance checklists."
-        }
-      }
+      { "path": "/staff_profiles/{staffId}", "definition": { "entityName": "StaffProfile", "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." } },
+      { "path": "/clients/{clientId}", "definition": { "entityName": "Client", "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." } },
+      { "path": "/processes/{processId}", "definition": { "entityName": "Process", "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." } },
+      { "path": "/leads/{leadId}", "definition": { "entityName": "Lead", "schema": { "$ref": "#/backend/entities/Lead" }, "description": "Lead triaging data." } },
+      { "path": "/checklists/{checklistId}", "definition": { "entityName": "Checklist", "schema": { "$ref": "#/backend/entities/Checklist" }, "description": "Firm standardization protocols and interview models." } }
     ]
   }
 }
