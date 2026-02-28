@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Client": {
@@ -647,12 +648,53 @@
         "status",
         "createdAt"
       ]
+    },
+    "Checklist": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Checklist",
+      "type": "object",
+      "description": "Represents a strategic or operational checklist template for firm standardization.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the checklist protocol."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Estratégico", "Qualidade", "Compliance", "Operacional"]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "completed": { "type": "boolean" }
+            }
+          }
+        },
+        "progress": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "title", "category", "items", "createdAt"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "google"
     ]
   },
   "firestore": {
@@ -664,7 +706,7 @@
           "schema": {
             "$ref": "#/backend/entities/StaffProfile"
           },
-          "description": "Stores individual staff member profiles and their assigned roles. This collection serves as the central authority for Role-Based Access Control (DBAC). Each document's 'id' matches the Firebase Authentication UID. Access is restricted to the staff member themselves (read/update) and 'admin' role (full control). This design enables QAPs for fetching a user's own profile and for admins to list all staff. Authorization rules will perform a direct 'get()' on this collection to retrieve the current user's role."
+          "description": "Stores individual staff member profiles and their assigned roles."
         }
       },
       {
@@ -674,7 +716,7 @@
           "schema": {
             "$ref": "#/backend/entities/Client"
           },
-          "description": "Maintains comprehensive registration data for legal clients. Documents in this collection will include a denormalized 'responsibleStaffIds' array (list of UIDs derived from associated processes), allowing 'lawyer' roles to query and list clients they are connected to, supporting QAPs. 'admin' and 'financial' roles have broader access. Denormalizing staff IDs avoids 'get()' calls to other collections when authorizing client data."
+          "description": "Maintains comprehensive registration data for legal clients."
         }
       },
       {
@@ -684,7 +726,7 @@
           "schema": {
             "$ref": "#/backend/entities/Process"
           },
-          "description": "Contains details for each legal process. Each document explicitly includes 'responsibleStaffId' to enable 'lawyer' roles to easily query and access only their assigned processes, ensuring QAPs without needing 'get()' on parent/related data. 'clientId' is also present for direct client association. 'admin' and 'financial' roles have broader access."
+          "description": "Contains details for each legal process."
         }
       },
       {
@@ -694,7 +736,7 @@
           "schema": {
             "$ref": "#/backend/entities/Defendant"
           },
-          "description": "Registers defendants associated with legal processes. Each document denormalizes 'processId', 'clientId', and 'processResponsibleStaffId' (from the parent Process) to ensure Authorization Independence. This allows security rules to evaluate access without 'get()' calls to the 'processes' or 'clients' collections, directly supporting QAPs for listing defendants related to a specific staff member's processes."
+          "description": "Registers defendants associated with legal processes."
         }
       },
       {
@@ -704,7 +746,7 @@
           "schema": {
             "$ref": "#/backend/entities/Lead"
           },
-          "description": "Manages potential client leads through a Kanban workflow. Documents include 'assignedStaffId', allowing 'lawyer' and 'assistant' roles to query and manage only their assigned leads, fulfilling QAP requirements. 'admin' role has full access."
+          "description": "Manages potential client leads through a Kanban workflow."
         }
       },
       {
@@ -714,7 +756,7 @@
           "schema": {
             "$ref": "#/backend/entities/Hearing"
           },
-          "description": "Schedules and tracks legal hearings and appointments. Each document denormalizes 'processId', 'clientId', 'processResponsibleStaffId' (from the associated Process), and includes its own 'staffId' (the participant). This structure ensures Authorization Independence and QAPs, allowing relevant staff members to list and access hearings directly without 'get()' operations on related process or client data."
+          "description": "Schedules and tracks legal hearings and appointments."
         }
       },
       {
@@ -724,7 +766,7 @@
           "schema": {
             "$ref": "#/backend/entities/Deadline"
           },
-          "description": "Tracks critical judicial deadlines. Documents denormalize 'processId', 'clientId', 'processResponsibleStaffId' (from the associated Process), and include their own 'staffId' (the responsible individual for the deadline). This design guarantees Authorization Independence and QAPs, enabling staff to access and list deadlines pertinent to their assigned cases or responsibilities directly."
+          "description": "Tracks critical judicial deadlines."
         }
       },
       {
@@ -734,7 +776,7 @@
           "schema": {
             "$ref": "#/backend/entities/FinancialTitle"
           },
-          "description": "Records all financial transactions. Documents include 'clientId' and optionally 'processId'. For financial entries linked to a process, 'processResponsibleStaffId' (denormalized from the Process) is included. This ensures Authorization Independence and QAPs, allowing 'financial' and 'admin' roles to manage all entries, and 'lawyer' roles to view entries specifically related to their processes without hierarchical lookups."
+          "description": "Records all financial transactions."
         }
       },
       {
@@ -744,10 +786,19 @@
           "schema": {
             "$ref": "#/backend/entities/StaffCredit"
           },
-          "description": "Manages individual staff member's honorarium credits. Each document explicitly contains 'staffId', making it easy for staff members to query their own credits (QAPs) and for 'financial'/'admin' roles to manage credits across the firm. This provides strong authorization independence for credit management."
+          "description": "Manages individual staff member's honorarium credits."
+        }
+      },
+      {
+        "path": "/checklists/{checklistId}",
+        "definition": {
+          "entityName": "Checklist",
+          "schema": {
+            "$ref": "#/backend/entities/Checklist"
+          },
+          "description": "Stores firm standardization protocols and compliance checklists."
         }
       }
-    ],
-    "reasoning": "The Firestore data structure for LexFlow ERP is meticulously designed to meet the demands of a high-performance legal ERP system, with paramount focus on security, scalability, and debuggability. This design strictly adheres to the core principles of Authorization Independence, Queryable Access Patterns (QAPs), and structural clarity.\n\n**Authorization Independence via Denormalization (CRITICAL):**\nThe most critical aspect of this design is the elimination of hierarchical authorization dependencies, meaning Firestore security rules will *not* rely on `get()` calls to parent documents for access control of sub-entities. This strategy ensures atomic operations (transactions/batches) remain unhindered and rules are easier to debug and maintain.\n\n1.  **StaffProfile as Central Role Authority:** The `/staff_profiles/{staffId}` collection is the single, permissible exception for a `get()` call in security rules. This is used solely to retrieve the authenticated user's own role (e.g., 'admin', 'lawyer', 'financial'). This initial lookup provides the foundational context for all subsequent authorization decisions.\n2.  **Top-Level Collections for Related Entities:** Entities such as `Defendant`, `Hearing`, and `Deadline`, while logically children of a `Process`, are maintained as top-level collections. This avoids the complex and performance-impacting `get()` calls to parent `Process` documents within security rules.\n3.  **Denormalized Authorization Context:** To achieve Authorization Independence and support QAPs, relevant authorization fields from parent or related entities are denormalized into the documents themselves:\n    *   **Client:** Each `Client` document will include a denormalized array `responsibleStaffIds: string[]`. This array aggregates the UIDs of all staff members who are designated as `responsibleStaffId` for *any* `Process` linked to that client. This enables `lawyer` roles to directly query and list clients they are involved with.\n    *   **Process:** The `responsibleStaffId` field is already part of the `Process` schema, directly linking the process to the managing staff member. This is ideal for secure, lawyer-specific access and efficient queries.\n    *   **Defendant, Hearing, Deadline:** These documents denormalize `clientId` and `processResponsibleStaffId` (the `responsibleStaffId` from their associated `Process`) in addition to their direct `processId` and (for `Hearing` and `Deadline`) their specific `staffId`. This allows security rules to evaluate access to these documents purely based on their own fields, enabling efficient listing for staff without requiring `get()` operations on parent `Process` or `Client` documents.\n    *   **FinancialTitle:** When a financial entry is related to a specific `Process` (indicated by `processId`), the `processResponsibleStaffId` (denormalized from that `Process`) is included. This permits `lawyer` roles to access financial items pertinent to their assigned cases.\n    *   **Lead & StaffCredit:** These entities inherently contain `assignedStaffId` and `staffId` respectively, which directly fulfill their authorization requirements without further denormalization.\n\n**Queryable Access Patterns (QAPs):**\nThe denormalization strategy is paramount for supporting QAPs. All fields necessary for authorization (e.g., `responsibleStaffId`, `assignedStaffId`, `staffId`, `processResponsibleStaffId`, `responsibleStaffIds`) are directly present in the documents. This allows client-side queries to include `where` clauses (e.g., `where('responsibleStaffId', '==', request.auth.uid)`), which are then securely verified by Firestore rules. This ensures that: \n*   Users only receive data they are explicitly authorized to see.\n*   Filtering is applied server-side by Firestore, preventing data leakage and minimizing the load on client applications.\n\n**Structural Segregation (Homogeneous Security Posture):**\nEach collection is designed to hold documents that share the same security posture. For instance, all documents within `/leads` adhere to rules based on `assignedStaffId` or broader roles like `admin`/`assistant`. This segregation prevents the need for complex, conditional logic within security rules based on document content, greatly simplifying rule definitions and making them more predictable and debuggable.\n\n**Access Modeling:**\n*   **Private Data:** `staff_profiles/{staffId}` represents user-owned private data. \n*   **DBAC (Database-Based Access Control):** Roles are stored and managed directly within the `StaffProfile` documents in the database, avoiding custom claims and centralizing role management.\n*   **Hierarchical Paths for User-Owned Data:** While not extensively used for all data (due to the denormalization for QAPs), `staff_profiles/{staffId}` exemplifies path-based ownership for individual profiles.\n\nThis architecture guarantees that LexFlow ERP will have a secure, scalable, and easily maintainable Firestore backend, optimized for performance and developer experience."
+    ]
   }
 }
