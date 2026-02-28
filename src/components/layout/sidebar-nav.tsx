@@ -18,7 +18,8 @@ import {
   Wallet, 
   Contact, 
   Settings,
-  Scale
+  Scale,
+  Users2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -58,9 +59,10 @@ const menuGroups = [
     ]
   },
   {
-    title: "TECNOLOGIA (GESTÃO)",
+    title: "GESTÃO (D.P.)",
     items: [
-      { name: "Equipe", href: "/team", icon: Contact },
+      { name: "Departamento Pessoal", href: "/staff", icon: Users2 },
+      { name: "Equipe (Acessos)", href: "/team", icon: Contact },
       { name: "Configurações", href: "/settings", icon: Settings },
     ]
   }
