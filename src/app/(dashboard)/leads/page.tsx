@@ -22,7 +22,8 @@ import {
   Brain,
   Scale,
   Hash,
-  Type
+  Type,
+  Loader2
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -42,7 +43,7 @@ import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
-import { collection, query, serverTimestamp, doc, where } from "firebase/firestore"
+import { collection, query, serverTimestamp, doc, where, limit } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 
 const columns = [
@@ -58,9 +59,10 @@ export default function LeadsPage() {
   const { user } = useUser()
   const { toast } = useToast()
 
+  // Otimização: Limite de 100 leads para Spark Tier
   const leadsQuery = useMemoFirebase(() => {
     if (!user) return null
-    return query(collection(db, "leads"))
+    return query(collection(db, "leads"), limit(100))
   }, [db, user])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
@@ -133,38 +135,45 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
-        {columns.map((col) => {
-          const leadsInCol = leads.filter(l => l.status === col.id)
-          return (
-            <div key={col.id} className="min-w-[300px] flex-1">
-              <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${col.color.replace('text-', 'bg-')}`} />
-                  <h3 className={`font-bold text-[10px] tracking-[0.2em] uppercase ${col.color}`}>{col.title}</h3>
+      {isLoading ? (
+        <div className="py-32 flex flex-col items-center justify-center space-y-4 glass rounded-3xl border-dashed">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Funil de Vendas...</span>
+        </div>
+      ) : (
+        <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
+          {columns.map((col) => {
+            const leadsInCol = leads.filter(l => l.status === col.id)
+            return (
+              <div key={col.id} className="min-w-[300px] flex-1">
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${col.color.replace('text-', 'bg-')}`} />
+                    <h3 className={`font-bold text-[10px] tracking-[0.2em] uppercase ${col.color}`}>{col.title}</h3>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/50 text-[10px] border-white/5">{leadsInCol.length}</Badge>
                 </div>
-                <Badge variant="secondary" className="bg-secondary/50 text-[10px] border-white/5">{leadsInCol.length}</Badge>
+                <div className="space-y-4">
+                  {leadsInCol.map((lead) => (
+                    <Card key={lead.id} className="glass hover-gold transition-all cursor-pointer group relative overflow-hidden" onClick={() => handleOpenLead(lead)}>
+                      <CardContent className="p-5 space-y-4">
+                        <div>
+                          <div className="font-bold text-base text-white group-hover:text-primary transition-colors uppercase tracking-tight">{lead.name}</div>
+                          <div className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-1">Área: {lead.type}</div>
+                        </div>
+                        <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                          <Badge variant="outline" className="text-[8px] uppercase border-primary/20 text-primary bg-primary/5">Lead Ativo</Badge>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-4">
-                {leadsInCol.map((lead) => (
-                  <Card key={lead.id} className="glass hover-gold transition-all cursor-pointer group relative overflow-hidden" onClick={() => handleOpenLead(lead)}>
-                    <CardContent className="p-5 space-y-4">
-                      <div>
-                        <div className="font-bold text-base text-white group-hover:text-primary transition-colors uppercase tracking-tight">{lead.name}</div>
-                        <div className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-1">Área: {lead.type}</div>
-                      </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                        <Badge variant="outline" className="text-[8px] uppercase border-primary/20 text-primary bg-primary/5">Lead Ativo</Badge>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full sm:max-w-3xl glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]">

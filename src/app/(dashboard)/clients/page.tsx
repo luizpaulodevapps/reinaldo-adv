@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, limit } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { 
   Search, 
@@ -33,9 +33,10 @@ export default function ClientsPage() {
   const { user } = useUser()
   const { toast } = useToast()
 
+  // Otimização: Spark Tier Protection
   const clientsQuery = useMemoFirebase(() => {
     if (!user) return null
-    return query(collection(db, "clients"), orderBy("name", "asc"))
+    return query(collection(db, "clients"), orderBy("name", "asc"), limit(100))
   }, [db, user])
 
   const { data: clientsData, isLoading } = useCollection(clientsQuery)
@@ -62,7 +63,7 @@ export default function ClientsPage() {
       phone: data.phone || "",
       type: data.personType === 'Pessoa Jurídica' ? 'corporate' : 'individual',
       status: data.registrationStatus,
-      registrationData: data, // Salva o objeto completo para não perder campos novos
+      registrationData: data,
       responsibleStaffIds: [user.uid],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -214,5 +215,3 @@ export default function ClientsPage() {
     </div>
   )
 }
-
-    

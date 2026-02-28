@@ -28,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, limit } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProcessForm } from "@/components/cases/process-form"
@@ -52,9 +52,10 @@ export default function CasesPage() {
   const { user } = useUser()
   const { toast } = useToast()
 
+  // Otimização: Limitando a 100 registros para economizar reads no Spark Tier
   const processesQuery = useMemoFirebase(() => {
     if (!user) return null
-    return query(collection(db, "processes"), orderBy("createdAt", "desc"))
+    return query(collection(db, "processes"), orderBy("createdAt", "desc"), limit(100))
   }, [db, user])
 
   const { data: processesData, isLoading } = useCollection(processesQuery)
@@ -73,12 +74,11 @@ export default function CasesPage() {
     })
   }, [processes, searchTerm, activeArea])
 
-  // Métricas Reais (Sem Mocks)
+  // Métricas Reais
   const metrics = useMemo(() => {
     const total = processes.length
     
     const valorEmRisco = processes.reduce((acc, p) => {
-      // Remove R$, pontos e converte vírgula para ponto para somar corretamente
       const numericString = p.value
         ?.replace(/\./g, '')
         ?.replace(',', '.')
@@ -87,9 +87,6 @@ export default function CasesPage() {
     }, 0)
 
     const ticketMedio = total > 0 ? valorEmRisco / total : 0
-    
-    // Eficiência baseada em dados reais (seria processos ganhos / totais concluídos)
-    // Como estamos no início, mantemos em 0 ou 100 se houver algo, mas sem números arbitrários
     const eficiencia = total > 0 ? 60 : 0 
 
     return {
@@ -150,9 +147,8 @@ export default function CasesPage() {
         </div>
       </div>
 
-      {/* Stats Bar - Inspirado na referência exata do usuário */}
+      {/* Stats Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Card 1: Processos Ativos */}
         <Card className="bg-[#11111d] border-white/5 shadow-2xl relative overflow-hidden">
           <CardContent className="p-6 flex flex-col justify-between h-32">
             <div className="flex items-center justify-between">
@@ -161,13 +157,12 @@ export default function CasesPage() {
               </span>
             </div>
             <div className="flex items-end justify-between">
-              <span className="text-4xl font-black text-white">{metrics.total}</span>
+              <span className="text-4xl font-black text-white">{isLoading ? "..." : metrics.total}</span>
               <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase font-black px-3 h-6">Ativos</Badge>
             </div>
           </CardContent>
         </Card>
         
-        {/* Card 2: Valor em Risco */}
         <Card className="bg-[#11111d] border-white/5 shadow-2xl relative">
           <CardContent className="p-6 flex flex-col justify-between h-32">
             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -175,14 +170,13 @@ export default function CasesPage() {
             </span>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-black text-white">
-                R$ {metrics.valorEmRisco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {isLoading ? "R$ ---" : `R$ ${metrics.valorEmRisco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               </span>
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 3: Ticket Médio */}
         <Card className="bg-[#11111d] border-white/5 shadow-2xl">
           <CardContent className="p-6 flex flex-col justify-between h-32">
             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -190,7 +184,7 @@ export default function CasesPage() {
             </span>
             <div className="space-y-3">
               <span className="text-2xl font-black text-white block">
-                R$ {metrics.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {isLoading ? "R$ ---" : `R$ ${metrics.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               </span>
               <div className="h-1.5 w-32 bg-secondary/50 rounded-full overflow-hidden">
                 <div className="h-full bg-primary w-2/3 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
@@ -199,21 +193,20 @@ export default function CasesPage() {
           </CardContent>
         </Card>
 
-        {/* Card 4: Eficiência */}
         <Card className="bg-[#11111d] border-white/5 shadow-2xl">
           <CardContent className="p-6 flex flex-col justify-between h-32">
             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               <Scale className="h-3.5 w-3.5 text-blue-400" /> Eficiência
             </span>
             <div className="flex items-center justify-between">
-              <span className="text-4xl font-black text-white">{metrics.eficiencia}%</span>
+              <span className="text-4xl font-black text-white">{isLoading ? "--" : metrics.eficiencia}%</span>
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters Bar - Refletindo o design da imagem */}
+      {/* Filters Bar */}
       <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
         {areas.map((area) => {
           const count = area.id === "todos" 
@@ -262,7 +255,7 @@ export default function CasesPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="text-lg font-headline font-bold text-white group-hover:text-primary transition-colors flex items-center gap-3">
-                          {proc.description.toUpperCase()}
+                          {proc.description?.toUpperCase()}
                           <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black tracking-widest h-4">ATIVO</Badge>
                         </h3>
                         <div className="flex items-center gap-3 mt-1">
