@@ -18,23 +18,19 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase"
-import { collection, query, orderBy, doc } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
+import { collection, query, orderBy } from "firebase/firestore"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const db = useFirestore()
-  const { user, isUserLoading } = useUser()
+  const { user, isUserLoading, role } = useUser()
 
-  // Sincroniza perfil para autorização de query
-  const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
-  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef)
-  
-  // Dr. Reinaldo tem acesso garantido pelo e-mail
+  // Dr. Reinaldo tem acesso garantido pelo e-mail ou pela role na sessão
   const isOwner = user?.email === 'luizao16@gmail.com'
-  const canQuery = !!(user && (isOwner || (profile && profile.role)))
+  const canQuery = !!(user && (isOwner || role))
 
   // Busca todos os títulos financeiros - SÓ dispara se canQuery for true
   const financialQuery = useMemoFirebase(() => {
@@ -44,7 +40,7 @@ export default function BillingPage() {
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
 
-  const isLoading = isUserLoading || (isProfileLoading && !isOwner) || isLoadingTransactions
+  const isLoading = isUserLoading || isLoadingTransactions
 
   // Cálculos de métricas baseados no real
   const stats = useMemo(() => {

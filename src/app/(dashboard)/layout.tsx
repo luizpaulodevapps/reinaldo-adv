@@ -13,26 +13,33 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { auth, user, isUserLoading, firestore: db } = useFirebase();
+  const { auth, user, isUserLoading, firestore: db, setProfile, profile, role } = useFirebase();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Monitora o perfil do staff em tempo real
+  // Monitora o perfil do staff em tempo real apenas para carregar na sessão inicial
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'staff_profiles', user.uid);
   }, [user, db]);
 
-  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+  const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // Identifica se é o administrador principal pelo e-mail
+  // Identifica se é o proprietário pelo e-mail
   const isOwner = user?.email === 'luizao16@gmail.com';
 
+  // Sincroniza o perfil carregado com a sessão global do FirebaseProvider
   useEffect(() => {
-    // Se o usuário logar, garantimos que o perfil exista
-    if (user && db && profile === null && !isProfileLoading) {
+    if (profileData && !profile) {
+      setProfile(profileData);
+    }
+  }, [profileData, profile, setProfile]);
+
+  useEffect(() => {
+    // Se o usuário logar e não tiver perfil, criamos ou garantimos que exista
+    if (user && db && profileData === null && !isProfileLoading) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
       
-      setDocumentNonBlocking(newProfileRef, {
+      const initialProfile = {
         id: user.uid,
         googleId: user.uid,
         name: user.displayName || 'Membro da Equipe',
@@ -41,9 +48,12 @@ export default function DashboardLayout({
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }, { merge: true });
+      };
+
+      setDocumentNonBlocking(newProfileRef, initialProfile, { merge: true });
+      setProfile(initialProfile);
     }
-  }, [user, db, profile, isProfileLoading, isOwner]);
+  }, [user, db, profileData, isProfileLoading, isOwner, setProfile]);
 
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -58,7 +68,7 @@ export default function DashboardLayout({
     }
   };
 
-  // 1. Carregamento de Autenticação
+  // 1. Carregamento de Autenticação Inicial
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
@@ -127,9 +137,9 @@ export default function DashboardLayout({
     );
   }
 
-  // 3. Aguarda Perfil do Usuário
-  // Para o administrador principal (isOwner), liberamos acesso imediato pois as regras de segurança validam o e-mail diretamente.
-  if (!isOwner && (isProfileLoading || !profile || !profile.role)) {
+  // 3. Aguarda Perfil do Usuário na Sessão
+  // O Dono (isOwner) tem permissão imediata, outros aguardam a role ser confirmada
+  if (!isOwner && !role && isProfileLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
         <div className="w-16 h-16 rounded-2xl border border-primary/20 flex items-center justify-center animate-bounce">
@@ -143,7 +153,7 @@ export default function DashboardLayout({
     );
   }
 
-  // 4. Layout do Dashboard
+  // 4. Layout do Dashboard - Renderiza apenas após autenticação e role estabilizada
   return (
     <div className="flex min-h-screen">
       <aside className="w-72 glass border-r border-border/50 hidden md:block sticky top-0 h-screen overflow-y-auto">
