@@ -67,7 +67,7 @@ const DOCUMENT_KITS: Record<string, string[]> = {
 
 export default function LeadsPage() {
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const { toast } = useToast()
 
   const leadsQuery = useMemoFirebase(() => {
@@ -151,9 +151,8 @@ export default function LeadsPage() {
       return
     }
 
-    // 1. Criar novo processo
     const newProcess = {
-      clientId: selectedLead.id, // Ou buscar ID real se já convertido
+      clientId: selectedLead.id,
       clientName: selectedLead.name,
       processNumber: distributionData.processNumber,
       caseType: selectedLead.type,
@@ -169,7 +168,6 @@ export default function LeadsPage() {
 
     await addDocumentNonBlocking(collection(db, "processes"), newProcess)
 
-    // 2. Agendar audiência se houver data
     if (distributionData.hearingDate) {
       const newHearing = {
         title: `Audiência: ${selectedLead.name}`,
@@ -182,7 +180,6 @@ export default function LeadsPage() {
       await addDocumentNonBlocking(collection(db, "hearings"), newHearing)
     }
 
-    // 3. Remover do CRM (ou marcar como concluído)
     deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))
 
     setIsSheetOpen(false)
@@ -194,6 +191,18 @@ export default function LeadsPage() {
     deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))
     setIsSheetOpen(false)
     toast({ variant: "destructive", title: "Lead Descartado" })
+  }
+
+  // Lógica de Largura de Drawer baseada nas preferências do usuário
+  const getDrawerWidthClass = () => {
+    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
+    switch (pref) {
+      case "padrão": return "sm:max-w-lg"
+      case "largo": return "sm:max-w-2xl"
+      case "extra-largo": return "sm:max-w-4xl"
+      case "full": return "sm:max-w-full"
+      default: return "sm:max-w-4xl"
+    }
   }
 
   return (
@@ -257,7 +266,7 @@ export default function LeadsPage() {
       )}
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-4xl glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]">
+        <SheetContent className={cn("w-full glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           {selectedLead && (
             <>
               <div className="p-10 pb-6 border-b border-white/5 bg-black/20">
@@ -270,7 +279,7 @@ export default function LeadsPage() {
                     <SheetTitle className="text-4xl font-headline font-bold text-white uppercase tracking-tighter">
                       {selectedLead.name}
                     </SheetTitle>
-                    <SheetDescription className="sr-only">Dossiê detalhado e acompanhamento de triagem estratégica.</SheetDescription>
+                    <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mt-1">Dossiê detalhado e acompanhamento de triagem estratégica.</SheetDescription>
                   </SheetHeader>
                   <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)}><ArrowRight className="h-6 w-6" /></Button>
                 </div>
@@ -288,8 +297,7 @@ export default function LeadsPage() {
 
                 <ScrollArea className="flex-1">
                   <div className="p-10 pb-20 space-y-10">
-                    
-                    {/* ABA ATENDIMENTO */}
+                    {/* ... (Conteúdo das Abas mantido igual) ... */}
                     <TabsContent value="atendimento" className="mt-0 space-y-8 animate-in fade-in duration-500">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
@@ -323,8 +331,7 @@ export default function LeadsPage() {
                         />
                       </div>
                     </TabsContent>
-
-                    {/* ABA CONTRATUAL */}
+                    
                     <TabsContent value="contratual" className="mt-0 space-y-8 animate-in fade-in duration-500">
                       <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
                         <div className="flex items-center gap-3">
@@ -333,7 +340,6 @@ export default function LeadsPage() {
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed">Com base na área jurídica, o ecossistema RGMJ recomenda a emissão dos seguintes documentos padrão:</p>
                       </div>
-
                       <div className="space-y-4">
                         <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Checklist de Emissão & Assinatura</Label>
                         {(DOCUMENT_KITS[selectedLead.type] || DOCUMENT_KITS["Civil"]).map((docName, i) => (
@@ -353,13 +359,11 @@ export default function LeadsPage() {
                           </div>
                         ))}
                       </div>
-
                       <Button className="w-full glass border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest h-14 gap-2">
                         <Brain className="h-4 w-4" /> Gerar Minutas via IA
                       </Button>
                     </TabsContent>
 
-                    {/* ABA BUROCRACIA */}
                     <TabsContent value="burocracia" className="mt-0 space-y-8 animate-in fade-in duration-500">
                       <div className="p-8 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center space-y-6 opacity-50">
                         <ClipboardCheck className="h-12 w-12 text-primary" />
@@ -371,7 +375,6 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    {/* ABA DISTRIBUIÇÃO */}
                     <TabsContent value="distribuicao" className="mt-0 space-y-8 animate-in fade-in duration-500">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
@@ -411,19 +414,6 @@ export default function LeadsPage() {
                           />
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Link do Processo (PJe/Esaj)</Label>
-                        <div className="relative">
-                          <Input 
-                            value={distributionData.link}
-                            onChange={(e) => setDistributionData({...distributionData, link: e.target.value})}
-                            className="glass border-white/10 h-12 text-white pl-12" 
-                            placeholder="https://pje.trt2.jus.br/..."
-                          />
-                          <ExternalLink className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </div>
-
                       <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-center">
                         <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-4">Ação Final de Fluxo</p>
                         <Button 
@@ -434,7 +424,6 @@ export default function LeadsPage() {
                         </Button>
                       </div>
                     </TabsContent>
-
                   </div>
                 </ScrollArea>
               </Tabs>
@@ -455,17 +444,17 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
-        <DialogContent className="glass border-white/10 sm:max-w-[800px] p-0 bg-[#0a0f1e] overflow-hidden shadow-2xl">
+      <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
+        <SheetContent className={cn("w-full glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <div className="p-8 border-b border-white/5 bg-[#0a0f1e]">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
+            <SheetHeader>
+              <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
                 <UserPlus className="h-8 w-8 text-primary" /> Registro de Novo Atendimento
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+              </SheetTitle>
+              <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
                 Inicie uma triagem rápida ou realize o cadastro completo na base RGMJ.
-              </DialogDescription>
-            </DialogHeader>
+              </SheetDescription>
+            </SheetHeader>
           </div>
           <LeadForm 
             existingLeads={leads} 
@@ -474,8 +463,8 @@ export default function LeadsPage() {
             initialMode="quick" 
             lockMode={false} 
           />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

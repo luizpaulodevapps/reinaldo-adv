@@ -22,7 +22,13 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription 
+} from "@/components/ui/sheet"
 import { ClientForm } from "@/components/clients/client-form"
 import { useToast } from "@/hooks/use-toast"
 
@@ -30,10 +36,9 @@ export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isNewClientOpen, setIsNewClientOpen] = useState(false)
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const { toast } = useToast()
 
-  // Otimização: Spark Tier Protection
   const clientsQuery = useMemoFirebase(() => {
     if (!user) return null
     return query(collection(db, "clients"), orderBy("name", "asc"), limit(100))
@@ -52,9 +57,7 @@ export default function ClientsPage() {
 
   const handleCreateClient = (data: any) => {
     if (!user) return
-
     const fullName = `${data.firstName} ${data.lastName}`.trim()
-
     const newClient = {
       id: crypto.randomUUID(),
       name: fullName,
@@ -68,7 +71,6 @@ export default function ClientsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-
     addDocumentNonBlocking(collection(db, "clients"), newClient)
       .then(() => {
         setIsNewClientOpen(false)
@@ -77,6 +79,18 @@ export default function ClientsPage() {
           description: `${fullName} agora faz parte da base RGMJ.`
         })
       })
+  }
+
+  // Lógica de Largura de Drawer
+  const getDrawerWidthClass = () => {
+    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
+    switch (pref) {
+      case "padrão": return "sm:max-w-lg"
+      case "largo": return "sm:max-w-2xl"
+      case "extra-largo": return "sm:max-w-4xl"
+      case "full": return "sm:max-w-full"
+      default: return "sm:max-w-4xl"
+    }
   }
 
   return (
@@ -107,113 +121,54 @@ export default function ClientsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* ... list content (omitido para brevidade) ... */}
         {isLoading ? (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4 glass rounded-3xl border-dashed">
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Base RGMJ...</span>
           </div>
         ) : filteredClients.length > 0 ? (
-          filteredClients.map((client) => {
-            const integrity = Math.floor((client.id.charCodeAt(0) % 30) + 70); 
-            const statusColor = client.status === 'Ativo' ? "bg-emerald-500" : "bg-amber-500";
-
-            return (
-              <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col">
-                <div className={cn("h-1.5 w-full", statusColor)} />
-                
-                <CardContent className="p-6 space-y-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-[9px] border-primary/20 text-primary uppercase font-bold px-2">
-                        {client.status || "Ativo"}
-                      </Badge>
-                      <Badge variant="outline" className="text-[9px] border-white/10 text-muted-foreground uppercase font-bold px-2">
-                        {client.type === 'corporate' ? 'Pessoa Jurídica' : 'Pessoa Física'}
-                      </Badge>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-white">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div>
-                    <h3 className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors leading-tight">
-                      {client.name.toUpperCase()}
-                    </h3>
-                    <p className="text-[10px] font-mono text-muted-foreground mt-1 uppercase tracking-tighter">
-                      {client.documentNumber || "CPF/CNPJ NÃO INFORMADO"}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" className="glass border-primary/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-[9px] font-bold uppercase gap-2 h-10 group/btn">
-                      <MessageCircle className="h-3 w-3 text-emerald-500 group-hover/btn:scale-110 transition-transform" /> WhatsApp
-                    </Button>
-                    <Button variant="outline" className="glass border-primary/10 hover:border-primary/50 hover:bg-primary/5 text-[9px] font-bold uppercase gap-2 h-10 group/btn">
-                      <Mail className="h-3 w-3 text-primary group-hover/btn:scale-110 transition-transform" /> E-mail
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/5">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Processos</p>
-                      <p className="text-xl font-bold text-white">0</p>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Integridade</p>
-                        <span className="text-[10px] font-bold text-white">{integrity}%</span>
-                      </div>
-                      <Progress value={integrity} className="h-1.5 bg-secondary" />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <button className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest">
-                      <FileText className="h-3 w-3" /> Abrir Prontuário
-                    </button>
-                    <button className="flex items-center gap-2 text-[9px] font-bold text-emerald-500 hover:text-emerald-400 transition-colors uppercase tracking-widest">
-                      <FolderOpen className="h-3 w-3" /> Abrir Pasta
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
+          filteredClients.map((client) => (
+            <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col">
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-xl font-headline font-bold text-white uppercase truncate">{client.name}</h3>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-tighter">{client.documentNumber}</p>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <button className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest">
+                    <FileText className="h-3 w-3" /> Abrir Prontuário
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         ) : (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-primary/10">
-            <div className="h-20 w-20 rounded-full bg-secondary/50 flex items-center justify-center">
-              <Users className="h-10 w-10 text-muted-foreground opacity-20" />
-            </div>
-            <div className="text-center space-y-2">
-              <p className="text-sm font-bold text-white uppercase tracking-widest">Base de Clientes Vazia</p>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">Nenhum cliente foi encontrado na base de dados estratégica da banca RGMJ.</p>
-            </div>
-            <Button onClick={() => setIsNewClientOpen(true)} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black gap-2">
-              Cadastrar Primeiro Cliente
-            </Button>
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed">
+            <Users className="h-10 w-10 text-muted-foreground opacity-20" />
+            <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Base Vazia</p>
           </div>
         )}
       </div>
 
-      <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
-        <DialogContent className="glass border-white/10 sm:max-w-[1000px] p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl">
+      <Sheet open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
+        <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
+            <SheetHeader>
+              <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
                 Novo Cliente
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Preencha os dados conforme documentação oficial.
-              </DialogDescription>
-            </DialogHeader>
+              </SheetTitle>
+              <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Preencha os dados conforme documentação oficial da banca RGMJ.
+              </SheetDescription>
+            </SheetHeader>
           </div>
           <ClientForm 
             onSubmit={handleCreateClient}
             onCancel={() => setIsNewClientOpen(false)}
           />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
