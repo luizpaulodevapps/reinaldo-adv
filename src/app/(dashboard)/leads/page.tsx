@@ -528,7 +528,7 @@ export default function LeadsPage() {
                                     </div>
                                   </div>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 glass border-primary/20" align="start">
+                                <PopoverContent className="w-auto p-0 bg-[#0a0f1e] border-primary/40 shadow-2xl z-50" align="start">
                                   <div className="p-4 space-y-4">
                                     <div className="space-y-2">
                                       <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sugestão de Data</Label>
@@ -536,17 +536,17 @@ export default function LeadsPage() {
                                         mode="single"
                                         selected={scheduledDate}
                                         onSelect={setScheduledDate}
-                                        className="rounded-md border border-primary/10"
+                                        className="rounded-md border border-primary/10 bg-[#0d121f]"
                                         locale={ptBR}
                                       />
                                     </div>
                                     <div className="space-y-2">
                                       <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
                                       <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                                        <SelectTrigger className="glass">
+                                        <SelectTrigger className="glass bg-[#1a1f2e] border-[#2d3748]">
                                           <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="glass">
+                                        <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
                                           {businessHours.map(h => (
                                             <SelectItem key={h} value={h}>{h}</SelectItem>
                                           ))}
@@ -555,7 +555,7 @@ export default function LeadsPage() {
                                     </div>
                                     <Button 
                                       onClick={handleConfirmSchedule}
-                                      className="w-full gold-gradient text-background font-bold h-10"
+                                      className="w-full gold-gradient text-background font-bold h-10 shadow-lg"
                                     >
                                       Confirmar Agendamento
                                     </Button>
