@@ -19,11 +19,13 @@ import {
   Contact, 
   Settings,
   Scale,
-  Users2
+  Users2,
+  UserCheck
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useUser } from "@/firebase"
 
 const menuGroups = [
   {
@@ -62,7 +64,7 @@ const menuGroups = [
     title: "GESTÃO (D.P.)",
     items: [
       { name: "Departamento Pessoal", href: "/staff", icon: Users2 },
-      { name: "Equipe (Acessos)", href: "/team", icon: Contact },
+      { name: "Equipe (Acessos)", href: "/team", icon: UserCheck },
       { name: "Configurações", href: "/settings", icon: Settings },
     ]
   }
@@ -70,6 +72,10 @@ const menuGroups = [
 
 export function SidebarNav() {
   const pathname = usePathname()
+  const { user, profile, role } = useUser()
+
+  const displayName = profile?.name || user?.displayName || "Membro RGMJ"
+  const userRole = role === 'admin' ? 'Administrador' : role === 'lawyer' ? 'Advogado' : role === 'financial' ? 'Financeiro' : 'Equipe'
 
   return (
     <nav className="flex flex-col h-full bg-[#020617] border-r border-white/5">
@@ -123,11 +129,13 @@ export function SidebarNav() {
       <div className="p-4 border-t border-white/5 bg-black/20">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/30 border border-white/5">
           <Avatar className="h-10 w-10 border border-primary/20">
-            <AvatarFallback className="bg-primary/10 text-primary font-bold">RGMJ</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary font-bold">
+              {displayName.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold truncate text-white">Dr. Reinaldo G.</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Administrador</span>
+            <span className="text-sm font-bold truncate text-white uppercase tracking-tighter">{displayName}</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{userRole}</span>
           </div>
         </div>
       </div>
