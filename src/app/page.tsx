@@ -22,7 +22,7 @@ import {
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#020617] text-white selection:bg-[#F5D030] selection:text-[#020617] overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-[#020617] text-white selection:bg-[#F5D030] selection:text-[#020617] overflow-x-hidden font-sans">
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }

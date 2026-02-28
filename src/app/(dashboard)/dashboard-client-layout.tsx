@@ -25,6 +25,13 @@ export function DashboardClientLayout({
 
   const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com';
 
+  // REDIRECIONAMENTO: Movido para o topo para respeitar as regras de Hooks (sempre chamado)
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
   useEffect(() => {
     if (profileData && !profile) {
       setProfile(profileData);
@@ -62,12 +69,8 @@ export function DashboardClientLayout({
     );
   }
 
+  // Enquanto o redirect não acontece, mostramos um loader se não houver user
   if (!user) {
-    // Redirecionar para login se não estiver autenticado
-    useEffect(() => {
-      router.push('/login');
-    }, [router]);
-    
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
