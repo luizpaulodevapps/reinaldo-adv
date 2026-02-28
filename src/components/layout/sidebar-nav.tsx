@@ -16,7 +16,6 @@ import {
   Archive, 
   Receipt, 
   Wallet, 
-  ArrowLeftRight, 
   Contact, 
   Settings,
   Scale
@@ -56,7 +55,6 @@ const menuGroups = [
     items: [
       { name: "Faturamento", href: "/billing", icon: Receipt },
       { name: "Carteira & Repasses", href: "/financial", icon: Wallet },
-      { name: "Reembolsos", href: "/refunds", icon: ArrowLeftRight },
     ]
   },
   {
