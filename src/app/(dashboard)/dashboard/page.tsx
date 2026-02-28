@@ -16,23 +16,24 @@ import {
 import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase"
 import { collection, query, where, limit, orderBy, doc } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useMemo } from "react"
 
 export default function DashboardPage() {
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, role } = useUser()
 
   // Sincroniza perfil para evitar race condition nas queries de admin
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null
     return doc(db, 'staff_profiles', user.uid)
   }, [user, db])
-  const { data: profile } = useDoc(profileRef)
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef)
 
-  // O dono (e-mail específico) ou qualquer um com role pode disparar as queries
+  // O dono (e-mail específico) ou qualquer um com role na sessão pode disparar as queries
   const isOwner = user?.email === 'luizao16@gmail.com'
-  const canQuery = !!(user && (isOwner || profile?.role))
+  const canQuery = !!(user && (isOwner || role || profile?.role))
 
   const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
   const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])
@@ -59,7 +60,7 @@ export default function DashboardPage() {
     ]
   }, [leads, cases, deadlines, financial])
 
-  if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
+  if (loadingLeads || loadingCases || loadingHearings || isProfileLoading || !canQuery) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
