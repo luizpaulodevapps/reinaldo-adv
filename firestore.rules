@@ -1,107 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     /**
-     * LexFlow ERP Security Rules - Proprietário Supremo
-     * Blindagem absoluta para o Dr. Reinaldo Gonçalves.
+     * LexFlow ERP - Blindagem de Acesso
+     * Conforme diretriz: Usuário autenticado = Acesso Total.
      */
-
-    // --- HELPER FUNCTIONS ---
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner() {
-      return isSignedIn() && (
-        request.auth.token.email == 'luizao16@gmail.com' || 
-        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' ||
-        request.auth.uid == '9JKuM4Hc9ROntW442XDME9kl6eK2' ||
-        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
-      );
-    }
-
-    // --- SUPREMACIA: ACESSO TOTAL PARA O PROPRIETÁRIO ---
-    // Esta regra garante que o Dono nunca receba "Permissão Insuficiente"
     match /{document=**} {
-      allow read, write: if isOwner();
-    }
-
-    function getStaffRole() {
-      return get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data.role;
-    }
-
-    function isAdmin() {
-      return isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)) && getStaffRole() == 'admin');
-    }
-
-    function isFinancial() {
-      return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)) && getStaffRole() == 'financial');
-    }
-
-    // --- COLLECTION RULES PARA OUTROS USUÁRIOS ---
-
-    match /staff_profiles/{staffId} {
-      allow read, update: if isSignedIn() && (request.auth.uid == staffId || isAdmin());
-      allow list: if isAdmin();
-    }
-
-    match /clients/{clientId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && resource.data.responsibleStaffIds is list && request.auth.uid in resource.data.responsibleStaffIds;
-      allow create, update: if isAdmin() || isFinancial();
-      allow delete: if isAdmin();
-    }
-
-    match /processes/{processId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && resource.data.responsibleStaffId == request.auth.uid;
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
-      allow update: if isAdmin() || (isSignedIn() && resource.data.responsibleStaffId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
-
-    match /defendants/{defendantId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && resource.data.processResponsibleStaffId == request.auth.uid;
-      allow create, update: if isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
-
-    match /leads/{leadId} {
-      allow list, read: if isAdmin() || (isSignedIn() && getStaffRole() == 'assistant');
-      allow list, read: if isSignedIn() && resource != null && resource.data.assignedStaffId == request.auth.uid;
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
-      allow update: if isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
-
-    match /hearings/{hearingId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
-      allow create, update: if isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
-      allow delete: if isAdmin();
-    }
-
-    match /deadlines/{deadlineId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
-      allow create, update: if isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
-
-    match /financial_titles/{financialTitleId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && resource.data.processResponsibleStaffId == request.auth.uid;
-      allow create, update, delete: if isAdmin() || isFinancial();
-    }
-
-    match /staff_credits/{staffCreditId} {
-      allow list, read: if isAdmin() || isFinancial();
-      allow list, read: if isSignedIn() && resource != null && resource.data.staffId == request.auth.uid;
-      allow create, update: if isAdmin() || isFinancial();
-      allow delete: if isAdmin();
+      allow read, write: if request.auth != null;
     }
   }
 }
