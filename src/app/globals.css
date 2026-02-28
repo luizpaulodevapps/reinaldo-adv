@@ -36,6 +36,16 @@
     --ring: 262 83% 58%;
     
     --radius: 1rem;
+
+    /* Sidebar specific tokens */
+    --sidebar-background: 244 28% 15%;
+    --sidebar-foreground: 0 0% 100%; /* Texto Branco */
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 244 28% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 244 28% 20%;
+    --sidebar-ring: 262 83% 58%;
   }
 }
 
@@ -65,7 +75,7 @@
   color: white;
 }
 
-.hover-glow:hover {
+.hover-gold:hover {
   border-color: rgba(124, 58, 237, 0.4);
   box-shadow: 0 0 20px rgba(124, 58, 237, 0.15);
 }

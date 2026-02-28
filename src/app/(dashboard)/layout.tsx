@@ -1,22 +1,21 @@
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Scale, LogIn, Menu, X } from "lucide-react";
+import { Loader2, Scale, LogIn, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { auth, user, isUserLoading, firestore: db, setProfile, profile, role } = useFirebase();
+  const { auth, user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -114,42 +113,34 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a14]">
-      {/* Sidebar Desktop */}
-      <aside className="w-[320px] hidden lg:block sticky top-0 h-screen">
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen bg-[#0a0a14] w-full">
         <SidebarNav />
-      </aside>
-
-      {/* Mobile Trigger & Header */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="lg:hidden h-20 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1e1b2e] rounded-xl flex items-center justify-center border border-white/5">
-              <Scale className="text-primary h-5 w-5" />
-            </div>
-            <span className="text-sm font-black text-white uppercase">RGMJ</span>
-          </div>
-          
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-[320px] bg-[#0a0a14] border-r border-white/5">
-              <div className="h-full flex flex-col pt-10">
-                <SidebarNav />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14] sticky top-0 z-40">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="text-white hover:bg-white/10" />
+              <div className="lg:hidden flex items-center gap-3">
+                <Scale className="text-primary h-5 w-5" />
+                <span className="text-sm font-black text-white uppercase">RGMJ</span>
               </div>
-            </SheetContent>
-          </Sheet>
-        </header>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[9px] font-black text-primary uppercase tracking-widest">Sincronizado</span>
+              </div>
+            </div>
+          </header>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="py-8 px-6 lg:py-12 lg:px-16 max-w-[1600px] mx-auto">
-            {children}
-          </div>
-        </main>
+          <main className="flex-1">
+            <div className="py-8 px-6 lg:py-12 lg:px-16 max-w-[1600px] mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }

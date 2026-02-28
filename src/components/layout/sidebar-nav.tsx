@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { 
@@ -12,7 +13,6 @@ import {
   Clock, 
   Gavel, 
   BookOpen, 
-  Archive, 
   Receipt, 
   Wallet, 
   Settings,
@@ -25,11 +25,21 @@ import {
   ClipboardList
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+} from "@/components/ui/sidebar"
 import { useUser, useAuth } from "@/firebase"
 import { signOut } from "firebase/auth"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,87 +109,93 @@ export function SidebarNav() {
   }
 
   return (
-    <nav className="flex flex-col h-[calc(100vh-40px)] m-5 rounded-[2rem] bg-[#1e1b2e] border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
-      {/* Bloco de Marca - Estilo "Your Logo" */}
-      <div className="flex items-center gap-3 px-8 py-10">
-        <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30">
-          <Scale className="text-primary h-5 w-5" />
+    <Sidebar collapsible="icon" className="border-r border-white/5">
+      <SidebarHeader className="py-8 px-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 border border-primary/30">
+            <Scale className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex flex-col overflow-hidden transition-all group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+            <span className="text-sm font-black text-white uppercase tracking-tighter leading-none whitespace-nowrap">RGMJ Elite</span>
+            <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1 whitespace-nowrap">Portal de Comando</span>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-black text-white uppercase tracking-tighter leading-none">RGMJ Elite</span>
-          <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1">Portal de Comando</span>
-        </div>
-      </div>
-      
-      <ScrollArea className="flex-1 px-4">
-        <div className="space-y-8 pb-10">
-          {menuGroups.map((group, idx) => (
-            <div key={idx} className="space-y-2">
-              <h3 className="px-4 text-[9px] font-black text-white/20 tracking-[0.3em] uppercase">
-                {group.title}
-              </h3>
-              <div className="space-y-1">
+      </SidebarHeader>
+
+      <SidebarContent className="px-2">
+        {menuGroups.map((group, idx) => (
+          <SidebarGroup key={idx}>
+            <SidebarGroupLabel className="text-[9px] font-black text-white/30 tracking-[0.3em] uppercase px-4 group-data-[collapsible=icon]:hidden">
+              {group.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
-
                   const isActive = pathname === item.href
+                  
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
-                        isActive 
-                          ? "bg-white/5 text-white" 
-                          : "text-white/40 hover:text-white hover:bg-white/[0.03]"
-                      )}
-                    >
-                      {/* Indicador Lateral da Referência */}
-                      {isActive && (
-                        <div className="absolute left-0 w-1 h-5 bg-primary rounded-r-full shadow-[0_0_10px_rgba(124,58,237,0.5)]" />
-                      )}
-                      
-                      <item.icon className={cn(
-                        "h-4 w-4 transition-colors",
-                        isActive ? "text-primary" : "text-white/20 group-hover:text-primary/50"
-                      )} />
-                      <span className={cn(
-                        "text-[11px] uppercase tracking-widest font-bold",
-                        isActive ? "opacity-100" : "opacity-80"
-                      )}>{item.name}</span>
-                    </Link>
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.name}
+                        className={cn(
+                          "relative flex items-center gap-3 px-4 py-6 rounded-xl transition-all duration-300 group h-12",
+                          isActive 
+                            ? "bg-white/10 text-white" 
+                            : "text-white/70 hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        <Link href={item.href}>
+                          <item.icon className={cn(
+                            "h-5 w-5 transition-colors shrink-0",
+                            isActive ? "text-primary" : "text-white/40 group-hover:text-primary/70"
+                          )} />
+                          <span className="text-[11px] uppercase tracking-widest font-bold whitespace-nowrap">
+                            {item.name}
+                          </span>
+                          {isActive && (
+                            <div className="absolute left-0 w-1 h-6 bg-primary rounded-r-full shadow-[0_0_10px_rgba(124,58,237,0.5)]" />
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   )
                 })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
 
-      {/* Footer de Usuário SaaS */}
-      <div className="p-6 bg-black/20 mt-auto">
+      <SidebarFooter className="p-4 bg-black/20 mt-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-white/5 transition-all outline-none group border border-transparent">
-              <Avatar className="h-9 w-9 border-2 border-primary/20">
+            <SidebarMenuButton 
+              size="lg" 
+              className="w-full flex items-center gap-3 px-2 py-3 rounded-2xl hover:bg-white/5 transition-all outline-none border border-transparent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            >
+              <Avatar className="h-9 w-9 shrink-0 border-2 border-primary/20">
                 <AvatarFallback className="bg-secondary text-white text-[10px] font-black uppercase">
                   {displayName.substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col text-left overflow-hidden">
-                <span className="text-[10px] font-black truncate text-white uppercase">{displayName}</span>
-                <span className="text-[8px] text-primary font-bold uppercase tracking-widest">{userRoleDisplay}</span>
+              <div className="flex flex-col text-left overflow-hidden transition-all group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
+                <span className="text-[10px] font-black truncate text-white uppercase whitespace-nowrap">{displayName}</span>
+                <span className="text-[8px] text-primary font-bold uppercase tracking-widest whitespace-nowrap">{userRoleDisplay}</span>
               </div>
-            </button>
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="w-64 bg-[#1e1b2e] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
+          <DropdownMenuContent align="end" side="right" className="w-64 bg-[#1e1b2e] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
             <DropdownMenuLabel className="text-[9px] font-black text-white/40 uppercase px-4 py-3 tracking-widest">Opções</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/5" />
             <DropdownMenuItem asChild>
-              <Link href="/settings?tab=perfil" className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-white/5 cursor-pointer rounded-xl transition-colors">
+              <Link href="/settings?tab=perfil" className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-white/5 cursor-pointer rounded-xl transition-colors text-white">
                 <UserIcon className="h-4 w-4 text-primary" /> Meu Perfil
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/5" />
             <DropdownMenuItem 
               onClick={handleLogout}
               className="flex items-center gap-3 px-4 py-3 text-xs text-rose-400 hover:bg-rose-400/10 cursor-pointer rounded-xl transition-colors font-bold"
@@ -188,7 +204,7 @@ export function SidebarNav() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-    </nav>
+      </SidebarFooter>
+    </Sidebar>
   )
 }
