@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -10,20 +10,20 @@ import {
   DollarSign, 
   CheckCircle2, 
   MessageCircle, 
-  ChevronRight,
-  Clock,
-  AlertCircle,
-  Wrench,
-  Calculator,
-  FileCheck,
-  Zap,
-  Copy,
-  ArrowRight,
-  UserPlus,
-  FileText,
-  PlusCircle,
-  Target,
-  X
+  ChevronRight, 
+  Clock, 
+  AlertCircle, 
+  Wrench, 
+  Calculator, 
+  FileCheck, 
+  Zap, 
+  Copy, 
+  ArrowRight, 
+  UserPlus, 
+  FileText, 
+  PlusCircle, 
+  Target, 
+  Calendar as CalendarIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,6 @@ import {
   SheetTitle, 
   SheetDescription 
 } from "@/components/ui/sheet"
-import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -43,6 +42,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -99,6 +102,12 @@ const stageChecklists: Record<string, string[]> = {
   distribuicao: ["Petição finalizada", "Protocolo realizado", "Número do processo inserido"],
 }
 
+const businessHours = [
+  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", 
+  "17:00", "17:30", "18:00"
+]
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState(initialLeadsData)
   const [selectedLead, setSelectedLead] = useState<any>(null)
@@ -106,6 +115,11 @@ export default function LeadsPage() {
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false)
   const { toast } = useToast()
+
+  // Estados para Agendamento
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() + 1)))
+  const [scheduledTime, setScheduledTime] = useState("10:00")
+  const [isScheduling, setIsScheduling] = useState(false)
 
   const [calcValue, setCalcValue] = useState("")
   const [calcProb, setCalcProb] = useState("70")
@@ -165,6 +179,15 @@ export default function LeadsPage() {
     toast({
       title: isClient ? "Cliente Cadastrado!" : "Triagem Iniciada!",
       description: `${newEntry.name} foi adicionado com sucesso.`
+    })
+  }
+
+  const handleConfirmSchedule = () => {
+    if (!scheduledDate) return
+    setIsScheduling(false)
+    toast({
+      title: "Reunião Agendada",
+      description: `Agendado para ${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledTime}.`,
     })
   }
 
@@ -481,17 +504,78 @@ export default function LeadsPage() {
 
                       <div className="grid gap-3 pt-2">
                         {stageChecklists[selectedLead.stage]?.map((item, i) => (
-                          <div key={i} className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group">
-                            <Checkbox 
-                              id={`check-${i}`} 
-                              className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
-                            />
-                            <label 
-                              htmlFor={`check-${i}`} 
-                              className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
-                            >
-                              {item}
-                            </label>
+                          <div key={i}>
+                            {item === "Agendar reunião inicial" ? (
+                              <Popover open={isScheduling} onOpenChange={setIsScheduling}>
+                                <PopoverTrigger asChild>
+                                  <div className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group cursor-pointer">
+                                    <Checkbox 
+                                      id={`check-${i}`} 
+                                      className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
+                                    />
+                                    <div className="flex-1 flex items-center justify-between">
+                                      <label 
+                                        htmlFor={`check-${i}`} 
+                                        className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
+                                      >
+                                        {item}
+                                      </label>
+                                      {scheduledDate && (
+                                        <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+                                          {format(scheduledDate, "dd/MM")} às {scheduledTime}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 glass border-primary/20" align="start">
+                                  <div className="p-4 space-y-4">
+                                    <div className="space-y-2">
+                                      <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sugestão de Data</Label>
+                                      <Calendar
+                                        mode="single"
+                                        selected={scheduledDate}
+                                        onSelect={setScheduledDate}
+                                        className="rounded-md border border-primary/10"
+                                        locale={ptBR}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
+                                      <Select value={scheduledTime} onValueChange={setScheduledTime}>
+                                        <SelectTrigger className="glass">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="glass">
+                                          {businessHours.map(h => (
+                                            <SelectItem key={h} value={h}>{h}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <Button 
+                                      onClick={handleConfirmSchedule}
+                                      className="w-full gold-gradient text-background font-bold h-10"
+                                    >
+                                      Confirmar Agendamento
+                                    </Button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <div className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group">
+                                <Checkbox 
+                                  id={`check-${i}`} 
+                                  className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
+                                />
+                                <label 
+                                  htmlFor={`check-${i}`} 
+                                  className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
+                                >
+                                  {item}
+                                </label>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
