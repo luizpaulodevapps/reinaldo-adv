@@ -47,7 +47,11 @@ import {
   Image as ImageIcon,
   Upload,
   Info,
-  Scale
+  Scale,
+  Maximize2,
+  Monitor,
+  MousePointerClick,
+  Square
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -79,6 +83,10 @@ export default function SettingsPage() {
   const [accentColor, setAccentColor] = useState("#818258")
   const [cardStyle, setCardStyle] = useState("glass")
 
+  // --- ESTADO DE DRAWER & NAVEGAÇÃO ---
+  const [drawerWidth, setDrawerWidth] = useState("extra-largo") // normal, largo, extra-largo
+  const [linkBehavior, setLinkBehavior] = useState("drawer") // drawer, navigate
+
   // --- CRUD DE USUÁRIOS ---
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
@@ -108,6 +116,8 @@ export default function SettingsPage() {
         setDashboardColor(tp.dashboardColor || "#020617")
         setAccentColor(tp.accentColor || "#818258")
         setCardStyle(tp.cardStyle || "glass")
+        setDrawerWidth(tp.drawerWidth || "extra-largo")
+        setLinkBehavior(tp.linkBehavior || "drawer")
       }
     }
   }, [profile])
@@ -149,6 +159,8 @@ export default function SettingsPage() {
       dashboardColor,
       accentColor,
       cardStyle,
+      drawerWidth,
+      linkBehavior,
       updatedAt: new Date().toISOString()
     }
     
@@ -159,7 +171,7 @@ export default function SettingsPage() {
 
     toast({
       title: "Atmosfera Visual Aplicada",
-      description: "As configurações de design foram injetadas no seu perfil.",
+      description: "As configurações de design e navegação foram injetadas no seu perfil.",
     })
   }
 
@@ -450,10 +462,106 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* SEÇÃO: DRAWER & NAVEGAÇÃO */}
+              <Card className="glass border-white/5 overflow-hidden shadow-2xl">
+                <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+                  <div className="flex items-center gap-4">
+                    <Monitor className="h-8 w-8 text-primary" />
+                    <div>
+                      <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Drawer & Navegação</CardTitle>
+                      <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                        Configure a ergonomia de visualização e o fluxo de cliques no sistema.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-10 space-y-12">
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <Square className="h-4 w-4" /> Largura do Drawer Padrão
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold">Defina o tamanho preferido para a abertura inicial das gavetas de visualização.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[
+                        { id: 'normal', label: 'Normal', desc: '600px', icon: Square },
+                        { id: 'largo', label: 'Largo', desc: '900px', icon: Maximize2 },
+                        { id: 'extra-largo', label: 'Extra Largo', desc: '1200px', icon: Monitor },
+                      ].map((size) => (
+                        <div 
+                          key={size.id}
+                          onClick={() => setDrawerWidth(size.id)}
+                          className={cn(
+                            "cursor-pointer p-8 rounded-xl border transition-all duration-300 flex flex-col items-center text-center gap-4",
+                            drawerWidth === size.id ? "bg-[#10b981] border-[#10b981] text-[#0a0f1e]" : "bg-white/5 border-white/5 text-white hover:border-white/20"
+                          )}
+                        >
+                          <size.icon className={cn("h-8 w-8", drawerWidth === size.id ? "text-[#0a0f1e]" : "text-primary")} />
+                          <div>
+                            <p className="text-sm font-black uppercase tracking-tight">{size.label}</p>
+                            <p className={cn("text-[10px] font-bold mt-1", drawerWidth === size.id ? "text-[#0a0f1e]/70" : "text-muted-foreground")}>{size.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-6 border-t border-white/5">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <MousePointerClick className="h-4 w-4" /> Comportamento de Clique em Links
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold">Escolha como os links de visualização rápida devem se comportar.</p>
+                    
+                    <div className="space-y-4">
+                      <div 
+                        onClick={() => setLinkBehavior('drawer')}
+                        className={cn(
+                          "cursor-pointer p-6 rounded-xl border transition-all flex items-center gap-6",
+                          linkBehavior === 'drawer' ? "border-[#10b981] bg-[#10b981]/5" : "border-white/5 bg-white/[0.02]"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                          linkBehavior === 'drawer' ? "border-[#10b981]" : "border-white/20"
+                        )}>
+                          {linkBehavior === 'drawer' && <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white uppercase">Padrão: Abrir Drawer</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Clique normal abre o Drawer. <span className="text-[#10b981] font-black">Ctrl + Clique</span> navega para a página.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div 
+                        onClick={() => setLinkBehavior('navigate')}
+                        className={cn(
+                          "cursor-pointer p-6 rounded-xl border transition-all flex items-center gap-6",
+                          linkBehavior === 'navigate' ? "border-[#10b981] bg-[#10b981]/5" : "border-white/5 bg-white/[0.02]"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                          linkBehavior === 'navigate' ? "border-[#10b981]" : "border-white/20"
+                        )}>
+                          {linkBehavior === 'navigate' && <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white uppercase">Padrão: Navegar (Mesma Aba)</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Clique normal navega para a página. <span className="text-[#10b981] font-black">Ctrl + Clique</span> abre o Drawer.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="pt-6">
                     <Button onClick={handleApplyTheme} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-primary/20">
-                      <Save className="h-5 w-5" /> INJETAR IDENTIDADE VISUAL
+                      <Save className="h-5 w-5" /> INJETAR PARÂMETROS DE NAVEGAÇÃO
                     </Button>
                   </div>
                 </CardContent>
