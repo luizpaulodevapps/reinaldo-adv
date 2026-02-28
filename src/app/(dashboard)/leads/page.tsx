@@ -1,81 +1,325 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, MoreVertical, Search } from "lucide-react"
+import { 
+  Plus, 
+  MoreVertical, 
+  Search, 
+  TrendingUp, 
+  Users, 
+  DollarSign, 
+  CheckCircle2, 
+  MessageCircle, 
+  Calendar,
+  ChevronRight,
+  Info,
+  Clock,
+  AlertCircle
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription 
+} from "@/components/ui/sheet"
+import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Checkbox } from "@/components/ui/checkbox"
 
 const columns = [
-  { id: "novo", title: "NOVO" },
-  { id: "atendimento", title: "ATENDIMENTO" },
-  { id: "contratual", title: "CONTRATUAL" },
-  { id: "burocracia", title: "BUROCRACIA" },
-  { id: "distribuicao", title: "DISTRIBUIÇÃO" },
+  { id: "novo", title: "NOVO", color: "text-blue-400" },
+  { id: "atendimento", title: "ATENDIMENTO", color: "text-amber-400" },
+  { id: "contratual", title: "CONTRATUAL", color: "text-emerald-400" },
+  { id: "burocracia", title: "BUROCRACIA", color: "text-primary" },
+  { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
 
-const leads = [
-  { id: "1", name: "Ricardo Santos", type: "Trabalhista", date: "2h atrás", stage: "novo", value: "R$ 15k est." },
-  { id: "2", name: "Maria Oliveira", type: "Trabalhista", date: "1d atrás", stage: "atendimento", value: "R$ 45k est." },
-  { id: "3", name: "Bruno Fernandes", type: "Trabalhista", date: "3d atrás", stage: "contratual", value: "R$ 120k est." },
-  { id: "4", name: "Ana Paula", type: "Trabalhista", date: "5d atrás", stage: "burocracia", value: "R$ 22k est." },
+const initialLeads = [
+  { 
+    id: "1", 
+    name: "Ricardo Santos", 
+    type: "Trabalhista", 
+    date: "2h atrás", 
+    stage: "novo", 
+    value: 15000, 
+    priority: "alta",
+    phone: "(11) 98888-7777",
+    email: "ricardo@email.com",
+    notes: "Demitido após 10 anos sem justa causa. Reclamação de horas extras."
+  },
+  { 
+    id: "2", 
+    name: "Maria Oliveira", 
+    type: "Civil", 
+    date: "1d atrás", 
+    stage: "atendimento", 
+    value: 45000, 
+    priority: "media",
+    phone: "(11) 97777-6666",
+    email: "maria@email.com",
+    notes: "Danos morais por atraso em entrega de imóvel."
+  },
+  { 
+    id: "3", 
+    name: "Bruno Fernandes", 
+    type: "Empresarial", 
+    date: "3d atrás", 
+    stage: "contratual", 
+    value: 120000, 
+    priority: "alta",
+    phone: "(11) 96666-5555",
+    email: "bruno@empresa.com",
+    notes: "Revisão de contrato social e blindagem patrimonial."
+  },
+  { 
+    id: "4", 
+    name: "Ana Paula", 
+    type: "Previdenciário", 
+    date: "5d atrás", 
+    stage: "burocracia", 
+    value: 22000, 
+    priority: "baixa",
+    phone: "(11) 95555-4444",
+    email: "ana@email.com",
+    notes: "Aposentadoria especial por tempo de serviço insalubre."
+  },
 ]
+
+const stageChecklists: Record<string, string[]> = {
+  novo: ["Primeiro contato via WhatsApp", "Agendar reunião inicial", "Coletar resumo dos fatos"],
+  atendimento: ["Reunião de diagnóstico realizada", "Análise de viabilidade técnica", "Documentação básica solicitada"],
+  contratual: ["Proposta de honorários enviada", "Contrato assinado", "Procuração assinada"],
+  burocracia: ["Cópias de CTPS/Documentos", "Cálculos iniciais prontos", "Aprovação final do cliente"],
+  distribuicao: ["Petição finalizada", "Protocolo realizado", "Número do processo inserido"],
+}
 
 export default function LeadsPage() {
+  const [selectedLead, setSelectedLead] = useState<any>(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+
+  const handleOpenLead = (lead: any) => {
+    setSelectedLead(lead)
+    setIsSheetOpen(true)
+  }
+
+  const totalValue = initialLeads.reduce((acc, lead) => acc + lead.value, 0)
+  const hotLeadsCount = initialLeads.filter(l => l.priority === 'alta').length
+
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      {/* Header & Metrics */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-headline font-bold text-primary mb-2">CRM & Triagem</h1>
-          <p className="text-muted-foreground">Gerencie o fluxo de novos clientes e conversão.</p>
+          <h1 className="text-4xl font-headline font-bold text-primary mb-2">CRM & Triagem de Elite</h1>
+          <p className="text-muted-foreground">Conversão estratégica de potenciais clientes para Dr. Reinaldo.</p>
         </div>
-        <Button className="gold-gradient text-background font-bold gap-2">
-          <Plus className="h-4 w-4" /> Novo Lead
-        </Button>
+        <div className="flex gap-3 w-full md:w-auto">
+          <Button variant="outline" className="glass flex-1 md:flex-none font-bold">
+            <TrendingUp className="h-4 w-4 mr-2 text-primary" /> Relatórios
+          </Button>
+          <Button className="gold-gradient text-background font-bold gap-2 flex-1 md:flex-none">
+            <Plus className="h-4 w-4" /> Novo Lead
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: "Pipeline Total", value: `R$ ${(totalValue / 1000).toFixed(0)}k`, icon: DollarSign, color: "text-emerald-500" },
+          { label: "Leads Quentes", value: hotLeadsCount, icon: AlertCircle, color: "text-destructive" },
+          { label: "Novos na Semana", value: "08", icon: Users, color: "text-primary" },
+          { label: "Taxa de Conversão", value: "68%", icon: CheckCircle2, color: "text-blue-500" },
+        ].map((stat, i) => (
+          <Card key={i} className="glass border-primary/10">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                <p className="text-2xl font-bold mt-1">{stat.value}</p>
+              </div>
+              <div className={`p-3 rounded-xl bg-secondary/50 ${stat.color}`}>
+                <stat.icon className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="flex gap-4 items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar leads..." className="pl-9 glass" />
+          <Input placeholder="Buscar leads por nome ou especialidade..." className="pl-9 glass" />
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-6">
-        {columns.map((col) => (
-          <div key={col.id} className="min-w-[280px] flex-1">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <h3 className="font-bold text-sm tracking-widest text-muted-foreground">{col.title}</h3>
-              <Badge variant="secondary">{leads.filter(l => l.stage === col.id).length}</Badge>
+      {/* Kanban Board */}
+      <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0">
+        {columns.map((col) => {
+          const leadsInCol = initialLeads.filter(l => l.stage === col.id)
+          return (
+            <div key={col.id} className="min-w-[300px] flex-1">
+              <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${col.color.replace('text-', 'bg-')}`} />
+                  <h3 className={`font-bold text-sm tracking-widest ${col.color}`}>{col.title}</h3>
+                </div>
+                <Badge variant="secondary" className="bg-secondary/50">{leadsInCol.length}</Badge>
+              </div>
+              
+              <div className="space-y-4">
+                {leadsInCol.map((lead) => (
+                  <Card 
+                    key={lead.id} 
+                    className="glass hover-gold transition-all cursor-pointer group relative overflow-hidden"
+                    onClick={() => handleOpenLead(lead)}
+                  >
+                    {lead.priority === 'alta' && (
+                      <div className="absolute top-0 right-0 p-1">
+                        <Badge variant="destructive" className="text-[8px] uppercase font-bold px-1.5 py-0">Urgente</Badge>
+                      </div>
+                    )}
+                    <CardContent className="p-4 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-bold text-lg group-hover:text-primary transition-colors">{lead.name}</div>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-tighter font-bold flex items-center gap-1 mt-0.5">
+                            <Clock className="h-3 w-3" /> Recebido {lead.date}
+                          </div>
+                        </div>
+                        <MoreVertical className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary border-primary/20">
+                          {lead.type}
+                        </Badge>
+                        <span className="text-emerald-500 font-bold text-sm">
+                          R$ {(lead.value / 1000).toFixed(0)}k
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        <div className="flex -space-x-2">
+                          <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">RG</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-emerald-500/10 hover:text-emerald-500">
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary">
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                <Button variant="ghost" className="w-full border-2 border-dashed border-border/30 hover:border-primary/50 h-16 text-muted-foreground group">
+                  <Plus className="h-4 w-4 mr-2 group-hover:text-primary" /> 
+                  <span className="group-hover:text-foreground">Novo Lead nesta fase</span>
+                </Button>
+              </div>
             </div>
-            <div className="space-y-3">
-              {leads.filter(l => l.stage === col.id).map((lead) => (
-                <Card key={lead.id} className="glass hover:border-primary/50 transition-colors cursor-pointer group">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="font-bold">{lead.name}</div>
-                      <MoreVertical className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary border-primary/20">
-                        {lead.type}
-                      </Badge>
-                      <span>•</span>
-                      <span>{lead.date}</span>
-                    </div>
-                    <div className="text-sm font-semibold text-emerald-500">
-                      {lead.value}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              <Button variant="ghost" className="w-full border-2 border-dashed border-border/50 hover:border-primary/50 h-20 text-muted-foreground">
-                <Plus className="h-4 w-4 mr-2" /> Arrastar para cá
-              </Button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
+
+      {/* Lead Details Sheet */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20">
+          {selectedLead && (
+            <div className="h-full flex flex-col">
+              <SheetHeader className="mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className="gold-gradient text-background font-bold uppercase text-[10px]">
+                    {selectedLead.stage.replace('_', ' ')}
+                  </Badge>
+                  {selectedLead.priority === 'alta' && <Badge variant="destructive">Alta Prioridade</Badge>}
+                </div>
+                <SheetTitle className="text-3xl font-headline font-bold text-primary">
+                  {selectedLead.name}
+                </SheetTitle>
+                <SheetDescription className="flex items-center gap-4 text-sm mt-2">
+                  <span className="flex items-center gap-1"><MessageCircle className="h-4 w-4" /> {selectedLead.phone}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1 font-bold text-emerald-500">Expectativa: R$ {selectedLead.value.toLocaleString()}</span>
+                </SheetDescription>
+              </SheetHeader>
+
+              <ScrollArea className="flex-1 pr-4">
+                <div className="space-y-8">
+                  {/* Checklist Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm uppercase tracking-widest text-primary flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" /> Checklist de Fase
+                      </h3>
+                      <span className="text-[10px] text-muted-foreground font-bold">40% COMPLETO</span>
+                    </div>
+                    <Progress value={40} className="h-1.5" />
+                    <div className="grid gap-3 pt-2">
+                      {stageChecklists[selectedLead.stage]?.map((item, i) => (
+                        <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-secondary/30 border border-border/50 group hover:border-primary/30 transition-colors">
+                          <Checkbox id={`check-${i}`} />
+                          <label htmlFor={`check-${i}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            {item}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* IA Insights Section */}
+                  <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Info className="h-12 w-12" />
+                    </div>
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-primary flex items-center gap-2 mb-3">
+                      <TrendingUp className="h-4 w-4" /> IA Insight de Viabilidade
+                    </h3>
+                    <p className="text-sm text-foreground/80 leading-relaxed italic">
+                      "Lead com alto potencial baseado no tempo de serviço e tipo de demissão. Recomendamos priorizar a coleta da CTPS e extrato do FGTS para cálculo exato de horas extras."
+                    </p>
+                    <Button variant="link" className="text-xs p-0 text-primary mt-3 h-auto">Gerar análise detalhada com IA</Button>
+                  </div>
+
+                  {/* Actions Section */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Ações Rápidas</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button className="gold-gradient text-background font-bold gap-2 py-6">
+                        <MessageCircle className="h-5 w-5" /> Enviar WhatsApp
+                      </Button>
+                      <Button variant="outline" className="glass font-bold gap-2 py-6">
+                        <Calendar className="h-5 w-5" /> Agendar Reunião
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Notes Section */}
+                  <div className="space-y-3">
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Notas do Caso</h3>
+                    <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 text-sm text-muted-foreground min-h-[100px]">
+                      {selectedLead.notes}
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-xs text-primary underline">Editar Notas</Button>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <div className="pt-6 mt-6 border-t border-border/50 grid grid-cols-2 gap-4">
+                <Button variant="destructive" className="font-bold opacity-50 hover:opacity-100">Descartar Lead</Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Mover p/ Próxima Fase</Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
