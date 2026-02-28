@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -19,7 +20,8 @@ import {
   FileText,
   DollarSign,
   AlertCircle,
-  X
+  X,
+  Printer
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,10 +64,10 @@ export default function BillingPage() {
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
     const acordos = transactions
-      .filter(t => t.category === 'Acordo Judicial')
+      .filter(t => t.category?.includes('Acordo') || t.category?.includes('Sentença'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const real = bruto * 0.3
+    const real = bruto * 0.7 // Simulando 70% para a banca
 
     return { real, bruto, pendente, acordos }
   }, [transactions])
@@ -83,7 +85,7 @@ export default function BillingPage() {
 
     const newTitle = {
       ...data,
-      clientId: "AUTO", // Pode ser expandido para vincular cliente
+      clientId: data.clientId || "AUTO",
       value: data.numericValue,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -99,9 +101,58 @@ export default function BillingPage() {
       })
   }
 
+  const TransactionList = ({ items }: { items: any[] }) => (
+    <div className="divide-y divide-white/5 w-full">
+      {items.map((t) => (
+        <div key={t.id} className="p-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors group">
+          <div className="flex items-center gap-6">
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center border",
+              t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+            )}>
+              <Receipt className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h4 className="font-bold text-white uppercase text-sm tracking-tight">{t.description}</h4>
+                <Badge variant="outline" className="text-[8px] font-black border-white/10 text-muted-foreground">{t.category?.toUpperCase()}</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1 flex items-center gap-2">
+                Vencimento: {t.dueDate} • Proc: {t.processNumber || "N/A"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="text-right">
+              <div className={cn(
+                "text-lg font-black",
+                t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400"
+              )}>
+                {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <Badge 
+                variant={t.status === 'Recebido' ? 'default' : 'outline'}
+                className={cn("text-[9px] font-black uppercase h-5", t.status === 'Recebido' ? "bg-emerald-500 text-white" : "border-white/10")}
+              >
+                {t.status}
+              </Badge>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" title="Gerar Recibo" onClick={() => window.print()}>
+                <Printer className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header Corporativo */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
@@ -136,13 +187,12 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Métricas de Elite */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="glass border-primary/20 relative overflow-hidden h-32 flex flex-col justify-center">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <Scale className="h-3 w-3" /> Receita Real (30%)
+              <Scale className="h-3 w-3" /> Receita da Banca (70%)
             </p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.real.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -164,7 +214,7 @@ export default function BillingPage() {
         <Card className="glass border-amber-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <Gavel className="h-3 w-3" /> Verba de Acordos
+              <Gavel className="h-3 w-3" /> Acordos & Sentenças
             </p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.acordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -200,77 +250,38 @@ export default function BillingPage() {
           </TabsTrigger>
         </TabsList>
 
-        <div className="glass rounded-b-xl border-t-0 p-0 min-h-[500px] flex flex-col items-center justify-center relative">
-          <TabsContent value="todos" className="w-full m-0 p-0 h-full flex flex-col">
-            {isLoading ? (
-              <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Caixa RGMJ...</span>
-              </div>
-            ) : filteredTransactions.length > 0 ? (
-              <div className="divide-y divide-white/5 w-full">
-                {filteredTransactions.map((t) => (
-                  <div key={t.id} className="p-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors group">
-                    <div className="flex items-center gap-6">
-                      <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center border",
-                        t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                      )}>
-                        <Receipt className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-bold text-white uppercase text-sm tracking-tight">{t.description}</h4>
-                          <Badge variant="outline" className="text-[8px] font-black border-white/10 text-muted-foreground">{t.category?.toUpperCase()}</Badge>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1 flex items-center gap-2">
-                          Vencimento: {t.dueDate} • Proc: {t.processNumber || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-8">
-                      <div className="text-right">
-                        <div className={cn(
-                          "text-lg font-black",
-                          t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400"
-                        )}>
-                          {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                        <Badge 
-                          variant={t.status === 'Recebido' ? 'default' : 'outline'}
-                          className={cn("text-[9px] font-black uppercase h-5", t.status === 'Recebido' ? "bg-emerald-500 text-white" : "border-white/10")}
-                        >
-                          {t.status}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" title="Gerar Recibo">
-                          <FileText className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
-                          <ChevronRight className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center space-y-6 opacity-30">
-                <Calculator className="h-16 w-16 text-muted-foreground" />
-                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum lançamento no radar</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          {/* Outros Tabs seguem lógica similar filtrada */}
-          <TabsContent value="acordos" className="w-full m-0 p-0 flex-1">
-             {/* Conteúdo filtrado por Acordos */}
-          </TabsContent>
+        <div className="glass rounded-b-xl border-t-0 p-0 min-h-[500px] flex flex-col relative overflow-hidden">
+          {isLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Caixa RGMJ...</span>
+            </div>
+          ) : (
+            <>
+              <TabsContent value="todos" className="w-full m-0 p-0">
+                {filteredTransactions.length > 0 ? (
+                  <TransactionList items={filteredTransactions} />
+                ) : (
+                  <EmptyState />
+                )}
+              </TabsContent>
+              
+              <TabsContent value="acordos" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Acordo') || t.category?.includes('Sentença'))} />
+              </TabsContent>
+
+              <TabsContent value="honorarios" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Honorário'))} />
+              </TabsContent>
+
+              <TabsContent value="diligencias" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Diligência') || t.category?.includes('Custas'))} />
+              </TabsContent>
+            </>
+          )}
         </div>
       </Tabs>
 
-      {/* Dialog de Novo Título (High Fidelity) */}
       <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
@@ -286,6 +297,15 @@ export default function BillingPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
+      <Calculator className="h-16 w-16 text-muted-foreground" />
+      <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum lançamento no radar</p>
     </div>
   )
 }

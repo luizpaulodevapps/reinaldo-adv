@@ -21,7 +21,9 @@ import {
   ArrowRight,
   Printer,
   FileText,
-  X
+  X,
+  TrendingUp,
+  Target
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,7 +39,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, where, serverTimestamp } from "firebase/firestore"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -49,17 +51,15 @@ export default function FinancialPage() {
   const [selectedStaff, setSelectedStaff] = useState<any>(null)
   const [isWalletOpen, setIsWalletOpen] = useState(false)
   const [isPayConfirmOpen, setIsPayConfirmOpen] = useState(false)
+  const [folhaLoading, setFolhaLoading] = useState(false)
   
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
 
-  // Sincroniza perfil para autorização
-  const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
-  const { data: profile } = useDoc(profileRef)
-  
+  // Autorização
   const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
-  const canQuery = !!(user && (isOwner || profile?.role))
+  const canQuery = !!user
 
   // Busca Equipe
   const staffQuery = useMemoFirebase(() => {
@@ -68,12 +68,19 @@ export default function FinancialPage() {
   }, [db, canQuery])
   const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
 
-  // Busca Créditos/Repasses
+  // Busca Créditos
   const creditsQuery = useMemoFirebase(() => {
     if (!canQuery) return null
     return query(collection(db, "staff_credits"), orderBy("createdAt", "desc"))
   }, [db, canQuery])
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery)
+
+  // Busca Títulos Financeiros para aba Banca e Rodar Folha
+  const titlesQuery = useMemoFirebase(() => {
+    if (!canQuery) return null
+    return query(collection(db, "financial_titles"), where("status", "==", "Recebido"))
+  }, [db, canQuery])
+  const { data: receivedTitles } = useCollection(titlesQuery)
 
   // Cálculos de Métricas
   const stats = useMemo(() => {
@@ -106,14 +113,38 @@ export default function FinancialPage() {
       .reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
   }
 
-  const handleOpenWallet = (staff: any) => {
-    setSelectedStaff(staff)
-    setIsWalletOpen(true)
-  }
+  const handleRodarFolha = async () => {
+    if (!receivedTitles || !team) return
+    setFolhaLoading(true)
 
-  const handleOpenQuitar = (staff: any) => {
-    setSelectedStaff(staff)
-    setIsPayConfirmOpen(true)
+    let createdCount = 0
+    
+    // Simulação de processamento de folha:
+    // Para cada título recebido, se não houver um crédito correspondente, cria um para o responsável.
+    for (const title of receivedTitles) {
+      const existing = credits?.find(c => c.financialTitleId === title.id)
+      if (!existing && title.processResponsibleStaffId) {
+        const amount = (Number(title.value) || 0) * 0.3 // 30% rateio padrão
+        
+        await addDocumentNonBlocking(collection(db, "staff_credits"), {
+          staffId: title.processResponsibleStaffId,
+          financialTitleId: title.id,
+          description: `Repasse: ${title.description}`,
+          amount: amount,
+          status: "Disponível",
+          honorariumPercentage: 30,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        })
+        createdCount++
+      }
+    }
+
+    setFolhaLoading(false)
+    toast({
+      title: "Folha Processada",
+      description: `${createdCount} novos créditos foram liberados para a equipe.`,
+    })
   }
 
   const handleConfirmQuitar = () => {
@@ -141,7 +172,7 @@ export default function FinancialPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      {/* Header & Breadcrumbs */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
@@ -158,8 +189,14 @@ export default function FinancialPage() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" className="glass border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase h-11 gap-2 px-6 hover:bg-emerald-500/10">
-            <Zap className="h-3.5 w-3.5" /> Rodar Folha Mensal
+          <Button 
+            variant="outline" 
+            onClick={handleRodarFolha}
+            disabled={folhaLoading}
+            className="glass border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase h-11 gap-2 px-6 hover:bg-emerald-500/10"
+          >
+            {folhaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />} 
+            Rodar Folha Mensal
           </Button>
           <Button variant="outline" className="glass border-primary/20 text-primary text-[10px] font-bold uppercase h-11 gap-2 px-6" onClick={() => window.location.reload()}>
             <RefreshCw className="h-3.5 w-3.5" /> Recarregar Saldos
@@ -167,11 +204,11 @@ export default function FinancialPage() {
         </div>
       </div>
 
-      {/* Métricas Corporativas */}
+      {/* Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="glass border-emerald-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-2">Total Liquidado (Mês)</p>
+            <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-2">Total Liquidado (Equipe)</p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.liquidado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
@@ -180,7 +217,7 @@ export default function FinancialPage() {
 
         <Card className="glass border-primary/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-primary/70 uppercase tracking-[0.2em] mb-2">Saldos Liberados (Equipe)</p>
+            <p className="text-[9px] font-black text-primary/70 uppercase tracking-[0.2em] mb-2">Saldos Disponíveis</p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.liberado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
@@ -189,7 +226,7 @@ export default function FinancialPage() {
 
         <Card className="glass border-blue-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-blue-500/70 uppercase tracking-[0.2em] mb-2">Previsão Futura (Retido)</p>
+            <p className="text-[9px] font-black text-blue-500/70 uppercase tracking-[0.2em] mb-2">Provisionado (Retido)</p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.retido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
@@ -198,7 +235,7 @@ export default function FinancialPage() {
 
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Colaboradores com Saldo</p>
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Colaboradores Ativos</p>
             <div className="text-3xl font-black text-white">
               {stats.ativos}
             </div>
@@ -206,7 +243,6 @@ export default function FinancialPage() {
         </Card>
       </div>
 
-      {/* Seção de Abas e Listagem */}
       <Tabs defaultValue="advogados" onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-[#0a1420]/50 border border-white/5 h-12 p-1 gap-1 w-full justify-start rounded-xl">
           <TabsTrigger value="advogados" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2">
@@ -235,7 +271,7 @@ export default function FinancialPage() {
                     <TableRow className="border-white/5">
                       <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6 pl-10">Data</TableHead>
                       <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Favorecido</TableHead>
-                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Descrição do Lançamento</TableHead>
+                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Descrição</TableHead>
                       <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Valor</TableHead>
                       <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6 text-right pr-10">Status</TableHead>
                     </TableRow>
@@ -244,9 +280,9 @@ export default function FinancialPage() {
                     {(credits || []).slice(0, 50).map((credit) => (
                       <TableRow key={credit.id} className="border-white/5 hover:bg-white/[0.01]">
                         <TableCell className="py-6 pl-10 text-[10px] font-mono text-muted-foreground uppercase">
-                          {credit.createdAt?.toDate ? new Date(credit.createdAt.toDate()).toLocaleDateString() : "RECÉM-CRIADO"}
+                          {credit.createdAt?.toDate ? new Date(credit.createdAt.toDate()).toLocaleDateString() : "PENDENTE"}
                         </TableCell>
-                        <TableCell className="py-6 text-xs font-bold text-white">
+                        <TableCell className="py-6 text-xs font-bold text-white uppercase">
                           {team?.find(t => t.id === credit.staffId)?.name || "MEMBRO REMOVIDO"}
                         </TableCell>
                         <TableCell className="py-6 text-xs text-muted-foreground italic">
@@ -270,12 +306,58 @@ export default function FinancialPage() {
               </CardContent>
             </Card>
           ) : activeTab === "banca" ? (
-            <div className="py-20 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
-              <Building2 className="h-16 w-16 text-primary" />
-              <div className="text-center space-y-2">
-                <p className="text-sm font-bold text-white uppercase tracking-widest">Receita Institucional</p>
-                <p className="text-xs text-muted-foreground max-w-sm">Módulo de monitoramento da fatia de honorários retida pela banca RGMJ para custos fixos e dividendos.</p>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="glass border-primary/20 p-8">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4">Bruto Recebido (Firm)</p>
+                  <div className="text-4xl font-black text-white">
+                    R$ {(receivedTitles?.reduce((acc, t) => acc + (Number(t.value) || 0), 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </Card>
+                <Card className="glass border-rose-500/20 p-8">
+                  <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-4">Total Rateio Equipe</p>
+                  <div className="text-4xl font-black text-white">
+                    R$ {(credits?.reduce((acc, c) => acc + (Number(c.amount) || 0), 0) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </Card>
+                <Card className="glass border-emerald-500/20 p-8 bg-emerald-500/5">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Margem Líquida Banca</p>
+                  <div className="text-4xl font-black text-white">
+                    R$ {((receivedTitles?.reduce((acc, t) => acc + (Number(t.value) || 0), 0) || 0) - (credits?.reduce((acc, c) => acc + (Number(c.amount) || 0), 0) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </Card>
               </div>
+              <Card className="glass border-white/5 overflow-hidden">
+                <CardHeader className="p-8 border-b border-white/5">
+                  <CardTitle className="text-xl font-headline font-bold text-white uppercase tracking-tighter">Detalhamento de Receita Líquida</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-secondary/20">
+                      <TableRow className="border-white/5">
+                        <TableHead className="pl-10">Título</TableHead>
+                        <TableHead>Valor Bruto</TableHead>
+                        <TableHead>Repasses</TableHead>
+                        <TableHead className="text-right pr-10">Líquido RGMJ</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(receivedTitles || []).map(t => {
+                        const titleCredits = credits?.filter(c => c.financialTitleId === t.id) || []
+                        const totalRepasse = titleCredits.reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
+                        return (
+                          <TableRow key={t.id} className="border-white/5">
+                            <TableCell className="pl-10 font-bold uppercase text-xs">{t.description}</TableCell>
+                            <TableCell className="text-xs">R$ {(Number(t.value) || 0).toLocaleString('pt-BR')}</TableCell>
+                            <TableCell className="text-xs text-rose-400">R$ {totalRepasse.toLocaleString('pt-BR')}</TableCell>
+                            <TableCell className="text-right pr-10 font-bold text-emerald-400">R$ {((Number(t.value) || 0) - totalRepasse).toLocaleString('pt-BR')}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </div>
           ) : (
             <div className="space-y-6">
@@ -302,7 +384,7 @@ export default function FinancialPage() {
                         <TableRow className="border-white/5 hover:bg-transparent">
                           <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 pl-10">Nome do Colaborador</TableHead>
                           <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-center">Perfil</TableHead>
-                          <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right">Total Disponível</TableHead>
+                          <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right">Saldo Disponível</TableHead>
                           <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right pr-10">Ação</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -337,13 +419,13 @@ export default function FinancialPage() {
                               <TableCell className="text-right pr-10">
                                 <div className="flex items-center justify-end gap-6">
                                   <button 
-                                    onClick={() => handleOpenWallet(member)}
+                                    onClick={() => { setSelectedStaff(member); setIsWalletOpen(true); }}
                                     className="text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-all"
                                   >
                                     VER CARTEIRA
                                   </button>
                                   <button 
-                                    onClick={() => handleOpenQuitar(member)}
+                                    onClick={() => { setSelectedStaff(member); setIsPayConfirmOpen(true); }}
                                     disabled={balance <= 0}
                                     className={cn(
                                       "text-[10px] font-black uppercase tracking-widest transition-all",
@@ -396,51 +478,49 @@ export default function FinancialPage() {
           </div>
           
           <ScrollArea className="max-h-[500px]">
-            <div className="p-0">
-              <Table>
-                <TableHeader className="bg-white/[0.02]">
-                  <TableRow className="border-white/5">
-                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 pl-8">Lançamento</TableHead>
-                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-center">Origem (%)</TableHead>
-                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-right">Crédito</TableHead>
-                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-right pr-8">Status</TableHead>
+            <Table>
+              <TableHeader className="bg-white/[0.02]">
+                <TableRow className="border-white/5">
+                  <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 pl-8">Lançamento</TableHead>
+                  <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-center">Origem (%)</TableHead>
+                  <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-right">Crédito</TableHead>
+                  <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-right pr-8">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {credits?.filter(c => c.staffId === selectedStaff?.id).map((credit) => (
+                  <TableRow key={credit.id} className="border-white/5">
+                    <TableCell className="py-4 pl-8">
+                      <p className="text-xs font-bold text-white uppercase">{credit.description}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Data: {credit.createdAt?.toDate ? credit.createdAt.toDate().toLocaleDateString() : 'N/A'}</p>
+                    </TableCell>
+                    <TableCell className="py-4 text-center">
+                      <Badge variant="outline" className="text-[8px] font-black text-primary border-primary/20">
+                        {credit.honorariumPercentage}% HONORÁRIOS
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4 text-right font-mono font-bold text-white text-sm">
+                      R$ {(credit.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                    <TableCell className="py-4 text-right pr-8">
+                      <Badge className={cn(
+                        "text-[8px] font-black uppercase border-0",
+                        credit.status === 'Pago' ? "bg-emerald-500/10 text-emerald-500" : credit.status === 'Disponível' ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-500"
+                      )}>
+                        {credit.status}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {credits?.filter(c => c.staffId === selectedStaff?.id).map((credit) => (
-                    <TableRow key={credit.id} className="border-white/5">
-                      <TableCell className="py-4 pl-8">
-                        <p className="text-xs font-bold text-white uppercase">{credit.description}</p>
-                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Data: {credit.createdAt?.toDate ? credit.createdAt.toDate().toLocaleDateString() : 'N/A'}</p>
-                      </TableCell>
-                      <TableCell className="py-4 text-center">
-                        <Badge variant="outline" className="text-[8px] font-black text-primary border-primary/20">
-                          {credit.honorariumPercentage}% HONORÁRIOS
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-4 text-right font-mono font-bold text-white text-sm">
-                        R$ {(credit.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="py-4 text-right pr-8">
-                        <Badge className={cn(
-                          "text-[8px] font-black uppercase border-0",
-                          credit.status === 'Pago' ? "bg-emerald-500/10 text-emerald-500" : credit.status === 'Disponível' ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-500"
-                        )}>
-                          {credit.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/20 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsWalletOpen(false)} className="text-muted-foreground uppercase font-bold text-[10px] tracking-widest">
               Fechar Dossiê
             </Button>
-            <Button className="glass border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest px-8 gap-2">
+            <Button className="glass border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest px-8 gap-2" onClick={() => window.print()}>
               <Printer className="h-3.5 w-3.5" /> Imprimir Extrato
             </Button>
           </DialogFooter>
@@ -457,12 +537,8 @@ export default function FinancialPage() {
             <div className="space-y-2">
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Confirmar Quitação?</DialogTitle>
               <p className="text-muted-foreground text-sm">
-                O senhor está autorizando a liquidação de <span className="text-emerald-400 font-black">R$ {getStaffBalance(selectedStaff?.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> para o colaborador <span className="text-white font-bold">{selectedStaff?.name}</span>.
+                Autorizando liquidação de <span className="text-emerald-400 font-black">R$ {getStaffBalance(selectedStaff?.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> para <span className="text-white font-bold">{selectedStaff?.name}</span>.
               </p>
-            </div>
-            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-3 text-left">
-              <AlertCircle className="h-5 w-5 text-emerald-500 shrink-0" />
-              <p className="text-[10px] text-emerald-500/80 font-bold uppercase leading-relaxed">Esta ação registrará o pagamento definitivo no sistema e zerará o saldo disponível do colaborador.</p>
             </div>
           </div>
           <div className="p-8 bg-black/40 border-t border-white/5 flex flex-col gap-3">
