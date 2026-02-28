@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, UserPlus, UserCheck, MapPin, FileText, Smartphone } from "lucide-react"
+import { Search, UserPlus, UserCheck, MapPin, FileText, Smartphone, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 
 interface Lead {
   id: string
@@ -24,11 +25,16 @@ interface LeadFormProps {
   existingLeads: Lead[]
   onSubmit: (leadData: any) => void
   onSelectExisting: (lead: Lead) => void
+  initialMode?: "quick" | "complete"
+  lockMode?: boolean
 }
 
-export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadFormProps) {
-  const [mode, setMode] = useState<"quick" | "complete">("quick")
+export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMode = "quick", lockMode = false }: LeadFormProps) {
+  const [mode, setMode] = useState<"quick" | "complete">(initialMode)
   const [searchTerm, setSearchTerm] = useState("")
+  const [loadingCep, setLoadingCep] = useState(false)
+  const { toast } = useToast()
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -36,6 +42,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
     type: "Trabalhista",
     priority: "media",
     notes: "",
+    value: "",
     // Dados Completos
     cpf: "",
     rg: "",
@@ -61,6 +68,45 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
     if (field === "name") setSearchTerm(value)
   }
 
+  const handleCepBlur = async () => {
+    const cep = formData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+
+    setLoadingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      
+      if (data.erro) {
+        toast({
+          variant: "destructive",
+          title: "CEP não encontrado",
+          description: "Por favor, verifique o número digitado."
+        })
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          address: data.logradouro,
+          neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf
+        }))
+        toast({
+          title: "Endereço localizado",
+          description: `${data.logradouro}, ${data.localidade} - ${data.uf}`
+        })
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro na busca",
+        description: "Não foi possível consultar o CEP agora."
+      })
+    } finally {
+      setLoadingCep(false)
+    }
+  }
+
   const handleSelectLead = (lead: Lead) => {
     onSelectExisting(lead)
     setSearchTerm("")
@@ -75,7 +121,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
       <div className="relative">
         <div className="space-y-2">
           <Label className="text-primary font-bold uppercase text-[10px] tracking-widest">
-            Nome Completo ou Pesquisa
+            {mode === "quick" ? "Nome do Lead" : "Nome Completo do Cliente"}
           </Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -88,11 +134,10 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
           </div>
         </div>
 
-        {/* Sugestões de Pesquisa */}
         {filteredLeads.length > 0 && (
           <div className="absolute z-50 w-full mt-1 glass border-primary/30 shadow-2xl rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
             <div className="p-2 bg-primary/10 border-b border-primary/20 text-[10px] font-bold text-primary uppercase flex items-center gap-2">
-              <UserCheck className="h-3 w-3" /> Clientes Encontrados na Base
+              <UserCheck className="h-3 w-3" /> Já existe na base
             </div>
             <ScrollArea className="max-h-[200px]">
               {filteredLeads.map(lead => (
@@ -114,17 +159,19 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
-            Tipo de Cadastro
-          </Label>
-          <Tabs value={mode} onValueChange={(v) => setMode(v as any)} className="w-auto">
-            <TabsList className="glass border-primary/10">
-              <TabsTrigger value="quick" className="text-xs">Rápido</TabsTrigger>
-              <TabsTrigger value="complete" className="text-xs">Completo</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        {!lockMode && (
+          <div className="flex items-center justify-between">
+            <Label className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
+              Alternar Modo
+            </Label>
+            <Tabs value={mode} onValueChange={(v) => setMode(v as any)} className="w-auto">
+              <TabsList className="glass border-primary/10">
+                <TabsTrigger value="quick" className="text-xs">Rápido</TabsTrigger>
+                <TabsTrigger value="complete" className="text-xs">Completo</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -161,25 +208,46 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
                 <Label className="flex items-center gap-2"><FileText className="h-3 w-3" /> RG</Label>
                 <Input placeholder="00.000.000-0" className="glass" value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value)} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="flex items-center gap-2"><MapPin className="h-3 w-3" /> Endereço Completo</Label>
-                <Input placeholder="Rua, Número, Complemento" className="glass" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3 w-3" /> CEP
+                  {loadingCep && <Loader2 className="h-3 w-3 animate-spin ml-2 text-primary" />}
+                </Label>
+                <Input 
+                  placeholder="00000-000" 
+                  className="glass" 
+                  value={formData.zipCode} 
+                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                  onBlur={handleCepBlur}
+                />
               </div>
+
               <div className="space-y-2">
                 <Label>Bairro</Label>
                 <Input placeholder="Ex: Centro" className="glass" value={formData.neighborhood} onChange={(e) => handleInputChange("neighborhood", e.target.value)} />
               </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>Endereço / Logradouro</Label>
+                <Input placeholder="Rua, Número, Complemento" className="glass" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
+              </div>
+
               <div className="space-y-2">
-                <Label>Cidade/Estado</Label>
-                <Input placeholder="Ex: São Paulo - SP" className="glass" value={formData.city} onChange={(e) => handleInputChange("city", e.target.value)} />
+                <Label>Cidade</Label>
+                <Input placeholder="Cidade" className="glass" value={formData.city} onChange={(e) => handleInputChange("city", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Estado (UF)</Label>
+                <Input placeholder="UF" className="glass" value={formData.state} onChange={(e) => handleInputChange("state", e.target.value)} />
               </div>
             </>
           )}
 
           <div className="space-y-2 md:col-span-2">
-            <Label>Notas do Caso</Label>
+            <Label>{mode === "quick" ? "Notas Iniciais" : "Histórico / Observações"}</Label>
             <Textarea 
-              placeholder="Fatos iniciais narrados pelo cliente..." 
+              placeholder="Fatos narrados pelo cliente..." 
               className="glass min-h-[100px]" 
               value={formData.notes}
               onChange={(e) => handleInputChange("notes", e.target.value)}
@@ -192,8 +260,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting }: LeadForm
         onClick={handleSubmit} 
         className="w-full gold-gradient text-background font-bold h-14 text-lg shadow-lg shadow-primary/20"
       >
-        <UserPlus className="mr-2 h-5 w-5" /> 
-        {mode === "quick" ? "Finalizar Triagem Rápida" : "Salvar Cadastro Completo"}
+        {mode === "quick" ? <UserPlus className="mr-2 h-5 w-5" /> : <FileText className="mr-2 h-5 w-5" />}
+        {mode === "quick" ? "Cadastrar Lead Rápido" : "Salvar Ficha de Cliente"}
       </Button>
     </div>
   )

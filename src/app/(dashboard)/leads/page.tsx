@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -24,7 +25,8 @@ import {
   Copy,
   ArrowRight,
   X,
-  UserPlus
+  UserPlus,
+  FileText
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -117,6 +119,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
+  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false)
   const { toast } = useToast()
 
   // Ferramentas State
@@ -163,21 +166,23 @@ export default function LeadsPage() {
     setGeneratedChecklist(lists[checklistArea] || [])
   }
 
-  const handleCreateLead = (leadData: any) => {
-    const newLead = {
-      ...leadData,
+  const handleCreateEntry = (data: any) => {
+    const isClient = data.mode === "complete"
+    const newEntry = {
+      ...data,
       id: Math.random().toString(36).substr(2, 9),
       date: "Agora",
-      stage: "novo",
-      value: parseFloat(leadData.value) || 0,
-      priority: leadData.priority || "media"
+      stage: isClient ? "contratual" : "novo",
+      value: parseFloat(data.value) || 0,
+      priority: data.priority || "media"
     }
 
-    setLeads([newLead, ...leads])
+    setLeads([newEntry, ...leads])
     setIsNewLeadDialogOpen(false)
+    setIsNewClientDialogOpen(false)
     toast({
-      title: "Lead Criado!",
-      description: `${newLead.name} foi adicionado com sucesso.`
+      title: isClient ? "Cliente Cadastrado!" : "Lead Criado!",
+      description: `${newEntry.name} foi adicionado com sucesso.`
     })
   }
 
@@ -190,35 +195,64 @@ export default function LeadsPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-headline font-bold text-primary mb-2">CRM & Triagem de Elite</h1>
-          <p className="text-muted-foreground">Conversão estratégica de potenciais clientes para Dr. Reinaldo.</p>
+          <p className="text-muted-foreground">Gestão estratégica por Dr. Reinaldo Gonçalves Miguel de Jesus.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <Button variant="outline" className="glass flex-1 md:flex-none font-bold">
-            <TrendingUp className="h-4 w-4 mr-2 text-primary" /> Relatórios
-          </Button>
-          
+          {/* Botão Novo Lead - Rápido */}
           <Dialog open={isNewLeadDialogOpen} onOpenChange={setIsNewLeadDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gold-gradient text-background font-bold gap-2 flex-1 md:flex-none">
+              <Button className="glass text-primary font-bold gap-2 border-primary/20 hover:bg-primary/10">
                 <Plus className="h-4 w-4" /> Novo Lead
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-primary/20 sm:max-w-[700px] p-0 overflow-hidden">
+            <DialogContent className="glass border-primary/20 sm:max-w-[500px] p-0 overflow-hidden">
               <div className="p-6 bg-secondary/50 border-b border-primary/20">
                 <DialogHeader>
                   <DialogTitle className="text-primary font-headline text-2xl flex items-center gap-2">
-                    <UserPlus className="h-6 w-6" /> Triagem de Elite
+                    <Zap className="h-6 w-6" /> Triagem Rápida
                   </DialogTitle>
                 </DialogHeader>
               </div>
               <div className="p-6">
                 <LeadForm 
                   existingLeads={leads} 
-                  onSubmit={handleCreateLead}
+                  onSubmit={handleCreateEntry}
                   onSelectExisting={(lead) => {
                     handleOpenLead(lead)
                     setIsNewLeadDialogOpen(false)
                   }}
+                  initialMode="quick"
+                  lockMode={true}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Botão Novo Cliente - Completo */}
+          <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gold-gradient text-background font-bold gap-2">
+                <UserPlus className="h-4 w-4" /> Cadastrar Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="glass border-primary/20 sm:max-w-[700px] p-0 overflow-hidden">
+              <div className="p-6 bg-secondary/50 border-b border-primary/20">
+                <DialogHeader>
+                  <DialogTitle className="text-primary font-headline text-2xl flex items-center gap-2">
+                    <FileText className="h-6 w-6" /> Ficha Completa de Cliente
+                  </DialogTitle>
+                </DialogHeader>
+              </div>
+              <div className="p-6">
+                <LeadForm 
+                  existingLeads={leads} 
+                  onSubmit={handleCreateEntry}
+                  onSelectExisting={(lead) => {
+                    handleOpenLead(lead)
+                    setIsNewClientDialogOpen(false)
+                  }}
+                  initialMode="complete"
+                  lockMode={true}
                 />
               </div>
             </DialogContent>
@@ -421,7 +455,7 @@ export default function LeadsPage() {
       <div className="flex gap-4 items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar leads por nome ou especialidade..." className="pl-9 glass" />
+          <Input placeholder="Buscar leads ou clientes..." className="pl-9 glass" />
         </div>
       </div>
 
@@ -487,17 +521,6 @@ export default function LeadsPage() {
                     </CardContent>
                   </Card>
                 ))}
-                
-                <Button 
-                  variant="ghost" 
-                  className="w-full border-2 border-dashed border-border/30 hover:border-primary/50 h-16 text-muted-foreground group"
-                  onClick={() => {
-                    setIsNewLeadDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2 group-hover:text-primary" /> 
-                  <span className="group-hover:text-foreground">Novo Lead nesta fase</span>
-                </Button>
               </div>
             </div>
           )
@@ -531,15 +554,14 @@ export default function LeadsPage() {
               <Tabs defaultValue="dossie" className="flex-1 flex flex-col">
                 <div className="px-6 border-b border-border/50 bg-secondary/20">
                   <TabsList className="bg-transparent border-none w-full justify-start h-12 gap-6 p-0">
-                    <TabsTrigger value="dossie" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Dossiê do Lead</TabsTrigger>
-                    <TabsTrigger value="documentos" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Documentação</TabsTrigger>
-                    <TabsTrigger value="ferramentas" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Ferramentas</TabsTrigger>
+                    <TabsTrigger value="dossie" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Dossiê</TabsTrigger>
+                    <TabsTrigger value="documentos" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Docs</TabsTrigger>
+                    <TabsTrigger value="ferramentas" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Tools</TabsTrigger>
                   </TabsList>
                 </div>
 
                 <ScrollArea className="flex-1 p-6">
                   <TabsContent value="dossie" className="m-0 space-y-8">
-                    {/* Checklist Section */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-sm uppercase tracking-widest text-primary flex items-center gap-2">
@@ -560,40 +582,29 @@ export default function LeadsPage() {
                       </div>
                     </div>
 
-                    {/* IA Insights Section */}
                     <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Info className="h-12 w-12" />
                       </div>
                       <h3 className="font-bold text-sm uppercase tracking-widest text-primary flex items-center gap-2 mb-3">
-                        <TrendingUp className="h-4 w-4" /> IA Insight de Viabilidade
+                        <TrendingUp className="h-4 w-4" /> IA Insight
                       </h3>
                       <p className="text-sm text-foreground/80 leading-relaxed italic">
-                        "Lead com alto potencial baseado no tempo de serviço e tipo de demissão. Recomendamos priorizar a coleta da CTPS e extrato do FGTS para cálculo exato de horas extras."
+                        "Lead estratégico para Dr. Reinaldo. Alta probabilidade de êxito baseada em casos similares da comarca."
                       </p>
-                      <Button variant="link" className="text-xs p-0 text-primary mt-3 h-auto">Gerar análise detalhada com IA</Button>
                     </div>
 
-                    {/* Notes Section */}
                     <div className="space-y-3">
-                      <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Notas do Caso</h3>
+                      <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Notas</h3>
                       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 text-sm text-muted-foreground min-h-[100px]">
                         {selectedLead.notes}
                       </div>
-                      <Button variant="ghost" size="sm" className="text-xs text-primary underline">Editar Notas</Button>
                     </div>
                   </TabsContent>
 
                   <TabsContent value="documentos" className="m-0 space-y-4">
-                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Arquivos Recebidos</h3>
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Arquivos</h3>
                     <div className="grid grid-cols-1 gap-2">
-                      <div className="p-4 border rounded-lg flex items-center justify-between glass">
-                        <div className="flex items-center gap-3">
-                          <FileCheck className="h-5 w-5 text-primary" />
-                          <div className="text-sm">RG_e_CPF_Digitalizado.pdf</div>
-                        </div>
-                        <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                      </div>
                       <Button variant="outline" className="w-full border-dashed py-8">
                         <Plus className="h-4 w-4 mr-2" /> Upload de Documentos
                       </Button>
@@ -603,13 +614,10 @@ export default function LeadsPage() {
                   <TabsContent value="ferramentas" className="m-0 space-y-6">
                     <div className="grid gap-4">
                       <Button className="w-full gold-gradient text-background font-bold py-6 justify-between">
-                        Gerar Proposta de Honorários <Zap className="h-4 w-4" />
+                        Gerar Proposta <Zap className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" className="w-full py-6 justify-between glass">
-                        Gerar Procuração Técnica <ArrowRight className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" className="w-full py-6 justify-between glass">
-                        Enviar Script de Agendamento <MessageCircle className="h-4 w-4" />
+                        Gerar Procuração <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </TabsContent>
@@ -618,16 +626,8 @@ export default function LeadsPage() {
 
               <div className="p-6 border-t border-border/50 bg-background">
                 <div className="grid grid-cols-2 gap-4">
-                  <Button variant="destructive" className="font-bold opacity-50 hover:opacity-100">Descartar Lead</Button>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Mover p/ Próxima Fase</Button>
-                </div>
-                <div className="flex gap-4 mt-4">
-                  <Button className="flex-1 gold-gradient text-background font-bold gap-2">
-                    <MessageCircle className="h-4 w-4" /> WhatsApp
-                  </Button>
-                  <Button variant="outline" className="flex-1 glass font-bold gap-2">
-                    <Calendar className="h-4 w-4" /> Reunião
-                  </Button>
+                  <Button variant="destructive" className="font-bold opacity-50 hover:opacity-100">Descartar</Button>
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Avançar Fase</Button>
                 </div>
               </div>
             </div>
