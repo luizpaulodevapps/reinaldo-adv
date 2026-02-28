@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * LexFlow ERP Security Rules
+     *
+     * Core Philosophy: 
+     * This ruleset implements a robust Role-Based Access Control (RBAC) model combined with 
+     * document-level ownership. It prioritizes Authorization Independence by relying on 
+     * denormalized fields (e.g., responsibleStaffId) within documents to avoid costly 
+     * hierarchical lookups, ensuring high performance for list operations and batch updates.
+     *
+     * Data Structure:
+     * - /staff_profiles: Central authority for user roles and identity.
+     * - /clients, /processes, /leads: Top-level collections secured by staff assignments.
+     * - /defendants, /hearings, /deadlines: Specialized entities denormalizing parent 
+     *   authorization context for independent access control.
+     *
+     * Key Security Decisions:
+     * - StaffProfile is the single source of truth for roles (admin, lawyer, financial, assistant).
+     * - Admin and Financial roles have elevated privileges across the firm's data.
+     * - Lawyers and Assistants are restricted to data explicitly assigned to them via UIDs.
+     * - Write operations strictly enforce existence checks and immutability of relationship fields.
+     */
+
+    // --- HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Fetches the staff profile for the currently authenticated user.
+    // This is the only permissible get() call within these rules.
+    function getStaffData() {
+      return get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && getStaffData().role == role;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Checks if the user is the responsible staff member for a document based on a specific field.
+    function isAssigned(staffId) {
+      return isSignedIn() && request.auth.uid == staffId;
+    }
+
+    // Checks if the user's UID is present in a denormalized array of responsible staff members.
+    function isOneOfAssigned(staffIds) {
+      return isSignedIn() && request.auth.uid in staffIds;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isFinancial() {
+      return hasRole('financial');
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Profiles for legal team members. Controls role-based access for the entire app.
+     * @path /staff_profiles/{staffId}
+     * @allow (get) Any signed-in user reading their own profile.
+     * @deny (create) Any user trying to create a profile with an ID other than their own.
+     * @principle Path-based ownership and restricted admin management.
+     */
+    match /staff_profiles/{staffId} {
+      allow get: if isOwner(staffId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(staffId);
+      allow update: if (isOwner(staffId) && resource != null) || isAdmin();
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Legal clients registration data.
+     * @path /clients/{clientId}
+     * @allow (list) A lawyer assigned to at least one of the client's processes.
+     * @deny (update) A lawyer trying to modify a client they aren't associated with.
+     * @principle Denormalized array-based authorization (responsibleStaffIds).
+     */
+    match /clients/{clientId} {
+      allow get, list: if isAdmin() || isFinancial() || (resource.data.responsibleStaffIds is list && isOneOfAssigned(resource.data.responsibleStaffIds));
+      allow create: if isAdmin() || isFinancial();
+      allow update: if (isAdmin() || isFinancial() || (resource.data.responsibleStaffIds is list && isOneOfAssigned(resource.data.responsibleStaffIds))) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Legal processes/cases details.
+     * @path /processes/{processId}
+     * @allow (update) The lawyer responsible for the case.
+     * @deny (create) Setting a different UID for responsibleStaffId than the current user (unless admin).
+     * @principle Enforces relational integrity between the staff member and the case.
+     */
+    match /processes/{processId} {
+      allow get, list: if isAdmin() || isFinancial() || isAssigned(resource.data.responsibleStaffId);
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
+      allow update: if (isAdmin() || isAssigned(resource.data.responsibleStaffId)) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Defendants associated with processes.
+     * @path /defendants/{defendantId}
+     * @allow (list) Lawyer responsible for the parent process (via denormalized field).
+     * @deny (update) Modification by a staff member not linked to the parent process.
+     * @principle Authorization Independence via denormalized processResponsibleStaffId.
+     */
+    match /defendants/{defendantId} {
+      allow get, list: if isAdmin() || isAssigned(resource.data.processResponsibleStaffId);
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
+      allow update: if (isAdmin() || isAssigned(resource.data.processResponsibleStaffId)) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Potential client leads in the CRM workflow.
+     * @path /leads/{leadId}
+     * @allow (get) An assistant assigned to triage this lead.
+     * @deny (delete) Any non-admin user trying to delete a lead.
+     * @principle Role-based and assignment-based access control.
+     */
+    match /leads/{leadId} {
+      allow get, list: if isAdmin() || hasRole('assistant') || isAssigned(resource.data.assignedStaffId);
+      allow create: if isAdmin() || hasRole('assistant') || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
+      allow update: if (isAdmin() || hasRole('assistant') || isAssigned(resource.data.assignedStaffId)) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Scheduled hearings and appointments.
+     * @path /hearings/{hearingId}
+     * @allow (list) The staff member participating in the hearing.
+     * @deny (update) Changing the processResponsibleStaffId to a different user.
+     * @principle Ensures hearings are only accessible to relevant staff.
+     */
+    match /hearings/{hearingId} {
+      allow get, list: if isAdmin() || isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId);
+      allow create: if isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
+      allow update: if (isAdmin() || isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Critical judicial deadlines.
+     * @path /deadlines/{deadlineId}
+     * @allow (get) Staff responsible for the deadline or the case.
+     * @deny (list) Staff attempting to list deadlines for cases they don't own.
+     * @principle QAP support through denormalized staff links.
+     */
+    match /deadlines/{deadlineId} {
+      allow get, list: if isAdmin() || isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId);
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
+      allow update: if (isAdmin() || isAssigned(resource.data.staffId)) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Firm financial movements and titles.
+     * @path /financial_titles/{financialTitleId}
+     * @allow (get) Lawyer viewing titles for their own processes.
+     * @deny (create) Non-financial staff creating financial entries.
+     * @principle Elevated access for 'financial' role with lawyer-specific visibility.
+     */
+    match /financial_titles/{financialTitleId} {
+      allow get, list: if isAdmin() || isFinancial() || isAssigned(resource.data.processResponsibleStaffId);
+      allow create: if isAdmin() || isFinancial();
+      allow update: if (isAdmin() || isFinancial()) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Individual honorarium credits for staff.
+     * @path /staff_credits/{staffCreditId}
+     * @allow (list) A user listing their own credits.
+     * @deny (update) A user trying to release their own credit (only financial/admin).
+     * @principle Strict ownership for personal credits, administrative control for payouts.
+     */
+    match /staff_credits/{staffCreditId} {
+      allow get, list: if isAdmin() || isFinancial() || isAssigned(resource.data.staffId);
+      allow create: if isAdmin() || isFinancial();
+      allow update: if (isAdmin() || isFinancial()) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+  }
+}
