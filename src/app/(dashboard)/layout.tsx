@@ -61,7 +61,7 @@ export default function DashboardLayout({
           </p>
         </div>
         <div className="p-4 bg-secondary/50 border border-border/50 rounded-xl font-mono text-xs text-primary">
-          Firebase Console > Authentication > Sign-in method > Anonymous (Enable)
+          Firebase Console &gt; Authentication &gt; Sign-in method &gt; Anonymous (Enable)
         </div>
         <button 
           onClick={() => window.location.reload()}
