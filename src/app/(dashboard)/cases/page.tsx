@@ -21,13 +21,17 @@ import {
   Zap,
   User,
   Clock,
-  Globe
+  Globe,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query, orderBy } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ProcessForm } from "@/components/cases/process-form"
+import { useToast } from "@/hooks/use-toast"
 
 const areas = [
   { id: "todos", label: "Todos", count: 0 },
@@ -42,8 +46,10 @@ const areas = [
 export default function CasesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeArea, setActiveArea] = useState("todos")
+  const [isNewProcessOpen, setIsNewProcessOpen] = useState(false)
   const db = useFirestore()
   const { user } = useUser()
+  const { toast } = useToast()
 
   const processesQuery = useMemoFirebase(() => {
     if (!user) return null
@@ -69,7 +75,7 @@ export default function CasesPage() {
   // Métricas
   const metrics = useMemo(() => {
     const total = processes.length
-    const valorEmRisco = processes.reduce((acc, p) => acc + (parseFloat(p.value || "0")), 0) || 253719.16
+    const valorEmRisco = processes.reduce((acc, p) => acc + (parseFloat(p.value?.replace(/\D/g, '') || "0") / 100), 0) || 253719.16
     const ticketMedio = total > 0 ? valorEmRisco / total : 50743.83
     return {
       total,
@@ -78,6 +84,26 @@ export default function CasesPage() {
       eficiencia: 60
     }
   }, [processes])
+
+  const handleCreateProcess = (data: any) => {
+    if (!user) return
+
+    const newProcess = {
+      ...data,
+      status: "Em Andamento",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    addDocumentNonBlocking(collection(db, "processes"), newProcess)
+      .then(() => {
+        setIsNewProcessOpen(false)
+        toast({
+          title: "Processo Protocolado",
+          description: `O dossiê ${data.processNumber} foi registrado com sucesso.`
+        })
+      })
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -100,7 +126,10 @@ export default function CasesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button className="gold-gradient text-background font-bold gap-2 px-6 h-11 uppercase text-[10px] tracking-widest rounded-lg">
+          <Button 
+            onClick={() => setIsNewProcessOpen(true)}
+            className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold gap-2 px-6 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-lg"
+          >
             <Plus className="h-4 w-4" /> Novo Processo
           </Button>
         </div>
@@ -115,7 +144,7 @@ export default function CasesPage() {
             </span>
             <div className="flex items-end justify-between">
               <span className="text-2xl font-bold text-white">{metrics.total}</span>
-              <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">25</Badge>
+              <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">Ativos</Badge>
             </div>
           </CardContent>
         </Card>
@@ -183,7 +212,7 @@ export default function CasesPage() {
       <div className="space-y-4">
         {isLoading ? (
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4 glass rounded-3xl border-dashed">
-            <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-full" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Dossiês RGMJ...</span>
           </div>
         ) : filteredProcesses.length > 0 ? (
@@ -228,7 +257,7 @@ export default function CasesPage() {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-white truncate max-w-[150px] uppercase">
-                          {proc.clientId || "Cliente não vinculado"}
+                          {proc.clientName || "Cliente não vinculado"}
                         </span>
                         <span className="text-[9px] text-muted-foreground uppercase tracking-tighter">Pessoa Física</span>
                       </div>
@@ -251,14 +280,14 @@ export default function CasesPage() {
                          <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20 animate-pulse">
                           <AlertCircle className="h-5 w-5" />
                         </div>
-                        <span className="text-[8px] font-black text-destructive uppercase tracking-widest">Prazo</span>
+                        <span className="text-[8px] font-black text-destructive uppercase tracking-widest">Ação</span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-end">
                         <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Protocolo</span>
-                        <span className="text-[10px] font-mono font-bold text-white">20/05/2024</span>
+                        <span className="text-[10px] font-mono font-bold text-white">{proc.startDate || "--/--/----"}</span>
                       </div>
                       <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
                         <MoreVertical className="h-5 w-5" />
@@ -279,12 +308,29 @@ export default function CasesPage() {
               <p className="text-sm font-bold text-white uppercase tracking-widest">Acervo Digital Vazio</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">Nenhum dossiê estratégico foi encontrado na base de dados ativa da banca RGMJ.</p>
             </div>
-            <Button className="gold-gradient text-background font-bold gap-2 px-8">
+            <Button onClick={() => setIsNewProcessOpen(true)} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold gap-2 px-8">
               Protocolar Primeiro Processo
             </Button>
           </div>
         )}
       </div>
+
+      <Dialog open={isNewProcessOpen} onOpenChange={setIsNewProcessOpen}>
+        <DialogContent className="glass border-white/10 sm:max-w-[1000px] p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
+                Novo Processo
+              </DialogTitle>
+              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Siga as etapas para um cadastro completo.</p>
+            </DialogHeader>
+          </div>
+          <ProcessForm 
+            onSubmit={handleCreateProcess}
+            onCancel={() => setIsNewProcessOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
