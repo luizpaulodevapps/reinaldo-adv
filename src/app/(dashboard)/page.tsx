@@ -1,4 +1,3 @@
-
 /**
  * ARQUIVO REMOVIDO PARA EVITAR CONFLITO DE ROTA RAIZ (/)
  * A Landing Page oficial reside em src/app/page.tsx.

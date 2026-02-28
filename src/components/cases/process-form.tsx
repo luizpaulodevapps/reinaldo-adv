@@ -228,11 +228,11 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                     />
                   </div>
                   {showResults && searchTerm.length >= 2 && (
-                    <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl">
+                    <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
                       <div className="max-h-[300px] overflow-y-auto">
                         {filteredClients.length > 0 ? (
                           filteredClients.map(c => (
-                            <button key={c.id} onClick={() => { handleInputChange("clientId", c.id); handleInputChange("clientName", c.name); setShowResults(false); }} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0">
+                            <button key={c.id} onClick={() => { handleInputChange("clientId", c.id); handleInputChange("clientName", c.name); setShowResults(false); }} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left">
                               <div>
                                 <p className="text-xs font-bold text-white uppercase">{c.name}</p>
                                 <p className="text-[10px] font-mono text-muted-foreground">{c.documentNumber}</p>

@@ -15,15 +15,15 @@ export function initializeFirebase() {
     return getSdks(getApp());
   }
 
-  // Verifica se temos uma API Key minimamente válida (não vazia e não placeholder de build)
+  // Verifica se temos uma API Key minimamente válida
   const hasValidConfig = 
     firebaseConfig.apiKey && 
     firebaseConfig.apiKey !== "BUILD_TIME_PLACEHOLDER" &&
     !firebaseConfig.apiKey.includes("YOUR_");
 
   if (!hasValidConfig) {
-    // Retorna nulos controlados se não houver configuração válida
-    // Isso evita que initializeApp() dispare erros de API Key inválida no Auth
+    // Retorna nulos controlados se não houver configuração válida.
+    // Isso evita o erro auth/api-key-not-valid durante o build.
     return {
       firebaseApp: null,
       auth: null,
