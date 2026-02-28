@@ -88,7 +88,7 @@ export default function DeadlinesPage() {
                 <Brain className="h-5 w-5 text-primary" />
                 <CardTitle className="font-headline text-lg">Parser de DJE</CardTitle>
               </div>
-            </Header>
+            </CardHeader>
             <CardContent className="p-6 space-y-4">
               <p className="text-sm text-muted-foreground font-light">
                 Cole abaixo o texto bruto da publicação do Diário de Justiça Eletrônico. A IA identificará o tipo de prazo e a data de vencimento.
