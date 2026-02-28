@@ -128,7 +128,7 @@ export default function DashboardLayout({
   }
 
   // 3. Aguarda Perfil do Usuário
-  // Para o administrador principal, permitimos o acesso imediato pois as regras de segurança validam o e-mail diretamente.
+  // Para o administrador principal (isOwner), liberamos acesso imediato pois as regras de segurança validam o e-mail diretamente.
   if (!isOwner && (isProfileLoading || !profile || !profile.role)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">

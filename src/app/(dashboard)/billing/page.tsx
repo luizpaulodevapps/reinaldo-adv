@@ -9,10 +9,8 @@ import {
   Wallet, 
   Calculator, 
   ChevronRight, 
-  LayoutGrid, 
   ArrowUpRight, 
   ArrowDownRight,
-  TrendingUp,
   Receipt,
   Loader2,
   BarChart3
@@ -28,23 +26,25 @@ import { cn } from "@/lib/utils"
 export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
 
   // Sincroniza perfil para autorização de query
   const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
-  const { data: profile } = useDoc(profileRef)
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef)
   
   // Dr. Reinaldo tem acesso garantido pelo e-mail
   const isOwner = user?.email === 'luizao16@gmail.com'
-  const canQuery = !!(user && (isOwner || profile?.role))
+  const canQuery = !!(user && (isOwner || (profile && profile.role)))
 
-  // Busca todos os títulos financeiros
+  // Busca todos os títulos financeiros - SÓ dispara se canQuery for true
   const financialQuery = useMemoFirebase(() => {
     if (!canQuery) return null
     return query(collection(db, "financial_titles"), orderBy("dueDate", "desc"))
   }, [db, canQuery])
 
-  const { data: transactions, isLoading } = useCollection(financialQuery)
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
+
+  const isLoading = isUserLoading || (isProfileLoading && !isOwner) || isLoadingTransactions
 
   // Cálculos de métricas baseados no real
   const stats = useMemo(() => {

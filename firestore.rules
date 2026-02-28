@@ -6,8 +6,8 @@ service cloud.firestore {
      * LexFlow ERP Security Rules - RGMJ Elite Edition
      *
      * Core Philosophy: 
-     * Robust Role-Based Access Control (RBAC) with Authorization Independence.
-     * Special Priority for Owner: luizao16@gmail.com
+     * Absolute Priority for the Owner (luizao16@gmail.com).
+     * Robust Role-Based Access Control (RBAC) for other staff.
      */
 
     // --- HELPER FUNCTIONS ---
@@ -16,23 +16,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOwner() {
+      return isSignedIn() && request.auth.token.email == 'luizao16@gmail.com';
+    }
+
     function isAdmin() {
-      if (!isSignedIn()) return false;
-      // Prioridade absoluta para o e-mail do Dr. Reinaldo
-      if (request.auth.token.email == 'luizao16@gmail.com') return true;
-      
+      if (isOwner()) return true;
       let path = /databases/$(database)/documents/staff_profiles/$(request.auth.uid);
-      return exists(path) && get(path).data.role == 'admin';
+      return isSignedIn() && exists(path) && get(path).data.role == 'admin';
     }
 
     function isFinancial() {
       if (isAdmin()) return true;
       let path = /databases/$(database)/documents/staff_profiles/$(request.auth.uid);
-      return exists(path) && get(path).data.role == 'financial';
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && (request.auth.uid == userId || isAdmin());
+      return isSignedIn() && exists(path) && get(path).data.role == 'financial';
     }
 
     function isAssigned(staffId) {
@@ -46,66 +43,60 @@ service cloud.firestore {
     // --- COLLECTION RULES ---
 
     match /staff_profiles/{staffId} {
-      allow get: if isOwner(staffId);
-      allow list: if isAdmin();
-      allow create: if isOwner(staffId);
-      allow update: if isOwner(staffId);
-      allow delete: if isAdmin();
+      allow get, update: if isSignedIn() && (request.auth.uid == staffId || isAdmin());
+      allow list, create, delete: if isAdmin();
     }
 
     match /clients/{clientId} {
-      allow get, list: if isAdmin() || isFinancial() || (resource != null && resource.data.responsibleStaffIds is list && isOneOfAssigned(resource.data.responsibleStaffIds));
-      allow create: if isAdmin() || isFinancial();
-      allow update: if isAdmin() || isFinancial();
+      allow read: if isAdmin() || isFinancial() || (resource != null && resource.data.responsibleStaffIds is list && isOneOfAssigned(resource.data.responsibleStaffIds));
+      allow create, update: if isAdmin() || isFinancial();
       allow delete: if isAdmin();
     }
 
     match /processes/{processId} {
-      allow get, list: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.responsibleStaffId));
+      allow read: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.responsibleStaffId));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
       allow update: if isAdmin() || (resource != null && isAssigned(resource.data.responsibleStaffId));
       allow delete: if isAdmin();
     }
 
     match /defendants/{defendantId} {
-      allow get, list: if isAdmin() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
+      allow read: if isAdmin() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
       allow update: if isAdmin() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
       allow delete: if isAdmin();
     }
 
     match /leads/{leadId} {
-      allow get, list: if isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant') || (resource != null && isAssigned(resource.data.assignedStaffId));
+      allow read: if isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant') || (resource != null && isAssigned(resource.data.assignedStaffId));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
       allow update: if isAdmin() || (resource != null && isAssigned(resource.data.assignedStaffId));
       allow delete: if isAdmin();
     }
 
     match /hearings/{hearingId} {
-      allow get, list: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
+      allow read: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
       allow create: if isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
       allow update: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
       allow delete: if isAdmin();
     }
 
     match /deadlines/{deadlineId} {
-      allow get, list: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
+      allow read: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
       allow update: if isAdmin() || (resource != null && isAssigned(resource.data.staffId));
       allow delete: if isAdmin();
     }
 
     match /financial_titles/{financialTitleId} {
-      allow get, list: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
-      allow create: if isAdmin() || isFinancial();
-      allow update: if isAdmin() || isFinancial();
+      allow read: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
+      allow create, update: if isAdmin() || isFinancial();
       allow delete: if isAdmin();
     }
 
     match /staff_credits/{staffCreditId} {
-      allow get, list: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.staffId));
-      allow create: if isAdmin() || isFinancial();
-      allow update: if isAdmin() || isFinancial();
+      allow read: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.staffId));
+      allow create, update: if isAdmin() || isFinancial();
       allow delete: if isAdmin();
     }
   }
