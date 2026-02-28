@@ -27,7 +27,13 @@ import {
   Database,
   BarChart3,
   Mail,
-  Smartphone
+  Smartphone,
+  Cloud,
+  Calendar,
+  CheckSquare,
+  HardDrive,
+  Cpu,
+  Lock
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -39,7 +45,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("financeiro")
+  const [activeTab, setActiveTab] = useState("google")
   const db = useFirestore()
   const { user } = useUser()
 
@@ -141,13 +147,12 @@ export default function SettingsPage() {
         <TabsList className="bg-transparent border-b border-white/5 h-14 p-0 gap-1 w-full justify-start rounded-none mb-10 overflow-x-auto scrollbar-hide">
           {[
             { id: "geral", label: "Geral" },
-            { id: "seo", label: "SEO & Analytics" },
-            { id: "usuarios", label: "Usuarios" },
+            { id: "google", label: "Integração Google" },
+            { id: "usuarios", label: "Usuários" },
             { id: "financeiro", label: "Financeiro" },
             { id: "tags", label: "Dicionário de Tags" },
             { id: "kit", label: "Kit Cliente" },
             { id: "modelos", label: "Modelos" },
-            { id: "backup", label: "Backup" },
             { id: "licenca", label: "Licença" }
           ].map((tab) => (
             <TabsTrigger 
@@ -159,6 +164,109 @@ export default function SettingsPage() {
             </TabsTrigger>
           ))}
         </TabsList>
+
+        {/* Tab: Google Workspace (NOVA) */}
+        <TabsContent value="google" className="mt-0 outline-none space-y-8">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <div className="flex items-center gap-4">
+                <Cloud className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Google Workspace Hub</CardTitle>
+                  <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                    Sincronização profunda com Drive, Calendar e Tasks para a banca RGMJ.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-12">
+              {/* Google Drive Section */}
+              <div className="space-y-6">
+                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <HardDrive className="h-4 w-4" /> Google Drive (Documentos)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA RAIZ (BANCA)</Label>
+                    <Input defaultValue="1A2B3C4D5E6F7G8H9I0J" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA DE MODELOS</Label>
+                    <Input defaultValue="MODELOS_RGMJ_MASTER" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Criar Pastas Automaticamente</h4>
+                    <p className="text-xs text-muted-foreground">Gerar estrutura do 'Kit Cliente' ao protocolar novo processo.</p>
+                  </div>
+                  <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                </div>
+              </div>
+
+              {/* Google Calendar Section */}
+              <div className="space-y-6 pt-6 border-t border-white/5">
+                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <Calendar className="h-4 w-4" /> Google Calendar (Audiências)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA AGENDA JURÍDICA</Label>
+                    <Input defaultValue="agenda.banca@rgmj.adv.br" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
+                  </div>
+                  <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5 h-14 mt-7">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-white uppercase">Sincronizar Atos Judiciais</h4>
+                    </div>
+                    <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Google Tasks Section */}
+              <div className="space-y-6 pt-6 border-t border-white/5">
+                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <CheckSquare className="h-4 w-4" /> Google Tasks (Prazos)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA LISTA DE PRAZOS</Label>
+                    <Input defaultValue="TASKS_PRAZOS_CRITICOS" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
+                  </div>
+                  <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5 h-14 mt-7">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-white uppercase">Alerta no Celular (Google Tasks)</h4>
+                    </div>
+                    <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-primary/20">
+                  <Save className="h-5 w-5" /> SALVAR CONFIGURAÇÕES GOOGLE
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass border-primary/20 bg-primary/5">
+            <CardContent className="p-8 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Cpu className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Status da Conexão API</h4>
+                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" /> Google Workspace está operando com latência zero.
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" className="glass border-primary/20 text-primary uppercase font-black text-[10px] px-8">Testar Conectividade</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Tab: Geral */}
         <TabsContent value="geral" className="mt-0 outline-none">
@@ -195,34 +303,7 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: SEO */}
-        <TabsContent value="seo" className="mt-0 outline-none">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">SEO & Analytics</CardTitle>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Gestão de tráfego e visibilidade digital da banca.
-              </p>
-            </CardHeader>
-            <CardContent className="p-10 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Google Analytics ID</Label>
-                  <Input placeholder="G-XXXXXXXXXX" className="glass h-12 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Meta Pixel ID</Label>
-                  <Input placeholder="1234567890" className="glass h-12 text-white" />
-                </div>
-              </div>
-              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-bold gap-2">
-                <Globe className="h-4 w-4" /> Salvar Configurações SEO
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab: Usuários (FIDELIDADE TOTAL À REFERÊNCIA) */}
+        {/* Tab: Usuários */}
         <TabsContent value="usuarios" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
@@ -301,13 +382,13 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Financeiro (FIDELIDADE TOTAL À REFERÊNCIA VISUAL) */}
+        {/* Tab: Financeiro (FIEL À IMAGEM) */}
         <TabsContent value="financeiro" className="mt-0 outline-none space-y-6">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
               <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Parâmetros Financeiros</CardTitle>
               <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Defina padrões para honorários, vencimentos, moeda e alertas financeiros.
+                DEFINA PADRÕES PARA HONORÁRIOS, VENCIMENTOS, MOEDA E ALERTAS FINANCEIROS.
               </p>
             </CardHeader>
             <CardContent className="p-10 space-y-10">
@@ -343,7 +424,7 @@ export default function SettingsPage() {
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
               <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Controle de Honorários da Equipe</CardTitle>
               <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Gerencie as configurações de visualização de honorários para os advogados.
+                GERENCIE AS CONFIGURAÇÕES DE VISUALIZAÇÃO DE HONORÁRIOS PARA OS ADVOGADOS.
               </p>
             </CardHeader>
             <CardContent className="p-10">
