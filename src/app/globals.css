@@ -4,48 +4,46 @@
 
 @layer base {
   :root {
-    /* Design Tokens RGMJ - Tema Deep Blue Elite (Blue Version) */
-    --background: 240 10% 4%; /* #0a0a14 - Quase Preto */
+    /* LexFlow ERP - Paleta Oficial PRD */
+    --background: 222 84% 5%; /* #020617 - Deep Navy */
     --foreground: 210 40% 98%;
     
-    --card: 240 10% 6%;
+    --card: 222 84% 7%;
     --card-foreground: 210 40% 98%;
     
-    --popover: 240 10% 5%;
+    --popover: 222 84% 5%;
     --popover-foreground: 210 40% 98%;
     
-    /* Primária: Azul Vibrante para Contraste Moderno */
-    --primary: 217 91% 60%; /* #3b82f6 - Azul */
-    --primary-foreground: 210 40% 98%;
+    --primary: 48 91% 58%; /* #F5D030 - Vibrant Gold */
+    --primary-foreground: 222 84% 5%;
     
-    /* Secundária: Azul Profundo da Sidebar */
-    --secondary: 244 28% 15%; /* #1e1b2e - Deep Blue */
+    --secondary: 222 84% 12%;
     --secondary-foreground: 210 40% 98%;
     
-    --muted: 244 20% 12%;
+    --muted: 222 84% 12%;
     --muted-foreground: 215 20% 65%;
     
-    --accent: 217 91% 60%;
+    --accent: 202 40% 50%; /* #4D8BB1 - Corporate Blue */
     --accent-foreground: 210 40% 98%;
     
-    --destructive: 0 84% 60%;
+    --success: 135 36% 41%; /* #438F56 - Muted Emerald */
+    --destructive: 335 49% 50%; /* #BD4073 - Muted Rose */
     --destructive-foreground: 210 40% 98%;
     
-    --border: 244 28% 20%;
-    --input: 244 28% 20%;
-    --ring: 217 91% 60%;
+    --border: 222 84% 15%;
+    --input: 222 84% 15%;
+    --ring: 48 91% 58%;
     
     --radius: 1rem;
 
-    /* Sidebar specific tokens */
-    --sidebar-background: 244 28% 15%;
-    --sidebar-foreground: 0 0% 100%; /* Texto Branco Puro */
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 244 28% 20%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 244 28% 20%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 222 84% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 48 91% 58%;
+    --sidebar-primary-foreground: 222 84% 5%;
+    --sidebar-accent: 222 84% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 84% 15%;
+    --sidebar-ring: 48 91% 58%;
   }
 }
 
@@ -54,44 +52,59 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    line-height: 1.6;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'PT Sans', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
   }
 }
 
-.font-sans {
-  font-family: 'Roboto', sans-serif;
+.font-headline {
+  font-family: 'Playfair Display', serif;
 }
 
-/* Glass Morphism SaaS */
+.font-body {
+  font-family: 'PT Sans', sans-serif;
+}
+
+/* Glassmorphism Effect */
 .glass {
-  background: rgba(30, 27, 46, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 208, 48, 0.1);
 }
 
-.blue-gradient {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-}
-
-/* Mantendo por compatibilidade se houver referências antigas, mas agora azul */
-.violet-gradient {
-  @apply blue-gradient;
+.gold-gradient {
+  background: linear-gradient(135deg, #F5D030 0%, #D4AF37 100%);
+  color: #020617;
 }
 
 .hover-gold:hover {
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+  border-color: rgba(245, 208, 48, 0.4);
+  box-shadow: 0 0 30px rgba(245, 208, 48, 0.1);
 }
 
-/* Scrollbar Invisível para SaaS */
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #F5D030 0%, #FFFFFF 50%, #F5D030 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/5 rounded-full hover:bg-primary/20 transition-colors;
+  @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
 }

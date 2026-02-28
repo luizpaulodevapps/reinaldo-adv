@@ -1,432 +1,261 @@
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Building2, Users, Briefcase, Award, Mail, Phone, MapPin, FileText, Scale, BarChart3, ChevronDown, Sparkles, CheckCircle, Star } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { 
+  ArrowRight, 
+  Scale, 
+  Gavel, 
+  Award, 
+  CheckCircle2, 
+  ShieldCheck, 
+  MessageSquare, 
+  Clock, 
+  ChevronDown,
+  Briefcase,
+  TrendingUp,
+  Landmark,
+  Hammer,
+  ChevronRight,
+  Zap,
+  FileText,
+  Users,
+  Mail,
+  Phone,
+  MapPin
+} from 'lucide-react'
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-white overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-[#020617] text-white selection:bg-[#F5D030] selection:text-[#020617] overflow-x-hidden">
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-20px); }
         }
-        @keyframes slideInLeft {
-          from { opacity: 0; transform: translateX(-100px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes slideInRight {
-          from { opacity: 0; transform: translateX(100px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes slideInUp {
-          from { opacity: 0; transform: translateY(100px); }
+        @keyframes reveal {
+          from { opacity: 0; transform: translateY(40px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 20px rgba(129, 130, 88, 0.3); }
-          50% { box-shadow: 0 0 40px rgba(129, 130, 88, 0.6); }
-        }
-        @keyframes shimmer {
-          0% { background-position: -1000px 0; }
-          100% { background-position: 1000px 0; }
-        }
-        .float-animation { animation: float 3s ease-in-out infinite; }
-        .slide-in-left { animation: slideInLeft 0.8s ease-out; }
-        .slide-in-right { animation: slideInRight 0.8s ease-out; }
-        .slide-in-up { animation: slideInUp 0.8s ease-out; }
-        .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
-        .shimmer-text { 
-          background: linear-gradient(90deg, #213b37, #818258, #213b37);
-          background-size: 1000px 100%;
-          animation: shimmer 3s infinite;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+        .animate-reveal { animation: reveal 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) forwards; }
+        .animate-float { animation: float 5s ease-in-out infinite; }
+        .gold-glow { box-shadow: 0 0 40px rgba(245, 208, 48, 0.15); }
+        .glass-nav {
+          background: rgba(2, 6, 23, 0.8);
+          backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(245, 208, 48, 0.05);
         }
       `}</style>
 
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 glass-nav py-5">
+        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#F5D030] to-[#D4AF37] flex items-center justify-center border border-white/10 shadow-lg shadow-yellow-500/10">
+              <Scale className="h-6 w-6 text-[#020617]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-black tracking-tighter uppercase leading-none font-headline">RGMJ Elite</span>
+              <span className="text-[9px] font-bold text-[#F5D030] tracking-[0.4em] uppercase mt-1">Advocacia Trabalhista</span>
+            </div>
+          </div>
+          <div className="hidden md:flex items-center gap-10 text-[10px] font-black tracking-[0.25em] uppercase">
+            <Link href="#atuacao" className="hover:text-[#F5D030] transition-colors">Atuação</Link>
+            <Link href="#diferencial" className="hover:text-[#F5D030] transition-colors">Diferencial</Link>
+            <Link href="#contato" className="hover:text-[#F5D030] transition-colors">Contato</Link>
+            <Link href="/login">
+              <Button size="sm" variant="outline" className="border-[#F5D030]/40 text-[#F5D030] hover:bg-[#F5D030] hover:text-[#020617] rounded-full px-8 text-[9px] font-black uppercase tracking-widest transition-all">
+                Acesso Restrito
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
-      <section className="relative min-h-screen pt-20 pb-16 bg-gradient-to-b from-white to-[#E9E8E6]">
-        {/* Animated Background */}
+      <section className="relative min-h-screen flex items-center pt-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#818258]/10 rounded-full blur-3xl float-animation" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#213b37]/10 rounded-full blur-3xl float-animation" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#F5D030]/5 rounded-full blur-[140px] animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-[700px] h-[700px] bg-[#4D8BB1]/10 rounded-full blur-[160px] animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
 
-        <div className="mx-auto max-w-6xl relative z-10 px-4 sm:px-6 lg:px-8 w-full">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
-            <div className="space-y-8">
-              <div className="slide-in-left space-y-4">
-                <div className="inline-block px-4 py-2 bg-[#818258]/20 text-[#818258] text-sm font-bold uppercase tracking-wider rounded-full border border-[#818258]/30">
-                  <Sparkles className="inline h-4 w-4 mr-2" />
-                  Legal Excellence
-                </div>
-                <h1 className="text-6xl sm:text-7xl font-light leading-tight text-[#213b37]">
-                  Assessoria<br />
-                  <span className="shimmer-text font-normal text-7xl">Jurídica</span>
-                </h1>
-              </div>
-
-              <p className="slide-in-left text-xl text-gray-700 font-light max-w-lg leading-relaxed" style={{ animationDelay: '0.2s' }}>
-                Soluções ágeis, seguras e confiáveis. Transformamos desafios jurídicos em oportunidades de negócio.
-              </p>
-
-              <div className="slide-in-left flex flex-col sm:flex-row gap-4 pt-4" style={{ animationDelay: '0.4s' }}>
-                <Link href="/">
-                  <Button size="lg" className="bg-[#818258] hover:bg-[#bbbd7e] text-white font-semibold rounded-lg px-8 h-14 pulse-glow">
-                    Acessar Dashboard <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="#areas">
-                  <Button size="lg" variant="outline" className="border-[#213b37] text-[#213b37] hover:bg-[#213b37] hover:text-white rounded-lg px-8 h-14 font-semibold">
-                    Explorar
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Stats Row */}
-              <div className="slide-in-left grid grid-cols-3 gap-6 pt-8 border-t border-gray-200" style={{ animationDelay: '0.6s' }}>
-                <div>
-                  <p className="text-3xl font-bold text-[#818258]">8+</p>
-                  <p className="text-sm text-gray-600">Anos</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#818258]">20+</p>
-                  <p className="text-sm text-gray-600">Profissionais</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#818258]">500+</p>
-                  <p className="text-sm text-gray-600">Clientes</p>
-                </div>
-              </div>
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center relative z-10 w-full">
+          <div className="space-y-12 animate-reveal">
+            <div className="space-y-6">
+              <Badge variant="outline" className="border-[#F5D030]/30 text-[#F5D030] bg-[#F5D030]/5 px-6 py-1.5 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">
+                Estratégia Jurídica de Alto Impacto
+              </Badge>
+              <h1 className="text-7xl lg:text-9xl font-black leading-[0.85] tracking-tighter uppercase font-headline">
+                Defesa <br />
+                <span className="animate-shimmer">Implacável</span> <br />
+                do seu Direito.
+              </h1>
             </div>
 
-            {/* Right Visual */}
-            <div className="hidden md:flex relative h-[600px]">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#213b37] to-[#0A2C29] rounded-3xl overflow-hidden slide-in-right">
-                <div className="absolute inset-0 opacity-20 pattern-dots" />
-                <div className="flex items-center justify-center h-full relative z-10">
-                  <div className="text-center space-y-6 px-8">
-                    <Building2 className="h-32 w-32 text-[#818258] mx-auto float-animation" />
-                    <h3 className="text-3xl font-serif font-semibold text-white">
-                      Escritório Especializado
-                    </h3>
-                    <p className="text-lg text-gray-300 font-light">
-                      Expertise consolidada em Direito Corporativo e Consultoria Jurídica Estratégica
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <ChevronDown className="h-8 w-8 text-[#818258]" />
-        </div>
-      </section>
-
-      {/* Trust Section */}
-      <section className="py-16 bg-[#213b37] text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm uppercase tracking-widest text-[#818258] font-bold mb-8">
-            Confiado por líderes do mercado
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="space-y-2">
-              <Star className="h-6 w-6 text-[#818258] mx-auto" />
-              <p className="font-semibold">Excelência</p>
-              <p className="text-sm text-gray-400">Técnica Jurídica</p>
-            </div>
-            <div className="space-y-2">
-              <CheckCircle className="h-6 w-6 text-[#818258] mx-auto" />
-              <p className="font-semibold">Resultados</p>
-              <p className="text-sm text-gray-400">Comprovados</p>
-            </div>
-            <div className="space-y-2">
-              <Award className="h-6 w-6 text-[#818258] mx-auto" />
-              <p className="font-semibold">Confiança</p>
-              <p className="text-sm text-gray-400">De Clientes</p>
-            </div>
-            <div className="space-y-2">
-              <Sparkles className="h-6 w-6 text-[#818258] mx-auto" />
-              <p className="font-semibold">Inovação</p>
-              <p className="text-sm text-gray-400">Estratégica</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Practice Areas Section - Enhanced */}
-      <section id="areas" className="py-24 px-4 sm:px-6 lg:px-8 bg-[#E9E8E6]">
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center mb-20 space-y-4">
-            <div className="inline-block px-4 py-2 bg-[#818258]/20 text-[#818258] text-sm font-bold uppercase tracking-wider rounded-full">
-              Especialidades
-            </div>
-            <h2 className="text-6xl font-serif font-semibold text-[#213b37]">
-              Áreas de Atuação
-            </h2>
-            <p className="text-xl text-[#464646] max-w-2xl mx-auto font-light">
-              Expertise consolidada em múltiplas áreas do direito corporativo
+            <p className="text-xl text-gray-400 font-light max-w-xl leading-relaxed border-l-2 border-[#F5D030]/20 pl-8">
+              Dr. Reinaldo Gonçalves Miguel de Jesus comanda uma banca de elite focada na <span className="text-white font-bold italic">recuperação de patrimônio trabalhista</span>. Combinamos agressividade jurídica com inteligência técnica para resultados extraordinários.
             </p>
+
+            <div className="flex flex-col sm:row gap-6 pt-6">
+              <Link href="https://wa.me/5511999999999" target="_blank" className="w-full sm:w-auto">
+                <Button size="lg" className="gold-gradient w-full sm:w-auto hover:scale-105 transition-all duration-500 font-black rounded-xl px-12 h-20 text-sm uppercase tracking-widest shadow-2xl shadow-yellow-500/20">
+                  Agendar Análise Estratégica <MessageSquare className="ml-4 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="#atuacao" className="w-full sm:w-auto">
+                <Button size="lg" variant="ghost" className="text-white hover:bg-white/5 w-full sm:w-auto font-black h-20 px-10 text-xs uppercase tracking-widest gap-3 border border-white/5 rounded-xl">
+                  Nossas Especialidades <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-3 gap-12 pt-12 border-t border-white/5">
+              <div>
+                <p className="text-4xl font-black text-[#F5D030] font-headline">8+</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Anos de Excelência</p>
+              </div>
+              <div>
+                <p className="text-4xl font-black text-[#F5D030] font-headline">94%</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Taxa de Sucesso</p>
+              </div>
+              <div>
+                <p className="text-4xl font-black text-[#F5D030] font-headline">R$ Mi</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Valores Recuperados</p>
+              </div>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          <div className="relative hidden lg:block group animate-reveal" style={{ animationDelay: '0.4s' }}>
+            <div className="absolute -inset-6 bg-gradient-to-br from-[#F5D030] to-[#D4AF37] rounded-[3rem] opacity-10 blur-3xl group-hover:opacity-20 transition-opacity duration-1000" />
+            <div className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden border border-white/10 gold-glow bg-[#0a0a14]">
+              <img 
+                src="https://picsum.photos/seed/reinaldo-law/800/1000" 
+                alt="Dr. Reinaldo Gonçalves" 
+                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000"
+                data-ai-hint="elegant lawyer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80" />
+              <div className="absolute bottom-12 left-12 right-12 space-y-3">
+                <p className="text-3xl font-black uppercase tracking-tighter text-white font-headline">Dr. Reinaldo Gonçalves</p>
+                <p className="text-[11px] font-bold text-[#F5D030] uppercase tracking-[0.5em]">Advocacia Estratégica | OAB/SP</p>
+              </div>
+            </div>
+            
+            {/* Floating Card */}
+            <div className="absolute -left-12 top-1/3 glass p-8 rounded-3xl border-l-4 border-l-[#F5D030] animate-float shadow-2xl">
+              <div className="flex items-center gap-5">
+                <div className="bg-[#F5D030]/10 p-3 rounded-2xl text-[#F5D030]">
+                  <Gavel className="h-8 w-8" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#F5D030] uppercase tracking-widest">Especialista em</p>
+                  <p className="text-base font-bold text-white uppercase tracking-tight">Alta Performance Trabalhista</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Specialties */}
+      <section id="atuacao" className="py-40 px-6 relative bg-[#020617]">
+        <div className="max-w-7xl mx-auto space-y-32">
+          <div className="text-center space-y-8 max-w-4xl mx-auto">
+            <Badge className="bg-[#F5D030]/10 text-[#F5D030] border-[#F5D030]/20 px-8 py-2 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">Áreas de Domínio</Badge>
+            <h2 className="text-6xl lg:text-8xl font-black uppercase tracking-tighter font-headline leading-none">A Banca que <span className="animate-shimmer">Domina</span> o Tribunal.</h2>
+            <p className="text-gray-400 font-light text-xl">Desenvolvemos teses exclusivas para garantir a proteção máxima dos seus direitos trabalhistas.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-10">
             {[
-              {
-                title: 'Direito Corporativo',
-                description: 'Operações societárias complexas, contratos comerciais e governança.',
-                icon: Building2,
-                delay: '0s'
+              { 
+                title: "Rescisão Indireta", 
+                desc: "Saia da empresa com todos os seus direitos garantidos (FGTS + 40%, Seguro Desemprego e Aviso Prévio) quando o patrão descumpre a lei.",
+                icon: Zap,
+                tag: "FALTA PATRONAL"
               },
-              {
-                title: 'Direito Trabalhista',
-                description: 'Contencioso e consultiva em relações trabalhistas especializadas.',
-                icon: Users,
-                delay: '0.1s'
+              { 
+                title: "Horas Extras & Banco", 
+                desc: "Recuperamos cada minuto trabalhado fora da jornada, inclusive intervalos suprimidos e períodos de prontidão via WhatsApp.",
+                icon: Clock,
+                tag: "RECUPERAÇÃO"
               },
-              {
-                title: 'Direito Imobiliário',
-                description: 'Exploração comercial de imóveis com análises de risco.',
-                icon: Award,
-                delay: '0.2s'
+              { 
+                title: "Assédio & Saúde", 
+                desc: "Proteção total contra assédio moral, burnout e doenças do trabalho. Defendemos sua dignidade e integridade emocional.",
+                icon: ShieldCheck,
+                tag: "DIGNIDADE"
               },
-              {
-                title: 'Direito Tributário',
-                description: 'Planejamento tributário estratégico e contencioso fiscal.',
-                icon: BarChart3,
-                delay: '0.3s'
+              { 
+                title: "Cargos de Confiança", 
+                desc: "Anulação de falsos cargos de gestão para recebimento de horas extras e reflexos salariais de alta monta.",
+                icon: TrendingUp,
+                tag: "ESTRATÉGIA"
               },
-              {
-                title: 'Direito Penal',
-                description: 'Atuação estratégica contenciosa em todos os ramos.',
+              { 
+                title: "Reversão de Justa Causa", 
+                desc: "Combate técnico contra demissões arbitrárias, limpando seu histórico profissional e garantindo suas verbas rescisórias.",
+                icon: Hammer,
+                tag: "REVERSÃO"
+              },
+              { 
+                title: "Equiparação Salarial", 
+                desc: "Justiça remuneratória: se você faz a mesma função, merece o mesmo salário. Corrigimos distorções históricas.",
                 icon: Scale,
-                delay: '0.4s'
-              },
-              {
-                title: 'Direito Civil',
-                description: 'Contencioso nas mais diversas áreas do Direito Civil.',
-                icon: FileText,
-                delay: '0.5s'
-              },
-            ].map((area, idx) => {
-              const Icon = area.icon
-              return (
-                <div
-                  key={idx}
-                  className="slide-in-up bg-white rounded-3xl p-8 hover:shadow-2xl transition-all duration-300 border border-gray-100 group hover:-translate-y-2"
-                  style={{ animationDelay: area.delay }}
-                >
-                  <div className="mb-4 inline-flex p-3 rounded-lg bg-[#213b37]/5 group-hover:bg-[#213b37] transition-all duration-300">
-                    <Icon className="h-6 w-6 text-[#213b37] group-hover:text-white transition-colors duration-300" />
+                tag: "ISONOMIA"
+              }
+            ].map((spec, i) => (
+              <div key={i} className="group glass p-12 rounded-[3rem] hover:border-[#F5D030]/40 transition-all duration-700 hover:-translate-y-4 flex flex-col h-full hover-gold">
+                <div className="flex justify-between items-start mb-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[#F5D030]/10 flex items-center justify-center text-[#F5D030] group-hover:scale-110 group-hover:bg-[#F5D030] group-hover:text-[#020617] transition-all duration-700">
+                    <spec.icon className="h-8 w-8" />
                   </div>
-                  <h3 className="text-2xl font-serif font-semibold text-[#213b37] mb-3">
-                    {area.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed text-sm">
-                    {area.description}
-                  </p>
-                  <div className="mt-6 flex items-center text-[#818258] opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-sm font-semibold">Explorar</span>
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </div>
+                  <Badge variant="outline" className="text-[9px] border-white/10 text-gray-500 uppercase font-black tracking-widest px-3">{spec.tag}</Badge>
                 </div>
-              )
-            })}
-          </div>
-
-          <div className="text-center slide-in-up">
-            <Link href="#areas">
-              <Button
-                size="lg"
-                className="bg-[#213b37] hover:bg-[#26736b] text-white font-semibold rounded-lg px-8 h-14"
-              >
-                Ver Todas as Áreas <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* About Section - Enhanced */}
-      <section className="py-32 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8 slide-in-left">
-              <div className="space-y-4">
-                <div className="inline-block px-4 py-2 bg-[#818258]/20 text-[#818258] text-sm font-bold uppercase tracking-wider rounded-full">
-                  História
-                </div>
-                <h2 className="text-5xl font-serif font-semibold text-[#213b37]">
-                  Quem Somos
-                </h2>
+                <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-6 group-hover:text-[#F5D030] transition-colors font-headline">{spec.title}</h3>
+                <p className="text-gray-400 text-base leading-relaxed mb-10 flex-1">{spec.desc}</p>
+                <Link href="https://wa.me/5511999999999" className="text-[11px] font-black text-[#F5D030] uppercase tracking-[0.3em] flex items-center gap-3 group-hover:gap-6 transition-all">
+                  Analisar meu Caso <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-
-              <p className="text-gray-700 leading-relaxed text-lg font-light">
-                Fundado em 2017, nascemos da união entre jovens advogados que decidiram agregar à experiência da advocacia tradicional uma forma <span className="text-[#818258] font-semibold">descomplicada, próxima e incisiva</span>.
-              </p>
-
-              <p className="text-gray-700 leading-relaxed text-lg font-light">
-                O contato direto com clientes, aliado à experiência em grandes operações, proporciona <span className="text-[#818258] font-semibold">fluidez e segurança</span> a novos negócios.
-              </p>
-
-              <div className="space-y-3 pt-4">
-                {['Excelência Técnica', 'Agilidade Estratégica', 'Foco em Resultados'].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 slide-in-left" style={{ animationDelay: `${0.1 * (i + 1)}s` }}>
-                    <CheckCircle className="h-5 w-5 text-[#818258] flex-shrink-0" />
-                    <span className="text-gray-700 font-medium">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative slide-in-right">
-              <div className="absolute -inset-8 bg-gradient-to-br from-[#818258] to-[#213b37] rounded-3xl opacity-20 blur-2xl" />
-              <div className="relative bg-gradient-to-br from-[#818258] to-[#213b37] rounded-3xl overflow-hidden p-12 text-white h-96 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <Award className="h-16 w-16 text-white/80 float-animation" />
-                  <h3 className="text-3xl font-serif font-semibold">
-                    Missão
-                  </h3>
-                  <p className="text-lg font-light text-gray-100">
-                    Ser fonte de boas ideias, descomplicando o cotidiano jurídico-empresarial e otimizando a busca por novas oportunidades.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#213b37] text-white">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-5xl font-serif font-semibold text-center mb-20">
-            Por que Nos Escolher?
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Sparkles,
-                title: 'Inovação Jurídica',
-                desc: 'Estratégias modernas combinadas com expertise tradicional.',
-                gradient: 'from-[#818258] to-[#bbbd7e]'
-              },
-              {
-                icon: CheckCircle,
-                title: 'Resultados Garantidos',
-                desc: 'Foco obsessivo em alcançar objetivos estratégicos definidos.',
-                gradient: 'from-[#26736b] to-[#0A2C29]'
-              },
-              {
-                icon: Award,
-                title: 'Expertise Consolidada',
-                desc: 'Profissionais com vasta experiência em casos complexos.',
-                gradient: 'from-[#213b37] to-[#0A2C29]'
-              },
-            ].map((feature, idx) => {
-              const Icon = feature.icon
-              return (
-                <div key={idx} className={`bg-gradient-to-br ${feature.gradient} rounded-2xl p-8 slide-in-up`} style={{ animationDelay: `${idx * 0.2}s` }}>
-                  <Icon className="h-12 w-12 mb-6 float-animation" style={{ animationDelay: `${idx * 0.2}s` }} />
-                  <h3 className="text-2xl font-serif font-semibold mb-3">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-100 font-light leading-relaxed">
-                    {feature.desc}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#0A2C29] to-[#213b37] text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#818258]/10 rounded-full blur-3xl -z-0" />
-        <div className="mx-auto max-w-5xl text-center space-y-12 relative z-10">
-          <div className="space-y-6 slide-in-up">
-            <h2 className="text-6xl font-serif font-semibold leading-tight">
-              Transforme Seus Desafios Jurídicos
-            </h2>
-            <p className="text-2xl text-gray-300 font-light max-w-3xl mx-auto">
-              Em oportunidades de negócio com assessoria estratégica de alta performance
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 py-12 slide-in-up">
-            {[
-              { icon: Mail, label: 'Email', value: 'contato@reinaldoadv.com.br', href: 'mailto:contato@reinaldoadv.com.br' },
-              { icon: Phone, label: 'Telefone', value: '(11) 9999-9999', href: 'tel:+5511999999999' },
-              { icon: MapPin, label: 'Localização', value: 'São Paulo, SP', href: '#' },
-            ].map((contact, idx) => {
-              const Icon = contact.icon
-              return (
-                <a
-                  key={idx}
-                  href={contact.href}
-                  className="p-8 rounded-lg bg-white bg-opacity-10 hover:bg-opacity-20 transition-all border border-white/20 hover:border-[#818258] group backdrop-blur-sm"
-                >
-                  <Icon className="h-12 w-12 text-[#818258] mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                  <p className="font-semibold text-lg mb-1">{contact.label}</p>
-                  <p className="text-gray-300 text-sm">{contact.value}</p>
-                </a>
-              )
-            })}
-          </div>
-
-          <div className="slide-in-up pt-8">
-            <Link href="/">
-              <Button size="lg" className="bg-[#818258] hover:bg-[#bbbd7e] text-white font-semibold rounded-lg px-8 h-14 pulse-glow">
-                Acessar Portal <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0A2C29] text-white py-20 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-4 gap-12 mb-16 pb-16 border-b border-gray-800">
-            <div className="space-y-4">
-              <h3 className="text-lg font-serif font-semibold text-[#818258]">
-                Dr. Reinaldo Gonçalves
-              </h3>
-              <p className="text-gray-400 font-light text-sm leading-relaxed">
-                Assessoria Jurídica Especializada em Direito Corporativo e Consultoria Estratégica
-              </p>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-[#818258]">Contato</h4>
-              <div className="text-gray-400 font-light text-sm space-y-2">
-                <p>contato@reinaldoadv.com.br</p>
-                <p>(11) 9999-9999</p>
-                <p>São Paulo, SP</p>
+      <footer className="py-32 bg-[#01040d] border-t border-white/5" id="contato">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-4 gap-20">
+          <div className="lg:col-span-2 space-y-10">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-[#F5D030] flex items-center justify-center">
+                <Scale className="h-5 w-5 text-[#020617]" />
               </div>
+              <span className="text-2xl font-black uppercase tracking-tighter font-headline">RGMJ Advogados</span>
             </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-[#818258]">Navegação</h4>
-              <div className="flex flex-col gap-2">
-                <Link href="/" className="text-gray-400 hover:text-[#818258] transition font-light text-sm">Dashboard</Link>
-                <Link href="#areas" className="text-gray-400 hover:text-[#818258] transition font-light text-sm">Áreas de Atuação</Link>
-                <Link href="#" className="text-gray-400 hover:text-[#818258] transition font-light text-sm">Contato</Link>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-[#818258]">Redes Sociais</h4>
-              <div className="flex gap-4">
-                <a href="#" className="text-gray-400 hover:text-[#818258] transition font-light text-sm">LinkedIn</a>
-                <a href="#" className="text-gray-400 hover:text-[#818258] transition font-light text-sm">Instagram</a>
-              </div>
+            <p className="text-gray-500 text-lg max-w-md font-light leading-relaxed">
+              Escritório Boutique especializado em alta performance trabalhista. Localizado no coração financeiro de São Paulo, atendemos clientes em todo o Brasil com rigor técnico e ética absoluta.
+            </p>
+            <div className="flex gap-6">
+              {[Users, MessageSquare, Briefcase].map((Icon, i) => (
+                <div key={i} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#F5D030] hover:text-[#020617] transition-all cursor-pointer"><Icon className="h-5 w-5" /></div>
+              ))}
             </div>
           </div>
-          <div className="text-center text-gray-500 text-sm font-light">
-            <p>&copy; 2025 Dr. Reinaldo Gonçalves. Todos os direitos reservados.</p>
+          <div className="space-y-8">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[#F5D030]">Contato Direto</h4>
+            <div className="space-y-6 text-base text-gray-400 font-bold">
+              <p className="flex items-center gap-4 hover:text-white transition-colors cursor-pointer"><Mail className="h-5 w-5 text-[#F5D030]" /> contato@rgmj.adv.br</p>
+              <p className="flex items-center gap-4 hover:text-white transition-colors cursor-pointer"><Phone className="h-5 w-5 text-[#F5D030]" /> (11) 9999-9999</p>
+              <p className="flex items-center gap-4 hover:text-white transition-colors cursor-pointer leading-tight"><MapPin className="h-5 w-5 text-[#F5D030]" /> Vila Olímpia, <br /> São Paulo - SP</p>
+            </div>
+          </div>
+          <div className="space-y-8 text-right">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[#F5D030]">Governança</h4>
+            <div className="space-y-6 text-sm text-gray-500 uppercase font-black tracking-widest">
+              <Link href="/login" className="block hover:text-white transition-colors">Acesso Corporativo</Link>
+              <p className="text-[10px] mt-12 text-gray-700 leading-relaxed tracking-normal font-normal">© 2025 Dr. Reinaldo Gonçalves. <br /> CNPJ: 00.000.000/0001-00. <br /> Todos os direitos reservados.</p>
+            </div>
           </div>
         </div>
       </footer>

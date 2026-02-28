@@ -55,7 +55,7 @@ const menuGroups = [
   {
     title: "ESTRATÉGICO",
     items: [
-      { name: "DASHBOARD", href: "/", icon: LayoutDashboard },
+      { name: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
       { name: "RELATÓRIOS BI", href: "/reports", icon: BarChart3 },
       { name: "LABORATÓRIO", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
     ]

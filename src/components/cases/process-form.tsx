@@ -53,7 +53,6 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
   const [isQuickClientOpen, setIsQuickClientOpen] = useState(false)
   const [quickClientData, setQuickClientData] = useState({ name: '', cpf: '' })
   const [isSavingClient, setIsSavingClient] = useState(false)
-  const [loadingApi, setLoadingApi] = useState(false)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -126,7 +125,8 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
         updatedAt: serverTimestamp(),
       }
 
-      const docRef = await addDocumentNonBlocking(collection(db, "clients"), newClient) as DocumentReference<any, DocumentData>;
+      const result = await addDocumentNonBlocking(collection(db, "clients"), newClient);
+      const docRef = result as DocumentReference<any, DocumentData>;
       
       if (docRef && docRef.id) {
         handleInputChange("clientId", docRef.id)

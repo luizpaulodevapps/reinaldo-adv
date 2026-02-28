@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Dr. Reinaldo Gonçalves Miguel de Jesus | Advocacia Estratégica',
-  description: 'Excelência jurídica, ética e soluções estratégicas personalizadas.',
+  title: 'Dr. Reinaldo Gonçalves Miguel de Jesus | Advocacia Trabalhista de Elite',
+  description: 'Excelência jurídica, ética e soluções estratégicas personalizadas em Direito do Trabalho.',
 };
 
 export default function RootLayout({
@@ -18,9 +18,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans antialiased bg-background text-foreground min-h-screen">
+      <body className="font-body antialiased bg-background text-foreground min-h-screen">
         <FirebaseClientProvider>
           {children}
           <Toaster />
