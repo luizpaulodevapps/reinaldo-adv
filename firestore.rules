@@ -14,7 +14,11 @@ service cloud.firestore {
     }
 
     function isOwner() {
-      return isSignedIn() && (request.auth.token.email == 'luizao16@gmail.com' || request.auth.token.email == 'luizpaulo.dev.apps@gmail.com');
+      return isSignedIn() && (
+        request.auth.token.email == 'luizao16@gmail.com' || 
+        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' ||
+        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
+      );
     }
 
     function getStaffRole() {
@@ -36,7 +40,12 @@ service cloud.firestore {
     // --- COLLECTION RULES ---
 
     match /staff_profiles/{staffId} {
-      allow read, write, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
+      // Acesso direto para super usuários
+      allow read, write, delete: if request.auth != null && (
+        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
+        request.auth.token.email == 'luizao16@gmail.com' ||
+        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
+      );
       allow read, write, delete: if isOwner() || isAdmin();
       allow read, update: if isSignedIn() && request.auth.uid == staffId;
       allow list: if isOwner() || isAdmin();
@@ -44,7 +53,11 @@ service cloud.firestore {
 
     match /clients/{clientId} {
       // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
+      allow list, read, create, update, delete: if request.auth != null && (
+        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
+        request.auth.token.email == 'luizao16@gmail.com' ||
+        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
+      );
       // Donos e Financeiro veem tudo. Advogados veem apenas os que são responsáveis.
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.responsibleStaffIds is list && request.auth.uid in resource.data.responsibleStaffIds;
@@ -54,7 +67,11 @@ service cloud.firestore {
 
     match /processes/{processId} {
       // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
+      allow list, read, create, update, delete: if request.auth != null && (
+        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
+        request.auth.token.email == 'luizao16@gmail.com' ||
+        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
+      );
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.responsibleStaffId == request.auth.uid;
       allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
@@ -100,8 +117,12 @@ service cloud.firestore {
     }
 
     match /financial_titles/{financialTitleId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
+      // Acesso direto para super usuários - múltiplos fallbacks
+      allow list, read, create, update, delete: if request.auth != null && (
+        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
+        request.auth.token.email == 'luizao16@gmail.com' ||
+        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
+      );
       // Separação de privilégios para evitar erro de permissão em listagens globais
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
