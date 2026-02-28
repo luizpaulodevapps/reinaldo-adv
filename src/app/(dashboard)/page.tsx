@@ -1,10 +1,10 @@
-import { redirect } from 'next/navigation';
-
 /**
- * Rota interna neutralizada para evitar conflito com a Landing Page (src/app/page.tsx).
- * O acesso ao Dashboard é feito exclusivamente via /dashboard.
- * Usamos um redirecionamento de servidor para garantir que não haja conflito de rotas.
+ * ARQUIVO NEUTRALIZADO RGMJ
+ * Forçamos este componente como dinâmico para evitar conflitos de manifesto
+ * com a Landing Page na raiz durante o build da Vercel.
  */
-export default function DashboardRootPlaceholder() {
-  redirect('/dashboard');
+export const dynamic = 'force-dynamic';
+
+export default function InactiveDashboardRoot() {
+  return null;
 }
