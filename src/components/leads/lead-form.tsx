@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, UserCheck, Smartphone, Loader2, AlertCircle, Calendar as CalendarIcon, Target, X } from "lucide-react"
+import { Search, UserCheck, Smartphone, Loader2, AlertCircle, Calendar as CalendarIcon, Target, X, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -33,7 +33,9 @@ interface LeadFormProps {
 export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMode = "quick", lockMode = false }: LeadFormProps) {
   const [mode, setMode] = useState<"quick" | "complete">(initialMode)
   const [searchTerm, setSearchTerm] = useState("")
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -60,17 +62,28 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     value: ""
   })
 
+  // Fechar busca ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   const filteredLeads = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return []
     return existingLeads.filter(l => 
       l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      l.phone.includes(searchTerm)
+      (l.phone && l.phone.includes(searchTerm)) ||
+      (l.cpf && l.cpf.includes(searchTerm))
     )
   }, [searchTerm, existingLeads])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (field === "name") setSearchTerm(value)
   }
 
   const handleCepBlur = async () => {
@@ -110,11 +123,26 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
   const handleSelectLead = (lead: Lead) => {
     onSelectExisting(lead)
+    setIsSearchOpen(false)
     setSearchTerm("")
-    setFormData(prev => ({ ...prev, name: lead.name, phone: lead.phone }))
+    setFormData(prev => ({ ...prev, name: lead.name, phone: lead.phone || "" }))
+  }
+
+  const handleCreateNew = () => {
+    setFormData(prev => ({ ...prev, name: searchTerm }))
+    setIsSearchOpen(false)
+    // Opcionalmente, focar no próximo campo
   }
 
   const handleSubmit = () => {
+    if (!formData.name && !searchTerm) {
+      toast({
+        variant: "destructive",
+        title: "Nome obrigatório",
+        description: "Por favor, selecione ou digite o nome do cliente."
+      })
+      return
+    }
     onSubmit({ ...formData, name: formData.name || searchTerm, mode })
   }
 
@@ -137,49 +165,81 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             </div>
           )}
 
-          {/* Cliente Principal com Busca */}
-          <div className="relative space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest flex items-center gap-1">
-              Cliente Principal <span className="text-destructive">*</span>
+          {/* Cliente Principal - CONFORME MODELO DE INSPIRAÇÃO */}
+          <div className="relative space-y-2" ref={searchRef}>
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+              CLIENTE PRINCIPAL <span className="text-destructive">*</span>
             </Label>
-            <div className="relative">
+            
+            <div 
+              className="relative cursor-pointer"
+              onClick={() => setIsSearchOpen(true)}
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4a5568]" />
-              <Input 
-                placeholder="Pesquisar cliente..." 
-                className="pl-12 bg-[#1a1f2e] border-[#2d3748] focus:border-primary/50 h-12 text-white placeholder:text-[#4a5568]" 
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-              />
+              <div className="pl-12 bg-[#1a1f2e] border border-[#2d3748] rounded-md h-12 flex items-center text-[#4a5568] text-sm">
+                {formData.name || "Pesquisar cliente..."}
+              </div>
             </div>
 
-            {filteredLeads.length > 0 && (
-              <div className="absolute z-50 w-full mt-2 bg-[#1a1f2e] border border-primary/30 shadow-2xl rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div className="p-2 bg-primary/10 border-b border-primary/20 text-[10px] font-bold text-primary uppercase flex items-center gap-2">
-                  <UserCheck className="h-3 w-3" /> Registro em Base
+            {/* Dropdown de Pesquisa de Elite */}
+            {isSearchOpen && (
+              <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-[#2d3748] shadow-2xl rounded-lg overflow-hidden animate-in fade-in zoom-in-95">
+                <div className="p-4 border-b border-[#2d3748]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input 
+                      placeholder="Nome ou CPF/CNPJ..." 
+                      autoFocus
+                      className="pl-10 bg-[#0a0f1e] border-primary/50 focus:border-primary h-11 text-white ring-0"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <ScrollArea className="max-h-[200px]">
-                  {filteredLeads.map(lead => (
-                    <button
-                      key={lead.id}
-                      onClick={() => handleSelectLead(lead)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-primary/5 transition-colors border-b border-[#2d3748] last:border-0"
-                    >
-                      <div className="text-left">
-                        <div className="font-bold text-white">{lead.name}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono">{lead.phone}</div>
-                      </div>
-                      <Badge variant="outline" className="text-[9px] uppercase border-primary/40 text-primary">Abrir Dossiê</Badge>
-                    </button>
-                  ))}
-                </ScrollArea>
+                
+                <div className="min-h-[140px] flex flex-col justify-center items-center p-4">
+                  {searchTerm.length < 2 ? (
+                    <div className="text-center">
+                      <p className="text-[#4a5568] text-sm">Digite pelo menos 2 caracteres para buscar</p>
+                    </div>
+                  ) : filteredLeads.length > 0 ? (
+                    <ScrollArea className="w-full max-h-[300px]">
+                      {filteredLeads.map(lead => (
+                        <button
+                          key={lead.id}
+                          onClick={() => handleSelectLead(lead)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-primary/5 transition-colors border-b border-[#2d3748] last:border-0"
+                        >
+                          <div className="text-left">
+                            <div className="font-bold text-white">{lead.name}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{lead.phone}</div>
+                          </div>
+                          <Badge variant="outline" className="text-[9px] uppercase border-primary/40 text-primary">Selecionar</Badge>
+                        </button>
+                      ))}
+                    </ScrollArea>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-[#4a5568] text-sm italic">Nenhum registro encontrado para "{searchTerm}"</p>
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={handleCreateNew}
+                  className="w-full p-4 border-t border-[#2d3748] flex items-center gap-3 text-primary hover:bg-primary/5 transition-colors font-bold text-xs uppercase tracking-widest"
+                >
+                  <Plus className="h-4 w-4" />
+                  Criar Novo Cliente
+                </button>
               </div>
             )}
           </div>
 
           {/* Título da Demanda */}
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest flex items-center gap-1">
-              Título da Demanda <span className="text-destructive">*</span>
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+              TÍTULO DA DEMANDA <span className="text-destructive">*</span>
             </Label>
             <Input 
               placeholder="Ex: Revisional de Horas Extras..." 
@@ -192,8 +252,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Advogado Responsável */}
             <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest flex items-center gap-1">
-                Advogado Responsável <span className="text-destructive">*</span>
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                ADVOGADO RESPONSÁVEL <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.responsibleLawyer} onValueChange={(v) => handleInputChange("responsibleLawyer", v)}>
                 <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
@@ -208,8 +268,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
             {/* Área Jurídica */}
             <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest flex items-center gap-1">
-                Área Jurídica <span className="text-destructive">*</span>
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                ÁREA JURÍDICA <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
                 <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
@@ -226,8 +286,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
             {/* Prioridade */}
             <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest">
-                Prioridade
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
+                PRIORIDADE
               </Label>
               <Select value={formData.priority} onValueChange={(v) => handleInputChange("priority", v)}>
                 <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
@@ -243,8 +303,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
             {/* Data de Prescrição */}
             <div className="space-y-2">
-              <Label className="text-[#e53e3e] font-bold uppercase text-[11px] tracking-widest flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Data de Prescrição
+              <Label className="text-[#e53e3e] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> DATA DE PRESCRIÇÃO
               </Label>
               <div className="relative">
                 <Input 
@@ -259,8 +319,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
           {/* Fonte de Captação */}
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest flex items-center gap-1">
-              Fonte de Captação <span className="text-destructive">*</span>
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+              FONTE DE CAPTAÇÃO <span className="text-destructive">*</span>
             </Label>
             <Select value={formData.source} onValueChange={(v) => handleInputChange("source", v)}>
               <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
@@ -277,8 +337,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
           {/* Briefing Inicial */}
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[11px] tracking-widest">
-              Briefing Inicial
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
+              BRIEFING INICIAL
             </Label>
             <Textarea 
               placeholder="Relato inicial do cliente..." 
