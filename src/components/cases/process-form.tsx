@@ -28,7 +28,7 @@ import {
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 
@@ -83,7 +83,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     strategyNotes: ""
   })
 
-  // Busca clientes para o Passo 1
+  // Busca clientes para o Passo 1 e Validação
   const clientsQuery = useMemoFirebase(() => {
     if (!user) return null
     return query(collection(db, "clients"), orderBy("name", "asc"))
@@ -121,8 +121,8 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     
     if (doc.length === 11) {
       toast({ 
-        title: "Integração Gov.br CBC", 
-        description: "A busca por CPF exige autorização Gov.br. Por ora, insira o nome manualmente." 
+        title: "VALORAÇÃO ESTRUTURAL RGMJ", 
+        description: "A validação matemática está ativa. Documento parece formalmente correto." 
       })
       return
     }
@@ -157,12 +157,21 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
       return
     }
 
+    const cleanDoc = quickClientData.cpf.replace(/\D/g, "");
+    
+    // Validação de Duplicidade
+    const isDup = (clients || []).some(c => (c.documentNumber || "").replace(/\D/g, "") === cleanDoc);
+    if (isDup && cleanDoc) {
+      toast({ variant: "destructive", title: "Cliente já existe", description: "Este CPF/CNPJ já está cadastrado na base RGMJ." });
+      return;
+    }
+
     setIsSavingClient(true)
     try {
       const newClient = {
         name: quickClientData.name.toUpperCase(),
         documentNumber: quickClientData.cpf,
-        type: quickClientData.cpf.replace(/\D/g, "").length > 11 ? 'corporate' : 'individual',
+        type: cleanDoc.length > 11 ? 'corporate' : 'individual',
         status: 'Ativo',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -579,7 +588,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                   className="absolute right-1 top-1 h-12 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4 border border-primary/20"
                 >
                   {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-                  API
+                  VALORAR
                 </Button>
               </div>
             </div>

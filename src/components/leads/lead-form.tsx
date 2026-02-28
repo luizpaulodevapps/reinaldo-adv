@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -162,6 +163,13 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
         toast({ variant: "destructive", title: "Documento Inválido", description: "O CPF/CNPJ não passou na validação matemática." });
         return;
       }
+
+      // Validação de Duplicidade
+      const isDup = existingLeads.some(l => (l.cpf || l.documentNumber || "").replace(/\D/g, "") === doc);
+      if (isDup) {
+        toast({ variant: "destructive", title: "Lead já Cadastrado", description: "Este CPF/CNPJ já consta na base de atendimentos." });
+        return;
+      }
     }
 
     setFormData(prev => ({
@@ -183,6 +191,16 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       toast({ variant: "destructive", title: "Selecione ou busque um cliente." })
       return
     }
+
+    const doc = formData.cpf.replace(/\D/g, "");
+    if (doc) {
+      const isDup = existingLeads.some(l => (l.cpf || l.documentNumber || "").replace(/\D/g, "") === doc);
+      if (isDup) {
+        toast({ variant: "destructive", title: "Registro Duplicado", description: "Um atendimento para este documento já foi iniciado." });
+        return;
+      }
+    }
+
     onSubmit({ ...formData, name: finalName, mode })
   }
 

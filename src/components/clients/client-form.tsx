@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -9,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Search, CheckCircle2, ShieldAlert, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
+import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
+import { collection, query } from "firebase/firestore"
 
 interface ClientFormProps {
   onSubmit: (data: any) => void
@@ -17,7 +20,17 @@ interface ClientFormProps {
 
 export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   const { toast } = useToast()
+  const db = useFirestore()
+  const { user } = useUser()
   const [loadingCep, setLoadingCep] = useState(false)
+  
+  // Busca clientes existentes para validar duplicidade
+  const clientsQuery = useMemoFirebase(() => {
+    if (!user) return null
+    return query(collection(db, "clients"))
+  }, [db, user])
+  const { data: existingClients } = useCollection(clientsQuery)
+
   const [formData, setFormData] = useState({
     registrationStatus: "Ativo",
     personType: "Pessoa Física",
@@ -88,6 +101,12 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     return false;
   }
 
+  const checkDuplicate = () => {
+    const newDoc = formData.cpf.replace(/\D/g, "");
+    if (!newDoc) return false;
+    return (existingClients || []).some(c => (c.documentNumber || "").replace(/\D/g, "") === newDoc);
+  }
+
   const handleSubmit = () => {
     if (!formData.firstName || !formData.cpf) {
       toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome e CPF/CNPJ são necessários." })
@@ -95,6 +114,14 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     }
     if (!isDocumentValid()) {
       toast({ variant: "destructive", title: "Documento Inválido", description: "O CPF ou CNPJ informado não é matematicamente válido." })
+      return
+    }
+    if (checkDuplicate()) {
+      toast({ 
+        variant: "destructive", 
+        title: "Registro Duplicado", 
+        description: `O documento ${formData.cpf} já consta na base de dados da banca RGMJ.` 
+      })
       return
     }
     onSubmit(formData)
@@ -155,7 +182,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                   </div>
                 </div>
                 <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
-                  * Validação estrutural offline ativa para economia de custos.
+                  * VALIDAÇÃO ESTRUTURAL OFFLINE ATIVA PARA ECONOMIA DE CUSTOS.
                 </p>
               </div>
               <div className="space-y-1">
