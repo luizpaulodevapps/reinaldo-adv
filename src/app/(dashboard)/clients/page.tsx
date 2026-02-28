@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -22,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { LeadForm } from "@/components/leads/lead-form"
+import { ClientForm } from "@/components/clients/client-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ClientsPage() {
@@ -51,17 +52,17 @@ export default function ClientsPage() {
   const handleCreateClient = (data: any) => {
     if (!user) return
 
+    const fullName = `${data.firstName} ${data.lastName}`.trim()
+
     const newClient = {
       id: crypto.randomUUID(),
-      name: data.name,
+      name: fullName,
       documentNumber: data.cpf,
       email: data.email || "",
       phone: data.phone || "",
-      address: data.address || "",
-      city: data.city || "",
-      state: data.state || "",
-      zipCode: data.zipCode || "",
-      type: data.mode === 'complete' ? 'corporate' : 'individual',
+      type: data.personType === 'Pessoa Jurídica' ? 'corporate' : 'individual',
+      status: data.registrationStatus,
+      registrationData: data, // Salva o objeto completo para não perder campos novos
       responsibleStaffIds: [user.uid],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -72,7 +73,7 @@ export default function ClientsPage() {
         setIsNewClientOpen(false)
         toast({
           title: "Cliente Cadastrado",
-          description: `${data.name} agora faz parte da base RGMJ.`
+          description: `${fullName} agora faz parte da base RGMJ.`
         })
       })
   }
@@ -97,9 +98,9 @@ export default function ClientsPage() {
           </div>
           <Button 
             onClick={() => setIsNewClientOpen(true)}
-            className="gold-gradient text-background font-bold gap-2 px-6 h-10 uppercase text-[10px] tracking-widest rounded-lg"
+            className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black gap-2 px-6 h-10 uppercase text-[10px] tracking-widest rounded-lg shadow-lg"
           >
-            <UserPlus className="h-4 w-4" /> Novo
+            <UserPlus className="h-4 w-4" /> Novo Cliente
           </Button>
         </div>
       </div>
@@ -113,7 +114,7 @@ export default function ClientsPage() {
         ) : filteredClients.length > 0 ? (
           filteredClients.map((client) => {
             const integrity = Math.floor((client.id.charCodeAt(0) % 30) + 70); 
-            const statusColor = integrity > 85 ? "bg-emerald-500" : integrity > 75 ? "bg-primary" : "bg-destructive";
+            const statusColor = client.status === 'Ativo' ? "bg-emerald-500" : "bg-amber-500";
 
             return (
               <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col">
@@ -123,7 +124,7 @@ export default function ClientsPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-[9px] border-primary/20 text-primary uppercase font-bold px-2">
-                        Ativo
+                        {client.status || "Ativo"}
                       </Badge>
                       <Badge variant="outline" className="text-[9px] border-white/10 text-muted-foreground uppercase font-bold px-2">
                         {client.type === 'corporate' ? 'Pessoa Jurídica' : 'Pessoa Física'}
@@ -187,7 +188,7 @@ export default function ClientsPage() {
               <p className="text-sm font-bold text-white uppercase tracking-widest">Base de Clientes Vazia</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">Nenhum cliente foi encontrado na base de dados estratégica da banca RGMJ.</p>
             </div>
-            <Button onClick={() => setIsNewClientOpen(true)} className="gold-gradient text-background font-bold gap-2">
+            <Button onClick={() => setIsNewClientOpen(true)} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black gap-2">
               Cadastrar Primeiro Cliente
             </Button>
           </div>
@@ -195,23 +196,23 @@ export default function ClientsPage() {
       </div>
 
       <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
-        <DialogContent className="glass border-[#2d3748] sm:max-w-[800px] p-0 overflow-hidden bg-[#0a0f1e]">
-          <div className="p-6 bg-[#0a0f1e] border-b border-[#1a1f2e]">
+        <DialogContent className="glass border-white/10 sm:max-w-[1000px] p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl flex items-center gap-4 uppercase tracking-tighter">
-                <FileText className="h-7 w-7 text-primary" /> Ficha de Cliente
+              <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
+                Novo Cliente
               </DialogTitle>
+              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Preencha os dados conforme documentação oficial.</p>
             </DialogHeader>
           </div>
-          <LeadForm 
-            existingLeads={clientsData || []} 
+          <ClientForm 
             onSubmit={handleCreateClient}
-            onSelectExisting={() => {}}
-            initialMode="complete"
-            lockMode={true}
+            onCancel={() => setIsNewClientOpen(false)}
           />
         </DialogContent>
       </Dialog>
     </div>
   )
 }
+
+    
