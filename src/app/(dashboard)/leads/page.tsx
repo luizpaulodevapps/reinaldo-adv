@@ -456,10 +456,11 @@ export default function LeadsPage() {
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20 p-0 flex flex-col bg-[#0a0f1e]">
+        <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20 p-0 flex flex-col bg-[#0a0f1e] h-full overflow-hidden">
           {selectedLead && (
             <>
-              <div className="p-8 pb-4">
+              {/* Header Fixo */}
+              <div className="p-8 pb-4 shrink-0">
                 <SheetHeader className="text-left space-y-1">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge className="bg-primary/10 text-primary border-primary/20 font-bold uppercase text-[9px]">NOVO</Badge>
@@ -473,8 +474,9 @@ export default function LeadsPage() {
                 </SheetHeader>
               </div>
 
-              <Tabs defaultValue="dossie" className="flex-1 flex flex-col mt-4">
-                <TabsList className="px-8 bg-transparent border-b border-border/30 justify-start h-12 gap-8 p-0 rounded-none w-full">
+              {/* Tabs Container - Expande e gerencia o scroll internamente */}
+              <Tabs defaultValue="dossie" className="flex-1 flex flex-col min-h-0">
+                <TabsList className="px-8 bg-transparent border-b border-border/30 justify-start h-12 gap-8 p-0 rounded-none w-full shrink-0">
                   <TabsTrigger 
                     value="dossie" 
                     className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-black data-[state=active]:text-white px-4 font-bold transition-all"
@@ -489,121 +491,125 @@ export default function LeadsPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <ScrollArea className="flex-1 p-8">
-                  <TabsContent value="dossie" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Checklist de Fase</h3>
-                      </div>
-                      
-                      <div className="relative pt-1">
-                        <div className="overflow-hidden h-1 text-xs flex rounded bg-secondary/30">
-                          <div style={{ width: "33%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary"></div>
+                {/* Área de Scroll Única para o Conteúdo das Tabs */}
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="p-8">
+                    <TabsContent value="dossie" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Checklist de Fase</h3>
+                        </div>
+                        
+                        <div className="relative pt-1">
+                          <div className="overflow-hidden h-1 text-xs flex rounded bg-secondary/30">
+                            <div style={{ width: "33%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary"></div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 pt-2">
+                          {stageChecklists[selectedLead.stage]?.map((item, i) => (
+                            <div key={i}>
+                              {item === "Agendar reunião inicial" ? (
+                                <Popover open={isScheduling} onOpenChange={setIsScheduling}>
+                                  <PopoverTrigger asChild>
+                                    <div className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group cursor-pointer">
+                                      <Checkbox 
+                                        id={`check-${i}`} 
+                                        className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
+                                      />
+                                      <div className="flex-1 flex items-center justify-between">
+                                        <label 
+                                          htmlFor={`check-${i}`} 
+                                          className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
+                                        >
+                                          {item}
+                                        </label>
+                                        {scheduledDate && (
+                                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+                                            {format(scheduledDate, "dd/MM")} às {scheduledTime}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 bg-[#0a0f1e] border-primary/40 shadow-2xl z-50" align="start">
+                                    <div className="p-4 space-y-4">
+                                      <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sugestão de Data</Label>
+                                        <Calendar
+                                          mode="single"
+                                          selected={scheduledDate}
+                                          onSelect={setScheduledDate}
+                                          className="rounded-md border border-primary/10 bg-[#0d121f]"
+                                          locale={ptBR}
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
+                                        <Select value={scheduledTime} onValueChange={setScheduledTime}>
+                                          <SelectTrigger className="glass bg-[#1a1f2e] border-[#2d3748]">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
+                                            {businessHours.map(h => (
+                                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <Button 
+                                        onClick={handleConfirmSchedule}
+                                        className="w-full gold-gradient text-background font-bold h-10 shadow-lg"
+                                      >
+                                        Confirmar Agendamento
+                                      </Button>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <div className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group">
+                                  <Checkbox 
+                                    id={`check-${i}`} 
+                                    className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
+                                  />
+                                  <label 
+                                    htmlFor={`check-${i}`} 
+                                    className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
+                                  >
+                                    {item}
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </div>
 
-                      <div className="grid gap-3 pt-2">
-                        {stageChecklists[selectedLead.stage]?.map((item, i) => (
-                          <div key={i}>
-                            {item === "Agendar reunião inicial" ? (
-                              <Popover open={isScheduling} onOpenChange={setIsScheduling}>
-                                <PopoverTrigger asChild>
-                                  <div className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group cursor-pointer">
-                                    <Checkbox 
-                                      id={`check-${i}`} 
-                                      className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
-                                    />
-                                    <div className="flex-1 flex items-center justify-between">
-                                      <label 
-                                        htmlFor={`check-${i}`} 
-                                        className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
-                                      >
-                                        {item}
-                                      </label>
-                                      {scheduledDate && (
-                                        <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
-                                          {format(scheduledDate, "dd/MM")} às {scheduledTime}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 bg-[#0a0f1e] border-primary/40 shadow-2xl z-50" align="start">
-                                  <div className="p-4 space-y-4">
-                                    <div className="space-y-2">
-                                      <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sugestão de Data</Label>
-                                      <Calendar
-                                        mode="single"
-                                        selected={scheduledDate}
-                                        onSelect={setScheduledDate}
-                                        className="rounded-md border border-primary/10 bg-[#0d121f]"
-                                        locale={ptBR}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Horário Comercial</Label>
-                                      <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                                        <SelectTrigger className="glass bg-[#1a1f2e] border-[#2d3748]">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
-                                          {businessHours.map(h => (
-                                            <SelectItem key={h} value={h}>{h}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <Button 
-                                      onClick={handleConfirmSchedule}
-                                      className="w-full gold-gradient text-background font-bold h-10 shadow-lg"
-                                    >
-                                      Confirmar Agendamento
-                                    </Button>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            ) : (
-                              <div className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group">
-                                <Checkbox 
-                                  id={`check-${i}`} 
-                                  className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
-                                />
-                                <label 
-                                  htmlFor={`check-${i}`} 
-                                  className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
-                                >
-                                  {item}
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                      <div className="space-y-4">
+                        <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Briefing Inicial</h3>
+                        <div className="p-6 rounded-xl bg-secondary/10 border-l-4 border-primary/50 italic text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                          "{selectedLead.notes}"
+                        </div>
                       </div>
-                    </div>
+                    </TabsContent>
 
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Briefing Inicial</h3>
-                      <p className="text-muted-foreground leading-relaxed italic border-l-2 border-primary/30 pl-4 py-1">
-                        "{selectedLead.notes}"
-                      </p>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="ferramentas" className="mt-0 space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                    <Button className="w-full gold-gradient text-background font-bold h-14 flex justify-between px-6 rounded-xl shadow-lg">
-                      Gerar Proposta Estratégica <Zap className="h-5 w-5" />
-                    </Button>
-                    <Button variant="outline" className="w-full h-14 flex justify-between px-6 glass rounded-xl border-primary/20 hover:border-primary/50">
-                      Gerar Procuração de Plenos Poderes <ArrowRight className="h-5 w-5" />
-                    </Button>
-                    <Button variant="outline" className="w-full h-14 flex justify-between px-6 glass rounded-xl border-primary/20 hover:border-primary/50">
-                      Scripts de Fechamento <MessageCircle className="h-5 w-5" />
-                    </Button>
-                  </TabsContent>
+                    <TabsContent value="ferramentas" className="mt-0 space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                      <Button className="w-full gold-gradient text-background font-bold h-14 flex justify-between px-6 rounded-xl shadow-lg">
+                        Gerar Proposta Estratégica <Zap className="h-5 w-5" />
+                      </Button>
+                      <Button variant="outline" className="w-full h-14 flex justify-between px-6 glass rounded-xl border-primary/20 hover:border-primary/50">
+                        Gerar Procuração de Plenos Poderes <ArrowRight className="h-5 w-5" />
+                      </Button>
+                      <Button variant="outline" className="w-full h-14 flex justify-between px-6 glass rounded-xl border-primary/20 hover:border-primary/50">
+                        Scripts de Fechamento <MessageCircle className="h-5 w-5" />
+                      </Button>
+                    </TabsContent>
+                  </div>
                 </ScrollArea>
               </Tabs>
 
-              <div className="p-8 pt-4 border-t border-border/30 bg-[#0a0f1e] grid grid-cols-2 gap-4">
+              {/* Footer Fixo com Botões de Ação */}
+              <div className="p-8 pt-4 border-t border-border/30 bg-[#0a0f1e] grid grid-cols-2 gap-4 shrink-0">
                 <Button 
                   className="bg-[#7f1d1d] hover:bg-[#991b1b] text-white font-bold h-14 text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
                 >
