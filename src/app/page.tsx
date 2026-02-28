@@ -5,28 +5,24 @@ import {
   ArrowRight, 
   Scale, 
   Gavel, 
-  Award, 
   CheckCircle2, 
   ShieldCheck, 
   MessageSquare, 
   Clock, 
-  ChevronDown,
-  Briefcase,
-  TrendingUp,
-  Landmark,
-  Hammer,
   ChevronRight,
   Zap,
-  FileText,
   Users,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Briefcase,
+  TrendingUp,
+  Hammer
 } from 'lucide-react'
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#020617] text-white selection:bg-[#F5D030] selection:text-[#020617] overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-[#020617] text-white selection:bg-[#F5D030] selection:text-[#020617] overflow-x-hidden font-sans">
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
@@ -44,6 +40,17 @@ export default function HomePage() {
           backdrop-filter: blur(12px);
           border-bottom: 1px solid rgba(245, 208, 48, 0.05);
         }
+        .animate-shimmer {
+          background: linear-gradient(90deg, #F5D030 0%, #FFFFFF 50%, #F5D030 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 4s linear infinite;
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
       `}</style>
 
       {/* Navigation */}
@@ -54,13 +61,12 @@ export default function HomePage() {
               <Scale className="h-6 w-6 text-[#020617]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-black tracking-tighter uppercase leading-none font-headline">RGMJ Elite</span>
+              <span className="text-lg font-black tracking-tighter uppercase leading-none">RGMJ Elite</span>
               <span className="text-[8px] font-bold text-[#F5D030] tracking-[0.4em] uppercase mt-1">Advocacia Trabalhista</span>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-10 text-[10px] font-black tracking-[0.25em] uppercase">
             <Link href="#atuacao" className="hover:text-[#F5D030] transition-colors">Atuação</Link>
-            <Link href="#diferencial" className="hover:text-[#F5D030] transition-colors">Diferencial</Link>
             <Link href="#contato" className="hover:text-[#F5D030] transition-colors">Contato</Link>
             <Link href="/login">
               <Button size="sm" variant="outline" className="border-[#F5D030]/40 text-[#F5D030] hover:bg-[#F5D030] hover:text-[#020617] rounded-full px-8 text-[9px] font-black uppercase tracking-widest transition-all">
@@ -84,7 +90,7 @@ export default function HomePage() {
               <Badge variant="outline" className="border-[#F5D030]/30 text-[#F5D030] bg-[#F5D030]/5 px-6 py-1.5 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">
                 Estratégia Jurídica de Alto Impacto
               </Badge>
-              <h1 className="text-7xl lg:text-9xl font-black leading-[0.85] tracking-tighter uppercase font-headline">
+              <h1 className="text-7xl lg:text-9xl font-black leading-[0.85] tracking-tighter uppercase">
                 Defesa <br />
                 <span className="animate-shimmer">Implacável</span> <br />
                 do seu Direito.
@@ -95,30 +101,25 @@ export default function HomePage() {
               Dr. Reinaldo Gonçalves Miguel de Jesus comanda uma banca de elite focada na <span className="text-white font-bold italic">recuperação de patrimônio trabalhista</span>. Combinamos agressividade jurídica com inteligência técnica para resultados extraordinários.
             </p>
 
-            <div className="flex flex-col sm:row gap-6 pt-6">
+            <div className="flex flex-col sm:flex-row gap-6 pt-6">
               <Link href="https://wa.me/5511999999999" target="_blank" className="w-full sm:w-auto">
                 <Button size="lg" className="gold-gradient w-full sm:w-auto hover:scale-105 transition-all duration-500 font-black rounded-xl px-12 h-20 text-sm uppercase tracking-widest shadow-2xl shadow-yellow-500/20">
                   Agendar Análise Estratégica <MessageSquare className="ml-4 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="#atuacao" className="w-full sm:w-auto">
-                <Button size="lg" variant="ghost" className="text-white hover:bg-white/5 w-full sm:w-auto font-black h-20 px-10 text-xs uppercase tracking-widest gap-3 border border-white/5 rounded-xl">
-                  Nossas Especialidades <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>
             </div>
 
             <div className="grid grid-cols-3 gap-12 pt-12 border-t border-white/5">
               <div>
-                <p className="text-4xl font-black text-[#F5D030] font-headline">8+</p>
+                <p className="text-4xl font-black text-[#F5D030]">8+</p>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Anos de Excelência</p>
               </div>
               <div>
-                <p className="text-4xl font-black text-[#F5D030] font-headline">94%</p>
+                <p className="text-4xl font-black text-[#F5D030]">94%</p>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Taxa de Sucesso</p>
               </div>
               <div>
-                <p className="text-4xl font-black text-[#F5D030] font-headline">R$ Mi</p>
+                <p className="text-4xl font-black text-[#F5D030]">R$ Mi</p>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Valores Recuperados</p>
               </div>
             </div>
@@ -135,33 +136,20 @@ export default function HomePage() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80" />
               <div className="absolute bottom-12 left-12 right-12 space-y-3">
-                <p className="text-3xl font-black uppercase tracking-tighter text-white font-headline">Dr. Reinaldo Gonçalves</p>
+                <p className="text-3xl font-black uppercase tracking-tighter text-white">Dr. Reinaldo Gonçalves</p>
                 <p className="text-[11px] font-bold text-[#F5D030] uppercase tracking-[0.5em]">Advocacia Estratégica | OAB/SP</p>
-              </div>
-            </div>
-            
-            {/* Floating Card */}
-            <div className="absolute -left-12 top-1/3 glass p-8 rounded-3xl border-l-4 border-l-[#F5D030] animate-float shadow-2xl">
-              <div className="flex items-center gap-5">
-                <div className="bg-[#F5D030]/10 p-3 rounded-2xl text-[#F5D030]">
-                  <Gavel className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-[#F5D030] uppercase tracking-widest">Especialista em</p>
-                  <p className="text-base font-bold text-white uppercase tracking-tight">Alta Performance Trabalhista</p>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Specialties */}
+      {/* Specialty Section */}
       <section id="atuacao" className="py-40 px-6 relative bg-[#020617]">
         <div className="max-w-7xl mx-auto space-y-32">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
             <Badge className="bg-[#F5D030]/10 text-[#F5D030] border-[#F5D030]/20 px-8 py-2 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">Áreas de Domínio</Badge>
-            <h2 className="text-6xl lg:text-8xl font-black uppercase tracking-tighter font-headline leading-none">A Banca que <span className="animate-shimmer">Domina</span> o Tribunal.</h2>
+            <h2 className="text-6xl lg:text-8xl font-black uppercase tracking-tighter leading-none">A Banca que <span className="animate-shimmer">Domina</span> o Tribunal.</h2>
             <p className="text-gray-400 font-light text-xl">Desenvolvemos teses exclusivas para garantir a proteção máxima dos seus direitos trabalhistas.</p>
           </div>
 
@@ -184,24 +172,6 @@ export default function HomePage() {
                 desc: "Proteção total contra assédio moral, burnout e doenças do trabalho. Defendemos sua dignidade e integridade emocional.",
                 icon: ShieldCheck,
                 tag: "DIGNIDADE"
-              },
-              { 
-                title: "Cargos de Confiança", 
-                desc: "Anulação de falsos cargos de gestão para recebimento de horas extras e reflexos salariais de alta monta.",
-                icon: TrendingUp,
-                tag: "ESTRATÉGIA"
-              },
-              { 
-                title: "Reversão de Justa Causa", 
-                desc: "Combate técnico contra demissões arbitrárias, limpando seu histórico profissional e garantindo suas verbas rescisórias.",
-                icon: Hammer,
-                tag: "REVERSÃO"
-              },
-              { 
-                title: "Equiparação Salarial", 
-                desc: "Justiça remuneratória: se você faz a mesma função, merece o mesmo salário. Corrigimos distorções históricas.",
-                icon: Scale,
-                tag: "ISONOMIA"
               }
             ].map((spec, i) => (
               <div key={i} className="group glass p-12 rounded-[3rem] hover:border-[#F5D030]/40 transition-all duration-700 hover:-translate-y-4 flex flex-col h-full hover-gold">
@@ -211,7 +181,7 @@ export default function HomePage() {
                   </div>
                   <Badge variant="outline" className="text-[9px] border-white/10 text-gray-500 uppercase font-black tracking-widest px-3">{spec.tag}</Badge>
                 </div>
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-6 group-hover:text-[#F5D030] transition-colors font-headline">{spec.title}</h3>
+                <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-6 group-hover:text-[#F5D030] transition-colors">{spec.title}</h3>
                 <p className="text-gray-400 text-base leading-relaxed mb-10 flex-1">{spec.desc}</p>
                 <Link href="https://wa.me/5511999999999" className="text-[11px] font-black text-[#F5D030] uppercase tracking-[0.3em] flex items-center gap-3 group-hover:gap-6 transition-all">
                   Analisar meu Caso <ArrowRight className="h-4 w-4" />
@@ -230,7 +200,7 @@ export default function HomePage() {
               <div className="w-10 h-10 rounded-lg bg-[#F5D030] flex items-center justify-center">
                 <Scale className="h-5 w-5 text-[#020617]" />
               </div>
-              <span className="text-2xl font-black uppercase tracking-tighter font-headline">RGMJ Advogados</span>
+              <span className="text-2xl font-black uppercase tracking-tighter">RGMJ Advogados</span>
             </div>
             <p className="text-gray-500 text-lg max-w-md font-light leading-relaxed">
               Escritório Boutique especializado em alta performance trabalhista. Localizado no coração financeiro de São Paulo, atendemos clientes em todo o Brasil com rigor técnico e ética absoluta.

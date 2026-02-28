@@ -15,7 +15,8 @@ import {
   Users,
   Target,
   Plus,
-  ArrowRight
+  ArrowRight,
+  CheckCircle2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, where, limit, orderBy } from "firebase/firestore"
@@ -71,7 +72,7 @@ export function DashboardContent() {
   const displayName = profile?.name || user?.displayName || "DR. REINALDO GONÇALVES"
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 font-sans">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-white/5 pb-10">
         <div className="space-y-2">

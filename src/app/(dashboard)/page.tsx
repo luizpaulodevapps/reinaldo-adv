@@ -1,11 +1,14 @@
+/**
+ * ARQUIVO NEUTRALIZADO - RGMJ ELITE ERP
+ * 
+ * Este arquivo foi esvaziado para evitar o conflito de rota (ENOENT) na Vercel.
+ * A Landing Page oficial reside em src/app/page.tsx.
+ * O Dashboard oficial reside em src/app/(dashboard)/dashboard/page.tsx.
+ */
+
 import { redirect } from 'next/navigation';
 
-/**
- * Redirecionamento tático para evitar conflitos de rota raiz (/)
- * A Landing Page oficial reside em src/app/page.tsx.
- * Este arquivo como componente de servidor puro evita erros de manifesto na Vercel.
- */
-export default function DashboardRedirectPage() {
+export default function NeutralizedPage() {
   redirect('/dashboard');
   return null;
 }
