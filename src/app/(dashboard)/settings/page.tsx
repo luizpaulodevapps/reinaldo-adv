@@ -39,7 +39,11 @@ import {
   Moon,
   Sun,
   Contrast,
-  Palette
+  Palette,
+  Type,
+  Layout,
+  MousePointer2,
+  Paintbrush
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -49,6 +53,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function SettingsPage() {
   const { toast } = useToast()
@@ -61,6 +66,14 @@ export default function SettingsPage() {
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
   }, [initialTab])
+
+  // --- ESTADO DO LABORATÓRIO DE TEMAS ---
+  const [selectedTheme, setSelectedTheme] = useState("dark")
+  const [selectedFont, setSelectedFont] = useState("roboto")
+  const [sidebarColor, setSidebarColor] = useState("#213B37")
+  const [dashboardColor, setDashboardColor] = useState("#020617")
+  const [accentColor, setAccentColor] = useState("#818258")
+  const [cardStyle, setCardStyle] = useState("glass")
 
   // --- CRUD DE USUÁRIOS ---
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
@@ -77,15 +90,22 @@ export default function SettingsPage() {
     email: profile?.email || ""
   })
 
-  // Estado do Tema (Simulação para UI)
-  const [selectedTheme, setSelectedTheme] = useState("dark")
-
   useEffect(() => {
     if (profile) {
       setProfileFormData({
         name: profile.name,
         email: profile.email
       })
+      // Carrega preferências de tema se existirem
+      if (profile.themePreferences) {
+        const tp = profile.themePreferences
+        setSelectedTheme(tp.preset || "dark")
+        setSelectedFont(tp.font || "roboto")
+        setSidebarColor(tp.sidebarColor || "#213B37")
+        setDashboardColor(tp.dashboardColor || "#020617")
+        setAccentColor(tp.accentColor || "#818258")
+        setCardStyle(tp.cardStyle || "glass")
+      }
     }
   }, [profile])
 
@@ -113,6 +133,30 @@ export default function SettingsPage() {
     toast({
       title: "Perfil Atualizado",
       description: "Suas informações foram salvas com sucesso."
+    })
+  }
+
+  const handleApplyTheme = () => {
+    if (!user) return
+    const docRef = doc(db, "staff_profiles", user.uid)
+    const themePreferences = {
+      preset: selectedTheme,
+      font: selectedFont,
+      sidebarColor,
+      dashboardColor,
+      accentColor,
+      cardStyle,
+      updatedAt: new Date().toISOString()
+    }
+    
+    updateDocumentNonBlocking(docRef, {
+      themePreferences,
+      updatedAt: serverTimestamp()
+    })
+
+    toast({
+      title: "Atmosfera Visual Aplicada",
+      description: "As configurações de design foram injetadas no seu perfil.",
     })
   }
 
@@ -168,9 +212,34 @@ export default function SettingsPage() {
     }
   }
 
+  // --- PRESETS DE TEMAS ---
+  const applyPreset = (preset: string) => {
+    setSelectedTheme(preset)
+    if (preset === 'dark') {
+      setSidebarColor("#213B37")
+      setDashboardColor("#020617")
+      setAccentColor("#818258")
+      setCardStyle("glass")
+    } else if (preset === 'light') {
+      setSidebarColor("#213B37")
+      setDashboardColor("#FFFFFF")
+      setAccentColor("#213B37")
+      setCardStyle("solid")
+    } else if (preset === 'modern') {
+      setSidebarColor("#0f172a")
+      setDashboardColor("#f1f5f9")
+      setAccentColor("#3b82f6")
+      setCardStyle("bordered")
+    } else if (preset === 'contrast') {
+      setSidebarColor("#000000")
+      setDashboardColor("#000000")
+      setAccentColor("#f5d030")
+      setCardStyle("solid")
+    }
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50">
         <LayoutGrid className="h-3 w-3" />
         <Link href="/dashboard" className="hover:text-primary transition-colors">Início</Link>
@@ -197,7 +266,7 @@ export default function SettingsPage() {
             { id: "financeiro", label: "Financeiro" },
             { id: "tags", label: "Dicionário de Tags" },
             { id: "kit", label: "Kit Cliente" },
-            { id: "temas", label: "Temas" },
+            { id: "temas", label: "Laboratório de Temas" },
             { id: "licenca", label: "Licença" }
           ].map((tab) => (
             <TabsTrigger 
@@ -213,121 +282,179 @@ export default function SettingsPage() {
           ))}
         </TabsList>
 
-        {/* Tab: Temas (Nova) */}
+        {/* Tab: Laboratório de Temas (Expandida) */}
         <TabsContent value="temas" className="mt-0 outline-none space-y-8">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
-              <div className="flex items-center gap-4">
-                <Palette className="h-8 w-8 text-primary" />
-                <div>
-                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Personalização de Ambiente</CardTitle>
-                  <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                    Defina a identidade visual do seu Centro de Comando RGMJ.
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {/* Tema Escuro */}
-                <div 
-                  onClick={() => setSelectedTheme("dark")}
-                  className={cn(
-                    "cursor-pointer p-8 rounded-2xl border transition-all duration-500 group relative overflow-hidden",
-                    selectedTheme === "dark" ? "border-primary bg-primary/5 ring-1 ring-primary/50" : "border-white/5 bg-white/[0.02] hover:border-white/20"
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-white/10">
-                      <Moon className="h-6 w-6 text-primary" />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            
+            {/* Coluna de Configuração */}
+            <div className="xl:col-span-2 space-y-8">
+              <Card className="glass border-white/5 overflow-hidden">
+                <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+                  <div className="flex items-center gap-4">
+                    <Paintbrush className="h-8 w-8 text-primary" />
+                    <div>
+                      <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Laboratório de Identidade</CardTitle>
+                      <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                        Customize a atmosfera visual do Centro de Comando RGMJ.
+                      </p>
                     </div>
-                    {selectedTheme === "dark" && (
-                      <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase px-3">ATIVO</Badge>
-                    )}
                   </div>
-                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Midnight Elite</h4>
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    Interface profunda com alto foco e zero fadiga visual. O padrão ouro da advocacia moderna.
-                  </p>
-                  <div className="mt-6 flex gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#020617] border border-white/10" />
-                    <div className="w-4 h-4 rounded-full bg-[#213B37]" />
-                    <div className="w-4 h-4 rounded-full bg-[#818258]" />
-                  </div>
-                </div>
-
-                {/* Tema Claro Contraste */}
-                <div 
-                  onClick={() => setSelectedTheme("light")}
-                  className={cn(
-                    "cursor-pointer p-8 rounded-2xl border transition-all duration-500 group relative overflow-hidden",
-                    selectedTheme === "light" ? "border-primary bg-primary/5 ring-1 ring-primary/50" : "border-white/5 bg-white/[0.02] hover:border-white/20"
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-black/10">
-                      <Sun className="h-6 w-6 text-amber-500" />
+                </CardHeader>
+                
+                <CardContent className="p-10 space-y-12">
+                  {/* Seção 1: Presets Rápidos */}
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <Layout className="h-4 w-4" /> Pacotes de Atmosfera (Presets)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {[
+                        { id: 'dark', label: 'Midnight Elite', icon: Moon, desc: 'Escuro Profundo' },
+                        { id: 'light', label: 'Classic Law', icon: Sun, desc: 'Claro Institucional' },
+                        { id: 'modern', label: 'Modern Minimal', icon: Palette, desc: 'Cinza e Azul' },
+                        { id: 'contrast', label: 'Pure Contrast', icon: Contrast, desc: 'Acessibilidade' },
+                      ].map((preset) => (
+                        <div 
+                          key={preset.id}
+                          onClick={() => applyPreset(preset.id)}
+                          className={cn(
+                            "cursor-pointer p-6 rounded-xl border transition-all duration-300 flex flex-col items-center text-center gap-3",
+                            selectedTheme === preset.id ? "border-primary bg-primary/10" : "border-white/5 bg-white/[0.02] hover:border-white/20"
+                          )}
+                        >
+                          <preset.icon className={cn("h-6 w-6", selectedTheme === preset.id ? "text-primary" : "text-muted-foreground")} />
+                          <div>
+                            <p className="text-xs font-bold text-white uppercase">{preset.label}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase mt-1">{preset.desc}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    {selectedTheme === "light" && (
-                      <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase px-3">ATIVO</Badge>
-                    )}
                   </div>
-                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Institutional Light</h4>
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    Ambiente claro com alto contraste e foco na legibilidade textual técnica.
-                  </p>
-                  <div className="mt-6 flex gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#FFFFFF] border border-black/10" />
-                    <div className="w-4 h-4 rounded-full bg-[#213B37]" />
-                    <div className="w-4 h-4 rounded-full bg-[#E9E8E6]" />
-                  </div>
-                </div>
 
-                {/* Tema High Contrast */}
-                <div 
-                  onClick={() => setSelectedTheme("contrast")}
-                  className={cn(
-                    "cursor-pointer p-8 rounded-2xl border transition-all duration-500 group relative overflow-hidden",
-                    selectedTheme === "contrast" ? "border-primary bg-primary/5 ring-1 ring-primary/50" : "border-white/5 bg-white/[0.02] hover:border-white/20"
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border-4 border-white">
-                      <Contrast className="h-6 w-6 text-white" />
+                  {/* Seção 2: Personalização de Cores */}
+                  <div className="space-y-6 pt-6 border-t border-white/5">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <MousePointer2 className="h-4 w-4" /> Customização Granular de Cores
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div className="space-y-3">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">MENU LATERAL (SIDEBAR)</Label>
+                        <div className="flex gap-2">
+                          <Input type="color" value={sidebarColor} onChange={(e) => setSidebarColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10" />
+                          <Input value={sidebarColor} onChange={(e) => setSidebarColor(e.target.value)} className="glass border-white/10 h-12 text-xs font-mono" />
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">FUNDO DO DASHBOARD</Label>
+                        <div className="flex gap-2">
+                          <Input type="color" value={dashboardColor} onChange={(e) => setDashboardColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10" />
+                          <Input value={dashboardColor} onChange={(e) => setDashboardColor(e.target.value)} className="glass border-white/10 h-12 text-xs font-mono" />
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">ACENTO PRIMÁRIO (BOTÕES)</Label>
+                        <div className="flex gap-2">
+                          <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10" />
+                          <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="glass border-white/10 h-12 text-xs font-mono" />
+                        </div>
+                      </div>
                     </div>
-                    {selectedTheme === "contrast" && (
-                      <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase px-3">ATIVO</Badge>
-                    )}
                   </div>
-                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Pure Contrast</h4>
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    Acessibilidade máxima com contraste absoluto entre fundo e tipografia.
+
+                  {/* Seção 3: Tipografia Jurídica */}
+                  <div className="space-y-6 pt-6 border-t border-white/5">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <Type className="h-4 w-4" /> Arquitetura Tipográfica
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-3">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">FONTE DO SISTEMA</Label>
+                        <Select value={selectedFont} onValueChange={setSelectedFont}>
+                          <SelectTrigger className="glass border-white/10 h-14 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="glass border-white/10">
+                            <SelectItem value="roboto">🤖 ROBOTO (EQUILÍBRIO)</SelectItem>
+                            <SelectItem value="playfair">🖋️ PLAYFAIR DISPLAY (ELEGÂNCIA)</SelectItem>
+                            <SelectItem value="inter">⚡ INTER (PRECISÃO)</SelectItem>
+                            <SelectItem value="montserrat">📐 MONTSERRAT (MODERNIDADE)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">ESTILO DOS CARTÕES</Label>
+                        <Select value={cardStyle} onValueChange={setCardStyle}>
+                          <SelectTrigger className="glass border-white/10 h-14 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="glass border-white/10">
+                            <SelectItem value="glass">🧊 GLASS MORPHISM (TRANSPARENTE)</SelectItem>
+                            <SelectItem value="solid">⬜ SÓLIDO (CLÁSSICO)</SelectItem>
+                            <SelectItem value="bordered">🔳 APENAS BORDAS (MINIMALISTA)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6">
+                    <Button onClick={handleApplyTheme} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-primary/20">
+                      <Save className="h-5 w-5" /> INJETAR ATMOSFERA VISUAL
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Coluna de Preview */}
+            <div className="space-y-6">
+              <div className="sticky top-10">
+                <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+                  <LayoutGrid className="h-3 w-3" /> Visualização Tática (Preview)
+                </h4>
+                
+                <Card className="overflow-hidden border-2 border-primary/20 shadow-2xl">
+                  {/* Mockup do Sistema */}
+                  <div className="flex h-[500px]">
+                    {/* Mock Sidebar */}
+                    <div className="w-20 flex flex-col items-center py-6 gap-6" style={{ backgroundColor: sidebarColor }}>
+                      <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center"><Scale className="h-4 w-4 text-white" /></div>
+                      <div className="w-8 h-8 rounded-md bg-white/5"></div>
+                      <div className="w-8 h-8 rounded-md" style={{ backgroundColor: accentColor }}></div>
+                      <div className="w-8 h-8 rounded-md bg-white/5"></div>
+                    </div>
+                    {/* Mock Content */}
+                    <div className="flex-1 p-6 space-y-6" style={{ backgroundColor: dashboardColor }}>
+                      <div className="h-4 w-32 rounded bg-white/10 mb-8"></div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className={cn(
+                          "h-24 rounded-lg border",
+                          cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
+                          cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
+                          "bg-transparent border-white/20"
+                        )}></div>
+                        <div className={cn(
+                          "h-24 rounded-lg border",
+                          cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
+                          cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
+                          "bg-transparent border-white/20"
+                        )}></div>
+                      </div>
+                      <div className="h-40 w-full rounded-xl border border-white/5 bg-white/[0.02]"></div>
+                      <div className="h-12 w-full rounded-lg" style={{ backgroundColor: accentColor }}></div>
+                    </div>
+                  </div>
+                </Card>
+                
+                <div className="mt-6 p-6 rounded-2xl border border-white/5 bg-white/[0.02]">
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
+                    Nota: O preview acima é uma simulação técnica. A aplicação real afetará todos os componentes, tabelas e menus do ecossistema RGMJ conforme os tokens definidos.
                   </p>
-                  <div className="mt-6 flex gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#000000] border border-white" />
-                    <div className="w-4 h-4 rounded-full bg-[#FFFFFF]" />
-                    <div className="w-4 h-4 rounded-full bg-[#f5d030]" />
-                  </div>
                 </div>
               </div>
-
-              <div className="mt-12 p-8 rounded-2xl border border-primary/20 bg-primary/5">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Sincronizar com Sistema Operacional</h4>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">O tema mudará automaticamente conforme as configurações do seu dispositivo.</p>
-                  </div>
-                  <Switch className="data-[state=checked]:bg-primary" />
-                </div>
-              </div>
-
-              <div className="mt-10">
-                <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
-                  <Save className="h-5 w-5" /> APLICAR PREFERÊNCIAS VISUAIS
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Tab: Meu Perfil */}
