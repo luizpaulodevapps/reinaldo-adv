@@ -1,9 +1,28 @@
+
+"use client"
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
+import { collection, query, orderBy } from "firebase/firestore"
 
 export default function FinancialPage() {
+  const db = useFirestore()
+  const { user } = useUser()
+
+  const financialQuery = useMemoFirebase(() => {
+    if (!user) return null
+    return query(collection(db, "financial_titles"), orderBy("dueDate", "desc"))
+  }, [db, user])
+
+  const { data: financialData, isLoading } = useCollection(financialQuery)
+  const titles = financialData || []
+
+  const totalValue = titles.reduce((acc, t) => acc + (t.value || 0), 0)
+  const pendingValue = titles.filter(t => t.status === 'Pendente').reduce((acc, t) => acc + (t.value || 0), 0)
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -23,35 +42,35 @@ export default function FinancialPage() {
             <Wallet className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-500">R$ 12.450,00</div>
+            <div className="text-3xl font-bold text-emerald-500">R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3" /> +12% em relação ao mês anterior
+              <ArrowUpRight className="h-3 w-3" /> Atualizado em tempo real
             </p>
           </CardContent>
         </Card>
 
         <Card className="glass border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Retido (StaffCredits)</CardTitle>
+            <CardTitle className="text-sm font-medium">Honorários Pendentes</CardTitle>
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">R$ 45.800,00</div>
+            <div className="text-3xl font-bold text-primary">R$ {pendingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              Aguardando liquidação processual
+              Aguardando confirmação de pagamento
             </p>
           </CardContent>
         </Card>
 
         <Card className="glass">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Honorários Previstos</CardTitle>
+            <CardTitle className="text-sm font-medium">Projeção do Mês</CardTitle>
             <TrendingUp className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">R$ 152k</div>
+            <div className="text-3xl font-bold">R$ {(totalValue * 1.2).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              Baseado em acordos em fase de homologação
+              Baseado no volume de processos ativos
             </p>
           </CardContent>
         </Card>
@@ -63,29 +82,31 @@ export default function FinancialPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { id: "TX-01", type: "Repasse", client: "João da Silva", amount: "R$ 1.250,00", status: "pago", date: "Hoje, 10:30" },
-              { id: "TX-02", type: "Honorário", client: "Empresa ABC", amount: "R$ 5.000,00", status: "pendente", date: "Ontem, 16:45" },
-              { id: "TX-03", type: "Custas", client: "Processo 0042", amount: "R$ 420,00", status: "pago", date: "15/10/2023" },
-            ].map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50">
-                <div className="flex gap-4 items-center">
-                  <div className={`p-2 rounded-full ${tx.status === 'pago' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'}`}>
-                    {tx.status === 'pago' ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+            {isLoading ? (
+              <div className="p-8 text-center text-muted-foreground">Sincronizando fluxo de caixa...</div>
+            ) : titles.length > 0 ? (
+              titles.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50">
+                  <div className="flex gap-4 items-center">
+                    <div className={`p-2 rounded-full ${tx.status === 'Recebido' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'}`}>
+                      {tx.status === 'Recebido' ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <div className="font-semibold">{tx.description}</div>
+                      <div className="text-xs text-muted-foreground">{tx.type} • {tx.dueDate}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold">{tx.client}</div>
-                    <div className="text-xs text-muted-foreground">{tx.type} • {tx.date}</div>
+                  <div className="text-right">
+                    <div className="font-bold">R$ {tx.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    <Badge variant={tx.status === 'Recebido' ? 'default' : 'outline'} className={tx.status === 'Recebido' ? 'bg-emerald-500' : ''}>
+                      {tx.status}
+                    </Badge>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold">{tx.amount}</div>
-                  <Badge variant={tx.status === 'pago' ? 'default' : 'outline'} className={tx.status === 'pago' ? 'bg-emerald-500' : ''}>
-                    {tx.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="p-8 text-center text-muted-foreground italic">Nenhum título financeiro registrado.</div>
+            )}
           </div>
         </CardContent>
       </Card>

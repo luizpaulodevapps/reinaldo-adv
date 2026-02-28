@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -38,7 +38,7 @@ import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { collection, query, serverTimestamp, deleteDoc } from "firebase/firestore"
+import { collection, query, serverTimestamp, doc } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 
 const columns = [
@@ -63,8 +63,9 @@ export default function LeadsPage() {
   const { toast } = useToast()
 
   const leadsQuery = useMemoFirebase(() => {
+    if (!user) return null
     return query(collection(db, "leads"))
-  }, [db])
+  }, [db, user])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
@@ -74,7 +75,7 @@ export default function LeadsPage() {
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false)
 
-  // Estados para Agendamento (Digitação Direta)
+  // Estados para Agendamento
   const [scheduledDateStr, setScheduledDateStr] = useState(format(new Date(), "yyyy-MM-dd"))
   const [scheduledTime, setScheduledTime] = useState("10:00")
   const [isScheduling, setIsScheduling] = useState(false)
@@ -108,27 +109,12 @@ export default function LeadsPage() {
   const handleConfirmSchedule = () => {
     if (!selectedLead || !selectedLead.id) return
     
-    const scheduleData = {
+    const leadDocRef = doc(db, "leads", selectedLead.id)
+    updateDocumentNonBlocking(leadDocRef, {
       scheduledDate: scheduledDateStr,
       scheduledTime: scheduledTime,
       updatedAt: serverTimestamp()
-    }
-
-    const docRef = collection(db, "leads") // Placeholder, real update requires the doc ref
-    // Em useCollection, cada item tem a propriedade 'id'
-    // Precisamos construir a referência do documento
-    const leadRef = useMemoFirebase(() => {
-        // This is a bit tricky inside the handle, let's use a dynamic ref approach if available
-        // But for simplicity in this prototype, we'll use selection and updateDocumentNonBlocking
-        return null 
-    }, [])
-
-    // No use-collection.tsx, WithId adiciona o 'id'. 
-    // Para atualizar, precisamos do doc(db, 'leads', selectedLead.id)
-    const { doc } = require("firebase/firestore")
-    const leadDocRef = doc(db, "leads", selectedLead.id)
-    
-    updateDocumentNonBlocking(leadDocRef, scheduleData)
+    })
     
     setIsScheduling(false)
     toast({
@@ -142,7 +128,6 @@ export default function LeadsPage() {
     const currentIndex = columns.findIndex(col => col.id === selectedLead.status)
     if (currentIndex < columns.length - 1) {
       const nextStatus = columns[currentIndex + 1].id
-      const { doc } = require("firebase/firestore")
       const leadDocRef = doc(db, "leads", selectedLead.id)
       
       updateDocumentNonBlocking(leadDocRef, { 
@@ -157,11 +142,8 @@ export default function LeadsPage() {
 
   const handleDiscardLead = () => {
     if (!selectedLead) return
-    const { doc } = require("firebase/firestore")
     const leadDocRef = doc(db, "leads", selectedLead.id)
-    
     deleteDocumentNonBlocking(leadDocRef)
-    
     setIsSheetOpen(false)
     toast({ variant: "destructive", title: "Lead Descartado", description: "O registro foi removido do CRM." })
   }
