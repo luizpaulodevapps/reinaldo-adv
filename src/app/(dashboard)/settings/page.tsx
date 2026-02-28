@@ -43,7 +43,10 @@ import {
   Type,
   Layout,
   MousePointer2,
-  Paintbrush
+  Paintbrush,
+  Image as ImageIcon,
+  Upload,
+  Info
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -96,7 +99,6 @@ export default function SettingsPage() {
         name: profile.name,
         email: profile.email
       })
-      // Carrega preferências de tema se existirem
       if (profile.themePreferences) {
         const tp = profile.themePreferences
         setSelectedTheme(tp.preset || "dark")
@@ -212,7 +214,6 @@ export default function SettingsPage() {
     }
   }
 
-  // --- PRESETS DE TEMAS ---
   const applyPreset = (preset: string) => {
     setSelectedTheme(preset)
     if (preset === 'dark') {
@@ -266,7 +267,7 @@ export default function SettingsPage() {
             { id: "financeiro", label: "Financeiro" },
             { id: "tags", label: "Dicionário de Tags" },
             { id: "kit", label: "Kit Cliente" },
-            { id: "temas", label: "Laboratório de Temas" },
+            { id: "temas", label: "Tema e Personalização" },
             { id: "licenca", label: "Licença" }
           ].map((tab) => (
             <TabsTrigger 
@@ -282,27 +283,80 @@ export default function SettingsPage() {
           ))}
         </TabsList>
 
-        {/* Tab: Laboratório de Temas (Expandida) */}
         <TabsContent value="temas" className="mt-0 outline-none space-y-8">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            
-            {/* Coluna de Configuração */}
             <div className="xl:col-span-2 space-y-8">
+              {/* SEÇÃO: LOGOTIPO */}
+              <Card className="glass border-white/5 overflow-hidden">
+                <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+                  <div className="flex items-center gap-4">
+                    <ImageIcon className="h-8 w-8 text-primary" />
+                    <div>
+                      <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Identidade Visual (Logotipo)</CardTitle>
+                      <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                        Consolide a marca RGMJ em todo o ecossistema digital.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-10 space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-6">
+                      <div className="p-10 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center text-center gap-4 group hover:border-primary/50 transition-all cursor-pointer">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                          <Upload className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white uppercase">Upload do Logotipo</p>
+                          <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Arraste ou selecione o arquivo oficial</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
+                      <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Info className="h-4 w-4" /> Diretrizes Técnicas
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            <span className="text-white font-bold">FORMATO IDEAL:</span> SVG (Vetorial) para nitidez máxima em qualquer dispositivo, ou PNG com fundo transparente.
+                          </p>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            <span className="text-white font-bold">DIMENSÕES:</span> Recomendamos logotipos horizontais (400x100px) ou quadrados para o menu lateral.
+                          </p>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            <span className="text-white font-bold">CONTRASTE:</span> Utilize versões claras do logo para o tema escuro e versões escuras para o tema claro.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* SEÇÃO: LABORATÓRIO DE IDENTIDADE */}
               <Card className="glass border-white/5 overflow-hidden">
                 <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
                   <div className="flex items-center gap-4">
                     <Paintbrush className="h-8 w-8 text-primary" />
                     <div>
-                      <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Laboratório de Identidade</CardTitle>
+                      <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Laboratório de Atmosfera</CardTitle>
                       <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                        Customize a atmosfera visual do Centro de Comando RGMJ.
+                        Customize cada detalhe da interface do Centro de Comando.
                       </p>
                     </div>
                   </div>
                 </CardHeader>
                 
                 <CardContent className="p-10 space-y-12">
-                  {/* Seção 1: Presets Rápidos */}
                   <div className="space-y-6">
                     <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                       <Layout className="h-4 w-4" /> Pacotes de Atmosfera (Presets)
@@ -332,7 +386,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Seção 2: Personalização de Cores */}
                   <div className="space-y-6 pt-6 border-t border-white/5">
                     <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                       <MousePointer2 className="h-4 w-4" /> Customização Granular de Cores
@@ -362,7 +415,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Seção 3: Tipografia Jurídica */}
                   <div className="space-y-6 pt-6 border-t border-white/5">
                     <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                       <Type className="h-4 w-4" /> Arquitetura Tipográfica
@@ -400,14 +452,13 @@ export default function SettingsPage() {
 
                   <div className="pt-6">
                     <Button onClick={handleApplyTheme} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-primary/20">
-                      <Save className="h-5 w-5" /> INJETAR ATMOSFERA VISUAL
+                      <Save className="h-5 w-5" /> INJETAR IDENTIDADE VISUAL
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Coluna de Preview */}
             <div className="space-y-6">
               <div className="sticky top-10">
                 <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
@@ -415,16 +466,13 @@ export default function SettingsPage() {
                 </h4>
                 
                 <Card className="overflow-hidden border-2 border-primary/20 shadow-2xl">
-                  {/* Mockup do Sistema */}
                   <div className="flex h-[500px]">
-                    {/* Mock Sidebar */}
                     <div className="w-20 flex flex-col items-center py-6 gap-6" style={{ backgroundColor: sidebarColor }}>
                       <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center"><Scale className="h-4 w-4 text-white" /></div>
                       <div className="w-8 h-8 rounded-md bg-white/5"></div>
                       <div className="w-8 h-8 rounded-md" style={{ backgroundColor: accentColor }}></div>
                       <div className="w-8 h-8 rounded-md bg-white/5"></div>
                     </div>
-                    {/* Mock Content */}
                     <div className="flex-1 p-6 space-y-6" style={{ backgroundColor: dashboardColor }}>
                       <div className="h-4 w-32 rounded bg-white/10 mb-8"></div>
                       <div className="grid grid-cols-2 gap-4">
@@ -449,7 +497,7 @@ export default function SettingsPage() {
                 
                 <div className="mt-6 p-6 rounded-2xl border border-white/5 bg-white/[0.02]">
                   <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                    Nota: O preview acima é uma simulação técnica. A aplicação real afetará todos os componentes, tabelas e menus do ecossistema RGMJ conforme os tokens definidos.
+                    Nota: O preview acima reflete como a marca RGMJ será injetada em todos os componentes operacionais do sistema.
                   </p>
                 </div>
               </div>
@@ -457,7 +505,6 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* Tab: Meu Perfil */}
         <TabsContent value="perfil" className="mt-0 outline-none space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
@@ -509,7 +556,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Google Workspace */}
         <TabsContent value="google" className="mt-0 outline-none space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -609,7 +655,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Institucional */}
         <TabsContent value="geral" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -644,7 +689,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Usuários */}
         <TabsContent value="usuarios" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
@@ -723,7 +767,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Financeiro */}
         <TabsContent value="financeiro" className="mt-0 outline-none space-y-6">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -762,7 +805,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Tags */}
         <TabsContent value="tags" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -786,7 +828,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Kit Cliente */}
         <TabsContent value="kit" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -808,7 +849,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Licença */}
         <TabsContent value="licenca" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5">
