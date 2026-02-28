@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Fingerprint,
   User,
-  X
+  X,
+  Heart
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,10 +45,16 @@ export default function StaffPage() {
 
   const [formData, setFormData] = useState({
     name: "",
+    motherName: "",
+    fatherName: "",
     cpf: "",
     rg: "",
+    rgIssuer: "",
+    rgIssueDate: "",
+    rgState: "",
     pis: "",
     ctps: "",
+    voterCard: "",
     birthDate: "",
     oab: "",
     role: "Secretária",
@@ -88,10 +95,16 @@ export default function StaffPage() {
     setEditingStaff(null)
     setFormData({
       name: "",
+      motherName: "",
+      fatherName: "",
       cpf: "",
       rg: "",
+      rgIssuer: "",
+      rgIssueDate: "",
+      rgState: "",
       pis: "",
       ctps: "",
+      voterCard: "",
       birthDate: "",
       oab: "",
       role: "Secretária",
@@ -176,7 +189,6 @@ export default function StaffPage() {
     }
   }
 
-  // Lógica de Diferenciação de Formulário
   const isLegalRole = formData.role === 'Advogado' || formData.role === 'Sócio' || formData.role === 'Estagiário'
 
   return (
@@ -343,7 +355,6 @@ export default function StaffPage() {
                       </Select>
                     </div>
 
-                    {/* CAMPOS DINÂMICOS PARA JURÍDICO */}
                     {isLegalRole && (
                       <>
                         <div className="space-y-3 animate-in slide-in-from-left-2">
@@ -399,10 +410,78 @@ export default function StaffPage() {
                       </Select>
                     </div>
                   </div>
+
+                  <div className="space-y-8 pt-6 border-t border-white/5">
+                    <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                      <Heart className="h-4 w-4" /> Filiação & Pessoal
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">NOME DA MÃE</Label>
+                        <Input 
+                          value={formData.motherName} 
+                          onChange={(e) => setFormData({...formData, motherName: e.target.value.toUpperCase()})}
+                          className="bg-[#0d121f] border-white/10 h-14 text-white text-sm"
+                          placeholder="NOME COMPLETO DA GENITORA"
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">NOME DO PAI</Label>
+                        <Input 
+                          value={formData.fatherName} 
+                          onChange={(e) => setFormData({...formData, fatherName: e.target.value.toUpperCase()})}
+                          className="bg-[#0d121f] border-white/10 h-14 text-white text-sm"
+                          placeholder="NOME COMPLETO DO GENITOR"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="documentos" className="mt-0 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-8">
+                    <div className="space-y-3 md:col-span-1">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">RG (NÚMERO)</Label>
+                      <Input 
+                        value={formData.rg} 
+                        onChange={(e) => setFormData({...formData, rg: e.target.value})}
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
+                        placeholder="00.000.000-0"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">ÓRGÃO EMISSOR</Label>
+                      <Input 
+                        value={formData.rgIssuer} 
+                        onChange={(e) => setFormData({...formData, rgIssuer: e.target.value.toUpperCase()})}
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
+                        placeholder="EX: SSP"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">UF DO RG</Label>
+                      <Select value={formData.rgState} onValueChange={(v) => setFormData({...formData, rgState: v})}>
+                        <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                          {["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"].map(uf => (
+                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">DATA DE EMISSÃO RG</Label>
+                      <Input 
+                        value={formData.rgIssueDate} 
+                        onChange={(e) => setFormData({...formData, rgIssueDate: e.target.value})}
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
+                        type="date"
+                      />
+                    </div>
+
                     <div className="space-y-3">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">CPF</Label>
                       <Input 
@@ -412,15 +491,17 @@ export default function StaffPage() {
                         placeholder="000.000.000-00"
                       />
                     </div>
+
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">RG / ÓRGÃO EMISSOR</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">DATA DE NASCIMENTO</Label>
                       <Input 
-                        value={formData.rg} 
-                        onChange={(e) => setFormData({...formData, rg: e.target.value.toUpperCase()})}
+                        value={formData.birthDate} 
+                        onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
                         className="bg-[#0d121f] border-white/10 h-14 text-white"
-                        placeholder="00.000.000-0"
+                        type="date"
                       />
                     </div>
+
                     <div className="space-y-3">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">PIS / PASEP</Label>
                       <Input 
@@ -440,12 +521,12 @@ export default function StaffPage() {
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">DATA DE NASCIMENTO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">TÍTULO DE ELEITOR</Label>
                       <Input 
-                        value={formData.birthDate} 
-                        onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
+                        value={formData.voterCard} 
+                        onChange={(e) => setFormData({...formData, voterCard: e.target.value})}
                         className="bg-[#0d121f] border-white/10 h-14 text-white"
-                        type="date"
+                        placeholder="0000 0000 0000"
                       />
                     </div>
                   </div>
