@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -43,7 +44,8 @@ import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { collection, query, serverTimestamp } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -51,45 +53,6 @@ const columns = [
   { id: "contratual", title: "CONTRATUAL", color: "text-emerald-400" },
   { id: "burocracia", title: "BUROCRACIA", color: "text-primary" },
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
-]
-
-const initialLeadsData = [
-  { 
-    id: "1", 
-    name: "Luiz Paulo Gonçalves", 
-    type: "Trabalhista", 
-    date: "2h atrás", 
-    stage: "novo", 
-    value: 15000, 
-    priority: "alta",
-    phone: "11948486470",
-    email: "luiz@email.com",
-    notes: "Demitido após 10 anos sem justa causa. Reclamação de horas extras."
-  },
-  { 
-    id: "2", 
-    name: "Maria Oliveira", 
-    type: "Civil", 
-    date: "1d atrás", 
-    stage: "atendimento", 
-    value: 45000, 
-    priority: "media",
-    phone: "(11) 97777-6666",
-    email: "maria@email.com",
-    notes: "Danos morais por atraso em entrega de imóvel."
-  },
-  { 
-    id: "3", 
-    name: "Bruno Fernandes", 
-    type: "Empresarial", 
-    date: "3d atrás", 
-    stage: "contratual", 
-    value: 120000, 
-    priority: "alta",
-    phone: "(11) 96666-5555",
-    email: "bruno@empresa.com",
-    notes: "Revisão de contrato social e blindagem patrimonial."
-  },
 ]
 
 const stageChecklists: Record<string, string[]> = {
@@ -107,15 +70,23 @@ const businessHours = [
 ]
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState(initialLeadsData)
+  const db = useFirestore()
+  const { user } = useUser()
+  const { toast } = useToast()
+
+  const leadsQuery = useMemoFirebase(() => {
+    return query(collection(db, "leads"))
+  }, [db])
+
+  const { data: leads = [], isLoading } = useCollection(leadsQuery)
+
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false)
-  const { toast } = useToast()
 
   // Estados para Agendamento
-  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() + 1)))
+  const [scheduledDateStr, setScheduledDateStr] = useState(format(new Date(new Date().setDate(new Date().getDate() + 1)), "yyyy-MM-dd"))
   const [scheduledTime, setScheduledTime] = useState("10:00")
   const [isScheduling, setIsScheduling] = useState(false)
 
@@ -129,14 +100,6 @@ export default function LeadsPage() {
   const handleOpenLead = (lead: any) => {
     setSelectedLead(lead)
     setIsSheetOpen(true)
-  }
-
-  const copyToClipboard = (text: string, title: string = "Copiado!") => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title,
-      description: "O conteúdo está pronto para ser enviado.",
-    })
   }
 
   const handleCalculate = () => {
@@ -161,36 +124,47 @@ export default function LeadsPage() {
   }
 
   const handleCreateEntry = (data: any) => {
-    const isClient = data.mode === "complete"
-    const newEntry = {
+    if (!user) return
+
+    const newLead = {
       ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      date: "Agora",
-      stage: isClient ? "contratual" : "novo",
-      value: parseFloat(data.value) || 0,
-      priority: data.priority || "media"
+      assignedStaffId: user.uid,
+      status: data.mode === "complete" ? "contratual" : "novo",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     }
 
-    setLeads([newEntry, ...leads])
+    addDocumentNonBlocking(collection(db, "leads"), newLead)
+    
     setIsNewLeadDialogOpen(false)
     setIsNewClientDialogOpen(false)
     toast({
-      title: isClient ? "Cliente Cadastrado!" : "Triagem Iniciada!",
-      description: `${newEntry.name} foi adicionado com sucesso.`
+      title: data.mode === "complete" ? "Cliente Cadastrado!" : "Triagem Iniciada!",
+      description: `${data.name} foi adicionado com sucesso.`
     })
   }
 
   const handleConfirmSchedule = () => {
-    if (!scheduledDate) return
+    if (!selectedLead) return
+    
+    const scheduleData = {
+      scheduledDate: scheduledDateStr,
+      scheduledTime: scheduledTime,
+      updatedAt: serverTimestamp()
+    }
+
+    // @ts-ignore
+    updateDocumentNonBlocking(selectedLead.ref, scheduleData)
+    
     setIsScheduling(false)
     toast({
       title: "Reunião Agendada",
-      description: `Agendado para ${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledTime}.`,
+      description: `Agendado para ${scheduledDateStr} às ${scheduledTime}.`,
     })
   }
 
-  const totalValue = leads.reduce((acc, lead) => acc + (lead.value || 0), 0)
-  const hotLeadsCount = leads.filter(l => l.priority === 'alta').length
+  const totalValue = leads?.reduce((acc, lead) => acc + (parseFloat(lead.value) || 0), 0) || 0
+  const hotLeadsCount = leads?.filter(l => l.priority === 'alta').length || 0
 
   return (
     <div className="space-y-8">
@@ -263,7 +237,7 @@ export default function LeadsPage() {
         {[
           { label: "Pipeline Total", value: `R$ ${(totalValue / 1000).toFixed(0)}k`, icon: DollarSign, color: "text-emerald-500" },
           { label: "Leads Quentes", value: hotLeadsCount, icon: AlertCircle, color: "text-destructive" },
-          { label: "Novos na Semana", value: "08", icon: PlusCircle, color: "text-primary" },
+          { label: "Novos na Semana", value: leads.length.toString().padStart(2, '0'), icon: PlusCircle, color: "text-primary" },
           { label: "Taxa de Conversão", value: "68%", icon: CheckCircle2, color: "text-blue-500" },
         ].map((stat, i) => (
           <Card key={i} className="glass border-primary/10">
@@ -280,126 +254,6 @@ export default function LeadsPage() {
         ))}
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-headline font-bold text-primary flex items-center gap-2">
-          <Wrench className="h-5 w-5" /> Caixa de Ferramentas de Conversão
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Card className="glass border-primary/20 hover:border-primary/50 transition-all group cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Calculator className="h-4 w-4 text-primary" /> Calculadora de Viabilidade
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Estime honorários e probabilidade de êxito.</p>
-                  <Button className="w-full gold-gradient text-background font-bold uppercase py-5">
-                    Abrir Simulador <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </DialogTrigger>
-            <DialogContent className="glass border-primary/20 sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="text-primary font-headline text-2xl">Simulador de Viabilidade</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Valor Estimado (R$)</Label>
-                  <Input placeholder="Ex: 50000" className="glass" value={calcValue} onChange={(e) => setCalcValue(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Probabilidade (%)</Label>
-                  <Select value={calcProb} onValueChange={setCalcProb}>
-                    <SelectTrigger className="glass">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="90">90% - Muito Alta</SelectItem>
-                      <SelectItem value="70">70% - Alta</SelectItem>
-                      <SelectItem value="50">50% - Moderada</SelectItem>
-                      <SelectItem value="30">30% - Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {calcResult && (
-                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2 animate-in fade-in zoom-in-95">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Honorários (30%):</span>
-                      <span className="font-bold text-primary">{calcResult.fee}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Expectativa:</span>
-                      <span className="font-bold text-emerald-500">{calcResult.expected}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCalculate} className="gold-gradient text-background font-bold w-full py-6">Calcular</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Card className="glass border-primary/20 hover:border-primary/50 transition-all group">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Zap className="h-4 w-4 text-emerald-500" /> Scripts de WhatsApp
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">Modelos de alta conversão para triagem.</p>
-              <Button variant="outline" className="w-full glass font-bold uppercase py-5" onClick={() => copyToClipboard("Olá! Dr. Reinaldo aqui. Gostaria de entender melhor o seu caso.", "Script Copiado!")}>
-                Copiar Script Base <Copy className="h-4 w-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Dialog>
-            <DialogTrigger asChild>
-              <Card className="glass border-primary/20 hover:border-primary/50 transition-all group cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <FileCheck className="h-4 w-4 text-blue-400" /> Checklist de Documentos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Gere a lista de documentos por área.</p>
-                  <Button variant="outline" className="w-full glass font-bold uppercase py-5">
-                    Gerar Lista <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </DialogTrigger>
-            <DialogContent className="glass border-primary/20 sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="text-primary font-headline text-2xl">Gerador de Checklist</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <Select value={checklistArea} onValueChange={setChecklistArea}>
-                  <SelectTrigger className="glass"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Trabalhista">Trabalhista</SelectItem>
-                    <SelectItem value="Civil">Civil</SelectItem>
-                  </SelectContent>
-                </Select>
-                {generatedChecklist.length > 0 && (
-                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 text-sm space-y-1">
-                    {generatedChecklist.map((doc, i) => <div key={i}>• {doc}</div>)}
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button onClick={handleGenerateChecklist} className="w-full glass border-primary/20">Gerar</Button>
-                {generatedChecklist.length > 0 && <Button onClick={() => copyToClipboard(generatedChecklist.join('\n'), "Checklist Copiado!")} className="gold-gradient text-background font-bold w-full">Copiar</Button>}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
       <div className="flex gap-4 items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -409,7 +263,7 @@ export default function LeadsPage() {
 
       <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0">
         {columns.map((col) => {
-          const leadsInCol = leads.filter(l => l.stage === col.id)
+          const leadsInCol = leads.filter(l => l.status === col.id)
           return (
             <div key={col.id} className="min-w-[300px] flex-1">
               <div className="flex items-center justify-between mb-4 px-2">
@@ -432,7 +286,7 @@ export default function LeadsPage() {
                       <div>
                         <div className="font-bold text-lg group-hover:text-primary transition-colors">{lead.name}</div>
                         <div className="text-[10px] text-muted-foreground uppercase tracking-tighter font-bold flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3" /> Recebido {lead.date}
+                          <Clock className="h-3 w-3" /> Recebido em {lead.createdAt?.toDate ? format(lead.createdAt.toDate(), "dd/MM") : "Agora"}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -460,7 +314,7 @@ export default function LeadsPage() {
               <div className="p-8 pb-4 shrink-0">
                 <SheetHeader className="text-left space-y-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge className="bg-primary/10 text-primary border-primary/20 font-bold uppercase text-[9px]">NOVO</Badge>
+                    <Badge className="bg-primary/10 text-primary border-primary/20 font-bold uppercase text-[9px]">{selectedLead.status?.toUpperCase()}</Badge>
                   </div>
                   <SheetTitle className="text-4xl font-headline font-bold text-primary leading-tight">
                     {selectedLead.name}
@@ -502,7 +356,7 @@ export default function LeadsPage() {
                         </div>
 
                         <div className="grid gap-3 pt-2">
-                          {stageChecklists[selectedLead.stage]?.map((item, i) => (
+                          {stageChecklists[selectedLead.status || 'novo']?.map((item, i) => (
                             <div key={i}>
                               {item === "Agendar reunião inicial" ? (
                                 <Popover open={isScheduling} onOpenChange={setIsScheduling}>
@@ -511,6 +365,7 @@ export default function LeadsPage() {
                                       <Checkbox 
                                         id={`check-${i}`} 
                                         className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
+                                        checked={!!selectedLead.scheduledDate}
                                       />
                                       <div className="flex-1 flex items-center justify-between">
                                         <label 
@@ -519,27 +374,24 @@ export default function LeadsPage() {
                                         >
                                           {item}
                                         </label>
-                                        {scheduledDate && (
+                                        {selectedLead.scheduledDate && (
                                           <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
-                                            {format(scheduledDate, "dd/MM")} às {scheduledTime}
+                                            {selectedLead.scheduledDate} às {selectedLead.scheduledTime}
                                           </Badge>
                                         )}
                                       </div>
                                     </div>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-[340px] p-0 bg-[#0a0f1e] border-[#2d3748] shadow-2xl z-50 rounded-xl overflow-hidden" align="start">
-                                    <div className="p-6 space-y-6">
+                                  <PopoverContent className="w-[380px] p-0 bg-[#0a0f1e] border-[#2d3748] shadow-2xl z-50 rounded-xl overflow-hidden" align="start">
+                                    <div className="p-8 space-y-8">
                                       <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">ESCOLHER DATA</Label>
                                         <div className="relative">
                                           <Input 
                                             type="date" 
-                                            className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white focus:border-primary/50 text-base appearance-none" 
-                                            value={scheduledDate ? format(scheduledDate, "yyyy-MM-dd") : ""}
-                                            onChange={(e) => {
-                                              const date = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
-                                              setScheduledDate(date);
-                                            }}
+                                            className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white focus:border-primary/50 text-base" 
+                                            value={scheduledDateStr}
+                                            onChange={(e) => setScheduledDateStr(e.target.value)}
                                           />
                                         </div>
                                       </div>
@@ -558,7 +410,7 @@ export default function LeadsPage() {
                                       </div>
                                       <Button 
                                         onClick={handleConfirmSchedule}
-                                        className="w-full bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold h-14 shadow-lg rounded-lg uppercase tracking-wider text-[12px]"
+                                        className="w-full bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold h-16 shadow-lg rounded-lg uppercase tracking-wider text-[12px] transition-transform active:scale-95"
                                       >
                                         CONFIRMAR AGENDAMENTO
                                       </Button>
@@ -587,7 +439,7 @@ export default function LeadsPage() {
                       <div className="space-y-4">
                         <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Briefing Inicial</h3>
                         <div className="p-6 rounded-xl bg-secondary/10 border-l-4 border-primary/50 italic text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                          "{selectedLead.notes}"
+                          "{selectedLead.notes || "Sem notas adicionais."}"
                         </div>
                       </div>
                     </TabsContent>
