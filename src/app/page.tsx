@@ -1,4 +1,3 @@
-
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -56,7 +55,7 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-black tracking-tighter uppercase leading-none font-headline">RGMJ Elite</span>
-              <span className="text-[9px] font-bold text-[#F5D030] tracking-[0.4em] uppercase mt-1">Advocacia Trabalhista</span>
+              <span className="text-[8px] font-bold text-[#F5D030] tracking-[0.4em] uppercase mt-1">Advocacia Trabalhista</span>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-10 text-[10px] font-black tracking-[0.25em] uppercase">

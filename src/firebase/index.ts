@@ -1,40 +1,46 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 /**
  * Inicializa os serviços do Firebase de forma resiliente.
- * Garante que o build e o SSR não quebrem na ausência de chaves,
- * inicializando sempre o app '[DEFAULT]' para satisfazer chamadas globais.
+ * Garante que o build e o SSR não quebrem na ausência de chaves reais.
  */
 export function initializeFirebase() {
+  // Se já houver um app inicializado, retorna as instâncias dele
   if (getApps().length > 0) {
     return getSdks(getApp());
   }
 
-  // Em ambiente de build ou sem variáveis de ambiente, usamos placeholders 
-  // para evitar o erro 'app/no-app' ou 'app/no-options'.
-  const config = {
-    apiKey: firebaseConfig?.apiKey || "BUILD_TIME_PLACEHOLDER",
-    authDomain: firebaseConfig?.authDomain || "placeholder.firebaseapp.com",
-    projectId: firebaseConfig?.projectId || "placeholder-project",
-    storageBucket: firebaseConfig?.storageBucket || "placeholder.appspot.com",
-    messagingSenderId: firebaseConfig?.messagingSenderId || "000000000000",
-    appId: firebaseConfig?.appId || "1:000000000000:web:000000000000",
-  };
+  // Verifica se temos uma API Key minimamente válida (não vazia e não placeholder de build)
+  const hasValidConfig = 
+    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey !== "BUILD_TIME_PLACEHOLDER" &&
+    !firebaseConfig.apiKey.includes("YOUR_");
+
+  if (!hasValidConfig) {
+    // Retorna nulos controlados se não houver configuração válida
+    // Isso evita que initializeApp() dispare erros de API Key inválida no Auth
+    return {
+      firebaseApp: null,
+      auth: null,
+      firestore: null
+    };
+  }
 
   try {
-    const firebaseApp = initializeApp(config);
+    const firebaseApp = initializeApp(firebaseConfig);
     return getSdks(firebaseApp);
   } catch (error) {
-    console.error("Erro crítico na inicialização do Firebase:", error);
-    // Fallback absoluto para não quebrar o build
-    const fallbackApp = initializeApp({ apiKey: "none" }, "fallback");
-    return getSdks(fallbackApp);
+    console.error("Erro na inicialização do Firebase:", error);
+    return {
+      firebaseApp: null,
+      auth: null,
+      firestore: null
+    };
   }
 }
 
