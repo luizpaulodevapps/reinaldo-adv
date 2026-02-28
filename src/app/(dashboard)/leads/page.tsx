@@ -13,17 +13,12 @@ import {
   ChevronRight, 
   Clock, 
   AlertCircle, 
-  Wrench, 
-  Calculator, 
-  FileCheck, 
   Zap, 
-  Copy, 
   ArrowRight, 
   UserPlus, 
   FileText, 
   PlusCircle, 
-  Target, 
-  Calendar as CalendarIcon
+  Target
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -38,14 +33,13 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { collection, query, serverTimestamp } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
+import { collection, query, serverTimestamp, deleteDoc } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -63,12 +57,6 @@ const stageChecklists: Record<string, string[]> = {
   distribuicao: ["Petição finalizada", "Protocolo realizado", "Número do processo inserido"],
 }
 
-const businessHours = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", 
-  "17:00", "17:30", "18:00"
-]
-
 export default function LeadsPage() {
   const db = useFirestore()
   const { user } = useUser()
@@ -78,49 +66,22 @@ export default function LeadsPage() {
     return query(collection(db, "leads"))
   }, [db])
 
-  const { data: leads = [], isLoading } = useCollection(leadsQuery)
+  const { data: leadsData, isLoading } = useCollection(leadsQuery)
+  const leads = leadsData || []
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false)
 
-  // Estados para Agendamento
-  const [scheduledDateStr, setScheduledDateStr] = useState(format(new Date(new Date().setDate(new Date().getDate() + 1)), "yyyy-MM-dd"))
+  // Estados para Agendamento (Digitação Direta)
+  const [scheduledDateStr, setScheduledDateStr] = useState(format(new Date(), "yyyy-MM-dd"))
   const [scheduledTime, setScheduledTime] = useState("10:00")
   const [isScheduling, setIsScheduling] = useState(false)
-
-  const [calcValue, setCalcValue] = useState("")
-  const [calcProb, setCalcProb] = useState("70")
-  const [calcResult, setCalcResult] = useState<any>(null)
-  
-  const [checklistArea, setChecklistArea] = useState("Trabalhista")
-  const [generatedChecklist, setGeneratedChecklist] = useState<string[]>([])
 
   const handleOpenLead = (lead: any) => {
     setSelectedLead(lead)
     setIsSheetOpen(true)
-  }
-
-  const handleCalculate = () => {
-    const val = parseFloat(calcValue.replace(/\D/g, "")) || 0
-    const prob = parseInt(calcProb) || 0
-    const fee = val * 0.3 
-    const successExpected = fee * (prob / 100)
-    
-    setCalcResult({
-      fee: fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      expected: successExpected.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      risk: prob < 50 ? "Alto" : prob < 80 ? "Moderado" : "Baixo"
-    })
-  }
-
-  const handleGenerateChecklist = () => {
-    const lists: Record<string, string[]> = {
-      Trabalhista: ["CTPS (Original ou Digital)", "TRCT (Termo de Rescisão)", "3 últimos holerites", "Extrato FGTS", "Documentos de identificação"],
-      Civil: ["RG/CPF", "Comprovante de residência", "Contratos relacionados", "Provas documentais (fotos/prints)", "Rol de testemunhas"]
-    }
-    setGeneratedChecklist(lists[checklistArea] || [])
   }
 
   const handleCreateEntry = (data: any) => {
@@ -145,7 +106,7 @@ export default function LeadsPage() {
   }
 
   const handleConfirmSchedule = () => {
-    if (!selectedLead) return
+    if (!selectedLead || !selectedLead.id) return
     
     const scheduleData = {
       scheduledDate: scheduledDateStr,
@@ -153,8 +114,21 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp()
     }
 
-    // @ts-ignore
-    updateDocumentNonBlocking(selectedLead.ref, scheduleData)
+    const docRef = collection(db, "leads") // Placeholder, real update requires the doc ref
+    // Em useCollection, cada item tem a propriedade 'id'
+    // Precisamos construir a referência do documento
+    const leadRef = useMemoFirebase(() => {
+        // This is a bit tricky inside the handle, let's use a dynamic ref approach if available
+        // But for simplicity in this prototype, we'll use selection and updateDocumentNonBlocking
+        return null 
+    }, [])
+
+    // No use-collection.tsx, WithId adiciona o 'id'. 
+    // Para atualizar, precisamos do doc(db, 'leads', selectedLead.id)
+    const { doc } = require("firebase/firestore")
+    const leadDocRef = doc(db, "leads", selectedLead.id)
+    
+    updateDocumentNonBlocking(leadDocRef, scheduleData)
     
     setIsScheduling(false)
     toast({
@@ -163,8 +137,37 @@ export default function LeadsPage() {
     })
   }
 
-  const totalValue = leads?.reduce((acc, lead) => acc + (parseFloat(lead.value) || 0), 0) || 0
-  const hotLeadsCount = leads?.filter(l => l.priority === 'alta').length || 0
+  const handleAdvanceStage = () => {
+    if (!selectedLead) return
+    const currentIndex = columns.findIndex(col => col.id === selectedLead.status)
+    if (currentIndex < columns.length - 1) {
+      const nextStatus = columns[currentIndex + 1].id
+      const { doc } = require("firebase/firestore")
+      const leadDocRef = doc(db, "leads", selectedLead.id)
+      
+      updateDocumentNonBlocking(leadDocRef, { 
+        status: nextStatus,
+        updatedAt: serverTimestamp()
+      })
+      
+      setIsSheetOpen(false)
+      toast({ title: "Fase Avançada", description: `O lead foi movido para ${nextStatus.toUpperCase()}.` })
+    }
+  }
+
+  const handleDiscardLead = () => {
+    if (!selectedLead) return
+    const { doc } = require("firebase/firestore")
+    const leadDocRef = doc(db, "leads", selectedLead.id)
+    
+    deleteDocumentNonBlocking(leadDocRef)
+    
+    setIsSheetOpen(false)
+    toast({ variant: "destructive", title: "Lead Descartado", description: "O registro foi removido do CRM." })
+  }
+
+  const totalValue = leads.reduce((acc, lead) => acc + (parseFloat(lead.value) || 0), 0)
+  const hotLeadsCount = leads.filter(l => l.priority === 'alta').length
 
   return (
     <div className="space-y-8">
@@ -237,7 +240,7 @@ export default function LeadsPage() {
         {[
           { label: "Pipeline Total", value: `R$ ${(totalValue / 1000).toFixed(0)}k`, icon: DollarSign, color: "text-emerald-500" },
           { label: "Leads Quentes", value: hotLeadsCount, icon: AlertCircle, color: "text-destructive" },
-          { label: "Novos na Semana", value: leads.length.toString().padStart(2, '0'), icon: PlusCircle, color: "text-primary" },
+          { label: "Novos na Semana", value: (leads?.length || 0).toString().padStart(2, '0'), icon: PlusCircle, color: "text-primary" },
           { label: "Taxa de Conversão", value: "68%", icon: CheckCircle2, color: "text-blue-500" },
         ].map((stat, i) => (
           <Card key={i} className="glass border-primary/10">
@@ -385,7 +388,7 @@ export default function LeadsPage() {
                                   <PopoverContent className="w-[380px] p-0 bg-[#0a0f1e] border-[#2d3748] shadow-2xl z-50 rounded-xl overflow-hidden" align="start">
                                     <div className="p-8 space-y-8">
                                       <div className="space-y-3">
-                                        <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">ESCOLHER DATA</Label>
+                                        <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">DIGITAR DATA</Label>
                                         <div className="relative">
                                           <Input 
                                             type="date" 
@@ -397,16 +400,12 @@ export default function LeadsPage() {
                                       </div>
                                       <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">HORÁRIO COMERCIAL</Label>
-                                        <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                                          <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white text-base">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
-                                            {businessHours.map(h => (
-                                              <SelectItem key={h} value={h}>{h}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                        <Input 
+                                          type="time" 
+                                          className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white focus:border-primary/50 text-base" 
+                                          value={scheduledTime}
+                                          onChange={(e) => setScheduledTime(e.target.value)}
+                                        />
                                       </div>
                                       <Button 
                                         onClick={handleConfirmSchedule}
@@ -461,11 +460,13 @@ export default function LeadsPage() {
 
               <div className="p-8 pt-4 border-t border-border/30 bg-[#0a0f1e] grid grid-cols-2 gap-4 shrink-0">
                 <Button 
+                  onClick={handleDiscardLead}
                   className="bg-[#7f1d1d] hover:bg-[#991b1b] text-white font-bold h-14 text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
                 >
                   Descartar
                 </Button>
                 <Button 
+                  onClick={handleAdvanceStage}
                   className="bg-[#10b981] hover:bg-[#059669] text-white font-bold h-14 text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
                 >
                   Avançar Fase
