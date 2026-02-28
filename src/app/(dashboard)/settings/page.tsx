@@ -407,21 +407,21 @@ export default function SettingsPage() {
                       <div className="space-y-3">
                         <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">MENU LATERAL (SIDEBAR)</Label>
                         <div className="flex gap-2">
-                          <Input type="color" value={sidebarColor} onChange={(e) => setSidebarColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10" />
+                          <input type="color" value={sidebarColor} onChange={(e) => setSidebarColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10 rounded-md cursor-pointer" />
                           <Input value={sidebarColor} onChange={(e) => setSidebarColor(e.target.value)} className="glass border-white/10 h-12 text-xs font-mono" />
                         </div>
                       </div>
                       <div className="space-y-3">
                         <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">FUNDO DO DASHBOARD</Label>
                         <div className="flex gap-2">
-                          <Input type="color" value={dashboardColor} onChange={(e) => setDashboardColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10" />
+                          <input type="color" value={dashboardColor} onChange={(e) => setDashboardColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10 rounded-md cursor-pointer" />
                           <Input value={dashboardColor} onChange={(e) => setDashboardColor(e.target.value)} className="glass border-white/10 h-12 text-xs font-mono" />
                         </div>
                       </div>
                       <div className="space-y-3">
                         <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">ACENTO PRIMÁRIO (BOTÕES)</Label>
                         <div className="flex gap-2">
-                          <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10" />
+                          <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-white/10 rounded-md cursor-pointer" />
                           <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="glass border-white/10 h-12 text-xs font-mono" />
                         </div>
                       </div>
@@ -574,39 +574,54 @@ export default function SettingsPage() {
                   <LayoutGrid className="h-3 w-3" /> Visualização Tática (Preview)
                 </h4>
                 
-                <Card className="overflow-hidden border-2 border-primary/20 shadow-2xl">
-                  <div className="flex h-[500px]">
-                    <div className="w-20 flex flex-col items-center py-6 gap-6" style={{ backgroundColor: sidebarColor }}>
-                      <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center"><Scale className="h-4 w-4 text-white" /></div>
-                      <div className="w-8 h-8 rounded-md bg-white/5"></div>
-                      <div className="w-8 h-8 rounded-md" style={{ backgroundColor: accentColor }}></div>
-                      <div className="w-8 h-8 rounded-md bg-white/5"></div>
+                <Card className="overflow-hidden border-2 border-primary/20 shadow-2xl bg-[#020617]">
+                  <div className="flex h-[550px]">
+                    {/* Sidebar Preview */}
+                    <div className="w-24 flex flex-col items-center py-8 gap-8" style={{ backgroundColor: sidebarColor }}>
+                      <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center border border-white/5">
+                        <Scale className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="space-y-4">
+                        <div className="w-10 h-10 rounded-lg bg-white/5"></div>
+                        <div className="w-10 h-10 rounded-lg" style={{ backgroundColor: accentColor }}></div>
+                        <div className="w-10 h-10 rounded-lg bg-white/5"></div>
+                      </div>
                     </div>
-                    <div className="flex-1 p-6 space-y-6" style={{ backgroundColor: dashboardColor }}>
-                      <div className="h-4 w-32 rounded bg-white/10 mb-8"></div>
-                      <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* Dashboard Preview */}
+                    <div className="flex-1 p-10 space-y-10" style={{ backgroundColor: dashboardColor }}>
+                      <div className="h-6 w-48 rounded-full bg-white/5 mb-4"></div>
+                      
+                      <div className="grid grid-cols-2 gap-6">
                         <div className={cn(
-                          "h-24 rounded-lg border",
+                          "h-32 rounded-2xl border",
                           cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
                           cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
                           "bg-transparent border-white/20"
                         )}></div>
                         <div className={cn(
-                          "h-24 rounded-lg border",
+                          "h-32 rounded-2xl border",
                           cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
                           cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
                           "bg-transparent border-white/20"
                         )}></div>
                       </div>
-                      <div className="h-40 w-full rounded-xl border border-white/5 bg-white/[0.02]"></div>
-                      <div className="h-12 w-full rounded-lg" style={{ backgroundColor: accentColor }}></div>
+                      
+                      <div className={cn(
+                        "h-56 w-full rounded-3xl border",
+                        cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
+                        cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
+                        "bg-transparent border-white/20"
+                      )}></div>
+                      
+                      <div className="h-16 w-full rounded-xl shadow-lg" style={{ backgroundColor: accentColor }}></div>
                     </div>
                   </div>
                 </Card>
                 
-                <div className="mt-6 p-6 rounded-2xl border border-white/5 bg-white/[0.02]">
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                    Nota: O preview acima reflete como a marca RGMJ será injetada em todos os componentes operacionais do sistema.
+                <div className="mt-8 p-8 rounded-3xl border border-white/5 bg-[#0a0f1e]/50">
+                  <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest leading-relaxed text-center">
+                    NOTA: O PREVIEW ACIMA REFLETE COMO A MARCA RGMJ SERÁ INJETADA EM TODOS OS COMPONENTES OPERACIONAIS DO SISTEMA.
                   </p>
                 </div>
               </div>
@@ -752,7 +767,7 @@ export default function SettingsPage() {
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                   <Cpu className="h-8 w-8 text-primary animate-pulse" />
                 </div>
-                <div>
+                <div className="space-y-1">
                   <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Status da Conexão API</h4>
                   <div className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" /> Google Workspace está operando com latência zero.
