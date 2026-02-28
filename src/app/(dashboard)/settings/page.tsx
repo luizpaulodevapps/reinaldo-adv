@@ -165,7 +165,7 @@ export default function SettingsPage() {
           ))}
         </TabsList>
 
-        {/* Tab: Google Workspace (NOVA) */}
+        {/* Tab: Google Workspace */}
         <TabsContent value="google" className="mt-0 outline-none space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -258,9 +258,9 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Status da Conexão API</h4>
-                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
+                  <div className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" /> Google Workspace está operando com latência zero.
-                  </p>
+                  </div>
                 </div>
               </div>
               <Button variant="outline" className="glass border-primary/20 text-primary uppercase font-black text-[10px] px-8">Testar Conectividade</Button>
@@ -382,7 +382,7 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Financeiro (FIEL À IMAGEM) */}
+        {/* Tab: Financeiro */}
         <TabsContent value="financeiro" className="mt-0 outline-none space-y-6">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
