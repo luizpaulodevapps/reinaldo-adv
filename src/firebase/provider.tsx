@@ -73,11 +73,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   const setProfile = (profile: any) => {
-    setUserAuthState(prev => ({ 
-      ...prev, 
-      profile, 
-      role: profile?.role || (prev.user?.email === 'luizao16@gmail.com' || prev.user?.email === 'luizpaulo.dev.apps@gmail.com' ? 'admin' : null) 
-    }));
+    setUserAuthState(prev => {
+      const isOwner = prev.user?.email === 'luizao16@gmail.com' || prev.user?.email === 'luizpaulo.dev.apps@gmail.com';
+      return { 
+        ...prev, 
+        profile, 
+        role: isOwner ? 'admin' : (profile?.role || null)
+      };
+    });
   };
 
   useEffect(() => {
@@ -89,12 +92,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        const isOwner = firebaseUser?.email === 'luizao16@gmail.com' || firebaseUser?.email === 'luizpaulo.dev.apps@gmail.com';
         setUserAuthState(prev => ({ 
           ...prev, 
           user: firebaseUser, 
           isUserLoading: false, 
           userError: null,
-          role: firebaseUser?.email === 'luizao16@gmail.com' || firebaseUser?.email === 'luizpaulo.dev.apps@gmail.com' ? 'admin' : prev.role
+          role: isOwner ? 'admin' : prev.role
         }));
       },
       (error) => {

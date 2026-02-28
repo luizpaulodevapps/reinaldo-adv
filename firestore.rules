@@ -21,121 +21,86 @@ service cloud.firestore {
       );
     }
 
+    // --- SUPREMACIA: ACESSO TOTAL PARA O PROPRIETÁRIO ---
+    // Esta regra garante que o Dono nunca receba "Permissão Insuficiente"
+    match /{document=**} {
+      allow read, write: if isOwner();
+    }
+
     function getStaffRole() {
       return get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data.role;
     }
 
     function isAdmin() {
-      return isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)) && getStaffRole() == 'admin');
+      return isSignedIn() && exists(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)) && getStaffRole() == 'admin';
     }
 
     function isFinancial() {
       return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)) && getStaffRole() == 'financial');
     }
 
-    function isAssigned(staffId) {
-      return isSignedIn() && (request.auth.uid == staffId || isOwner() || isAdmin());
-    }
-
-    // --- COLLECTION RULES ---
+    // --- COLLECTION RULES PARA OUTROS USUÁRIOS ---
 
     match /staff_profiles/{staffId} {
-      // Acesso direto para super usuários
-      allow read, write, delete: if request.auth != null && (
-        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
-        request.auth.token.email == 'luizao16@gmail.com' ||
-        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
-      );
-      allow read, write, delete: if isOwner() || isAdmin();
       allow read, update: if isSignedIn() && request.auth.uid == staffId;
-      allow list: if isOwner() || isAdmin();
+      allow list: if isAdmin();
     }
 
     match /clients/{clientId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (
-        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
-        request.auth.token.email == 'luizao16@gmail.com' ||
-        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
-      );
-      // Donos e Financeiro veem tudo. Advogados veem apenas os que são responsáveis.
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.responsibleStaffIds is list && request.auth.uid in resource.data.responsibleStaffIds;
-      allow create, update: if isOwner() || isAdmin() || isFinancial();
-      allow delete: if isOwner() || isAdmin();
+      allow create, update: if isAdmin() || isFinancial();
+      allow delete: if isAdmin();
     }
 
     match /processes/{processId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (
-        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
-        request.auth.token.email == 'luizao16@gmail.com' ||
-        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
-      );
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.responsibleStaffId == request.auth.uid;
-      allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
-      allow update: if isOwner() || isAdmin() || (isSignedIn() && resource.data.responsibleStaffId == request.auth.uid);
-      allow delete: if isOwner() || isAdmin();
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
+      allow update: if isAdmin() || (isSignedIn() && resource.data.responsibleStaffId == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     match /defendants/{defendantId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
-      allow create, update: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
-      allow delete: if isOwner() || isAdmin();
+      allow create, update: if isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     match /leads/{leadId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
-      allow list, read: if isOwner() || isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant');
+      allow list, read: if isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant');
       allow list, read: if isSignedIn() && resource.data.assignedStaffId == request.auth.uid;
-      allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
-      allow update: if isOwner() || isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid);
-      allow delete: if isOwner() || isAdmin();
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
+      allow update: if isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     match /hearings/{hearingId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
-      allow create, update: if isOwner() || isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
-      allow delete: if isOwner() || isAdmin();
+      allow create, update: if isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     match /deadlines/{deadlineId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
-      allow create, update: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
-      allow delete: if isOwner() || isAdmin();
+      allow create, update: if isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     match /financial_titles/{financialTitleId} {
-      // Acesso direto para super usuários - múltiplos fallbacks
-      allow list, read, create, update, delete: if request.auth != null && (
-        request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || 
-        request.auth.token.email == 'luizao16@gmail.com' ||
-        request.auth.uid == '8g3l5AXA6gOuaGyMRcgmLefxCcE3'
-      );
-      // Separação de privilégios para evitar erro de permissão em listagens globais
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
-      allow create, update, delete: if isOwner() || isAdmin() || isFinancial();
+      allow create, update, delete: if isAdmin() || isFinancial();
     }
 
     match /staff_credits/{staffCreditId} {
-      // Acesso direto para super usuários
-      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
-      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.staffId == request.auth.uid;
-      allow create, update: if isOwner() || isAdmin() || isFinancial();
-      allow delete: if isOwner() || isAdmin();
+      allow create, update: if isAdmin() || isFinancial();
+      allow delete: if isAdmin();
     }
   }
 }
