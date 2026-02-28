@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   Fingerprint,
   User,
-  X,
   Heart,
   Users
 } from "lucide-react"
@@ -77,8 +76,12 @@ export default function StaffPage() {
   })
 
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, role } = useUser()
   const { toast } = useToast()
+
+  // Controle de Permissão de Elite
+  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
+  const canManage = isOwner || role === 'admin'
 
   const staffQuery = useMemoFirebase(() => {
     if (!user) return null
@@ -191,6 +194,10 @@ export default function StaffPage() {
   }
 
   const handleDelete = (id: string) => {
+    if (!canManage) {
+      toast({ variant: "destructive", title: "Acesso Negado", description: "Apenas administradores podem excluir registros." })
+      return
+    }
     if (confirm("Deseja realmente remover este colaborador do Departamento Pessoal?")) {
       deleteDocumentNonBlocking(doc(db, "employees", id))
       toast({ variant: "destructive", title: "Removido", description: "O colaborador foi excluído da base." })
@@ -202,10 +209,10 @@ export default function StaffPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-headline font-bold text-white mb-2 tracking-tight">Departamento Pessoal</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.2em] text-[10px] font-bold opacity-70">
-            Gestão técnica de colaboradores e capital humano da banca RGMJ.
+        <div className="space-y-1">
+          <h1 className="text-5xl font-headline font-bold text-white tracking-tight">Departamento Pessoal</h1>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">
+            GESTÃO TÉCNICA E ESTRATÉGICA DO CAPITAL HUMANO RGMJ.
           </p>
         </div>
         
@@ -219,9 +226,11 @@ export default function StaffPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-lg shadow-primary/10">
-            <Plus className="h-4 w-4" /> Novo Colaborador
-          </Button>
+          {canManage && (
+            <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-lg shadow-primary/10">
+              <Plus className="h-4 w-4" /> Novo Colaborador
+            </Button>
+          )}
         </div>
       </div>
 
@@ -282,9 +291,11 @@ export default function StaffPage() {
                     <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-primary hover:bg-primary/5 transition-all" onClick={() => handleOpenEdit(staff)}>
                       <Settings2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-destructive hover:bg-destructive/5 transition-all" onClick={() => handleDelete(staff.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canManage && (
+                      <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-destructive hover:bg-destructive/5 transition-all" onClick={() => handleDelete(staff.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                   <Button variant="outline" className="glass border-primary/10 text-[9px] font-black uppercase h-9 px-4 tracking-widest hover:border-primary/50">
                     Abrir Prontuário
@@ -300,9 +311,11 @@ export default function StaffPage() {
               <p className="text-sm font-bold text-white uppercase tracking-widest">Base de Funcionários Vazia</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">Cadastre os colaboradores da banca RGMJ para iniciar a gestão operacional.</p>
             </div>
-            <Button onClick={handleOpenCreate} className="gold-gradient text-background font-bold gap-2">
-              Cadastrar Primeiro Funcionário
-            </Button>
+            {canManage && (
+              <Button onClick={handleOpenCreate} className="gold-gradient text-background font-bold gap-2">
+                Cadastrar Primeiro Funcionário
+              </Button>
+            )}
           </div>
         )}
       </div>
