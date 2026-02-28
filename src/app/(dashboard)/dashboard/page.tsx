@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,8 +13,8 @@ import {
   ChevronRight,
   Loader2
 } from "lucide-react"
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query, where, limit, orderBy } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase"
+import { collection, query, where, limit, orderBy, doc } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useMemo } from "react"
@@ -24,12 +23,21 @@ export default function DashboardPage() {
   const db = useFirestore()
   const { user } = useUser()
 
-  // Queries Reais
-  const leadsQuery = useMemoFirebase(() => user ? collection(db, "leads") : null, [db, user])
-  const casesQuery = useMemoFirebase(() => user ? collection(db, "processes") : null, [db, user])
-  const deadlinesQuery = useMemoFirebase(() => user ? query(collection(db, "deadlines"), where("status", "==", "Aberto"), limit(10)) : null, [db, user])
-  const hearingsQuery = useMemoFirebase(() => user ? query(collection(db, "hearings"), orderBy("startDateTime", "asc"), limit(5)) : null, [db, user])
-  const financialQuery = useMemoFirebase(() => user ? collection(db, "financial_titles") : null, [db, user])
+  // Sincroniza perfil para evitar race condition nas queries de admin
+  const profileRef = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return doc(db, 'staff_profiles', user.uid)
+  }, [user, db])
+  const { data: profile } = useDoc(profileRef)
+
+  // As queries só disparam quando o perfil de admin é confirmado no cliente
+  const canQuery = !!(user && profile?.role)
+
+  const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
+  const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])
+  const deadlinesQuery = useMemoFirebase(() => canQuery ? query(collection(db, "deadlines"), where("status", "==", "Aberto"), limit(10)) : null, [db, canQuery])
+  const hearingsQuery = useMemoFirebase(() => canQuery ? query(collection(db, "hearings"), orderBy("startDateTime", "asc"), limit(5)) : null, [db, canQuery])
+  const financialQuery = useMemoFirebase(() => canQuery ? collection(db, "financial_titles") : null, [db, canQuery])
 
   const { data: leads, isLoading: loadingLeads } = useCollection(leadsQuery)
   const { data: cases, isLoading: loadingCases } = useCollection(casesQuery)
@@ -50,7 +58,7 @@ export default function DashboardPage() {
     ]
   }, [leads, cases, deadlines, financial])
 
-  if (loadingLeads || loadingCases || loadingHearings) {
+  if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

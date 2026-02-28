@@ -1,22 +1,25 @@
-
 "use client"
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DollarSign, Receipt, CreditCard, Download, ArrowUpRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query, where, orderBy } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase"
+import { collection, query, where, orderBy, doc } from "firebase/firestore"
 import { useMemo } from "react"
 
 export default function BillingPage() {
   const db = useFirestore()
   const { user } = useUser()
 
+  const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
+  const { data: profile } = useDoc(profileRef)
+  const canQuery = !!(user && profile?.role)
+
   const billingQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!canQuery) return null
     return query(collection(db, "financial_titles"), where("type", "==", "Honorário"), orderBy("dueDate", "desc"))
-  }, [db, user])
+  }, [db, canQuery])
 
   const { data: invoices, isLoading } = useCollection(billingQuery)
 
@@ -88,7 +91,7 @@ export default function BillingPage() {
           <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold text-muted-foreground">Ver Todas</Button>
         </div>
         <div className="divide-y divide-primary/10">
-          {isLoading ? (
+          {isLoading || !canQuery ? (
             <div className="p-20 flex flex-col items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

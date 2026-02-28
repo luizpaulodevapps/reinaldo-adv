@@ -1,4 +1,3 @@
-
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -125,7 +124,8 @@ export default function DashboardLayout({
   }
 
   // 3. Aguarda Perfil de Administrador (Evita erro de permissão nas páginas)
-  if (isProfileLoading || !profile) {
+  // Adicionado check rigoroso de role para garantir que regras de segurança funcionem
+  if (isProfileLoading || !profile || !profile.role) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
         <div className="w-16 h-16 rounded-2xl border border-primary/20 flex items-center justify-center animate-bounce">
