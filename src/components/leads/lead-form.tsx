@@ -8,16 +8,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, UserCheck, Smartphone, Loader2, AlertCircle, Calendar as CalendarIcon, Target, X, Plus } from "lucide-react"
+import { Search, Loader2, AlertCircle, Target, X, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 interface Lead {
   id: string
   name: string
   phone: string
   type: string
+  cpf?: string
   [key: string]: any
 }
 
@@ -33,6 +34,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
   const [mode, setMode] = useState<"quick" | "complete">(initialMode)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isQuickRegOpen, setIsQuickRegOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -61,7 +63,15 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     value: ""
   })
 
-  // Fechar busca ao clicar fora
+  // Dados para o Cadastro Rápido (Modal de Inspiração)
+  const [quickRegData, setQuickRegData] = useState({
+    firstName: "",
+    lastName: "",
+    cpfCnpj: "",
+    whatsapp: "",
+    area: "Trabalhista"
+  })
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -95,11 +105,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       const data = await response.json()
       
       if (data.erro) {
-        toast({
-          variant: "destructive",
-          title: "CEP não encontrado",
-          description: "Por favor, verifique o número digitado."
-        })
+        toast({ variant: "destructive", title: "CEP não encontrado" })
       } else {
         setFormData(prev => ({
           ...prev,
@@ -110,11 +116,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
         }))
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro na busca",
-        description: "Não foi possível consultar o CEP agora."
-      })
+      toast({ variant: "destructive", title: "Erro na busca do CEP" })
     } finally {
       setLoadingCep(false)
     }
@@ -124,35 +126,63 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     onSelectExisting(lead)
     setIsSearchOpen(false)
     setSearchTerm("")
-    setFormData(prev => ({ ...prev, name: lead.name, phone: lead.phone || "" }))
+    setFormData(prev => ({ 
+      ...prev, 
+      name: lead.name, 
+      phone: lead.phone || "",
+      cpf: lead.cpf || "",
+      type: lead.type || "Trabalhista"
+    }))
   }
 
-  const handleCreateNew = () => {
-    setFormData(prev => ({ ...prev, name: searchTerm }))
+  const handleOpenQuickReg = () => {
+    // Tentar separar nome e sobrenome da busca para facilitar
+    const names = searchTerm.split(" ")
+    setQuickRegData({
+      ...quickRegData,
+      firstName: names[0] || "",
+      lastName: names.slice(1).join(" ") || ""
+    })
+    setIsQuickRegOpen(true)
     setIsSearchOpen(false)
+  }
+
+  const handleSaveQuickClient = () => {
+    const fullName = `${quickRegData.firstName} ${quickRegData.lastName}`.trim()
+    if (!fullName) {
+      toast({ variant: "destructive", title: "Nome obrigatório" })
+      return
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      name: fullName,
+      phone: quickRegData.whatsapp,
+      cpf: quickRegData.cpfCnpj,
+      type: quickRegData.area
+    }))
+
+    setIsQuickRegOpen(false)
+    setSearchTerm(fullName)
     toast({
-      title: "Novo Cliente Sugerido",
-      description: `Iniciando preenchimento para: ${searchTerm}`
+      title: "Cliente Pré-cadastrado",
+      description: `${fullName} pronto para triagem.`
     })
   }
 
   const handleSubmit = () => {
-    if (!formData.name && !searchTerm) {
-      toast({
-        variant: "destructive",
-        title: "Nome obrigatório",
-        description: "Por favor, selecione ou digite o nome do cliente."
-      })
+    const finalName = formData.name || searchTerm
+    if (!finalName) {
+      toast({ variant: "destructive", title: "Selecione ou busque um cliente." })
       return
     }
-    onSubmit({ ...formData, name: formData.name || searchTerm, mode })
+    onSubmit({ ...formData, name: finalName, mode })
   }
 
   return (
     <div className="flex flex-col h-full bg-[#0a0f1e]">
       <ScrollArea className="flex-1 px-8 py-4 max-h-[70vh]">
         <div className="space-y-6 pb-6">
-          {/* Alternar Modo se não bloqueado */}
           {!lockMode && (
             <div className="flex items-center justify-between mb-4">
               <Label className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
@@ -167,7 +197,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             </div>
           )}
 
-          {/* Cliente Principal */}
+          {/* Cliente Principal / Busca */}
           <div className="relative space-y-2" ref={searchRef}>
             <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
               CLIENTE PRINCIPAL <span className="text-destructive">*</span>
@@ -178,12 +208,11 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               onClick={() => setIsSearchOpen(true)}
             >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4a5568]" />
-              <div className="pl-12 bg-[#1a1f2e] border border-[#2d3748] rounded-md h-12 flex items-center text-[#4a5568] text-sm">
+              <div className="pl-12 bg-[#1a1f2e] border border-[#2d3748] rounded-md h-12 flex items-center text-white text-sm">
                 {formData.name || searchTerm || "Pesquisar cliente..."}
               </div>
             </div>
 
-            {/* Dropdown de Pesquisa de Elite */}
             {isSearchOpen && (
               <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-[#2d3748] shadow-2xl rounded-lg overflow-hidden animate-in fade-in zoom-in-95">
                 <div className="p-4 border-b border-[#2d3748]">
@@ -201,9 +230,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                 
                 <div className="min-h-[140px] flex flex-col justify-center items-center p-4">
                   {searchTerm.length < 2 ? (
-                    <div className="text-center">
-                      <p className="text-[#4a5568] text-sm">Digite pelo menos 2 caracteres para buscar</p>
-                    </div>
+                    <p className="text-[#4a5568] text-sm">Digite pelo menos 2 caracteres para buscar</p>
                   ) : filteredLeads.length > 0 ? (
                     <ScrollArea className="w-full max-h-[300px]">
                       {filteredLeads.map(lead => (
@@ -214,7 +241,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                         >
                           <div className="text-left">
                             <div className="font-bold text-white">{lead.name}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono">{lead.phone}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{lead.phone || lead.cpf}</div>
                           </div>
                           <Badge variant="outline" className="text-[9px] uppercase border-primary/40 text-primary">Selecionar</Badge>
                         </button>
@@ -222,9 +249,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                     </ScrollArea>
                   ) : (
                     <div className="text-center space-y-2">
-                      <p className="text-[#4a5568] text-sm italic">
-                        Nenhum registro encontrado para "{searchTerm}".
-                      </p>
+                      <p className="text-[#4a5568] text-sm italic">Nenhum registro encontrado para "{searchTerm}".</p>
                       <p className="text-primary/70 text-xs font-bold uppercase tracking-widest">
                         Sugestão: Clique abaixo para cadastrar este novo cliente.
                       </p>
@@ -233,7 +258,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                 </div>
 
                 <button 
-                  onClick={handleCreateNew}
+                  onClick={handleOpenQuickReg}
                   className="w-full p-4 border-t border-[#2d3748] flex items-center gap-3 text-primary hover:bg-primary/10 transition-colors font-bold text-xs uppercase tracking-widest bg-primary/5"
                 >
                   <Plus className="h-4 w-4" />
@@ -245,21 +270,20 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
           {/* Título da Demanda */}
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
               TÍTULO DA DEMANDA <span className="text-destructive">*</span>
             </Label>
             <Input 
               placeholder="Ex: Revisional de Horas Extras..." 
-              className="bg-[#1a1f2e] border-[#2d3748] focus:border-primary/50 h-12 text-white" 
+              className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
               value={formData.demandTitle}
               onChange={(e) => handleInputChange("demandTitle", e.target.value)}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Advogado Responsável */}
             <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
                 ADVOGADO RESPONSÁVEL <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.responsibleLawyer} onValueChange={(v) => handleInputChange("responsibleLawyer", v)}>
@@ -268,14 +292,13 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
                   <SelectItem value="Dr. Reinaldo Gonçalves">Dr. Reinaldo Gonçalves</SelectItem>
-                  <SelectItem value="Dra. Equipe 01">Equipe de Apoio 01</SelectItem>
+                  <SelectItem value="Equipe de Apoio">Equipe de Apoio</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Área Jurídica */}
             <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
                 ÁREA JURÍDICA <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
@@ -291,11 +314,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               </Select>
             </div>
 
-            {/* Prioridade */}
             <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
-                PRIORIDADE
-              </Label>
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">PRIORIDADE</Label>
               <Select value={formData.priority} onValueChange={(v) => handleInputChange("priority", v)}>
                 <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
                   <SelectValue />
@@ -308,27 +328,21 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               </Select>
             </div>
 
-            {/* Data de Prescrição */}
             <div className="space-y-2">
               <Label className="text-[#e53e3e] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" /> DATA DE PRESCRIÇÃO
               </Label>
-              <div className="relative">
-                <Input 
-                  type="date" 
-                  className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white pr-10" 
-                  value={formData.prescriptionDate}
-                  onChange={(e) => handleInputChange("prescriptionDate", e.target.value)}
-                />
-              </div>
+              <Input 
+                type="date" 
+                className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                value={formData.prescriptionDate}
+                onChange={(e) => handleInputChange("prescriptionDate", e.target.value)}
+              />
             </div>
           </div>
 
-          {/* Fonte de Captação */}
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
-              FONTE DE CAPTAÇÃO <span className="text-destructive">*</span>
-            </Label>
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">FONTE DE CAPTAÇÃO</Label>
             <Select value={formData.source} onValueChange={(v) => handleInputChange("source", v)}>
               <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white">
                 <SelectValue />
@@ -342,37 +356,27 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             </Select>
           </div>
 
-          {/* Briefing Inicial */}
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
-              BRIEFING INICIAL
-            </Label>
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">BRIEFING INICIAL</Label>
             <Textarea 
-              placeholder="Relato inicial do cliente..." 
-              className="bg-[#1a1f2e] border-[#2d3748] min-h-[140px] resize-none text-white focus:border-primary/50" 
+              placeholder="Relato inicial do caso..." 
+              className="bg-[#1a1f2e] border-[#2d3748] min-h-[140px] text-white focus:border-primary/50 resize-none" 
               value={formData.notes}
               onChange={(e) => handleInputChange("notes", e.target.value)}
             />
           </div>
 
-          {/* Campos Adicionais para Modo Completo */}
           {mode === "complete" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#1a1f2e] animate-in fade-in slide-in-from-top-4">
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">WhatsApp / Celular</Label>
-                <Input placeholder="(11) 99999-9999" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CPF</Label>
+                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CPF / CNPJ</Label>
                 <Input placeholder="000.000.000-00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1] flex items-center gap-2">
-                  CEP {loadingCep && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                </Label>
+                <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CEP</Label>
                 <Input placeholder="00000-000" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} onBlur={handleCepBlur} />
               </div>
-              <div className="space-y-2 md:col-span-1">
+              <div className="space-y-2 md:col-span-2">
                 <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">Endereço</Label>
                 <Input className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} />
               </div>
@@ -381,26 +385,107 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
         </div>
       </ScrollArea>
 
-      {/* Footer Fixo */}
       <div className="p-8 bg-[#0a0f1e] border-t border-[#1a1f2e] flex flex-col md:flex-row gap-4 items-center justify-between">
-        <Button 
-          variant="ghost" 
-          className="w-full md:w-auto text-[#a0a5b1] hover:text-white font-bold uppercase tracking-widest text-[11px]"
-          onClick={() => {
-            setFormData({ ...formData, name: "" })
-            toast({ title: "Triagem Cancelada" })
-          }}
-        >
+        <Button variant="ghost" className="text-[#a0a5b1] hover:text-white font-bold uppercase tracking-widest text-[11px]" onClick={() => setFormData({ ...formData, name: "" })}>
           Cancelar
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          className="w-full md:w-[240px] gold-gradient text-background font-bold h-14 text-[12px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex items-center justify-center gap-3"
-        >
-          <Target className="h-5 w-5" />
-          Iniciar Triagem
+        <Button onClick={handleSubmit} className="w-full md:w-[240px] gold-gradient text-background font-bold h-14 text-[12px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex items-center justify-center gap-3">
+          <Target className="h-5 w-5" /> Iniciar Triagem
         </Button>
       </div>
+
+      {/* MODAL DE CADASTRO RÁPIDO - INSPIRADO NO MODELO */}
+      <Dialog open={isQuickRegOpen} onOpenChange={setIsQuickRegOpen}>
+        <DialogContent className="bg-[#0a0f1e] border-[#1a1f2e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl">
+          <div className="p-8 space-y-2">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl flex items-center gap-2">
+                <Plus className="h-6 w-6 text-primary" /> Cadastro Rápido
+              </DialogTitle>
+              <p className="text-[#4a5568] text-sm">Preencha os dados essenciais para o novo atendimento.</p>
+            </DialogHeader>
+          </div>
+
+          <div className="px-8 py-6 space-y-8 border-t border-[#1a1f2e]/50">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                  NOME / RAZÃO <span className="text-destructive">*</span>
+                </Label>
+                <Input 
+                  placeholder="Ex: João" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
+                  value={quickRegData.firstName}
+                  onChange={(e) => setQuickRegData({...quickRegData, firstName: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                  SOBRENOME / FANTASIA <span className="text-destructive">*</span>
+                </Label>
+                <Input 
+                  placeholder="Ex: Silva" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
+                  value={quickRegData.lastName}
+                  onChange={(e) => setQuickRegData({...quickRegData, lastName: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CPF / CNPJ</Label>
+                <Input 
+                  placeholder="000.000.000-00" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
+                  value={quickRegData.cpfCnpj}
+                  onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">WHATSAPP</Label>
+                <Input 
+                  placeholder="(11) 99999-9999" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
+                  value={quickRegData.whatsapp}
+                  onChange={(e) => setQuickRegData({...quickRegData, whatsapp: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ÁREA DE ATENDIMENTO *</Label>
+              <Select value={quickRegData.area} onValueChange={(v) => setQuickRegData({...quickRegData, area: v})}>
+                <SelectTrigger className="bg-[#0a0f1e] border-[#2d3748] h-14 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0a0f1e] border-[#2d3748] text-white">
+                  <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                  <SelectItem value="Civil">Civil</SelectItem>
+                  <SelectItem value="Previdenciário">Previdenciário</SelectItem>
+                  <SelectItem value="Empresarial">Empresarial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="p-8 bg-[#0d121f] border-t border-[#1a1f2e] flex items-center justify-between">
+            <Button 
+              variant="ghost" 
+              className="text-[#a0a5b1] hover:text-white font-bold uppercase tracking-widest text-[11px]"
+              onClick={() => setIsQuickRegOpen(false)}
+            >
+              CANCELAR
+            </Button>
+            <Button 
+              onClick={handleSaveQuickClient}
+              className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold h-14 px-8 text-[12px] uppercase tracking-widest shadow-2xl flex items-center gap-2 rounded-lg"
+            >
+              <Plus className="h-5 w-5" /> SALVAR CLIENTE
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
