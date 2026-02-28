@@ -35,7 +35,11 @@ import {
   HardDrive,
   Cpu,
   Lock,
-  User
+  User,
+  Moon,
+  Sun,
+  Contrast,
+  Palette
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -44,6 +48,7 @@ import { collection, query, orderBy, doc, serverTimestamp } from "firebase/fires
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 
 export default function SettingsPage() {
   const { toast } = useToast()
@@ -71,6 +76,9 @@ export default function SettingsPage() {
     name: profile?.name || "",
     email: profile?.email || ""
   })
+
+  // Estado do Tema (Simulação para UI)
+  const [selectedTheme, setSelectedTheme] = useState("dark")
 
   useEffect(() => {
     if (profile) {
@@ -189,19 +197,140 @@ export default function SettingsPage() {
             { id: "financeiro", label: "Financeiro" },
             { id: "tags", label: "Dicionário de Tags" },
             { id: "kit", label: "Kit Cliente" },
+            { id: "temas", label: "Temas" },
             { id: "licenca", label: "Licença" }
           ].map((tab) => (
             <TabsTrigger 
               key={tab.id}
               value={tab.id} 
-              className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all rounded-md"
+              className={cn(
+                "data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all rounded-md",
+                tab.id === "temas" && "border border-primary/20"
+              )}
             >
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {/* Tab: Meu Perfil (Conforme Referência) */}
+        {/* Tab: Temas (Nova) */}
+        <TabsContent value="temas" className="mt-0 outline-none space-y-8">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+              <div className="flex items-center gap-4">
+                <Palette className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Personalização de Ambiente</CardTitle>
+                  <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                    Defina a identidade visual do seu Centro de Comando RGMJ.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Tema Escuro */}
+                <div 
+                  onClick={() => setSelectedTheme("dark")}
+                  className={cn(
+                    "cursor-pointer p-8 rounded-2xl border transition-all duration-500 group relative overflow-hidden",
+                    selectedTheme === "dark" ? "border-primary bg-primary/5 ring-1 ring-primary/50" : "border-white/5 bg-white/[0.02] hover:border-white/20"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-white/10">
+                      <Moon className="h-6 w-6 text-primary" />
+                    </div>
+                    {selectedTheme === "dark" && (
+                      <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase px-3">ATIVO</Badge>
+                    )}
+                  </div>
+                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Midnight Elite</h4>
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    Interface profunda com alto foco e zero fadiga visual. O padrão ouro da advocacia moderna.
+                  </p>
+                  <div className="mt-6 flex gap-2">
+                    <div className="w-4 h-4 rounded-full bg-[#020617] border border-white/10" />
+                    <div className="w-4 h-4 rounded-full bg-[#213B37]" />
+                    <div className="w-4 h-4 rounded-full bg-[#818258]" />
+                  </div>
+                </div>
+
+                {/* Tema Claro Contraste */}
+                <div 
+                  onClick={() => setSelectedTheme("light")}
+                  className={cn(
+                    "cursor-pointer p-8 rounded-2xl border transition-all duration-500 group relative overflow-hidden",
+                    selectedTheme === "light" ? "border-primary bg-primary/5 ring-1 ring-primary/50" : "border-white/5 bg-white/[0.02] hover:border-white/20"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-black/10">
+                      <Sun className="h-6 w-6 text-amber-500" />
+                    </div>
+                    {selectedTheme === "light" && (
+                      <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase px-3">ATIVO</Badge>
+                    )}
+                  </div>
+                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Institutional Light</h4>
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    Ambiente claro com alto contraste e foco na legibilidade textual técnica.
+                  </p>
+                  <div className="mt-6 flex gap-2">
+                    <div className="w-4 h-4 rounded-full bg-[#FFFFFF] border border-black/10" />
+                    <div className="w-4 h-4 rounded-full bg-[#213B37]" />
+                    <div className="w-4 h-4 rounded-full bg-[#E9E8E6]" />
+                  </div>
+                </div>
+
+                {/* Tema High Contrast */}
+                <div 
+                  onClick={() => setSelectedTheme("contrast")}
+                  className={cn(
+                    "cursor-pointer p-8 rounded-2xl border transition-all duration-500 group relative overflow-hidden",
+                    selectedTheme === "contrast" ? "border-primary bg-primary/5 ring-1 ring-primary/50" : "border-white/5 bg-white/[0.02] hover:border-white/20"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border-4 border-white">
+                      <Contrast className="h-6 w-6 text-white" />
+                    </div>
+                    {selectedTheme === "contrast" && (
+                      <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase px-3">ATIVO</Badge>
+                    )}
+                  </div>
+                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Pure Contrast</h4>
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    Acessibilidade máxima com contraste absoluto entre fundo e tipografia.
+                  </p>
+                  <div className="mt-6 flex gap-2">
+                    <div className="w-4 h-4 rounded-full bg-[#000000] border border-white" />
+                    <div className="w-4 h-4 rounded-full bg-[#FFFFFF]" />
+                    <div className="w-4 h-4 rounded-full bg-[#f5d030]" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-12 p-8 rounded-2xl border border-primary/20 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Sincronizar com Sistema Operacional</h4>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">O tema mudará automaticamente conforme as configurações do seu dispositivo.</p>
+                  </div>
+                  <Switch className="data-[state=checked]:bg-primary" />
+                </div>
+              </div>
+
+              <div className="mt-10">
+                <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+                  <Save className="h-5 w-5" /> APLICAR PREFERÊNCIAS VISUAIS
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Meu Perfil */}
         <TabsContent value="perfil" className="mt-0 outline-none space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
