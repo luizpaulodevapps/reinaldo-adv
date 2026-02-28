@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Loader2, AlertCircle, Target, X, Plus, ShieldAlert } from "lucide-react"
+import { Search, Loader2, AlertCircle, Target, X, Plus, ShieldAlert, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -37,6 +38,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isQuickRegOpen, setIsQuickRegOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState(false)
+  const [loadingApi, setLoadingApi] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
@@ -97,6 +99,40 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleDocumentLookup = async () => {
+    const doc = quickRegData.cpfCnpj.replace(/\D/g, "")
+    
+    if (doc.length === 11) {
+      toast({ title: "Proteção LGPD", description: "Dados de CPF são blindados. Favor preencher o nome manualmente." })
+      return
+    }
+
+    if (doc.length !== 14) {
+      toast({ variant: "destructive", title: "Documento Inválido", description: "CNPJ requer 14 dígitos." })
+      return
+    }
+
+    setLoadingApi(true)
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
+      if (!response.ok) throw new Error()
+      const data = await response.json()
+      
+      setQuickRegData(prev => ({
+        ...prev,
+        firstName: data.razao_social,
+        lastName: data.nome_fantasia || "",
+        whatsapp: data.ddd_telefone_1 || prev.whatsapp
+      }))
+
+      toast({ title: "Dados Injetados", description: data.razao_social })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Falha na API", description: "Empresa não localizada." })
+    } finally {
+      setLoadingApi(false)
+    }
+  }
+
   const handleCepBlur = async () => {
     const cep = formData.zipCode.replace(/\D/g, "")
     if (cep.length !== 8) return
@@ -155,23 +191,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       return
     }
 
-    // Validação de Duplicidade no Cadastro Rápido
-    const cleanDoc = quickRegData.cpfCnpj.replace(/\D/g, "")
-    if (cleanDoc) {
-      const duplicate = existingLeads.find(l => {
-        const existingDoc = (l.cpf || l.documentNumber || "").replace(/\D/g, "")
-        return existingDoc === cleanDoc
-      })
-      if (duplicate) {
-        toast({ 
-          variant: "destructive", 
-          title: "Documento Duplicado", 
-          description: `O documento ${quickRegData.cpfCnpj} já pertence a ${duplicate.name}.`
-        })
-        return
-      }
-    }
-
     setFormData(prev => ({
       ...prev,
       name: fullName,
@@ -194,24 +213,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       toast({ variant: "destructive", title: "Selecione ou busque um cliente." })
       return
     }
-
-    // Validação de Duplicidade no Submit Final
-    const cleanDoc = formData.cpf.replace(/\D/g, "")
-    if (cleanDoc) {
-      const duplicate = existingLeads.find(l => {
-        const existingDoc = (l.cpf || l.documentNumber || "").replace(/\D/g, "")
-        return existingDoc === cleanDoc
-      })
-      if (duplicate) {
-        toast({ 
-          variant: "destructive", 
-          title: "Bloqueio de Cadastro", 
-          description: `O CPF/CNPJ ${formData.cpf} já está registrado no sistema para ${duplicate.name}.`
-        })
-        return
-      }
-    }
-
     onSubmit({ ...formData, name: finalName, mode })
   }
 
@@ -450,6 +451,26 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
           </div>
 
           <div className="px-8 py-6 space-y-8 border-t border-[#1a1f2e]/50">
+            <div className="space-y-4">
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CPF / CNPJ *</Label>
+              <div className="relative">
+                <Input 
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50 pr-24" 
+                  value={quickRegData.cpfCnpj}
+                  onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: e.target.value})}
+                />
+                <Button 
+                  onClick={handleDocumentLookup}
+                  disabled={loadingApi}
+                  className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 px-4 text-[9px] font-black uppercase"
+                >
+                  {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  API
+                </Button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
@@ -464,7 +485,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               </div>
               <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
-                  SOBRENOME / FANTASIA <span className="text-destructive">*</span>
+                  SOBRENOME / FANTASIA
                 </Label>
                 <Input 
                   placeholder="Ex: Silva" 
@@ -477,15 +498,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CPF / CNPJ <span className="text-destructive">*</span></Label>
-                <Input 
-                  placeholder="000.000.000-00" 
-                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" 
-                  value={quickRegData.cpfCnpj}
-                  onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">WHATSAPP</Label>
                 <Input 
                   placeholder="(11) 99999-9999" 
@@ -494,21 +506,20 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                   onChange={(e) => setQuickRegData({...quickRegData, whatsapp: e.target.value})}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ÁREA DE ATENDIMENTO *</Label>
-              <Select value={quickRegData.area} onValueChange={(v) => setQuickRegData({...quickRegData, area: v})}>
-                <SelectTrigger className="bg-[#0a0f1e] border-[#2d3748] h-14 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0a0f1e] border-[#2d3748] text-white">
-                  <SelectItem value="Trabalhista">Trabalhista</SelectItem>
-                  <SelectItem value="Civil">Civil</SelectItem>
-                  <SelectItem value="Previdenciário">Previdenciário</SelectItem>
-                  <SelectItem value="Empresarial">Empresarial</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ÁREA DE ATENDIMENTO *</Label>
+                <Select value={quickRegData.area} onValueChange={(v) => setQuickRegData({...quickRegData, area: v})}>
+                  <SelectTrigger className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0a0f1e] border-[#2d3748] text-white">
+                    <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                    <SelectItem value="Civil">Civil</SelectItem>
+                    <SelectItem value="Previdenciário">Previdenciário</SelectItem>
+                    <SelectItem value="Empresarial">Empresarial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

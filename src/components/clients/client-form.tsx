@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Search, Target, ShieldCheck, X } from "lucide-react"
+import { Loader2, Search, Target, ShieldCheck, X, Globe, Zap } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface ClientFormProps {
@@ -18,6 +18,7 @@ interface ClientFormProps {
 export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   const { toast } = useToast()
   const [loadingCep, setLoadingCep] = useState(false)
+  const [loadingApi, setLoadingApi] = useState(false)
   const [formData, setFormData] = useState({
     registrationStatus: "Ativo",
     personType: "Pessoa Física",
@@ -57,6 +58,52 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleDocumentLookup = async () => {
+    const doc = formData.cpf.replace(/\D/g, "")
+    
+    if (doc.length === 11) {
+      toast({ 
+        title: "Atenção LGPD", 
+        description: "Consulta de CPF requer provedores privados (Serasa/BigData). Favor preencher manualmente." 
+      })
+      return
+    }
+
+    if (doc.length !== 14) {
+      toast({ variant: "destructive", title: "Documento Inválido", description: "Insira 11 dígitos para CPF ou 14 para CNPJ." })
+      return
+    }
+
+    setLoadingApi(true)
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
+      if (!response.ok) throw new Error()
+      const data = await response.json()
+      
+      setFormData(prev => ({
+        ...prev,
+        personType: "Pessoa Jurídica",
+        firstName: data.razao_social,
+        lastName: data.nome_fantasia || "",
+        email: data.email || prev.email,
+        phone: data.ddd_telefone_1 || prev.phone,
+        zipCode: data.cep,
+        address: data.logradouro,
+        number: data.numero,
+        complement: data.complemento || "",
+        neighborhood: data.bairro,
+        city: data.municipio,
+        state: data.uf
+      }))
+
+      toast({ title: "Dados Localizados", description: `Empresa: ${data.razao_social}` })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na Consulta", description: "CNPJ não encontrado ou falha na API externa." })
+    } finally {
+      setLoadingApi(false)
+    }
+  }
+
   const handleCepBlur = async () => {
     const cep = formData.zipCode.replace(/\D/g, "")
     if (cep.length !== 8) return
@@ -85,7 +132,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
   const handleSubmit = () => {
     if (!formData.firstName || !formData.cpf) {
-      toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome e CPF são necessários." })
+      toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome e CPF/CNPJ são necessários." })
       return
     }
     onSubmit(formData)
@@ -125,17 +172,33 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className={inputLabelClass}>CPF *</Label>
-                <Input placeholder="000.000.000-00" className={inputClass} value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
+              <div className="space-y-1 md:col-span-2">
+                <Label className={inputLabelClass}>CPF / CNPJ *</Label>
+                <div className="relative">
+                  <Input 
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00" 
+                    className={cn(inputClass, "pr-32")} 
+                    value={formData.cpf} 
+                    onChange={(e) => handleInputChange("cpf", e.target.value)} 
+                  />
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleDocumentLookup}
+                    disabled={loadingApi}
+                    className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[10px] font-black uppercase px-4 rounded-md"
+                  >
+                    {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                    Consultar API
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1">
-                <Label className={inputLabelClass}>Nome *</Label>
-                <Input placeholder="Primeiro nome" className={inputClass} value={formData.firstName} onChange={(e) => handleInputChange("firstName", e.target.value.toUpperCase())} />
+                <Label className={inputLabelClass}>Nome / Razão Social *</Label>
+                <Input placeholder="Nome oficial" className={inputClass} value={formData.firstName} onChange={(e) => handleInputChange("firstName", e.target.value.toUpperCase())} />
               </div>
               <div className="space-y-1">
-                <Label className={inputLabelClass}>Sobrenome *</Label>
-                <Input placeholder="Sobrenome completo" className={inputClass} value={formData.lastName} onChange={(e) => handleInputChange("lastName", e.target.value.toUpperCase())} />
+                <Label className={inputLabelClass}>Sobrenome / Nome Fantasia</Label>
+                <Input placeholder="Complemento do nome" className={inputClass} value={formData.lastName} onChange={(e) => handleInputChange("lastName", e.target.value.toUpperCase())} />
               </div>
               <div className="space-y-1">
                 <Label className={inputLabelClass}>Nacionalidade</Label>
@@ -300,4 +363,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   )
 }
 
-    
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(" ")
+}

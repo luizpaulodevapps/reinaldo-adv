@@ -21,7 +21,8 @@ import {
   Loader2,
   Plus,
   UserPlus,
-  ShieldAlert
+  ShieldAlert,
+  Zap
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
@@ -51,6 +52,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
   const [isQuickClientOpen, setIsQuickClientOpen] = useState(false)
   const [quickClientData, setQuickClientData] = useState({ name: '', cpf: '' })
   const [isSavingClient, setIsSavingClient] = useState(false)
+  const [loadingApi, setLoadingApi] = useState(false)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -113,6 +115,38 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     setShowResults(false)
   }
 
+  const handleDocumentLookup = async () => {
+    const doc = quickClientData.cpf.replace(/\D/g, "")
+    
+    if (doc.length === 11) {
+      toast({ title: "Consulta CPF", description: "Requer provedores privados. Favor preencher o nome manualmente." })
+      return
+    }
+
+    if (doc.length !== 14) {
+      toast({ variant: "destructive", title: "CNPJ Inválido", description: "O CNPJ deve ter 14 dígitos." })
+      return
+    }
+
+    setLoadingApi(true)
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
+      if (!response.ok) throw new Error()
+      const data = await response.json()
+      
+      setQuickClientData(prev => ({
+        ...prev,
+        name: data.razao_social
+      }))
+
+      toast({ title: "Dados Localizados", description: data.razao_social })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na API", description: "CNPJ não encontrado." })
+    } finally {
+      setLoadingApi(false)
+    }
+  }
+
   const handleSaveQuickClient = async () => {
     if (!quickClientData.name) {
       toast({ variant: "destructive", title: "Nome obrigatório" })
@@ -124,7 +158,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
       const newClient = {
         name: quickClientData.name.toUpperCase(),
         documentNumber: quickClientData.cpf,
-        type: 'individual',
+        type: quickClientData.cpf.replace(/\D/g, "").length > 11 ? 'corporate' : 'individual',
         status: 'Ativo',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -526,22 +560,33 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
           
           <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
             <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ *</Label>
+              <div className="relative">
+                <Input 
+                  value={quickClientData.cpf} 
+                  onChange={(e) => setQuickClientData({...quickClientData, cpf: e.target.value})}
+                  className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50 pr-32"
+                  placeholder="000.000.000-00"
+                />
+                <Button 
+                  variant="ghost" 
+                  onClick={handleDocumentLookup}
+                  disabled={loadingApi}
+                  className="absolute right-1 top-1 h-12 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4"
+                >
+                  {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  API
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO / RAZÃO *</Label>
               <Input 
                 value={quickClientData.name} 
                 onChange={(e) => setQuickClientData({...quickClientData, name: e.target.value.toUpperCase()})}
                 className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50 uppercase"
                 placeholder="EX: LUIZ PAULO GONÇALVES"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ</Label>
-              <Input 
-                value={quickClientData.cpf} 
-                onChange={(e) => setQuickClientData({...quickClientData, cpf: e.target.value})}
-                className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50"
-                placeholder="000.000.000-00"
               />
             </div>
           </div>
