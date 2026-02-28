@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     function isOwner() {
-      return isSignedIn() && request.auth.token.email == 'luizao16@gmail.com';
+      return isSignedIn() && (request.auth.token.email == 'luizao16@gmail.com' || request.auth.token.email == 'luizpaulo.dev.apps@gmail.com');
     }
 
     function getStaffRole() {
@@ -42,60 +42,60 @@ service cloud.firestore {
 
     match /clients/{clientId} {
       // Donos e Financeiro veem tudo. Advogados veem apenas os que são responsáveis.
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && resource.data.responsibleStaffIds is list && request.auth.uid in resource.data.responsibleStaffIds;
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && resource.data.responsibleStaffIds is list && request.auth.uid in resource.data.responsibleStaffIds;
       allow create, update: if isOwner() || isAdmin() || isFinancial();
       allow delete: if isOwner() || isAdmin();
     }
 
     match /processes/{processId} {
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && resource.data.responsibleStaffId == request.auth.uid;
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && resource.data.responsibleStaffId == request.auth.uid;
       allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
       allow update: if isOwner() || isAdmin() || (isSignedIn() && resource.data.responsibleStaffId == request.auth.uid);
       allow delete: if isOwner() || isAdmin();
     }
 
     match /defendants/{defendantId} {
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
       allow create, update: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
       allow delete: if isOwner() || isAdmin();
     }
 
     match /leads/{leadId} {
-      allow read: if isOwner() || isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant');
-      allow read: if isSignedIn() && resource.data.assignedStaffId == request.auth.uid;
+      allow list, read: if isOwner() || isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant');
+      allow list, read: if isSignedIn() && resource.data.assignedStaffId == request.auth.uid;
       allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
       allow update: if isOwner() || isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid);
       allow delete: if isOwner() || isAdmin();
     }
 
     match /hearings/{hearingId} {
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
       allow create, update: if isOwner() || isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
       allow delete: if isOwner() || isAdmin();
     }
 
     match /deadlines/{deadlineId} {
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
       allow create, update: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
       allow delete: if isOwner() || isAdmin();
     }
 
     match /financial_titles/{financialTitleId} {
       // Separação de privilégios para evitar erro de permissão em listagens globais
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
       allow create, update: if isOwner() || isAdmin() || isFinancial();
       allow delete: if isOwner() || isAdmin();
     }
 
     match /staff_credits/{staffCreditId} {
-      allow read: if isOwner() || isAdmin() || isFinancial();
-      allow read: if isSignedIn() && resource.data.staffId == request.auth.uid;
+      allow list, read: if isOwner() || isAdmin() || isFinancial();
+      allow list, read: if isSignedIn() && resource.data.staffId == request.auth.uid;
       allow create, update: if isOwner() || isAdmin() || isFinancial();
       allow delete: if isOwner() || isAdmin();
     }

@@ -10,8 +10,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
         headline: ['Playfair Display', 'serif'],
+        accent: ['Sora', 'sans-serif'],
+        elegant: ['Instrument Serif', 'serif'],
         code: ['monospace'],
       },
       colors: {
