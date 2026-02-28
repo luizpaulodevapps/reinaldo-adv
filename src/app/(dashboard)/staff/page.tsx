@@ -12,7 +12,7 @@ import {
   Phone, 
   Calendar, 
   Briefcase,
-  Loader2,
+  Loader2, 
   Trash2,
   Settings2,
   FileText,
@@ -308,10 +308,10 @@ export default function StaffPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] p-0 overflow-hidden shadow-2xl">
-          <div className="p-10 bg-[#0a0f1e] border-b border-white/5">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl">
+          <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-6xl uppercase tracking-tighter leading-none mb-2">
+              <DialogTitle className="text-white font-headline text-4xl md:text-5xl uppercase tracking-tighter leading-tight mb-2">
                 {editingStaff ? "EDITAR COLABORADOR" : "NOVO COLABORADOR"}
               </DialogTitle>
               <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] opacity-60">FICHA TÉCNICA PARA O DEPARTAMENTO PESSOAL RGMJ.</p>
@@ -319,25 +319,25 @@ export default function StaffPage() {
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="bg-[#0a0f1e] px-8 pt-6">
+            <div className="bg-[#0a0f1e] px-6 md:px-8 pt-4">
               <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl overflow-x-auto scrollbar-hide">
-                <TabsTrigger value="geral" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
+                <TabsTrigger value="geral" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-6 md:px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <User className="h-4 w-4" /> Informações Iniciais
                 </TabsTrigger>
-                <TabsTrigger value="documentos" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
+                <TabsTrigger value="documentos" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-6 md:px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <Fingerprint className="h-4 w-4" /> Documentação
                 </TabsTrigger>
-                <TabsTrigger value="endereco" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
+                <TabsTrigger value="endereco" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-6 md:px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <MapPin className="h-4 w-4" /> Endereço & Contato
                 </TabsTrigger>
-                <TabsTrigger value="familia" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
+                <TabsTrigger value="familia" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-6 md:px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <Heart className="h-4 w-4" /> Família & Dependentes
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <ScrollArea className="max-h-[500px]">
-              <div className="p-10">
+            <ScrollArea className="h-[55vh] md:h-[500px]">
+              <div className="p-6 md:p-10">
                 <TabsContent value="geral" className="mt-0 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                     <div className="space-y-3">
@@ -668,11 +668,11 @@ export default function StaffPage() {
             </ScrollArea>
           </Tabs>
 
-          <DialogFooter className="p-10 bg-black/40 border-t border-white/5 flex flex-row items-center justify-between gap-4">
+          <DialogFooter className="p-6 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
             <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-bold text-[11px] tracking-[0.1em] hover:text-white transition-colors">
               CANCELAR OPERAÇÃO
             </Button>
-            <Button onClick={handleSave} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black uppercase text-[12px] tracking-widest px-12 h-16 rounded-xl shadow-2xl transition-all flex items-center gap-3">
+            <Button onClick={handleSave} className="w-full md:w-auto bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black uppercase text-[12px] tracking-widest px-12 h-16 rounded-xl shadow-2xl transition-all flex items-center justify-center gap-3">
               <ShieldCheck className="h-5 w-5" /> CONFIRMAR REGISTRO
             </Button>
           </DialogFooter>
