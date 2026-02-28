@@ -22,7 +22,8 @@ import {
   Plus,
   UserPlus,
   ShieldAlert,
-  Zap
+  Zap,
+  Globe
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
@@ -119,7 +120,10 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     const doc = quickClientData.cpf.replace(/\D/g, "")
     
     if (doc.length === 11) {
-      toast({ title: "Consulta CPF", description: "Requer provedores privados. Favor preencher o nome manualmente." })
+      toast({ 
+        title: "Integração Gov.br CBC", 
+        description: "A busca por CPF exige autorização Gov.br. Por ora, insira o nome manualmente." 
+      })
       return
     }
 
@@ -139,9 +143,9 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
         name: data.razao_social
       }))
 
-      toast({ title: "Dados Localizados", description: data.razao_social })
+      toast({ title: "Dados Oficiais Injetados", description: data.razao_social })
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro na API", description: "CNPJ não encontrado." })
+      toast({ variant: "destructive", title: "Erro na API", description: "Documento não encontrado." })
     } finally {
       setLoadingApi(false)
     }
@@ -552,9 +556,9 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
-                <ShieldAlert className="h-6 w-6 text-primary" /> Cadastro Exclusivo RGMJ
+                <ShieldAlert className="h-6 w-6 text-primary" /> Injeção de Dados RGMJ
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] mt-1">Injeção rápida de novo cliente na base estratégica.</p>
+              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] mt-1">Conexão com Cadastro Oficial (Gov.br / Receita).</p>
             </DialogHeader>
           </div>
           
@@ -572,9 +576,9 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                   variant="ghost" 
                   onClick={handleDocumentLookup}
                   disabled={loadingApi}
-                  className="absolute right-1 top-1 h-12 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4"
+                  className="absolute right-1 top-1 h-12 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4 border border-primary/20"
                 >
-                  {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
                   API
                 </Button>
               </div>

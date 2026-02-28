@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Loader2, AlertCircle, Target, X, Plus, ShieldAlert, Zap } from "lucide-react"
+import { Search, Loader2, AlertCircle, Target, X, Plus, ShieldAlert, Zap, Globe } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -103,7 +103,10 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     const doc = quickRegData.cpfCnpj.replace(/\D/g, "")
     
     if (doc.length === 11) {
-      toast({ title: "Proteção LGPD", description: "Dados de CPF são blindados. Favor preencher o nome manualmente." })
+      toast({ 
+        title: "API Gov.br Restrita", 
+        description: "A consulta oficial de CPF requer convênio Conecta Gov. Favor preencher o nome manualmente." 
+      })
       return
     }
 
@@ -125,7 +128,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
         whatsapp: data.ddd_telefone_1 || prev.whatsapp
       }))
 
-      toast({ title: "Dados Injetados", description: data.razao_social })
+      toast({ title: "Consulta Base RFB", description: "Dados da empresa injetados com sucesso." })
     } catch (error) {
       toast({ variant: "destructive", title: "Falha na API", description: "Empresa não localizada." })
     } finally {
@@ -444,9 +447,9 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
           <div className="p-8 space-y-2">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-2xl flex items-center gap-2">
-                <ShieldAlert className="h-6 w-6 text-primary" /> Cadastro Exclusivo
+                <ShieldAlert className="h-6 w-6 text-primary" /> Cadastro Base do Cidadão
               </DialogTitle>
-              <p className="text-[#4a5568] text-sm">Validando unicidade de CPF/CNPJ no ecossistema RGMJ.</p>
+              <p className="text-[#4a5568] text-sm">Conexão estratégica com bases oficiais do Governo Federal.</p>
             </DialogHeader>
           </div>
 
@@ -456,17 +459,17 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               <div className="relative">
                 <Input 
                   placeholder="000.000.000-00 ou 00.000.000/0000-00" 
-                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50 pr-24" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50 pr-32" 
                   value={quickRegData.cpfCnpj}
                   onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: e.target.value})}
                 />
                 <Button 
                   onClick={handleDocumentLookup}
                   disabled={loadingApi}
-                  className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 px-4 text-[9px] font-black uppercase"
+                  className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 px-4 text-[9px] font-black uppercase border border-primary/20"
                 >
-                  {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                  API
+                  {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
+                  API Gov.br
                 </Button>
               </div>
             </div>

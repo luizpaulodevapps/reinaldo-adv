@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Search, Target, ShieldCheck, X, Globe, Zap } from "lucide-react"
+import { Loader2, Search, Target, ShieldCheck, X, Globe, Zap, ShieldAlert } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 interface ClientFormProps {
   onSubmit: (data: any) => void
@@ -63,8 +64,8 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     
     if (doc.length === 11) {
       toast({ 
-        title: "Atenção LGPD", 
-        description: "Consulta de CPF requer provedores privados (Serasa/BigData). Favor preencher manualmente." 
+        title: "Consulta CPF (Gov.br)", 
+        description: "A integração com o Cadastro Base do Cidadão requer chaves de acesso Gov.br Gold/Silver. Por ora, preencha manualmente." 
       })
       return
     }
@@ -76,6 +77,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
     setLoadingApi(true)
     try {
+      // Consulta Pública via BrasilAPI para CNPJ
       const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
       if (!response.ok) throw new Error()
       const data = await response.json()
@@ -96,7 +98,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
         state: data.uf
       }))
 
-      toast({ title: "Dados Localizados", description: `Empresa: ${data.razao_social}` })
+      toast({ title: "Dados Receita Federal", description: `Empresa: ${data.razao_social} injetada com sucesso.` })
     } catch (error) {
       toast({ variant: "destructive", title: "Erro na Consulta", description: "CNPJ não encontrado ou falha na API externa." })
     } finally {
@@ -138,7 +140,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     onSubmit(formData)
   }
 
-  const sectionLabelClass = "text-2xl font-headline font-bold text-white mb-6 border-b border-white/5 pb-2"
+  const sectionLabelClass = "text-2xl font-headline font-bold text-white mb-6 border-b border-white/5 pb-2 flex items-center gap-3"
   const inputLabelClass = "text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.15em] mb-2 block"
   const inputClass = "bg-[#0d121f] border-white/10 h-12 text-white text-sm focus:ring-1 focus:ring-primary/50"
 
@@ -177,7 +179,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                 <div className="relative">
                   <Input 
                     placeholder="000.000.000-00 ou 00.000.000/0000-00" 
-                    className={cn(inputClass, "pr-32")} 
+                    className={cn(inputClass, "pr-40")} 
                     value={formData.cpf} 
                     onChange={(e) => handleInputChange("cpf", e.target.value)} 
                   />
@@ -185,12 +187,15 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                     variant="ghost" 
                     onClick={handleDocumentLookup}
                     disabled={loadingApi}
-                    className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[10px] font-black uppercase px-4 rounded-md"
+                    className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4 rounded-md border border-primary/20"
                   >
-                    {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                    Consultar API
+                    {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
+                    Consultar API Gov.br
                   </Button>
                 </div>
+                <p className="text-[9px] text-primary/50 font-bold uppercase tracking-widest mt-1">
+                  * Consulta via CBC (Gov.br) ou Receita Federal
+                </p>
               </div>
               <div className="space-y-1">
                 <Label className={inputLabelClass}>Nome / Razão Social *</Label>
@@ -361,8 +366,4 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
       </div>
     </div>
   )
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ")
 }
