@@ -10,11 +10,14 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
         headline: ['Playfair Display', 'serif'],
         accent: ['Sora', 'sans-serif'],
         elegant: ['Instrument Serif', 'serif'],
-        code: ['monospace'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      fontSize: {
+        '2xs': ['0.625rem', { lineHeight: '1rem' }],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -65,6 +68,11 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      letterSpacing: {
+        'legal': '0.05em',
+        'header': '-0.02em',
+        'label': '0.25em',
       },
     },
   },
