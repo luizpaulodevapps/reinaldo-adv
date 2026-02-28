@@ -55,7 +55,7 @@ export default function StaffPage() {
     phone: "",
     hiringDate: new Date().toISOString().split('T')[0],
     status: "Ativo",
-    specialty: "Trabalhista / Cível",
+    specialty: "",
     zipCode: "",
     address: "",
     number: "",
@@ -176,6 +176,9 @@ export default function StaffPage() {
     }
   }
 
+  // Lógica de Diferenciação de Formulário
+  const isLegalRole = formData.role === 'Advogado' || formData.role === 'Sócio' || formData.role === 'Estagiário'
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -238,7 +241,7 @@ export default function StaffPage() {
                     {staff.name}
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                    <Briefcase className="h-3 w-3 text-primary/50" /> {staff.specialty} • OAB: {staff.oab || "N/A"}
+                    <Briefcase className="h-3 w-3 text-primary/50" /> {staff.role === 'Advogado' ? staff.specialty : staff.role} {staff.oab ? `• OAB: ${staff.oab}` : ""}
                   </div>
                 </div>
 
@@ -339,24 +342,31 @@ export default function StaffPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">ESPECIALIDADE JURÍDICA</Label>
-                      <Input 
-                        value={formData.specialty} 
-                        onChange={(e) => setFormData({...formData, specialty: e.target.value})}
-                        className="bg-[#0d121f] border-white/10 h-14 text-white"
-                        placeholder="Ex: Trabalhista / Cível"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">INSCRIÇÃO OAB</Label>
-                      <Input 
-                        value={formData.oab} 
-                        onChange={(e) => setFormData({...formData, oab: e.target.value.toUpperCase()})}
-                        className="bg-[#0d121f] border-white/10 h-14 text-white"
-                        placeholder="SP 000.000"
-                      />
-                    </div>
+
+                    {/* CAMPOS DINÂMICOS PARA JURÍDICO */}
+                    {isLegalRole && (
+                      <>
+                        <div className="space-y-3 animate-in slide-in-from-left-2">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">ESPECIALIDADE JURÍDICA</Label>
+                          <Input 
+                            value={formData.specialty} 
+                            onChange={(e) => setFormData({...formData, specialty: e.target.value})}
+                            className="bg-[#0d121f] border-white/10 h-14 text-white"
+                            placeholder="Ex: Trabalhista / Cível"
+                          />
+                        </div>
+                        <div className="space-y-3 animate-in slide-in-from-right-2">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">INSCRIÇÃO OAB</Label>
+                          <Input 
+                            value={formData.oab} 
+                            onChange={(e) => setFormData({...formData, oab: e.target.value.toUpperCase()})}
+                            className="bg-[#0d121f] border-white/10 h-14 text-white"
+                            placeholder="SP 000.000"
+                          />
+                        </div>
+                      </>
+                    )}
+
                     <div className="space-y-3">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">DATA DE ADMISSÃO</Label>
                       <Input 
