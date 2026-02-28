@@ -8,12 +8,9 @@ import {
   Plus, 
   MoreVertical, 
   Search, 
-  TrendingUp, 
-  Users, 
   DollarSign, 
   CheckCircle2, 
   MessageCircle, 
-  Calendar,
   ChevronRight,
   Info,
   Clock,
@@ -24,9 +21,10 @@ import {
   Zap,
   Copy,
   ArrowRight,
-  X,
   UserPlus,
-  FileText
+  FileText,
+  PlusCircle,
+  Target
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -181,7 +179,7 @@ export default function LeadsPage() {
     setIsNewLeadDialogOpen(false)
     setIsNewClientDialogOpen(false)
     toast({
-      title: isClient ? "Cliente Cadastrado!" : "Lead Criado!",
+      title: isClient ? "Cliente Cadastrado!" : "Triagem Iniciada!",
       description: `${newEntry.name} foi adicionado com sucesso.`
     })
   }
@@ -198,22 +196,25 @@ export default function LeadsPage() {
           <p className="text-muted-foreground">Gestão estratégica por Dr. Reinaldo Gonçalves Miguel de Jesus.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          {/* Botão Novo Lead - Rápido */}
+          {/* Botão Nova Triagem - Estilo Inspirado */}
           <Dialog open={isNewLeadDialogOpen} onOpenChange={setIsNewLeadDialogOpen}>
             <DialogTrigger asChild>
               <Button className="glass text-primary font-bold gap-2 border-primary/20 hover:bg-primary/10">
-                <Plus className="h-4 w-4" /> Novo Lead
+                <PlusCircle className="h-4 w-4" /> Nova Triagem
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-primary/20 sm:max-w-[500px] p-0 overflow-hidden">
-              <div className="p-6 bg-secondary/50 border-b border-primary/20">
+            <DialogContent className="glass border-border sm:max-w-[600px] p-0 overflow-hidden">
+              <div className="p-6 bg-[#0a0f1e]/80 border-b border-border">
                 <DialogHeader>
-                  <DialogTitle className="text-primary font-headline text-2xl flex items-center gap-2">
-                    <Zap className="h-6 w-6" /> Triagem Rápida
+                  <DialogTitle className="text-white font-headline text-2xl flex items-center gap-3 uppercase tracking-tight">
+                    <div className="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center">
+                      <Plus className="h-5 w-5 text-primary" />
+                    </div>
+                    Nova Triagem
                   </DialogTitle>
                 </DialogHeader>
               </div>
-              <div className="p-6">
+              <div className="p-8 bg-[#0a0f1e]">
                 <LeadForm 
                   existingLeads={leads} 
                   onSubmit={handleCreateEntry}
@@ -228,22 +229,21 @@ export default function LeadsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Botão Novo Cliente - Completo */}
           <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gold-gradient text-background font-bold gap-2">
-                <UserPlus className="h-4 w-4" /> Cadastrar Cliente
+                <UserPlus className="h-4 w-4" /> Ficha Completa
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-primary/20 sm:max-w-[700px] p-0 overflow-hidden">
-              <div className="p-6 bg-secondary/50 border-b border-primary/20">
+            <DialogContent className="glass border-border sm:max-w-[700px] p-0 overflow-hidden">
+              <div className="p-6 bg-[#0a0f1e]/80 border-b border-border">
                 <DialogHeader>
-                  <DialogTitle className="text-primary font-headline text-2xl flex items-center gap-2">
-                    <FileText className="h-6 w-6" /> Ficha Completa de Cliente
+                  <DialogTitle className="text-white font-headline text-2xl flex items-center gap-3 uppercase tracking-tight">
+                    <FileText className="h-6 w-6 text-primary" /> Ficha de Cliente
                   </DialogTitle>
                 </DialogHeader>
               </div>
-              <div className="p-6">
+              <div className="p-8 bg-[#0a0f1e]">
                 <LeadForm 
                   existingLeads={leads} 
                   onSubmit={handleCreateEntry}
@@ -260,11 +260,12 @@ export default function LeadsPage() {
         </div>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: "Pipeline Total", value: `R$ ${(totalValue / 1000).toFixed(0)}k`, icon: DollarSign, color: "text-emerald-500" },
           { label: "Leads Quentes", value: hotLeadsCount, icon: AlertCircle, color: "text-destructive" },
-          { label: "Novos na Semana", value: "08", icon: Users, color: "text-primary" },
+          { label: "Novos na Semana", value: "08", icon: PlusCircle, color: "text-primary" },
           { label: "Taxa de Conversão", value: "68%", icon: CheckCircle2, color: "text-blue-500" },
         ].map((stat, i) => (
           <Card key={i} className="glass border-primary/10">
@@ -281,13 +282,12 @@ export default function LeadsPage() {
         ))}
       </div>
 
-      {/* Seção de Ferramentas Estratégicas */}
+      {/* Caixa de Ferramentas */}
       <div className="space-y-4">
         <h2 className="text-xl font-headline font-bold text-primary flex items-center gap-2">
           <Wrench className="h-5 w-5" /> Caixa de Ferramentas de Conversão
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Calculadora de Viabilidade */}
           <Dialog>
             <DialogTrigger asChild>
               <Card className="glass border-primary/20 hover:border-primary/50 transition-all group cursor-pointer">
@@ -297,7 +297,7 @@ export default function LeadsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Estime honorários e probabilidade de êxito em segundos.</p>
+                  <p className="text-xs text-muted-foreground">Estime honorários e probabilidade de êxito.</p>
                   <Button className="w-full gold-gradient text-background font-bold uppercase py-5">
                     Abrir Simulador <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -306,20 +306,15 @@ export default function LeadsPage() {
             </DialogTrigger>
             <DialogContent className="glass border-primary/20 sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle className="text-primary font-headline text-2xl">Simulador de Viabilidade Técnica</DialogTitle>
+                <DialogTitle className="text-primary font-headline text-2xl">Simulador de Viabilidade</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label>Valor Estimado da Causa (R$)</Label>
-                  <Input 
-                    placeholder="Ex: 50000" 
-                    className="glass" 
-                    value={calcValue} 
-                    onChange={(e) => setCalcValue(e.target.value)}
-                  />
+                  <Label>Valor Estimado (R$)</Label>
+                  <Input placeholder="Ex: 50000" className="glass" value={calcValue} onChange={(e) => setCalcValue(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Probabilidade de Êxito (%)</Label>
+                  <Label>Probabilidade (%)</Label>
                   <Select value={calcProb} onValueChange={setCalcProb}>
                     <SelectTrigger className="glass">
                       <SelectValue />
@@ -335,31 +330,22 @@ export default function LeadsPage() {
                 {calcResult && (
                   <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2 animate-in fade-in zoom-in-95">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Honorários Estimados (30%):</span>
+                      <span className="text-muted-foreground">Honorários (30%):</span>
                       <span className="font-bold text-primary">{calcResult.fee}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Expectativa Realista:</span>
+                      <span className="text-muted-foreground">Expectativa:</span>
                       <span className="font-bold text-emerald-500">{calcResult.expected}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Risco Processual:</span>
-                      <Badge variant={calcResult.risk === "Alto" ? "destructive" : "outline"} className="font-bold uppercase text-[10px]">
-                        {calcResult.risk}
-                      </Badge>
                     </div>
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleCalculate} className="gold-gradient text-background font-bold w-full py-6">
-                  Calcular Viabilidade
-                </Button>
+                <Button onClick={handleCalculate} className="gold-gradient text-background font-bold w-full py-6">Calcular</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
-          {/* Scripts de WhatsApp */}
           <Card className="glass border-primary/20 hover:border-primary/50 transition-all group">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -367,21 +353,13 @@ export default function LeadsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">Modelos de mensagens de alta conversão para triagem.</p>
-              <Button 
-                variant="outline" 
-                className="w-full glass font-bold uppercase py-5 border-primary/20 hover:bg-primary/10"
-                onClick={() => copyToClipboard(
-                  "Olá! Dr. Reinaldo Gonçalves aqui. Recebi seu contato e gostaria de agendar uma breve conversa técnica para entender melhor os detalhes do seu caso e definir a melhor estratégia. Qual o melhor horário para falarmos hoje?",
-                  "Script Base Copiado!"
-                )}
-              >
+              <p className="text-xs text-muted-foreground">Modelos de alta conversão para triagem.</p>
+              <Button variant="outline" className="w-full glass font-bold uppercase py-5" onClick={() => copyToClipboard("Olá! Dr. Reinaldo aqui. Gostaria de entender melhor o seu caso.", "Script Copiado!")}>
                 Copiar Script Base <Copy className="h-4 w-4 ml-2" />
               </Button>
             </CardContent>
           </Card>
 
-          {/* Checklist de Documentos */}
           <Dialog>
             <DialogTrigger asChild>
               <Card className="glass border-primary/20 hover:border-primary/50 transition-all group cursor-pointer">
@@ -391,8 +369,8 @@ export default function LeadsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Gere a lista de documentos necessária por área do Direito.</p>
-                  <Button variant="outline" className="w-full glass font-bold uppercase py-5 border-primary/20 hover:bg-primary/10">
+                  <p className="text-xs text-muted-foreground">Gere a lista de documentos por área.</p>
+                  <Button variant="outline" className="w-full glass font-bold uppercase py-5">
                     Gerar Lista <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -403,49 +381,22 @@ export default function LeadsPage() {
                 <DialogTitle className="text-primary font-headline text-2xl">Gerador de Checklist</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Área do Direito</Label>
-                  <Select value={checklistArea} onValueChange={setChecklistArea}>
-                    <SelectTrigger className="glass">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Trabalhista">Trabalhista</SelectItem>
-                      <SelectItem value="Civil">Civil</SelectItem>
-                      <SelectItem value="Previdenciário">Previdenciário</SelectItem>
-                      <SelectItem value="Empresarial">Empresarial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={checklistArea} onValueChange={setChecklistArea}>
+                  <SelectTrigger className="glass"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                    <SelectItem value="Civil">Civil</SelectItem>
+                  </SelectContent>
+                </Select>
                 {generatedChecklist.length > 0 && (
-                  <ScrollArea className="h-[200px] w-full rounded-md border border-primary/10 bg-primary/5 p-4">
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-primary uppercase">Documentos Necessários ({checklistArea}):</p>
-                      {generatedChecklist.map((doc, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                          {doc}
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 text-sm space-y-1">
+                    {generatedChecklist.map((doc, i) => <div key={i}>• {doc}</div>)}
+                  </div>
                 )}
               </div>
-              <DialogFooter className="flex-col gap-2">
-                <Button onClick={handleGenerateChecklist} className="w-full glass border-primary/20">
-                  Gerar Itens
-                </Button>
-                {generatedChecklist.length > 0 && (
-                  <Button 
-                    onClick={() => copyToClipboard(
-                      `Olá! Conforme conversamos, para darmos início ao seu caso de área ${checklistArea}, preciso que me envie os seguintes documentos:\n\n${generatedChecklist.join('\n')}\n\nFico no aguardo!`,
-                      "Lista Copiada!"
-                    )} 
-                    className="gold-gradient text-background font-bold w-full"
-                  >
-                    Copiar Lista para WhatsApp
-                  </Button>
-                )}
+              <DialogFooter>
+                <Button onClick={handleGenerateChecklist} className="w-full glass border-primary/20">Gerar</Button>
+                {generatedChecklist.length > 0 && <Button onClick={() => copyToClipboard(generatedChecklist.join('\n'), "Checklist Copiado!")} className="gold-gradient text-background font-bold w-full">Copiar</Button>}
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -475,47 +426,26 @@ export default function LeadsPage() {
               
               <div className="space-y-4">
                 {leadsInCol.map((lead) => (
-                  <Card 
-                    key={lead.id} 
-                    className="glass hover-gold transition-all cursor-pointer group relative overflow-hidden"
-                    onClick={() => handleOpenLead(lead)}
-                  >
+                  <Card key={lead.id} className="glass hover-gold transition-all cursor-pointer group relative overflow-hidden" onClick={() => handleOpenLead(lead)}>
                     {lead.priority === 'alta' && (
                       <div className="absolute top-0 right-0 p-1">
                         <Badge variant="destructive" className="text-[8px] uppercase font-bold px-1.5 py-0">Urgente</Badge>
                       </div>
                     )}
                     <CardContent className="p-4 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-bold text-lg group-hover:text-primary transition-colors">{lead.name}</div>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-tighter font-bold flex items-center gap-1 mt-0.5">
-                            <Clock className="h-3 w-3" /> Recebido {lead.date}
-                          </div>
+                      <div>
+                        <div className="font-bold text-lg group-hover:text-primary transition-colors">{lead.name}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-tighter font-bold flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" /> Recebido {lead.date}
                         </div>
-                        <MoreVertical className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                       </div>
-
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary border-primary/20">
-                          {lead.type}
-                        </Badge>
-                        <span className="text-emerald-500 font-bold text-sm">
-                          R$ {(lead.value / 1000).toFixed(0)}k
-                        </span>
+                        <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary border-primary/20">{lead.type}</Badge>
                       </div>
-
                       <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                        <div className="flex -space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">RG</div>
-                        </div>
                         <div className="flex gap-2">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-emerald-500/10 hover:text-emerald-500">
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-emerald-500/10 hover:text-emerald-500"><MessageCircle className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"><ChevronRight className="h-4 w-4" /></Button>
                         </div>
                       </div>
                     </CardContent>
@@ -527,108 +457,52 @@ export default function LeadsPage() {
         })}
       </div>
 
-      {/* Lead Details Sheet */}
+      {/* Details Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20 p-0">
           {selectedLead && (
             <div className="h-full flex flex-col">
               <div className="p-6 border-b border-border/50">
-                <SheetHeader className="mb-4">
+                <SheetHeader>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge className="gold-gradient text-background font-bold uppercase text-[10px]">
-                      {selectedLead.stage.replace('_', ' ')}
-                    </Badge>
-                    {selectedLead.priority === 'alta' && <Badge variant="destructive">Alta Prioridade</Badge>}
+                    <Badge className="gold-gradient text-background font-bold uppercase text-[10px]">{selectedLead.stage}</Badge>
                   </div>
-                  <SheetTitle className="text-3xl font-headline font-bold text-primary">
-                    {selectedLead.name}
-                  </SheetTitle>
-                  <SheetDescription className="flex items-center gap-4 text-sm mt-2">
-                    <span className="flex items-center gap-1"><MessageCircle className="h-4 w-4" /> {selectedLead.phone}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1 font-bold text-emerald-500">Expectativa: R$ {selectedLead.value.toLocaleString()}</span>
-                  </SheetDescription>
+                  <SheetTitle className="text-3xl font-headline font-bold text-primary">{selectedLead.name}</SheetTitle>
+                  <SheetDescription>{selectedLead.phone} • {selectedLead.type}</SheetDescription>
                 </SheetHeader>
               </div>
-
               <Tabs defaultValue="dossie" className="flex-1 flex flex-col">
-                <div className="px-6 border-b border-border/50 bg-secondary/20">
-                  <TabsList className="bg-transparent border-none w-full justify-start h-12 gap-6 p-0">
-                    <TabsTrigger value="dossie" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Dossiê</TabsTrigger>
-                    <TabsTrigger value="documentos" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Docs</TabsTrigger>
-                    <TabsTrigger value="ferramentas" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-full px-0 font-bold text-xs uppercase tracking-widest">Tools</TabsTrigger>
-                  </TabsList>
-                </div>
-
+                <TabsList className="px-6 bg-secondary/20 border-b border-border/50 justify-start h-12 gap-6 p-0 rounded-none">
+                  <TabsTrigger value="dossie" className="h-full">Dossiê</TabsTrigger>
+                  <TabsTrigger value="tools" className="h-full">Ferramentas</TabsTrigger>
+                </TabsList>
                 <ScrollArea className="flex-1 p-6">
-                  <TabsContent value="dossie" className="m-0 space-y-8">
+                  <TabsContent value="dossie" className="space-y-6">
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-sm uppercase tracking-widest text-primary flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4" /> Checklist de Fase
-                        </h3>
-                        <span className="text-[10px] text-muted-foreground font-bold">40% COMPLETO</span>
-                      </div>
+                      <h3 className="font-bold text-sm uppercase text-primary">Checklist de Fase</h3>
                       <Progress value={40} className="h-1.5" />
-                      <div className="grid gap-3 pt-2">
+                      <div className="grid gap-2">
                         {stageChecklists[selectedLead.stage]?.map((item, i) => (
-                          <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-secondary/30 border border-border/50 group hover:border-primary/30 transition-colors">
+                          <div key={i} className="flex items-center space-x-2 p-2 rounded bg-secondary/30">
                             <Checkbox id={`check-${i}`} />
-                            <label htmlFor={`check-${i}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                              {item}
-                            </label>
+                            <label htmlFor={`check-${i}`} className="text-sm">{item}</label>
                           </div>
                         ))}
                       </div>
                     </div>
-
-                    <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Info className="h-12 w-12" />
-                      </div>
-                      <h3 className="font-bold text-sm uppercase tracking-widest text-primary flex items-center gap-2 mb-3">
-                        <TrendingUp className="h-4 w-4" /> IA Insight
-                      </h3>
-                      <p className="text-sm text-foreground/80 leading-relaxed italic">
-                        "Lead estratégico para Dr. Reinaldo. Alta probabilidade de êxito baseada em casos similares da comarca."
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Notas</h3>
-                      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 text-sm text-muted-foreground min-h-[100px]">
-                        {selectedLead.notes}
-                      </div>
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 italic text-sm italic">
+                      "Lead estratégico. Alta probabilidade de êxito."
                     </div>
                   </TabsContent>
-
-                  <TabsContent value="documentos" className="m-0 space-y-4">
-                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Arquivos</h3>
-                    <div className="grid grid-cols-1 gap-2">
-                      <Button variant="outline" className="w-full border-dashed py-8">
-                        <Plus className="h-4 w-4 mr-2" /> Upload de Documentos
-                      </Button>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="ferramentas" className="m-0 space-y-6">
-                    <div className="grid gap-4">
-                      <Button className="w-full gold-gradient text-background font-bold py-6 justify-between">
-                        Gerar Proposta <Zap className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" className="w-full py-6 justify-between glass">
-                        Gerar Procuração <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  <TabsContent value="tools" className="space-y-4">
+                    <Button className="w-full gold-gradient text-background font-bold h-12 flex justify-between">Gerar Proposta <Zap className="h-4 w-4" /></Button>
+                    <Button variant="outline" className="w-full h-12 flex justify-between glass">Gerar Procuração <ArrowRight className="h-4 w-4" /></Button>
                   </TabsContent>
                 </ScrollArea>
               </Tabs>
-
-              <div className="p-6 border-t border-border/50 bg-background">
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="destructive" className="font-bold opacity-50 hover:opacity-100">Descartar</Button>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Avançar Fase</Button>
-                </div>
+              <div className="p-6 border-t border-border/50 bg-background grid grid-cols-2 gap-4">
+                <Button variant="destructive" className="font-bold opacity-50">Descartar</Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Avançar Fase</Button>
               </div>
             </div>
           )}
