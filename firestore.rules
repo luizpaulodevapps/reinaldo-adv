@@ -15,13 +15,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Fetches the staff profile for the currently authenticated user.
-    function getStaffData() {
-      return get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data;
+    // Fetches the staff profile role safely.
+    function getStaffRole() {
+      let path = /databases/$(database)/documents/staff_profiles/$(request.auth.uid);
+      return exists(path) ? get(path).data.role : 'none';
     }
 
-    function hasRole(role) {
-      return isSignedIn() && getStaffData().role == role;
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'luizao16@gmail.com' || getStaffRole() == 'admin');
+    }
+
+    function isFinancial() {
+      return isAdmin() || getStaffRole() == 'financial';
     }
 
     function isOwner(userId) {
@@ -34,14 +39,6 @@ service cloud.firestore {
 
     function isOneOfAssigned(staffIds) {
       return isSignedIn() && request.auth.uid in staffIds;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (getStaffData().role == 'admin' || request.auth.token.email == 'luizao16@gmail.com');
-    }
-
-    function isFinancial() {
-      return hasRole('financial') || isAdmin();
     }
 
     // --- COLLECTION RULES ---
@@ -76,9 +73,9 @@ service cloud.firestore {
     }
 
     match /leads/{leadId} {
-      allow get, list: if isAdmin() || hasRole('assistant') || isAssigned(resource.data.assignedStaffId);
-      allow create: if isAdmin() || hasRole('assistant') || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
-      allow update: if (isAdmin() || hasRole('assistant') || isAssigned(resource.data.assignedStaffId)) && resource != null;
+      allow get, list: if isAdmin() || getStaffRole() == 'assistant' || isAssigned(resource.data.assignedStaffId);
+      allow create: if isAdmin() || getStaffRole() == 'assistant' || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
+      allow update: if (isAdmin() || getStaffRole() == 'assistant' || isAssigned(resource.data.assignedStaffId)) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 

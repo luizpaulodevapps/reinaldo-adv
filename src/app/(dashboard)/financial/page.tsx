@@ -138,7 +138,7 @@ export default function FinancialPage() {
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-blue-500/70 uppercase tracking-[0.2em] mb-2">Honorários Retidos (Futuro)</p>
             <div className="text-3xl font-black text-white tabular-nums">
-              R$ {stats.retid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {stats.retido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
