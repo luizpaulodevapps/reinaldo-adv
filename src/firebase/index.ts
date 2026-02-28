@@ -1,49 +1,41 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 /**
  * Inicializa os serviços do Firebase de forma resiliente.
- * Garante que o build e o SSR não quebrem na ausência de chaves.
+ * Garante que o build e o SSR não quebrem na ausência de chaves,
+ * inicializando sempre o app '[DEFAULT]' para satisfazer chamadas globais.
  */
 export function initializeFirebase() {
   if (getApps().length > 0) {
     return getSdks(getApp());
   }
 
-  const apiKey = firebaseConfig?.apiKey;
-  const isConfigValid = !!apiKey && 
-                        apiKey !== "undefined" && 
-                        apiKey !== "" &&
-                        !apiKey.startsWith("NEXT_PUBLIC");
-
-  if (!isConfigValid) {
-    // Retorna SDKs dummy para evitar quebra de contexto durante Build/SSR
-    const dummyApp = createDummyApp();
-    return getSdks(dummyApp);
-  }
+  // Em ambiente de build ou sem variáveis de ambiente, usamos placeholders 
+  // para evitar o erro 'app/no-app' ou 'app/no-options'.
+  const config = {
+    apiKey: firebaseConfig?.apiKey || "BUILD_TIME_PLACEHOLDER",
+    authDomain: firebaseConfig?.authDomain || "placeholder.firebaseapp.com",
+    projectId: firebaseConfig?.projectId || "placeholder-project",
+    storageBucket: firebaseConfig?.storageBucket || "placeholder.appspot.com",
+    messagingSenderId: firebaseConfig?.messagingSenderId || "000000000000",
+    appId: firebaseConfig?.appId || "1:000000000000:web:000000000000",
+  };
 
   try {
-    const firebaseApp = initializeApp(firebaseConfig);
+    const firebaseApp = initializeApp(config);
     return getSdks(firebaseApp);
   } catch (error) {
     console.error("Erro crítico na inicialização do Firebase:", error);
-    return getSdks(createDummyApp());
+    // Fallback absoluto para não quebrar o build
+    const fallbackApp = initializeApp({ apiKey: "none" }, "fallback");
+    return getSdks(fallbackApp);
   }
-}
-
-function createDummyApp() {
-  return initializeApp({
-    apiKey: "BUILD_TIME_PLACEHOLDER",
-    authDomain: "BUILD_TIME_PLACEHOLDER",
-    projectId: "nextn-placeholder",
-    storageBucket: "BUILD_TIME_PLACEHOLDER",
-    messagingSenderId: "BUILD_TIME_PLACEHOLDER",
-    appId: "BUILD_TIME_PLACEHOLDER"
-  }, "dummy-app");
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {

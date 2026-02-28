@@ -1,8 +1,8 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -44,7 +44,6 @@ import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBl
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
 
 const CATEGORIES = [
@@ -68,7 +67,6 @@ export default function LaboratorioChecklistsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
 
-  // Estados do Formulário
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Operacional")
   const [description, setDescription] = useState("")
@@ -81,7 +79,6 @@ export default function LaboratorioChecklistsPage() {
   const { user, role } = useUser()
   const { toast } = useToast()
 
-  // Somente Admins acessam o Laboratório
   const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
   const canManage = isOwner || role === 'admin'
 
@@ -147,19 +144,19 @@ export default function LaboratorioChecklistsPage() {
 
     if (editingList) {
       updateDocumentNonBlocking(doc(db, "checklists", editingList.id), listData)
-      toast({ title: "Matriz Atualizada", description: "O modelo estratégico foi modificado." })
+      toast({ title: "Matriz Atualizada", description: "Modelo modificado." })
     } else {
       addDocumentNonBlocking(collection(db, "checklists"), {
         ...listData,
         createdAt: serverTimestamp()
       })
-      toast({ title: "Nova Matriz Criada", description: "O roteiro está pronto para uso na rotina da equipe." })
+      toast({ title: "Nova Matriz Criada", description: "Roteiro pronto para uso." })
     }
     setIsDialogOpen(false)
   }
 
   const handleDelete = (id: string) => {
-    if (confirm("Deseja realmente remover esta matriz estratégica? Isso não afetará rotinas já iniciadas.")) {
+    if (confirm("Deseja realmente remover esta matriz?")) {
       deleteDocumentNonBlocking(doc(db, "checklists", id))
       toast({ variant: "destructive", title: "Matriz Removida" })
     }
@@ -170,11 +167,11 @@ export default function LaboratorioChecklistsPage() {
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-6 text-center">
         <Shield className="h-16 w-16 text-destructive animate-pulse" />
         <div className="space-y-2">
-          <h2 className="text-2xl font-headline font-bold text-white">ACESSO RESTRITO AO COMANDO</h2>
-          <p className="text-muted-foreground max-w-md">Apenas administradores da banca RGMJ podem definir matrizes e roteiros estratégicos no laboratório.</p>
+          <h2 className="text-2xl font-headline font-bold text-white">ACESSO RESTRITO</h2>
+          <p className="text-muted-foreground max-w-md">Apenas administradores da banca RGMJ acessam o laboratório.</p>
         </div>
         <Button asChild variant="outline" className="glass border-primary/20 text-primary">
-          <Link href="/checklists/execucao">Ir para Rotinas Operacionais</Link>
+          <Link href="/checklists/execucao">Ir para Rotinas</Link>
         </Button>
       </div>
     )
@@ -185,7 +182,7 @@ export default function LaboratorioChecklistsPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-5xl font-headline font-bold text-white tracking-tighter">Laboratório de Matrizes</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Design Estratégico de Protocolos e Entrevistas RGMJ.</p>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Design Estratégico RGMJ.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
@@ -211,7 +208,7 @@ export default function LaboratorioChecklistsPage() {
         {isLoading ? (
           <div className="col-span-full py-20 flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sincronizando Biblioteca...</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sincronizando...</span>
           </div>
         ) : filteredChecklists.length > 0 ? (
           filteredChecklists.map((list) => {
@@ -234,33 +231,15 @@ export default function LaboratorioChecklistsPage() {
                       </button>
                     </div>
                   </div>
-                  <CardTitle className="text-lg font-headline font-bold text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">
+                  <CardTitle className="text-lg font-headline font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">
                     {list.title}
                   </CardTitle>
-                  {list.category === "Entrevista de Triagem" && (
-                    <Badge className="mt-2 bg-purple-500/10 text-purple-400 border-purple-500/20 text-[8px] font-black uppercase tracking-widest">
-                      Área: {list.legalArea || "Geral"}
-                    </Badge>
-                  )}
                 </CardHeader>
 
                 <CardContent className="space-y-3 flex-1">
                   <p className="text-[10px] text-muted-foreground line-clamp-2 italic mb-4">
-                    {list.description || "Sem descrição estratégica definida."}
+                    {list.description || "Sem descrição técnica."}
                   </p>
-                  <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
-                    {list.items?.map((item: any, i: number) => {
-                      const TypeIcon = ITEM_TYPES.find(t => t.id === item.type)?.icon || CheckCircle2
-                      return (
-                        <div key={i} className="flex items-center gap-3 py-3 first:pt-0 group/item">
-                          <TypeIcon className="h-3.5 w-3.5 text-primary/40" />
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-white/80 leading-relaxed truncate">
-                            {item.text}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
                 </CardContent>
                 <div className="p-6 pt-0 border-t border-white/5 mt-4">
                    <Button asChild variant="ghost" className="w-full text-[9px] font-black uppercase tracking-[0.2em] text-primary hover:bg-primary/5">
@@ -271,14 +250,10 @@ export default function LaboratorioChecklistsPage() {
             )
           })
         ) : (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
-            <BookOpen className="h-16 w-16 text-muted-foreground" />
-            <div className="text-center space-y-2">
-              <p className="text-sm font-bold text-white uppercase tracking-widest">Biblioteca de Matrizes Vazia</p>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">Desenhe o primeiro protocolo padrão para garantir a excelência da banca RGMJ.</p>
-            </div>
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed">
+            <BookOpen className="h-16 w-16 text-muted-foreground opacity-30" />
             <Button onClick={handleOpenCreate} className="gold-gradient text-background font-bold gap-2 px-8">
-              Configurar Matriz Inicial
+              Criar Matriz Inicial
             </Button>
           </div>
         )}
@@ -289,152 +264,35 @@ export default function LaboratorioChecklistsPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-3">
-                <Settings2 className="h-7 w-7 text-[#f5d030]" /> Editor de Matriz Estratégica
+                <Settings2 className="h-7 w-7 text-[#f5d030]" /> Editor de Matriz
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">
-                Defina o roteiro obrigatório e o tipo de coleta para a equipe técnica.
+                Defina o roteiro para a equipe técnica.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="p-8 md:p-10 space-y-10 bg-[#0a0f1e]/50 max-h-[70vh] overflow-y-auto">
+          <div className="p-8 space-y-10 bg-[#0a0f1e]/50 max-h-[70vh] overflow-y-auto">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
               <div className="md:col-span-8 space-y-3">
-                <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">TÍTULO DA MATRIZ *</Label>
-                <Input 
-                  value={title} 
-                  onChange={(e) => setTitle(e.target.value.toUpperCase())}
-                  className="bg-[#0d121f] border-white/10 h-14 text-white text-base focus:ring-1 focus:ring-[#f5d030]/50"
-                  placeholder="Ex: Protocolo de Inicial Trabalhista"
-                />
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO DA MATRIZ *</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value.toUpperCase())} className="bg-[#0d121f] border-white/10 h-14 text-white" />
               </div>
               <div className="md:col-span-4 space-y-3">
-                <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">CATEGORIA</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CATEGORIA</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                    {CATEGORIES.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <div className="flex items-center gap-2">
-                          <cat.icon className={cn("h-4 w-4", cat.color)} />
-                          {cat.label}
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-              <div className="md:col-span-8 space-y-3">
-                <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">DESCRIÇÃO / FINALIDADE</Label>
-                <Textarea 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descreva o objetivo técnico deste protocolo..."
-                  className="bg-[#0d121f] border-white/10 min-h-[100px] text-white focus:ring-1 focus:ring-[#f5d030]/50 resize-none"
-                />
-              </div>
-              {category === "Entrevista de Triagem" && (
-                <div className="md:col-span-4 space-y-3">
-                  <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">ÁREA JURÍDICA</Label>
-                  <Select value={legalArea} onValueChange={setLegalArea}>
-                    <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                      <SelectItem value="Trabalhista">⚖️ Trabalhista</SelectItem>
-                      <SelectItem value="Cível">🏠 Cível</SelectItem>
-                      <SelectItem value="Previdenciário">👴 Previdenciário</SelectItem>
-                      <SelectItem value="Criminal">🚔 Criminal</SelectItem>
-                      <SelectItem value="Família">❤️ Família</SelectItem>
-                      <SelectItem value="Tributário">Tributário</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-6 pt-6 border-t border-white/5">
-              <Label className="text-[11px] font-black text-[#f5d030] uppercase tracking-[0.3em] flex items-center gap-3">
-                <ClipboardList className="h-5 w-5" /> Configurar Itens / Perguntas
-              </Label>
-              
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div className="md:col-span-7">
-                  <Input 
-                    value={newItemText} 
-                    onChange={(e) => setNewItemText(e.target.value)}
-                    className="bg-[#0d121f] border-white/10 h-14 text-white"
-                    placeholder="Enunciado do passo..."
-                  />
-                </div>
-                <div className="md:col-span-4">
-                  <Select value={newItemType} onValueChange={setNewItemType}>
-                    <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                      {ITEM_TYPES.map(t => (
-                        <SelectItem key={t.id} value={t.id}>
-                          <div className="flex items-center gap-2">
-                            <t.icon className="h-4 w-4" />
-                            {t.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-1">
-                  <Button 
-                    onClick={handleAddItem}
-                    className="w-full h-14 gold-gradient rounded-lg"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {items.map((item, index) => {
-                  const TypeIcon = ITEM_TYPES.find(t => t.id === item.type)?.icon || CheckCircle2
-                  return (
-                    <div key={index} className="flex items-center justify-between p-5 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-[#f5d030]/30 transition-all">
-                      <div className="flex items-center gap-4">
-                        <span className="w-6 h-6 rounded-full bg-[#f5d030]/10 text-[#f5d030] text-[11px] font-black flex items-center justify-center border border-[#f5d030]/20">
-                          {index + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-white/90 uppercase tracking-tight">{item.text}</p>
-                          <p className="text-[9px] text-muted-foreground uppercase font-black flex items-center gap-1 mt-1">
-                            <TypeIcon className="h-2.5 w-2.5" /> Coleta: {ITEM_TYPES.find(t => t.id === item.type)?.label}
-                          </p>
-                        </div>
-                      </div>
-                      <button onClick={() => handleRemoveItem(index)} className="text-muted-foreground hover:text-destructive p-2 transition-colors">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
           </div>
 
-          <DialogFooter className="p-8 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest hover:text-white transition-colors">
-              CANCELAR
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              className="w-full md:w-auto gold-gradient h-16 px-16 rounded-xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 font-black uppercase text-[12px] tracking-[0.2em]"
-            >
-              <CheckCircle2 className="h-5 w-5" /> Salvar Matriz Estratégica
-            </Button>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">CANCELAR</Button>
+            <Button onClick={handleSave} className="gold-gradient h-16 px-12 rounded-xl font-black uppercase text-[12px]">Salvar Matriz</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

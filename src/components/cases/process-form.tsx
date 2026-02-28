@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -25,9 +26,9 @@ import {
   Globe
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, DocumentReference } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
-import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 
@@ -114,7 +115,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     if (docNum.length === 11) {
       toast({ 
         title: "VALORAÇÃO ESTRUTURAL RGMJ", 
-        description: "A validação matemática está ativa. Documento parece formalmente correto." 
+        description: "A validação matemática está ativa." 
       })
       return
     }
@@ -152,7 +153,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     const cleanDoc = quickClientData.cpf.replace(/\D/g, "");
     const isDup = (clients || []).some(c => (c.documentNumber || "").replace(/\D/g, "") === cleanDoc);
     if (isDup && cleanDoc) {
-      toast({ variant: "destructive", title: "Cliente já existe", description: "Este CPF/CNPJ já está cadastrado na base RGMJ." });
+      toast({ variant: "destructive", title: "Cliente já existe", description: "Este CPF/CNPJ já está cadastrado." });
       return;
     }
 
@@ -178,7 +179,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
       setSearchTerm("")
       toast({ 
         title: "Cliente Cadastrado", 
-        description: `${newClient.name} foi adicionado à base e vinculado ao processo.` 
+        description: `${newClient.name} foi adicionado à base e vinculado.` 
       })
     } catch (error) {
       toast({ variant: "destructive", title: "Erro ao cadastrar cliente" })
