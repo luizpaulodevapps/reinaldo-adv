@@ -11,25 +11,53 @@ import {
   ArrowUpRight,
   Gavel,
   Zap,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query, orderBy, limit } from "firebase/firestore"
+import { collection, query, where, limit, orderBy } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useMemo } from "react"
 
 export default function DashboardPage() {
   const db = useFirestore()
   const { user } = useUser()
 
-  // Dados reais para estatísticas
+  // Queries Reais
   const leadsQuery = useMemoFirebase(() => user ? collection(db, "leads") : null, [db, user])
   const casesQuery = useMemoFirebase(() => user ? collection(db, "processes") : null, [db, user])
-  const hearingsQuery = useMemoFirebase(() => user ? query(collection(db, "hearings"), limit(5)) : null, [db, user])
+  const deadlinesQuery = useMemoFirebase(() => user ? query(collection(db, "deadlines"), where("status", "==", "Aberto"), limit(10)) : null, [db, user])
+  const hearingsQuery = useMemoFirebase(() => user ? query(collection(db, "hearings"), orderBy("startDateTime", "asc"), limit(5)) : null, [db, user])
+  const financialQuery = useMemoFirebase(() => user ? collection(db, "financial_titles") : null, [db, user])
 
-  const { data: leads } = useCollection(leadsQuery)
-  const { data: cases } = useCollection(casesQuery)
-  const { data: recentHearings } = useCollection(hearingsQuery)
+  const { data: leads, isLoading: loadingLeads } = useCollection(leadsQuery)
+  const { data: cases, isLoading: loadingCases } = useCollection(casesQuery)
+  const { data: deadlines } = useCollection(deadlinesQuery)
+  const { data: recentHearings, isLoading: loadingHearings } = useCollection(hearingsQuery)
+  const { data: financial } = useCollection(financialQuery)
+
+  const stats = useMemo(() => {
+    const totalRepasses = (financial || [])
+      .filter(f => f.type === 'Repasse' && f.status === 'Pendente')
+      .reduce((acc, f) => acc + (f.value || 0), 0)
+
+    return [
+      { label: "Pipeline (Leads)", value: leads?.length || 0, icon: Zap, color: "text-amber-500" },
+      { label: "Dossiês Ativos", value: cases?.length || 0, icon: Scale, color: "text-primary" },
+      { label: "Prazos em Aberto", value: deadlines?.length || 0, icon: Clock, color: "text-destructive" },
+      { label: "Repasses Pendentes", value: `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, icon: TrendingUp, color: "text-emerald-500" },
+    ]
+  }, [leads, cases, deadlines, financial])
+
+  if (loadingLeads || loadingCases || loadingHearings) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Centro de Comando...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -41,12 +69,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Pipeline (Leads)", value: leads?.length || 0, icon: Zap, color: "text-amber-500" },
-          { label: "Dossiês Ativos", value: cases?.length || 0, icon: Scale, color: "text-primary" },
-          { label: "Prazos da Semana", value: "12", icon: Clock, color: "text-destructive" },
-          { label: "Repasses Disponíveis", value: "R$ 4.250", icon: TrendingUp, color: "text-emerald-500" },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <Card key={i} className="glass border-primary/10 hover-gold transition-all">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</CardTitle>
@@ -55,7 +78,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-white">{stat.value}</div>
               <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-500 font-bold uppercase">
-                <ArrowUpRight className="h-3 w-3" /> +5% este mês
+                <ArrowUpRight className="h-3 w-3" /> Atualizado agora
               </div>
             </CardContent>
           </Card>
@@ -103,21 +126,22 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="p-4 rounded-xl bg-destructive/10 border-l-4 border-destructive text-xs space-y-1">
-                <div className="font-bold text-destructive uppercase tracking-widest">Atenção ao Prazo</div>
-                <p className="text-white/80">Processo 00123: Prazo de réplica vencendo amanhã às 23:59!</p>
-              </div>
-              <div className="p-4 rounded-xl bg-primary/10 border-l-4 border-primary text-xs space-y-1">
-                <div className="font-bold text-primary uppercase tracking-widest">Follow-up Pendente</div>
-                <p className="text-white/80">Lead "Pedro Santos": Sem contato há 48h na fase de Burocracia.</p>
-              </div>
-              <div className="p-4 rounded-xl bg-info/10 border-l-4 border-info text-xs space-y-1">
-                <div className="font-bold text-info uppercase tracking-widest">Financeiro</div>
-                <p className="text-white/80">3 repasses pendentes de conferência na carteira profissional.</p>
-              </div>
+              {deadlines && deadlines.length > 0 ? (
+                deadlines.slice(0, 3).map((d, i) => (
+                  <div key={i} className="p-4 rounded-xl bg-destructive/10 border-l-4 border-destructive text-xs space-y-1">
+                    <div className="font-bold text-destructive uppercase tracking-widest">Atenção ao Prazo</div>
+                    <p className="text-white/80 truncate">{d.title}: {d.dueDate}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 rounded-xl bg-primary/10 border-l-4 border-primary text-xs space-y-1">
+                  <div className="font-bold text-primary uppercase tracking-widest">Tudo em Dia</div>
+                  <p className="text-white/80">Nenhum alerta crítico pendente no radar.</p>
+                </div>
+              )}
             </div>
-            <Button variant="ghost" className="w-full mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white">
-              Ver todos os alertas <ChevronRight className="h-3 w-3 ml-1" />
+            <Button variant="ghost" asChild className="w-full mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white">
+              <Link href="/deadlines">Ver todos os alertas <ChevronRight className="h-3 w-3 ml-1" /></Link>
             </Button>
           </CardContent>
         </Card>

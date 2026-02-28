@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { 
   Archive, 
@@ -12,7 +12,8 @@ import {
   Users, 
   FileText,
   ChevronRight,
-  LayoutGrid
+  LayoutGrid,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,18 +28,42 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-
-const archivedProcesses = [
-  { id: "1", title: "SUBSTABELECIMENTO SEM RESERVA DE PODERES", processNumber: "N/A", date: "15/01/2024" },
-  { id: "2", title: "rt ooo", processNumber: "N/A", date: "10/12/2023" },
-]
+import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
+import { collection, query, where, doc, serverTimestamp } from "firebase/firestore"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ArchivePage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const db = useFirestore()
+  const { user } = useUser()
+  const { toast } = useToast()
+
+  const archivedQuery = useMemoFirebase(() => {
+    if (!user) return null
+    return query(collection(db, "processes"), where("status", "==", "Arquivado"))
+  }, [db, user])
+
+  const { data: archivedProcesses, isLoading } = useCollection(archivedQuery)
+
+  const filtered = useMemo(() => {
+    if (!archivedProcesses) return []
+    return archivedProcesses.filter(p => 
+      p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.processNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [archivedProcesses, searchTerm])
+
+  const handleReactivate = (id: string) => {
+    const ref = doc(db, "processes", id)
+    updateDocumentNonBlocking(ref, {
+      status: "Em Andamento",
+      updatedAt: serverTimestamp()
+    })
+    toast({ title: "Processo Reativado", description: "O dossiê retornou para a pauta ativa." })
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Breadcrumbs Mimetizados */}
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50">
         <LayoutGrid className="h-3 w-3" />
         <Link href="/dashboard" className="hover:text-primary transition-colors">Início</Link>
@@ -48,7 +73,6 @@ export default function ArchivePage() {
         <span className="text-white">Arquivo Digital</span>
       </div>
 
-      {/* Header Superior */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl font-headline font-bold text-white tracking-tight flex items-center gap-4">
@@ -76,7 +100,7 @@ export default function ArchivePage() {
             value="processos" 
             className="data-[state=active]:bg-white/5 data-[state=active]:text-white text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full rounded-t-lg px-6 gap-2"
           >
-            <FileText className="h-3.5 w-3.5" /> Processos Arquivados <Badge variant="secondary" className="h-4 px-1.5 text-[8px] bg-white/10 ml-1">2</Badge>
+            <FileText className="h-3.5 w-3.5" /> Processos Arquivados <Badge variant="secondary" className="h-4 px-1.5 text-[8px] bg-white/10 ml-1">{filtered.length}</Badge>
           </TabsTrigger>
           <TabsTrigger 
             value="clientes" 
@@ -101,41 +125,54 @@ export default function ArchivePage() {
               </p>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-secondary/20">
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableHead className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] py-6 pl-10">Processo</TableHead>
-                    <TableHead className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] py-6 text-center">Nº do Processo</TableHead>
-                    <TableHead className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] py-6 text-right pr-10">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {archivedProcesses.map((proc) => (
-                    <TableRow key={proc.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
-                      <TableCell className="py-8 pl-10">
-                        <span className="text-sm font-black text-white uppercase tracking-tighter group-hover:text-primary transition-colors">
-                          {proc.title}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center font-mono text-[10px] text-muted-foreground/60">
-                        {proc.processNumber}
-                      </TableCell>
-                      <TableCell className="text-right pr-10">
-                        <div className="flex items-center justify-end gap-4">
-                          <button className="flex items-center gap-2 text-[10px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-all active:scale-95">
-                            <RefreshCw className="h-3.5 w-3.5" /> REATIVAR
-                          </button>
-                          {proc.title === "rt ooo" && (
+              {isLoading ? (
+                <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando Arquivo...</span>
+                </div>
+              ) : filtered.length > 0 ? (
+                <Table>
+                  <TableHeader className="bg-secondary/20">
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableHead className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] py-6 pl-10">Processo</TableHead>
+                      <TableHead className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] py-6 text-center">Nº do Processo</TableHead>
+                      <TableHead className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] py-6 text-right pr-10">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((proc) => (
+                      <TableRow key={proc.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                        <TableCell className="py-8 pl-10">
+                          <span className="text-sm font-black text-white uppercase tracking-tighter group-hover:text-primary transition-colors">
+                            {proc.description}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center font-mono text-[10px] text-muted-foreground/60">
+                          {proc.processNumber}
+                        </TableCell>
+                        <TableCell className="text-right pr-10">
+                          <div className="flex items-center justify-end gap-4">
+                            <button 
+                              onClick={() => handleReactivate(proc.id)}
+                              className="flex items-center gap-2 text-[10px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-all active:scale-95"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" /> REATIVAR
+                            </button>
                             <button className="text-muted-foreground hover:text-white transition-colors">
                               <ExternalLink className="h-4 w-4" />
                             </button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="py-20 flex flex-col items-center justify-center space-y-6 opacity-30">
+                  <Archive className="h-12 w-12 text-muted-foreground" />
+                  <p className="text-sm font-bold uppercase tracking-[0.3em] text-center">Nenhum dossiê arquivado no momento.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
