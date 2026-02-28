@@ -22,7 +22,8 @@ import {
   UserPlus,
   FileText,
   PlusCircle,
-  Target
+  Target,
+  X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -54,14 +55,14 @@ const columns = [
 const initialLeadsData = [
   { 
     id: "1", 
-    name: "Ricardo Santos", 
+    name: "Luiz Paulo Gonçalves", 
     type: "Trabalhista", 
     date: "2h atrás", 
     stage: "novo", 
     value: 15000, 
     priority: "alta",
-    phone: "(11) 98888-7777",
-    email: "ricardo@email.com",
+    phone: "11948486470",
+    email: "luiz@email.com",
     notes: "Demitido após 10 anos sem justa causa. Reclamação de horas extras."
   },
   { 
@@ -87,18 +88,6 @@ const initialLeadsData = [
     phone: "(11) 96666-5555",
     email: "bruno@empresa.com",
     notes: "Revisão de contrato social e blindagem patrimonial."
-  },
-  { 
-    id: "4", 
-    name: "Ana Paula", 
-    type: "Previdenciário", 
-    date: "5d atrás", 
-    stage: "burocracia", 
-    value: 22000, 
-    priority: "baixa",
-    phone: "(11) 95555-4444",
-    email: "ana@email.com",
-    notes: "Aposentadoria especial por tempo de serviço insalubre."
   },
 ]
 
@@ -184,14 +173,12 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header & Metrics */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-headline font-bold text-primary mb-2">CRM & Triagem de Elite</h1>
           <p className="text-muted-foreground">Gestão estratégica por Dr. Reinaldo Gonçalves Miguel de Jesus.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          {/* Botão Nova Triagem - Estilo Inspirado */}
           <Dialog open={isNewLeadDialogOpen} onOpenChange={setIsNewLeadDialogOpen}>
             <DialogTrigger asChild>
               <Button className="glass text-primary font-bold gap-2 border-primary/20 hover:bg-primary/10">
@@ -251,7 +238,6 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: "Pipeline Total", value: `R$ ${(totalValue / 1000).toFixed(0)}k`, icon: DollarSign, color: "text-emerald-500" },
@@ -273,7 +259,6 @@ export default function LeadsPage() {
         ))}
       </div>
 
-      {/* Caixa de Ferramentas */}
       <div className="space-y-4">
         <h2 className="text-xl font-headline font-bold text-primary flex items-center gap-2">
           <Wrench className="h-5 w-5" /> Caixa de Ferramentas de Conversão
@@ -401,7 +386,6 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Kanban Board */}
       <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0">
         {columns.map((col) => {
           const leadsInCol = leads.filter(l => l.stage === col.id)
@@ -448,51 +432,106 @@ export default function LeadsPage() {
         })}
       </div>
 
-      {/* Details Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20 p-0">
+        <SheetContent className="w-full sm:max-w-xl glass border-l border-primary/20 p-0 flex flex-col bg-[#0a0f1e]">
           {selectedLead && (
-            <div className="h-full flex flex-col">
-              <div className="p-6 border-b border-border/50">
-                <SheetHeader>
+            <>
+              <div className="p-8 pb-4">
+                <SheetHeader className="text-left space-y-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge className="gold-gradient text-background font-bold uppercase text-[10px]">{selectedLead.stage}</Badge>
+                    <Badge className="bg-primary/10 text-primary border-primary/20 font-bold uppercase text-[9px]">NOVO</Badge>
                   </div>
-                  <SheetTitle className="text-3xl font-headline font-bold text-primary">{selectedLead.name}</SheetTitle>
-                  <SheetDescription>{selectedLead.phone} • {selectedLead.type}</SheetDescription>
+                  <SheetTitle className="text-4xl font-headline font-bold text-primary leading-tight">
+                    {selectedLead.name}
+                  </SheetTitle>
+                  <SheetDescription className="text-lg text-muted-foreground font-light flex items-center gap-2">
+                    {selectedLead.phone} <span className="text-muted-foreground/30">•</span> {selectedLead.type}
+                  </SheetDescription>
                 </SheetHeader>
               </div>
-              <Tabs defaultValue="dossie" className="flex-1 flex flex-col">
-                <TabsList className="px-6 bg-secondary/20 border-b border-border/50 justify-start h-12 gap-6 p-0 rounded-none">
-                  <TabsTrigger value="dossie" className="h-full">Dossiê</TabsTrigger>
-                  <TabsTrigger value="tools" className="h-full">Ferramentas</TabsTrigger>
+
+              <Tabs defaultValue="dossie" className="flex-1 flex flex-col mt-4">
+                <TabsList className="px-8 bg-transparent border-b border-border/30 justify-start h-12 gap-8 p-0 rounded-none w-full">
+                  <TabsTrigger 
+                    value="dossie" 
+                    className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-black data-[state=active]:text-white px-4 font-bold transition-all"
+                  >
+                    Dossiê
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="ferramentas" 
+                    className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-black data-[state=active]:text-white px-4 font-bold transition-all"
+                  >
+                    Ferramentas
+                  </TabsTrigger>
                 </TabsList>
-                <ScrollArea className="flex-1 p-6">
-                  <TabsContent value="dossie" className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-sm uppercase text-primary">Checklist de Fase</h3>
-                      <Progress value={40} className="h-1.5" />
-                      <div className="grid gap-2">
+
+                <ScrollArea className="flex-1 p-8">
+                  <TabsContent value="dossie" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Checklist de Fase</h3>
+                      </div>
+                      
+                      <div className="relative pt-1">
+                        <div className="overflow-hidden h-1 text-xs flex rounded bg-secondary/30">
+                          <div style={{ width: "33%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary"></div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 pt-2">
                         {stageChecklists[selectedLead.stage]?.map((item, i) => (
-                          <div key={i} className="flex items-center space-x-2 p-2 rounded bg-secondary/30">
-                            <Checkbox id={`check-${i}`} />
-                            <label htmlFor={`check-${i}`} className="text-sm">{item}</label>
+                          <div key={i} className="flex items-center space-x-4 p-4 rounded-xl bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors group">
+                            <Checkbox 
+                              id={`check-${i}`} 
+                              className="w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary"
+                            />
+                            <label 
+                              htmlFor={`check-${i}`} 
+                              className="text-base font-medium leading-none cursor-pointer group-hover:text-primary transition-colors"
+                            >
+                              {item}
+                            </label>
                           </div>
                         ))}
                       </div>
                     </div>
+
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary">Briefing Inicial</h3>
+                      <p className="text-muted-foreground leading-relaxed italic border-l-2 border-primary/30 pl-4 py-1">
+                        "{selectedLead.notes}"
+                      </p>
+                    </div>
                   </TabsContent>
-                  <TabsContent value="tools" className="space-y-4">
-                    <Button className="w-full gold-gradient text-background font-bold h-12 flex justify-between">Gerar Proposta <Zap className="h-4 w-4" /></Button>
-                    <Button variant="outline" className="w-full h-12 flex justify-between glass">Gerar Procuração <ArrowRight className="h-4 w-4" /></Button>
+
+                  <TabsContent value="ferramentas" className="mt-0 space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                    <Button className="w-full gold-gradient text-background font-bold h-14 flex justify-between px-6 rounded-xl shadow-lg">
+                      Gerar Proposta Estratégica <Zap className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" className="w-full h-14 flex justify-between px-6 glass rounded-xl border-primary/20 hover:border-primary/50">
+                      Gerar Procuração de Plenos Poderes <ArrowRight className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" className="w-full h-14 flex justify-between px-6 glass rounded-xl border-primary/20 hover:border-primary/50">
+                      Scripts de Fechamento <MessageCircle className="h-5 w-5" />
+                    </Button>
                   </TabsContent>
                 </ScrollArea>
               </Tabs>
-              <div className="p-6 border-t border-border/50 bg-background grid grid-cols-2 gap-4">
-                <Button variant="destructive" className="font-bold opacity-50">Descartar</Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Avançar Fase</Button>
+
+              <div className="p-8 pt-4 border-t border-border/30 bg-[#0a0f1e] grid grid-cols-2 gap-4">
+                <Button 
+                  className="bg-[#7f1d1d] hover:bg-[#991b1b] text-white font-bold h-14 text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
+                >
+                  Descartar
+                </Button>
+                <Button 
+                  className="bg-[#10b981] hover:bg-[#059669] text-white font-bold h-14 text-sm uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
+                >
+                  Avançar Fase
+                </Button>
               </div>
-            </div>
+            </>
           )}
         </SheetContent>
       </Sheet>
