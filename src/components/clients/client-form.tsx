@@ -6,10 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Search, Target, ShieldCheck, X, Globe, Zap, ShieldAlert } from "lucide-react"
+import { Loader2, Search, CheckCircle2, ShieldAlert, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
-import { queryCpfGovBr } from "@/services/gov-br"
+import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
 
 interface ClientFormProps {
   onSubmit: (data: any) => void
@@ -19,7 +18,6 @@ interface ClientFormProps {
 export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   const { toast } = useToast()
   const [loadingCep, setLoadingCep] = useState(false)
-  const [loadingApi, setLoadingApi] = useState(false)
   const [formData, setFormData] = useState({
     registrationStatus: "Ativo",
     personType: "Pessoa Física",
@@ -36,7 +34,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     ctps: "",
     pisPasep: "",
     legalArea: "Trabalhista",
-    // Contato & Endereço
     email: "",
     phone: "",
     fixedPhone: "",
@@ -47,7 +44,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     neighborhood: "",
     city: "",
     state: "",
-    // Dados Bancários
     bankAccountHolder: "",
     bankName: "",
     bankAgency: "",
@@ -57,69 +53,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const handleDocumentLookup = async () => {
-    const doc = formData.cpf.replace(/\D/g, "")
-    
-    if (doc.length === 11) {
-      setLoadingApi(true)
-      try {
-        const data = await queryCpfGovBr(doc)
-        if (data) {
-          setFormData(prev => ({
-            ...prev,
-            personType: "Pessoa Física",
-            firstName: data.nome?.split(' ')[0] || "",
-            lastName: data.nome?.split(' ').slice(1).join(' ') || "",
-            birthDate: data.data_nascimento || prev.birthDate,
-            motherName: data.nome_mae || prev.motherName,
-          }))
-          toast({ title: "Injeção CBC Gov.br", description: `Cidadão: ${data.nome} localizado.` })
-        } else {
-          toast({ variant: "destructive", title: "CPF não localizado", description: "O documento não consta no Cadastro Base." })
-        }
-      } catch (error) {
-        toast({ variant: "destructive", title: "Erro Gov.br", description: "Verifique as credenciais da API no servidor." })
-      } finally {
-        setLoadingApi(false)
-      }
-      return
-    }
-
-    if (doc.length === 14) {
-      setLoadingApi(true)
-      try {
-        const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
-        if (!response.ok) throw new Error()
-        const data = await response.json()
-        
-        setFormData(prev => ({
-          ...prev,
-          personType: "Pessoa Jurídica",
-          firstName: data.razao_social,
-          lastName: data.nome_fantasia || "",
-          email: data.email || prev.email,
-          phone: data.ddd_telefone_1 || prev.phone,
-          zipCode: data.cep,
-          address: data.logradouro,
-          number: data.numero,
-          complement: data.complemento || "",
-          neighborhood: data.bairro,
-          city: data.municipio,
-          state: data.uf
-        }))
-
-        toast({ title: "Dados Receita Federal", description: `Empresa: ${data.razao_social} injetada com sucesso.` })
-      } catch (error) {
-        toast({ variant: "destructive", title: "Erro na Consulta", description: "CNPJ não localizado." })
-      } finally {
-        setLoadingApi(false)
-      }
-      return
-    }
-
-    toast({ variant: "destructive", title: "Documento Inválido", description: "Insira 11 dígitos para CPF ou 14 para CNPJ." })
   }
 
   const handleCepBlur = async () => {
@@ -148,9 +81,20 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     }
   }
 
+  const isDocumentValid = () => {
+    const doc = formData.cpf.replace(/\D/g, "");
+    if (doc.length === 11) return validateCPF(doc);
+    if (doc.length === 14) return validateCNPJ(doc);
+    return false;
+  }
+
   const handleSubmit = () => {
     if (!formData.firstName || !formData.cpf) {
       toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome e CPF/CNPJ são necessários." })
+      return
+    }
+    if (!isDocumentValid()) {
+      toast({ variant: "destructive", title: "Documento Inválido", description: "O CPF ou CNPJ informado não é matematicamente válido." })
       return
     }
     onSubmit(formData)
@@ -164,8 +108,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     <div className="flex flex-col h-full bg-[#0a0f1e]">
       <ScrollArea className="flex-1 px-10 py-8 max-h-[80vh]">
         <div className="space-y-12">
-          
-          {/* SEÇÃO: DADOS PESSOAIS */}
           <section>
             <h2 className={sectionLabelClass}>Dados Pessoais</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -195,22 +137,25 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                 <div className="relative">
                   <Input 
                     placeholder="000.000.000-00 ou 00.000.000/0000-00" 
-                    className={cn(inputClass, "pr-44")} 
+                    className={cn(
+                      inputClass, 
+                      formData.cpf.length >= 11 && (isDocumentValid() ? "border-emerald-500/50" : "border-rose-500/50")
+                    )} 
                     value={formData.cpf} 
                     onChange={(e) => handleInputChange("cpf", e.target.value)} 
                   />
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleDocumentLookup}
-                    disabled={loadingApi}
-                    className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4 rounded-md border border-primary/20"
-                  >
-                    {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-                    Consulta Oficial API
-                  </Button>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {formData.cpf.length >= 11 && (
+                      isDocumentValid() ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <ShieldAlert className="h-4 w-4 text-rose-500" />
+                      )
+                    )}
+                  </div>
                 </div>
-                <p className="text-[9px] text-primary/50 font-bold uppercase tracking-widest mt-1">
-                  * Consulta via CBC (Gov.br) para CPF ou RFB para CNPJ.
+                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
+                  * Validação estrutural offline ativa para economia de custos.
                 </p>
               </div>
               <div className="space-y-1">
@@ -282,7 +227,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
             </div>
           </section>
 
-          {/* SEÇÃO: CONTATO & ENDEREÇO */}
           <section>
             <h2 className={sectionLabelClass}>Contato & Endereço</h2>
             <div className="space-y-6">
@@ -336,7 +280,6 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
             </div>
           </section>
 
-          {/* SEÇÃO: DADOS BANCÁRIOS */}
           <section>
             <h2 className={sectionLabelClass}>Dados Bancários p/ Recebimento</h2>
             <div className="space-y-6">
@@ -364,18 +307,16 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
               </div>
             </div>
           </section>
-
         </div>
       </ScrollArea>
 
-      {/* FOOTER FIXO */}
       <div className="p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-end gap-4">
         <Button variant="ghost" onClick={onCancel} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">
           Cancelar
         </Button>
         <Button 
           onClick={handleSubmit} 
-          className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black h-12 px-10 rounded-lg shadow-xl uppercase text-[11px] tracking-widest transition-all"
+          className="bg-primary hover:bg-primary/90 text-white font-black h-12 px-10 rounded-lg shadow-xl uppercase text-[11px] tracking-widest transition-all"
         >
           Salvar Cadastro
         </Button>
