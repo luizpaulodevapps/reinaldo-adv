@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Search, CheckCircle2, ShieldAlert, X, Building2, User } from "lucide-react"
+import { Loader2, Search, CheckCircle2, ShieldAlert, X, Building2, User, Wallet } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
@@ -60,6 +60,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     bankName: "",
     bankAgency: "",
     bankAccount: "",
+    pixKeyType: "CPF",
     pixKey: ""
   })
 
@@ -345,7 +346,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
           {/* SEÇÃO III: FINANCEIRO */}
           <section>
             <h2 className={sectionLabelClass}>Dados Bancários p/ Recebimento</h2>
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="space-y-1">
                 <Label className={inputLabelClass}>Nome do Favorecido</Label>
                 <Input placeholder="Deixe em branco se for o próprio cliente" className={inputClass} value={formData.bankAccountHolder} onChange={(e) => handleInputChange("bankAccountHolder", e.target.value.toUpperCase())} />
@@ -363,9 +364,38 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                   <Label className={inputLabelClass}>Conta Corrente</Label>
                   <Input placeholder="00000-0" className={inputClass} value={formData.bankAccount} onChange={(e) => handleInputChange("bankAccount", e.target.value)} />
                 </div>
-                <div className="space-y-1">
-                  <Label className={inputLabelClass}>Chave PIX</Label>
-                  <Input placeholder="CNPJ, E-mail ou Telefone" className={inputClass} value={formData.pixKey} onChange={(e) => handleInputChange("pixKey", e.target.value)} />
+                
+                {/* BLINDAGEM PIX RGMJ */}
+                <div className="md:col-span-2 p-6 rounded-2xl bg-primary/5 border border-primary/10 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <Label className={inputLabelClass}>Tipo de Chave PIX</Label>
+                    <Select value={formData.pixKeyType} onValueChange={(v) => handleInputChange("pixKeyType", v)}>
+                      <SelectTrigger className="bg-[#0a0f1e] border-white/10 h-12 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                        <SelectItem value="CPF">CPF</SelectItem>
+                        <SelectItem value="CNPJ">CNPJ</SelectItem>
+                        <SelectItem value="Celular">Celular (WhatsApp)</SelectItem>
+                        <SelectItem value="E-mail">E-mail</SelectItem>
+                        <SelectItem value="Chave Aleatória">Chave Aleatória</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label className={inputLabelClass}>Chave PIX</Label>
+                    <Input 
+                      placeholder={
+                        formData.pixKeyType === "CPF" ? "000.000.000-00" :
+                        formData.pixKeyType === "CNPJ" ? "00.000.000/0000-00" :
+                        formData.pixKeyType === "Celular" ? "(00) 00000-0000" :
+                        formData.pixKeyType === "E-mail" ? "exemplo@email.com" : "Insira a chave"
+                      }
+                      className="bg-[#0a0f1e] border-white/10 h-12 text-white" 
+                      value={formData.pixKey} 
+                      onChange={(e) => handleInputChange("pixKey", e.target.value)} 
+                    />
+                  </div>
                 </div>
               </div>
             </div>
