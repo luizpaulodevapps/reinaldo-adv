@@ -1,6 +1,7 @@
+
 import { redirect } from "next/navigation"
 
 export default function Home() {
-  // Redireciona para a página de processos para evitar conflito de rotas e loop infinito.
-  redirect("/cases")
+  // Redireciona para o dashboard principal para evitar conflitos de rotas no Next.js
+  redirect("/dashboard")
 }

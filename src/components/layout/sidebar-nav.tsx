@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -11,14 +12,13 @@ import {
   DollarSign, 
   Settings,
   Scale,
-  FileText,
-  User
+  FileText
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const navItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Leads & CRM", href: "/leads", icon: Users },
   { name: "Processos", href: "/cases", icon: Briefcase },
   { name: "Agenda", href: "/agenda", icon: Calendar },
