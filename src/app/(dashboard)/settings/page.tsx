@@ -1,7 +1,8 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -33,7 +34,8 @@ import {
   CheckSquare,
   HardDrive,
   Cpu,
-  Lock
+  Lock,
+  User
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -45,9 +47,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("google")
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get("tab") || "google"
+  const [activeTab, setActiveTab] = useState(initialTab)
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, profile, role } = useUser()
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab)
+  }, [initialTab])
 
   // --- CRUD DE USUÁRIOS ---
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
@@ -57,6 +65,21 @@ export default function SettingsPage() {
     email: "",
     role: "lawyer"
   })
+
+  // Dados para Edição do Próprio Perfil
+  const [profileFormData, setProfileFormData] = useState({
+    name: profile?.name || "",
+    email: profile?.email || ""
+  })
+
+  useEffect(() => {
+    if (profile) {
+      setProfileFormData({
+        name: profile.name,
+        email: profile.email
+      })
+    }
+  }, [profile])
 
   const staffQuery = useMemoFirebase(() => {
     if (!user) return null
@@ -69,6 +92,19 @@ export default function SettingsPage() {
     toast({
       title: "Parâmetros Atualizados",
       description: "As configurações estratégicas foram salvas no ecossistema RGMJ.",
+    })
+  }
+
+  const handleUpdateMyProfile = () => {
+    if (!user || !profileFormData.name) return
+    const docRef = doc(db, "staff_profiles", user.uid)
+    updateDocumentNonBlocking(docRef, {
+      name: profileFormData.name.toUpperCase(),
+      updatedAt: serverTimestamp()
+    })
+    toast({
+      title: "Perfil Atualizado",
+      description: "Suas informações foram salvas com sucesso."
     })
   }
 
@@ -146,13 +182,13 @@ export default function SettingsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-transparent border-b border-white/5 h-14 p-0 gap-1 w-full justify-start rounded-none mb-10 overflow-x-auto scrollbar-hide">
           {[
-            { id: "geral", label: "Geral" },
+            { id: "perfil", label: "Meu Perfil" },
             { id: "google", label: "Integração Google" },
             { id: "usuarios", label: "Usuários" },
+            { id: "geral", label: "Institucional" },
             { id: "financeiro", label: "Financeiro" },
             { id: "tags", label: "Dicionário de Tags" },
             { id: "kit", label: "Kit Cliente" },
-            { id: "modelos", label: "Modelos" },
             { id: "licenca", label: "Licença" }
           ].map((tab) => (
             <TabsTrigger 
@@ -164,6 +200,58 @@ export default function SettingsPage() {
             </TabsTrigger>
           ))}
         </TabsList>
+
+        {/* Tab: Meu Perfil (Conforme Referência) */}
+        <TabsContent value="perfil" className="mt-0 outline-none space-y-8">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-2xl">
+                  <AvatarFallback className="text-2xl font-black text-primary bg-secondary uppercase">
+                    {profileFormData.name.substring(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1 uppercase tracking-tight">Meu Perfil Estratégico</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">
+                    GESTÃO DE CREDENCIAIS E IDENTIDADE DIGITAL RGMJ.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO</Label>
+                  <Input 
+                    value={profileFormData.name}
+                    onChange={(e) => setProfileFormData({...profileFormData, name: e.target.value.toUpperCase()})}
+                    className="glass border-white/10 h-14 text-white focus:ring-primary/50 uppercase" 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-MAIL DE ACESSO</Label>
+                  <Input 
+                    value={profileFormData.email}
+                    disabled
+                    className="glass border-white/5 h-14 text-muted-foreground opacity-50 cursor-not-allowed" 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PAPEL (ROLE)</Label>
+                  <div className="glass border-white/5 h-14 flex items-center px-4 rounded-md">
+                    <Badge variant="outline" className="text-[10px] font-black text-primary border-primary/30 uppercase tracking-widest">
+                      {role?.toUpperCase() || "MEMBRO"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <Button onClick={handleUpdateMyProfile} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+                <Save className="h-5 w-5" /> SALVAR MEUS DADOS
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Tab: Google Workspace */}
         <TabsContent value="google" className="mt-0 outline-none space-y-8">
@@ -180,7 +268,6 @@ export default function SettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="p-10 space-y-12">
-              {/* Google Drive Section */}
               <div className="space-y-6">
                 <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                   <HardDrive className="h-4 w-4" /> Google Drive (Documentos)
@@ -204,7 +291,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Google Calendar Section */}
               <div className="space-y-6 pt-6 border-t border-white/5">
                 <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                   <Calendar className="h-4 w-4" /> Google Calendar (Audiências)
@@ -223,7 +309,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Google Tasks Section */}
               <div className="space-y-6 pt-6 border-t border-white/5">
                 <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                   <CheckSquare className="h-4 w-4" /> Google Tasks (Prazos)
@@ -268,7 +353,7 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Geral */}
+        {/* Tab: Institucional */}
         <TabsContent value="geral" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -417,24 +502,6 @@ export default function SettingsPage() {
               <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
                 <Save className="h-5 w-5" /> SALVAR PARÂMETROS
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Controle de Honorários da Equipe</CardTitle>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                GERENCIE AS CONFIGURAÇÕES DE VISUALIZAÇÃO DE HONORÁRIOS PARA OS ADVOGADOS.
-              </p>
-            </CardHeader>
-            <CardContent className="p-10">
-              <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">Exibição de Saldos Individuais</h4>
-                  <p className="text-xs text-muted-foreground">Permitir que advogados visualizem seus próprios saldos de honorários e carteira pendente.</p>
-                </div>
-                <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

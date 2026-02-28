@@ -22,11 +22,13 @@ import {
   UserCheck,
   LogOut,
   User as UserIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  ChevronRight
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
 import { useUser, useAuth } from "@/firebase"
 import { signOut } from "firebase/auth"
 import {
@@ -109,6 +111,21 @@ export function SidebarNav() {
       
       <ScrollArea className="flex-1 px-4">
         <div className="space-y-8 pb-8">
+          {/* Seção Minha Conta (Conforme Referência) */}
+          <div className="space-y-3 px-2 mb-6">
+            <h3 className="px-2 text-[10px] font-bold text-muted-foreground/60 tracking-[0.2em] uppercase">
+              MINHA CONTA
+            </h3>
+            <Button 
+              asChild 
+              className="w-full bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold h-12 shadow-lg rounded-lg uppercase tracking-wider text-[12px] transition-transform active:scale-95 border-0"
+            >
+              <Link href="/settings?tab=perfil">
+                Meu Perfil
+              </Link>
+            </Button>
+          </div>
+
           {menuGroups.map((group, idx) => (
             <div key={idx} className="space-y-2">
               <h3 className="px-4 text-[10px] font-bold text-muted-foreground/60 tracking-[0.2em] uppercase">
@@ -165,7 +182,7 @@ export function SidebarNav() {
             <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4 py-3">Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/5" />
             <DropdownMenuItem asChild>
-              <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/5 cursor-pointer transition-colors rounded-lg">
+              <Link href="/settings?tab=perfil" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/5 cursor-pointer transition-colors rounded-lg">
                 <UserIcon className="h-4 w-4 text-primary" /> Meu Perfil
               </Link>
             </DropdownMenuItem>
