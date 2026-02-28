@@ -26,13 +26,11 @@ import { cn } from "@/lib/utils"
 export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const db = useFirestore()
-  const { user, isUserLoading, role } = useUser()
+  const { user, isUserLoading } = useUser()
 
-  // Dr. Reinaldo tem acesso garantido pelo e-mail ou pela role na sessão
-  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
-  const canQuery = !!(user && (isOwner || role))
+  // Se o usuário logou, ele tem permissão imediata de consulta
+  const canQuery = !!user
 
-  // Busca todos os títulos financeiros - SÓ dispara se canQuery for true
   const financialQuery = useMemoFirebase(() => {
     if (!canQuery) return null
     return query(collection(db, "financial_titles"), orderBy("dueDate", "desc"))
@@ -42,7 +40,6 @@ export default function BillingPage() {
 
   const isLoading = isUserLoading || isLoadingTransactions
 
-  // Cálculos de métricas baseados no real
   const stats = useMemo(() => {
     if (!transactions) return { real: 0, bruto: 0, pendente: 0, custos: 0 }
     
@@ -58,7 +55,6 @@ export default function BillingPage() {
       .filter(t => t.type === 'Custo Processual' || t.type === 'Reembolso')
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    // Receita Real simula 30% dos honorários recebidos
     const real = bruto * 0.3
 
     return { real, bruto, pendente, custos }
@@ -73,7 +69,6 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Breadcrumbs & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
@@ -108,9 +103,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Grid de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Receita Real */}
         <Card className="glass border-primary/20 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
           <CardContent className="p-6">
@@ -121,7 +114,6 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        {/* Total Bruto */}
         <Card className="glass border-emerald-500/10 relative overflow-hidden">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-3">Total Bruto Recebido</p>
@@ -131,7 +123,6 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        {/* Receitas Pendentes */}
         <Card className="glass border-amber-500/10 relative overflow-hidden">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-3">Receitas Pendentes</p>
@@ -141,7 +132,6 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        {/* Total de Custos */}
         <Card className="glass border-rose-500/10 relative overflow-hidden">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-rose-500/70 uppercase tracking-[0.2em] mb-3">Total de Custos (Saídas)</p>
@@ -152,7 +142,6 @@ export default function BillingPage() {
         </Card>
       </div>
 
-      {/* Tabs & Content Area */}
       <Tabs defaultValue="receitas" className="space-y-0">
         <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-t-xl rounded-b-none border-b-0">
           <TabsTrigger 

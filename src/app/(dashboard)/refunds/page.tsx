@@ -25,17 +25,16 @@ export default function RefundsPage() {
   const db = useFirestore()
   const { user, role } = useUser()
 
-  // O dono ou qualquer um com role na sessão pode disparar as queries
+  // Se o usuário logou, ele tem permissão imediata de consulta
+  const canQuery = !!user
   const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
-  const canQuery = !!(user && (isOwner || role))
 
-  // Sincroniza dados reais de reembolso
   const refundsQuery = useMemoFirebase(() => {
     if (!canQuery) return null
     
     const baseQuery = collection(db, "financial_titles")
     
-    // Se for o dono ou admin, vê todos os reembolsos sem filtros de UID
+    // Se for o dono ou admin, vê todos os reembolsos sem filtros restritivos
     if (isOwner || role === 'admin' || role === 'financial') {
       return query(
         baseQuery, 
@@ -44,7 +43,7 @@ export default function RefundsPage() {
       )
     }
 
-    // Colaboradores vêm apenas os seus
+    // Colaboradores vêm apenas os seus vinculados
     return query(
       baseQuery, 
       where("type", "==", "Reembolso"),
@@ -55,7 +54,6 @@ export default function RefundsPage() {
 
   const { data: refunds, isLoading: loadingRefunds } = useCollection(refundsQuery)
 
-  // Cálculos de métricas baseados na pauta real
   const stats = useMemo(() => {
     if (!refunds) return { solicitado: 0, pendente: 0, pago: 0 }
     return {
@@ -69,7 +67,6 @@ export default function RefundsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Breadcrumbs & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
@@ -92,9 +89,7 @@ export default function RefundsPage() {
         </Button>
       </div>
 
-      {/* Grid de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Solicitado */}
         <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -109,7 +104,6 @@ export default function RefundsPage() {
           </CardContent>
         </Card>
 
-        {/* Aguardando Aprovação */}
         <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400">
@@ -124,7 +118,6 @@ export default function RefundsPage() {
           </CardContent>
         </Card>
 
-        {/* Total Pago */}
         <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
@@ -140,7 +133,6 @@ export default function RefundsPage() {
         </Card>
       </div>
 
-      {/* Tabs & Content Area */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
         <TabsList className="bg-[#0a1420]/50 border border-white/5 h-12 p-1 gap-1 w-full justify-start rounded-xl mb-6 max-w-fit">
           <TabsTrigger 
