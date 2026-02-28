@@ -531,15 +531,17 @@ export default function LeadsPage() {
                                     <div className="p-6 space-y-6">
                                       <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">ESCOLHER DATA</Label>
-                                        <Input 
-                                          type="date" 
-                                          className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white focus:border-primary/50 text-base" 
-                                          value={scheduledDate ? format(scheduledDate, "yyyy-MM-dd") : ""}
-                                          onChange={(e) => {
-                                            const date = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
-                                            setScheduledDate(date);
-                                          }}
-                                        />
+                                        <div className="relative">
+                                          <Input 
+                                            type="date" 
+                                            className="bg-[#1a1f2e] border-[#2d3748] h-14 text-white focus:border-primary/50 text-base appearance-none" 
+                                            value={scheduledDate ? format(scheduledDate, "yyyy-MM-dd") : ""}
+                                            onChange={(e) => {
+                                              const date = e.target.value ? new Date(e.target.value + "T00:00:00") : undefined;
+                                              setScheduledDate(date);
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                       <div className="space-y-3">
                                         <Label className="text-[10px] uppercase font-bold text-[#64748b] tracking-widest">HORÁRIO COMERCIAL</Label>
