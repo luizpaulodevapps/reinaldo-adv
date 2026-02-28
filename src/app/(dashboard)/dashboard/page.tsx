@@ -22,11 +22,9 @@ import { useMemo } from "react"
 
 export default function DashboardPage() {
   const db = useFirestore()
-  const { user, role } = useUser()
+  const { user, role, profile } = useUser()
 
-  // O dono (e-mail específico) ou qualquer um com role na sessão pode disparar as queries
-  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
-  const canQuery = !!(user && (isOwner || role))
+  const canQuery = !!user
 
   const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
   const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])
@@ -49,7 +47,7 @@ export default function DashboardPage() {
       { label: "Pipeline (Leads)", value: leads?.length || 0, icon: Zap, color: "text-amber-500" },
       { label: "Dossiês Ativos", value: cases?.length || 0, icon: Scale, color: "text-primary" },
       { label: "Prazos em Aberto", value: deadlines?.length || 0, icon: Clock, color: "text-destructive" },
-      { label: "Repasses Pendentes", value: `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, icon: TrendingUp, color: "text-emerald-500" },
+      { label: "Repasses Pendentes", value: totalRepasses > 0 ? `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : 0, icon: TrendingUp, color: "text-emerald-500" },
     ]
   }, [leads, cases, deadlines, financial])
 
@@ -62,27 +60,27 @@ export default function DashboardPage() {
     )
   }
 
-  const displayName = user?.displayName || "Dr. Reinaldo Gonçalves"
+  const displayName = profile?.name || user?.displayName || "Dr. Reinaldo Gonçalves"
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div>
-        <h1 className="text-4xl font-headline font-bold text-white mb-2">
-          Bem-vindo, <span className="text-primary">{displayName}</span>
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <div className="space-y-1">
+        <h1 className="text-4xl font-bold text-[#213B37] tracking-tight">
+          Bem-vindo, <span className="text-[#213B37]">{displayName}</span>
         </h1>
-        <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Centro de Comando Estratégico RGMJ</p>
+        <p className="text-[#818258] uppercase tracking-[0.2em] text-[10px] font-bold">Centro de Comando Estratégico RGMJ</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <Card key={i} className="glass border-primary/10 hover-gold transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+          <Card key={i} className="border-border/60 shadow-sm hover:shadow-md transition-all">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</CardTitle>
+              <stat.icon className={`h-4 w-4 ${stat.color} opacity-70`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{stat.value}</div>
-              <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-500 font-bold uppercase">
+              <div className="text-3xl font-bold text-[#213B37] mb-4">{stat.value}</div>
+              <div className="flex items-center gap-1 text-[9px] text-emerald-600 font-bold uppercase tracking-widest">
                 <ArrowUpRight className="h-3 w-3" /> Atualizado agora
               </div>
             </CardContent>
@@ -90,63 +88,64 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 glass border-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-headline text-white flex items-center gap-2">
-              <Gavel className="h-5 w-5 text-primary" /> Próximas Audiências
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <Card className="lg:col-span-2 border-border/60 shadow-sm min-h-[400px]">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 mb-6">
+            <CardTitle className="text-xs font-bold text-[#213B37] flex items-center gap-3 uppercase tracking-widest">
+              <Gavel className="h-4 w-4 text-primary/60" /> Próximas Audiências
             </CardTitle>
-            <Link href="/agenda" className="text-[10px] font-bold text-primary uppercase hover:underline">Ver Pauta Completa</Link>
+            <Link href="/agenda" className="text-[9px] font-bold text-primary uppercase tracking-widest hover:underline">Ver Pauta Completa</Link>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentHearings && recentHearings.length > 0 ? (
-                recentHearings.map((hearing, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 border border-primary/5 hover:bg-secondary/50 transition-colors group">
-                    <div className="flex gap-4 items-center">
-                      <div className="text-primary font-bold text-sm bg-primary/10 h-10 w-14 flex items-center justify-center rounded-lg">
+          <CardContent className="flex flex-col items-center justify-center h-full">
+            {recentHearings && recentHearings.length > 0 ? (
+              <div className="w-full space-y-4">
+                {recentHearings.map((hearing, i) => (
+                  <div key={i} className="flex items-center justify-between p-5 rounded-lg bg-[#F8F9FA] border border-border/40 hover:border-primary/20 transition-colors group">
+                    <div className="flex gap-5 items-center">
+                      <div className="text-primary font-bold text-xs bg-primary/5 h-10 w-16 flex items-center justify-center rounded border border-primary/10">
                         {hearing.startDateTime ? new Date(hearing.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
                       </div>
                       <div>
-                        <div className="font-bold text-white text-sm">{hearing.title}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{hearing.type} • {hearing.location || "Sala Virtual"}</div>
+                        <div className="font-bold text-[#213B37] text-sm uppercase tracking-tight">{hearing.title}</div>
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold mt-1">{hearing.type} • {hearing.location || "Sala Virtual"}</div>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] border-primary/20 text-primary opacity-0 group-hover:opacity-100 transition-opacity">Detalhes</Badge>
+                    <Badge variant="outline" className="text-[8px] border-primary/20 text-primary uppercase font-bold tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Detalhes</Badge>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-10 text-muted-foreground italic text-sm">
-                  Nenhuma audiência agendada para os próximos dias.
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 text-muted-foreground italic text-sm opacity-60">
+                Nenhuma audiência agendada para os próximos dias.
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="glass border-destructive/20">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-destructive" />
-            <CardTitle className="font-headline text-white">Alertas Críticos</CardTitle>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="flex flex-row items-center gap-3 border-b border-border/40 mb-6">
+            <AlertCircle className="h-4 w-4 text-destructive/70" />
+            <CardTitle className="text-xs font-bold text-[#213B37] uppercase tracking-widest">Alertas Críticos</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
               {deadlines && deadlines.length > 0 ? (
                 deadlines.slice(0, 3).map((d, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-destructive/10 border-l-4 border-destructive text-xs space-y-1">
-                    <div className="font-bold text-destructive uppercase tracking-widest">Atenção ao Prazo</div>
-                    <p className="text-white/80 truncate">{d.title}: {d.dueDate}</p>
+                  <div key={i} className="p-5 rounded-lg bg-destructive/5 border-l-4 border-destructive/60 text-xs space-y-2">
+                    <div className="font-bold text-destructive uppercase tracking-widest text-[9px]">Atenção ao Prazo</div>
+                    <p className="text-[#213B37] font-medium truncate">{d.title}</p>
+                    <p className="text-muted-foreground text-[10px] font-bold">{d.dueDate}</p>
                   </div>
                 ))
               ) : (
-                <div className="p-4 rounded-xl bg-primary/10 border-l-4 border-primary text-xs space-y-1">
-                  <div className="font-bold text-primary uppercase tracking-widest">Tudo em Dia</div>
-                  <p className="text-white/80">Nenhum alerta crítico pendente no radar.</p>
+                <div className="p-6 rounded-lg bg-emerald-50 border-l-4 border-emerald-500/60 space-y-2">
+                  <div className="font-bold text-emerald-700 uppercase tracking-widest text-[10px]">Tudo em Dia</div>
+                  <p className="text-emerald-800/70 text-xs font-medium">Nenhum alerta crítico pendente no radar.</p>
                 </div>
               )}
             </div>
-            <Button variant="ghost" asChild className="w-full mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white">
-              <Link href="/deadlines">Ver todos os alertas <ChevronRight className="h-3 w-3 ml-1" /></Link>
+            <Button variant="ghost" asChild className="w-full mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary hover:bg-primary/5">
+              <Link href="/deadlines">Ver todos os alertas <ChevronRight className="h-3 w-3 ml-2" /></Link>
             </Button>
           </CardContent>
         </Card>

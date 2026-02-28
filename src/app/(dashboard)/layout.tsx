@@ -5,7 +5,7 @@ import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/
 import { useEffect, useState } from 'react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Scale, LogIn, ShieldCheck, UserCheck } from "lucide-react";
+import { Loader2, Scale, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({
@@ -66,30 +66,30 @@ export default function DashboardLayout({
 
   if (isUserLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#E9E8E6] flex-col gap-4">
+      <div className="flex h-screen w-full items-center justify-center bg-[#F8F9FA] flex-col gap-4">
         <div className="w-16 h-16 rounded bg-[#213B37] flex items-center justify-center animate-pulse">
           <Scale className="text-white h-8 w-8" />
         </div>
-        <p className="text-[#213B37] font-bold tracking-widest uppercase text-xs">Sincronizando...</p>
+        <p className="text-[#213B37] font-bold tracking-widest uppercase text-[10px]">Sincronizando Ecossistema...</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#E9E8E6] p-6">
+      <div className="flex h-screen w-full items-center justify-center bg-[#F8F9FA] p-6">
         <div className="max-w-md w-full space-y-10 text-center">
           <div className="flex flex-col items-center gap-6">
             <div className="w-20 h-20 rounded bg-[#213B37] flex items-center justify-center shadow-xl">
               <Scale className="text-white h-10 w-10" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-4xl text-[#213B37]">Portal RGMJ</h1>
-              <p className="text-[#818258] uppercase tracking-[0.2em] text-[10px] font-bold">Acesso Restrito ao Comando</p>
+              <h1 className="text-4xl text-[#213B37] font-bold">Portal RGMJ</h1>
+              <p className="text-[#818258] uppercase tracking-[0.3em] text-[10px] font-bold">Acesso Restrito ao Comando</p>
             </div>
           </div>
 
-          <div className="bg-white p-10 rounded shadow-2xl border border-[#818258]/20 space-y-8">
+          <div className="bg-white p-10 rounded shadow-2xl border border-[#818258]/10 space-y-8">
             <p className="text-sm text-[#213B37]/70 font-medium">Autentique-se com sua conta corporativa Google.</p>
             <Button 
               onClick={handleGoogleLogin}
@@ -113,20 +113,20 @@ export default function DashboardLayout({
 
   if (!isOwner && !role && isProfileLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#E9E8E6] flex-col gap-4">
+      <div className="flex h-screen w-full items-center justify-center bg-[#F8F9FA] flex-col gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-[#213B37]" />
-        <p className="text-[#213B37] font-bold tracking-widest uppercase text-xs">Validando Credenciais...</p>
+        <p className="text-[#213B37] font-bold tracking-widest uppercase text-[10px]">Validando Credenciais...</p>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      <aside className="w-72 bg-[#213B37] hidden md:block sticky top-0 h-screen overflow-y-auto">
+      <aside className="w-[300px] bg-[#213B37] hidden lg:block sticky top-0 h-screen overflow-y-auto">
         <SidebarNav />
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <div className="site-container py-10">
+        <div className="py-10 px-12 max-w-[1400px] mx-auto">
           {children}
         </div>
       </main>
