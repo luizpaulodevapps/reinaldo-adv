@@ -66,7 +66,7 @@ export default function ArchivePage() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50">
         <LayoutGrid className="h-3 w-3" />
-        <Link href="/dashboard" className="hover:text-primary transition-colors">Início</Link>
+        <Link href="/" className="hover:text-primary transition-colors">Início</Link>
         <ChevronRight className="h-2 w-2" />
         <span className="text-muted-foreground">Dashboard</span>
         <ChevronRight className="h-2 w-2" />

@@ -11,7 +11,7 @@ export default function RefundsPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace("/dashboard")
+    router.replace("/")
   }, [router])
 
   return null

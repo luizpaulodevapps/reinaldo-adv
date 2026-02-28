@@ -96,7 +96,7 @@ export default function LandingPage() {
                 <Link href="#contato">Agendar Consulta</Link>
               </Button>
               <Button variant="outline" asChild className="border-[#213B37] text-[#213B37] h-14 px-10 text-lg hover:bg-[#213B37]/5">
-                <Link href="/dashboard">Acesso Restrito</Link>
+                <Link href="/">Acesso Restrito</Link>
               </Button>
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function LandingPage() {
             <nav className="flex flex-col gap-3 text-sm text-white/60">
               <Link href="#sobre" className="hover:text-[#818258]">Sobre</Link>
               <Link href="#atuacao" className="hover:text-[#818258]">Áreas</Link>
-              <Link href="/dashboard" className="text-[#818258] font-bold">Portal do Cliente</Link>
+              <Link href="/" className="text-[#818258] font-bold">Portal do Cliente</Link>
             </nav>
           </div>
           <div className="space-y-4">

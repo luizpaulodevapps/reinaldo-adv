@@ -128,7 +128,7 @@ export default function TeamPage() {
           <p className="text-muted-foreground max-w-md">Apenas administradores da banca RGMJ podem gerenciar permissões e acessos da equipe.</p>
         </div>
         <Button asChild variant="outline" className="glass border-primary/20 text-primary">
-          <Link href="/dashboard">Retornar ao Comando</Link>
+          <Link href="/">Retornar ao Comando</Link>
         </Button>
       </div>
     )
@@ -139,7 +139,7 @@ export default function TeamPage() {
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50">
         <LayoutGrid className="h-3 w-3" />
-        <Link href="/dashboard" className="hover:text-primary transition-colors">Início</Link>
+        <Link href="/" className="hover:text-primary transition-colors">Início</Link>
         <ChevronRight className="h-2 w-2" />
         <span className="text-white">Equipe (Acessos)</span>
       </div>

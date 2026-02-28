@@ -172,7 +172,7 @@ export default function BillingPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
-            <Link href="/dashboard" className="hover:text-primary transition-colors">Início</Link>
+            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
             <ChevronRight className="h-2 w-2" />
             <span>Dashboard</span>
             <ChevronRight className="h-2 w-2" />
