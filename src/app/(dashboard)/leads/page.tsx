@@ -35,12 +35,13 @@ import {
   SheetContent, 
   SheetHeader, 
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { Textarea } from "@/components/ui/textarea"
@@ -265,7 +266,12 @@ export default function LeadsPage() {
                   <Badge variant="outline" className="text-[9px] uppercase border-white/10 text-muted-foreground font-black tracking-widest">{selectedLead.type}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tighter">{selectedLead.name}</h2>
+                  <SheetHeader className="text-left p-0">
+                    <SheetTitle className="text-4xl font-headline font-bold text-white uppercase tracking-tighter">
+                      {selectedLead.name}
+                    </SheetTitle>
+                    <SheetDescription className="sr-only">Dossiê detalhado e acompanhamento de triagem estratégica.</SheetDescription>
+                  </SheetHeader>
                   <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)}><ArrowRight className="h-6 w-6" /></Button>
                 </div>
               </div>
@@ -456,7 +462,9 @@ export default function LeadsPage() {
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
                 <UserPlus className="h-8 w-8 text-primary" /> Registro de Novo Atendimento
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Inicie uma triagem rápida ou realize o cadastro completo na base RGMJ.</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Inicie uma triagem rápida ou realize o cadastro completo na base RGMJ.
+              </DialogDescription>
             </DialogHeader>
           </div>
           <LeadForm 

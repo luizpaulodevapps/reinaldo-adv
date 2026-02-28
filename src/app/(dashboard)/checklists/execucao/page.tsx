@@ -28,6 +28,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle,
+  DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
@@ -228,9 +229,9 @@ export default function ChecklistExecutionPage() {
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 Selecionar Matriz de Rotina
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
                 Escolha o roteiro padrão para iniciar a rotina técnica.
-              </p>
+              </DialogDescription>
             </DialogHeader>
           </div>
 

@@ -24,7 +24,7 @@ import {
   UserCheck
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
@@ -246,7 +246,9 @@ export default function TeamPage() {
                 {editingMember ? <UserCheck className="h-7 w-7 text-primary" /> : <UserPlus className="h-7 w-7 text-primary" />}
                 {editingMember ? "EDITAR ACESSO" : "NOVO ACESSO"}
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] opacity-60">CONFIGURAÇÃO DE PERMISSÕES E CREDENCIAIS DE ELITE.</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] opacity-60">
+                CONFIGURAÇÃO DE PERMISSÕES E CREDENCIAIS DE ELITE.
+              </DialogDescription>
             </DialogHeader>
           </div>
           

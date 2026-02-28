@@ -29,7 +29,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import Link from "next/link"
@@ -290,7 +290,9 @@ export default function BillingPage() {
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 Novo Lançamento Financeiro
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Gestão de caixa, despesas fixas e recebíveis.</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Gestão de caixa, despesas fixas e recebíveis.
+              </DialogDescription>
             </DialogHeader>
           </div>
           <div className="px-10 py-8 bg-[#0a0f1e]/50">

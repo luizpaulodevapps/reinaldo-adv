@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -227,7 +227,6 @@ export default function StaffPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {/* Botão Tático Amarelo (Conforme Referência) */}
           {canManage && (
             <button 
               onClick={handleOpenCreate}
@@ -326,7 +325,6 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* MODAL DE CRUD PERSONALIZADO */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5">
@@ -334,7 +332,9 @@ export default function StaffPage() {
               <DialogTitle className="text-white font-headline text-4xl md:text-5xl uppercase tracking-tighter leading-tight mb-2">
                 {editingStaff ? "EDITAR COLABORADOR" : "NOVO COLABORADOR"}
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] opacity-60">FICHA TÉCNICA PARA O DEPARTAMENTO PESSOAL RGMJ.</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] opacity-60">
+                FICHA TÉCNICA PARA O DEPARTAMENTO PESSOAL RGMJ.
+              </DialogDescription>
             </DialogHeader>
           </div>
           

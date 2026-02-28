@@ -33,6 +33,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
+  DialogDescription,
   DialogFooter 
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -290,7 +291,9 @@ export default function LaboratorioChecklistsPage() {
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-3">
                 <Settings2 className="h-7 w-7 text-[#f5d030]" /> Editor de Matriz Estratégica
               </DialogTitle>
-              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">Defina o roteiro obrigatório e o tipo de coleta para a equipe técnica.</p>
+              <DialogDescription className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">
+                Defina o roteiro obrigatório e o tipo de coleta para a equipe técnica.
+              </DialogDescription>
             </DialogHeader>
           </div>
 

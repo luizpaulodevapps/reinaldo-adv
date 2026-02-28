@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, limit } from "firebase/firestore"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
 
@@ -351,7 +351,9 @@ export default function CasesPage() {
               <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
                 Novo Processo
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Siga as etapas para um cadastro completo.</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Siga as etapas para um cadastro completo.
+              </DialogDescription>
             </DialogHeader>
           </div>
           <ProcessForm 

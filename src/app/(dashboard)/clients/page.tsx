@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ClientForm } from "@/components/clients/client-form"
 import { useToast } from "@/hooks/use-toast"
 
@@ -203,7 +203,9 @@ export default function ClientsPage() {
               <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
                 Novo Cliente
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Preencha os dados conforme documentação oficial.</p>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Preencha os dados conforme documentação oficial.
+              </DialogDescription>
             </DialogHeader>
           </div>
           <ClientForm 
