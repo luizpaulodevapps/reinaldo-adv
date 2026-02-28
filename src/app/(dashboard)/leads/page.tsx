@@ -6,13 +6,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Plus, 
-  MoreVertical, 
   Search, 
   DollarSign, 
   CheckCircle2, 
   MessageCircle, 
   ChevronRight,
-  Info,
   Clock,
   AlertCircle,
   Wrench,
@@ -120,7 +118,6 @@ export default function LeadsPage() {
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  // Ferramentas State
   const [calcValue, setCalcValue] = useState("")
   const [calcProb, setCalcProb] = useState("70")
   const [calcResult, setCalcResult] = useState<any>(null)
@@ -144,7 +141,7 @@ export default function LeadsPage() {
   const handleCalculate = () => {
     const val = parseFloat(calcValue.replace(/\D/g, "")) || 0
     const prob = parseInt(calcProb) || 0
-    const fee = val * 0.3 // 30% base honorários
+    const fee = val * 0.3 
     const successExpected = fee * (prob / 100)
     
     setCalcResult({
@@ -157,9 +154,7 @@ export default function LeadsPage() {
   const handleGenerateChecklist = () => {
     const lists: Record<string, string[]> = {
       Trabalhista: ["CTPS (Original ou Digital)", "TRCT (Termo de Rescisão)", "3 últimos holerites", "Extrato FGTS", "Documentos de identificação"],
-      Civil: ["RG/CPF", "Comprovante de residência", "Contratos relacionados", "Provas documentais (fotos/prints)", "Rol de testemunhas"],
-      Previdenciário: ["CNIS atualizado", "Laudos médicos", "PPP (Perfil Profissiográfico)", "CTPS", "Comprovante de períodos especiais"],
-      Empresarial: ["Contrato Social", "Cartão CNPJ", "Balanços contábeis", "Contratos com fornecedores", "Certidões negativas"]
+      Civil: ["RG/CPF", "Comprovante de residência", "Contratos relacionados", "Provas documentais (fotos/prints)", "Rol de testemunhas"]
     }
     setGeneratedChecklist(lists[checklistArea] || [])
   }
@@ -203,58 +198,54 @@ export default function LeadsPage() {
                 <PlusCircle className="h-4 w-4" /> Nova Triagem
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-border sm:max-w-[600px] p-0 overflow-hidden">
-              <div className="p-6 bg-[#0a0f1e]/80 border-b border-border">
+            <DialogContent className="glass border-[#2d3748] sm:max-w-[700px] p-0 overflow-hidden bg-[#0a0f1e]">
+              <div className="p-6 bg-[#0a0f1e] border-b border-[#1a1f2e]">
                 <DialogHeader>
-                  <DialogTitle className="text-white font-headline text-2xl flex items-center gap-3 uppercase tracking-tight">
-                    <div className="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center">
-                      <Plus className="h-5 w-5 text-primary" />
+                  <DialogTitle className="text-white font-headline text-2xl flex items-center gap-4 uppercase tracking-tighter">
+                    <div className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center">
+                      <Plus className="h-6 w-6 text-primary" />
                     </div>
                     Nova Triagem
                   </DialogTitle>
                 </DialogHeader>
               </div>
-              <div className="p-8 bg-[#0a0f1e]">
-                <LeadForm 
-                  existingLeads={leads} 
-                  onSubmit={handleCreateEntry}
-                  onSelectExisting={(lead) => {
-                    handleOpenLead(lead)
-                    setIsNewLeadDialogOpen(false)
-                  }}
-                  initialMode="quick"
-                  lockMode={true}
-                />
-              </div>
+              <LeadForm 
+                existingLeads={leads} 
+                onSubmit={handleCreateEntry}
+                onSelectExisting={(lead) => {
+                  handleOpenLead(lead)
+                  setIsNewLeadDialogOpen(false)
+                }}
+                initialMode="quick"
+                lockMode={true}
+              />
             </DialogContent>
           </Dialog>
 
           <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gold-gradient text-background font-bold gap-2">
-                <UserPlus className="h-4 w-4" /> Ficha Completa
+                <UserPlus className="h-4 w-4" /> Cadastrar Cliente
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-border sm:max-w-[700px] p-0 overflow-hidden">
-              <div className="p-6 bg-[#0a0f1e]/80 border-b border-border">
+            <DialogContent className="glass border-[#2d3748] sm:max-w-[800px] p-0 overflow-hidden bg-[#0a0f1e]">
+              <div className="p-6 bg-[#0a0f1e] border-b border-[#1a1f2e]">
                 <DialogHeader>
-                  <DialogTitle className="text-white font-headline text-2xl flex items-center gap-3 uppercase tracking-tight">
-                    <FileText className="h-6 w-6 text-primary" /> Ficha de Cliente
+                  <DialogTitle className="text-white font-headline text-2xl flex items-center gap-4 uppercase tracking-tighter">
+                    <FileText className="h-7 w-7 text-primary" /> Ficha de Cliente
                   </DialogTitle>
                 </DialogHeader>
               </div>
-              <div className="p-8 bg-[#0a0f1e]">
-                <LeadForm 
-                  existingLeads={leads} 
-                  onSubmit={handleCreateEntry}
-                  onSelectExisting={(lead) => {
-                    handleOpenLead(lead)
-                    setIsNewClientDialogOpen(false)
-                  }}
-                  initialMode="complete"
-                  lockMode={true}
-                />
-              </div>
+              <LeadForm 
+                existingLeads={leads} 
+                onSubmit={handleCreateEntry}
+                onSelectExisting={(lead) => {
+                  handleOpenLead(lead)
+                  setIsNewClientDialogOpen(false)
+                }}
+                initialMode="complete"
+                lockMode={true}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -489,9 +480,6 @@ export default function LeadsPage() {
                           </div>
                         ))}
                       </div>
-                    </div>
-                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 italic text-sm italic">
-                      "Lead estratégico. Alta probabilidade de êxito."
                     </div>
                   </TabsContent>
                   <TabsContent value="tools" className="space-y-4">
