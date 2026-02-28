@@ -1,7 +1,8 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
@@ -14,7 +15,13 @@ import {
   History, 
   Scale,
   Loader2,
-  Wallet
+  Wallet,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  Printer,
+  FileText,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,15 +35,24 @@ import {
   TableRow 
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase"
-import { collection, query, orderBy, doc } from "firebase/firestore"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, doc, where, serverTimestamp } from "firebase/firestore"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 
 export default function FinancialPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [activeTab, setActiveTab] = useState("advogados")
+  const [selectedStaff, setSelectedStaff] = useState<any>(null)
+  const [isWalletOpen, setIsWalletOpen] = useState(false)
+  const [isPayConfirmOpen, setIsPayConfirmOpen] = useState(false)
+  
   const db = useFirestore()
   const { user } = useUser()
+  const { toast } = useToast()
 
   // Sincroniza perfil para autorização
   const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
@@ -55,7 +71,7 @@ export default function FinancialPage() {
   // Busca Créditos/Repasses
   const creditsQuery = useMemoFirebase(() => {
     if (!canQuery) return null
-    return collection(db, "staff_credits")
+    return query(collection(db, "staff_credits"), orderBy("createdAt", "desc"))
   }, [db, canQuery])
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery)
 
@@ -73,10 +89,15 @@ export default function FinancialPage() {
 
   const filteredTeam = useMemo(() => {
     if (!team) return []
-    return team.filter(member => 
+    let list = team.filter(member => 
       member.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
-  }, [team, searchTerm])
+
+    if (activeTab === "advogados") return list.filter(m => m.role === "lawyer" || m.role === "admin")
+    if (activeTab === "colaboradores") return list.filter(m => m.role === "assistant" || m.role === "financial")
+    
+    return list
+  }, [team, searchTerm, activeTab])
 
   const getStaffBalance = (staffId: string) => {
     if (!credits) return 0
@@ -85,10 +106,41 @@ export default function FinancialPage() {
       .reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
   }
 
+  const handleOpenWallet = (staff: any) => {
+    setSelectedStaff(staff)
+    setIsWalletOpen(true)
+  }
+
+  const handleOpenQuitar = (staff: any) => {
+    setSelectedStaff(staff)
+    setIsPayConfirmOpen(true)
+  }
+
+  const handleConfirmQuitar = () => {
+    if (!selectedStaff || !credits) return
+
+    const pendingCredits = credits.filter(c => c.staffId === selectedStaff.id && c.status === 'Disponível')
+    
+    pendingCredits.forEach(c => {
+      const cRef = doc(db, "staff_credits", c.id)
+      updateDocumentNonBlocking(cRef, {
+        status: "Pago",
+        paymentDate: new Date().toISOString().split('T')[0],
+        updatedAt: serverTimestamp()
+      })
+    })
+
+    toast({
+      title: "Saldo Quitado",
+      description: `O pagamento para ${selectedStaff.name} foi processado no sistema.`,
+    })
+    setIsPayConfirmOpen(false)
+  }
+
   const isLoading = loadingTeam || loadingCredits
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       {/* Header & Breadcrumbs */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -101,7 +153,7 @@ export default function FinancialPage() {
           </div>
           <h1 className="text-4xl font-headline font-bold text-white tracking-tight">Gestão de Carteiras & Repasses</h1>
           <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-70">
-            Auditoria de saldos vinculados e controle de honorários da banca.
+            Auditoria de saldos vinculados e controle de honorários da banca RGMJ.
           </p>
         </div>
         
@@ -115,7 +167,7 @@ export default function FinancialPage() {
         </div>
       </div>
 
-      {/* Métricas Horizontais */}
+      {/* Métricas Corporativas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="glass border-emerald-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
@@ -128,7 +180,7 @@ export default function FinancialPage() {
 
         <Card className="glass border-primary/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-primary/70 uppercase tracking-[0.2em] mb-2">Saldos Liberados (Banca)</p>
+            <p className="text-[9px] font-black text-primary/70 uppercase tracking-[0.2em] mb-2">Saldos Liberados (Equipe)</p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.liberado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
@@ -137,7 +189,7 @@ export default function FinancialPage() {
 
         <Card className="glass border-blue-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-blue-500/70 uppercase tracking-[0.2em] mb-2">Honorários Retidos (Futuro)</p>
+            <p className="text-[9px] font-black text-blue-500/70 uppercase tracking-[0.2em] mb-2">Previsão Futura (Retido)</p>
             <div className="text-3xl font-black text-white tabular-nums">
               R$ {stats.retido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
@@ -146,7 +198,7 @@ export default function FinancialPage() {
 
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Ativos p/ Liquidação</p>
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Colaboradores com Saldo</p>
             <div className="text-3xl font-black text-white">
               {stats.ativos}
             </div>
@@ -155,7 +207,7 @@ export default function FinancialPage() {
       </div>
 
       {/* Seção de Abas e Listagem */}
-      <Tabs defaultValue="advogados" className="space-y-6">
+      <Tabs defaultValue="advogados" onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-[#0a1420]/50 border border-white/5 h-12 p-1 gap-1 w-full justify-start rounded-xl">
           <TabsTrigger value="advogados" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2">
             <Scale className="h-3.5 w-3.5" /> Advogados
@@ -163,93 +215,269 @@ export default function FinancialPage() {
           <TabsTrigger value="colaboradores" className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2">
             <Users className="h-3.5 w-3.5" /> Colaboradores
           </TabsTrigger>
-          <TabsTrigger value="provedores" className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2">
-            <ShieldCheck className="h-3.5 w-3.5" /> Provedores
-          </TabsTrigger>
           <TabsTrigger value="banca" className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2 border-l border-white/10 ml-2">
-            <Building2 className="h-3.5 w-3.5 text-emerald-500" /> Banca (RGMJ)
+            <Building2 className="h-3.5 w-3.5 text-emerald-500" /> Banca (Receita Líquida)
           </TabsTrigger>
           <TabsTrigger value="historico" className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 gap-2">
             <History className="h-3.5 w-3.5" /> Histórico Geral
           </TabsTrigger>
         </TabsList>
 
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Pesquisar colaborador..." 
-            className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50 max-w-md"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <Card className="glass border-white/5 overflow-hidden">
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando Carteiras...</span>
+        <TabsContent value={activeTab} className="mt-0">
+          {activeTab === "historico" ? (
+            <Card className="glass border-white/5 overflow-hidden">
+              <CardHeader className="p-8 border-b border-white/5">
+                <CardTitle className="text-xl font-headline font-bold text-white">Log de Transações de Crédito</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader className="bg-secondary/20">
+                    <TableRow className="border-white/5">
+                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6 pl-10">Data</TableHead>
+                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Favorecido</TableHead>
+                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Descrição do Lançamento</TableHead>
+                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6">Valor</TableHead>
+                      <TableHead className="text-[10px] font-bold text-muted-foreground uppercase py-6 text-right pr-10">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(credits || []).slice(0, 50).map((credit) => (
+                      <TableRow key={credit.id} className="border-white/5 hover:bg-white/[0.01]">
+                        <TableCell className="py-6 pl-10 text-[10px] font-mono text-muted-foreground uppercase">
+                          {credit.createdAt?.toDate ? new Date(credit.createdAt.toDate()).toLocaleDateString() : "RECÉM-CRIADO"}
+                        </TableCell>
+                        <TableCell className="py-6 text-xs font-bold text-white">
+                          {team?.find(t => t.id === credit.staffId)?.name || "MEMBRO REMOVIDO"}
+                        </TableCell>
+                        <TableCell className="py-6 text-xs text-muted-foreground italic">
+                          {credit.description}
+                        </TableCell>
+                        <TableCell className="py-6 text-xs font-bold text-white">
+                          R$ {(credit.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="py-6 text-right pr-10">
+                          <Badge variant="outline" className={cn(
+                            "text-[8px] font-black uppercase",
+                            credit.status === 'Pago' ? "border-emerald-500/50 text-emerald-500" : "border-amber-500/50 text-amber-500"
+                          )}>
+                            {credit.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : activeTab === "banca" ? (
+            <div className="py-20 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
+              <Building2 className="h-16 w-16 text-primary" />
+              <div className="text-center space-y-2">
+                <p className="text-sm font-bold text-white uppercase tracking-widest">Receita Institucional</p>
+                <p className="text-xs text-muted-foreground max-w-sm">Módulo de monitoramento da fatia de honorários retida pela banca RGMJ para custos fixos e dividendos.</p>
               </div>
-            ) : filteredTeam.length > 0 ? (
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="relative max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Pesquisar colaborador..." 
+                  className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <Card className="glass border-white/5 overflow-hidden">
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando Carteiras...</span>
+                    </div>
+                  ) : filteredTeam.length > 0 ? (
+                    <Table>
+                      <TableHeader className="bg-secondary/20">
+                        <TableRow className="border-white/5 hover:bg-transparent">
+                          <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 pl-10">Nome do Colaborador</TableHead>
+                          <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-center">Perfil</TableHead>
+                          <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right">Total Disponível</TableHead>
+                          <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right pr-10">Ação</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTeam.map((member) => {
+                          const balance = getStaffBalance(member.id)
+                          return (
+                            <TableRow key={member.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                              <TableCell className="py-6 pl-10">
+                                <div className="flex items-center gap-4">
+                                  <Avatar className="h-10 w-10 border border-primary/20 bg-secondary">
+                                    <AvatarFallback className="text-[10px] font-black text-primary uppercase">
+                                      {member.name ? member.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : '??'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm font-bold text-white uppercase tracking-tight">
+                                    {member.name}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-white/10 text-muted-foreground py-1 px-3">
+                                  {member.role || "MEMBRO"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className={cn(
+                                "text-right font-bold text-sm tabular-nums",
+                                balance > 0 ? "text-emerald-400" : "text-white/40"
+                              )}>
+                                R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell className="text-right pr-10">
+                                <div className="flex items-center justify-end gap-6">
+                                  <button 
+                                    onClick={() => handleOpenWallet(member)}
+                                    className="text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-all"
+                                  >
+                                    VER CARTEIRA
+                                  </button>
+                                  <button 
+                                    onClick={() => handleOpenQuitar(member)}
+                                    disabled={balance <= 0}
+                                    className={cn(
+                                      "text-[10px] font-black uppercase tracking-widest transition-all",
+                                      balance > 0 ? "text-emerald-500 hover:text-emerald-400" : "text-white/10 cursor-not-allowed"
+                                    )}
+                                  >
+                                    QUITAR SALDO
+                                  </button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-20 flex flex-col items-center justify-center space-y-6 opacity-30">
+                      <Wallet className="h-12 w-12 text-muted-foreground" />
+                      <p className="text-sm font-bold uppercase tracking-[0.3em] text-center">Nenhum saldo encontrado para os filtros.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* DIALOG DE CARTEIRA DETALHADA */}
+      <Dialog open={isWalletOpen} onOpenChange={setIsWalletOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-12 w-12 border-2 border-primary/20 bg-secondary">
+                <AvatarFallback className="font-black text-primary uppercase">
+                  {selectedStaff?.name ? selectedStaff.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : '??'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
+                  Carteira: {selectedStaff?.name}
+                </DialogTitle>
+                <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Dossiê de créditos e repasses vinculados.</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-primary uppercase tracking-widest">Saldo Disponível</p>
+              <p className="text-2xl font-black text-emerald-400">R$ {getStaffBalance(selectedStaff?.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+          </div>
+          
+          <ScrollArea className="max-h-[500px]">
+            <div className="p-0">
               <Table>
-                <TableHeader className="bg-secondary/20">
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 pl-10">Nome do Colaborador</TableHead>
-                    <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-center">Perfil</TableHead>
-                    <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right">Total Disponível</TableHead>
-                    <TableHead className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest py-6 text-right pr-10">Ação</TableHead>
+                <TableHeader className="bg-white/[0.02]">
+                  <TableRow className="border-white/5">
+                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 pl-8">Lançamento</TableHead>
+                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-center">Origem (%)</TableHead>
+                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-right">Crédito</TableHead>
+                    <TableHead className="text-[9px] font-black text-muted-foreground uppercase py-4 text-right pr-8">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTeam.map((member) => {
-                    const balance = getStaffBalance(member.id)
-                    return (
-                      <TableRow key={member.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
-                        <TableCell className="py-6 pl-10">
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-10 w-10 border border-primary/20 bg-secondary">
-                              <AvatarFallback className="text-[10px] font-black text-primary uppercase">
-                                {member.name ? member.name.split(' ').map(n => n[0]).join('').substring(0, 2) : '??'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">
-                              {member.name}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-white/10 text-muted-foreground py-1 px-3">
-                            {member.role || "MEMBRO"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-white text-sm tabular-nums">
-                          R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell className="text-right pr-10">
-                          <div className="flex items-center justify-end gap-6">
-                            <button className="text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-all">
-                              VER CARTEIRA
-                            </button>
-                            <button className="text-[10px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-all">
-                              QUITAR SALDO
-                            </button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {credits?.filter(c => c.staffId === selectedStaff?.id).map((credit) => (
+                    <TableRow key={credit.id} className="border-white/5">
+                      <TableCell className="py-4 pl-8">
+                        <p className="text-xs font-bold text-white uppercase">{credit.description}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Data: {credit.createdAt?.toDate ? credit.createdAt.toDate().toLocaleDateString() : 'N/A'}</p>
+                      </TableCell>
+                      <TableCell className="py-4 text-center">
+                        <Badge variant="outline" className="text-[8px] font-black text-primary border-primary/20">
+                          {credit.honorariumPercentage}% HONORÁRIOS
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-4 text-right font-mono font-bold text-white text-sm">
+                        R$ {(credit.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="py-4 text-right pr-8">
+                        <Badge className={cn(
+                          "text-[8px] font-black uppercase border-0",
+                          credit.status === 'Pago' ? "bg-emerald-500/10 text-emerald-500" : credit.status === 'Disponível' ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-500"
+                        )}>
+                          {credit.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
-            ) : (
-              <div className="py-20 flex flex-col items-center justify-center space-y-6 opacity-30">
-                <Wallet className="h-12 w-12 text-muted-foreground" />
-                <p className="text-sm font-bold uppercase tracking-[0.3em] text-center">Nenhum saldo encontrado para os filtros.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </Tabs>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/20 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsWalletOpen(false)} className="text-muted-foreground uppercase font-bold text-[10px] tracking-widest">
+              Fechar Dossiê
+            </Button>
+            <Button className="glass border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest px-8 gap-2">
+              <Printer className="h-3.5 w-3.5" /> Imprimir Extrato
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CONFIRMAÇÃO DE PAGAMENTO */}
+      <Dialog open={isPayConfirmOpen} onOpenChange={setIsPayConfirmOpen}>
+        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[450px] p-0 overflow-hidden shadow-2xl">
+          <div className="p-10 text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto animate-pulse">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            </div>
+            <div className="space-y-2">
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Confirmar Quitação?</DialogTitle>
+              <p className="text-muted-foreground text-sm">
+                O senhor está autorizando a liquidação de <span className="text-emerald-400 font-black">R$ {getStaffBalance(selectedStaff?.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> para o colaborador <span className="text-white font-bold">{selectedStaff?.name}</span>.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-3 text-left">
+              <AlertCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+              <p className="text-[10px] text-emerald-500/80 font-bold uppercase leading-relaxed">Esta ação registrará o pagamento definitivo no sistema e zerará o saldo disponível do colaborador.</p>
+            </div>
+          </div>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex flex-col gap-3">
+            <Button 
+              onClick={handleConfirmQuitar}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black h-14 uppercase text-[11px] tracking-widest rounded-xl shadow-xl shadow-emerald-900/20"
+            >
+              Confirmar Pagamento
+            </Button>
+            <Button variant="ghost" onClick={() => setIsPayConfirmOpen(false)} className="w-full text-muted-foreground uppercase font-bold text-[10px]">
+              Cancelar Operação
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
