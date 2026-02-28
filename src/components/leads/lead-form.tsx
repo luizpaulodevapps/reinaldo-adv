@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -131,7 +130,10 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
   const handleCreateNew = () => {
     setFormData(prev => ({ ...prev, name: searchTerm }))
     setIsSearchOpen(false)
-    // Opcionalmente, focar no próximo campo
+    toast({
+      title: "Novo Cliente Sugerido",
+      description: `Iniciando preenchimento para: ${searchTerm}`
+    })
   }
 
   const handleSubmit = () => {
@@ -165,7 +167,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             </div>
           )}
 
-          {/* Cliente Principal - CONFORME MODELO DE INSPIRAÇÃO */}
+          {/* Cliente Principal */}
           <div className="relative space-y-2" ref={searchRef}>
             <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
               CLIENTE PRINCIPAL <span className="text-destructive">*</span>
@@ -177,7 +179,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
             >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4a5568]" />
               <div className="pl-12 bg-[#1a1f2e] border border-[#2d3748] rounded-md h-12 flex items-center text-[#4a5568] text-sm">
-                {formData.name || "Pesquisar cliente..."}
+                {formData.name || searchTerm || "Pesquisar cliente..."}
               </div>
             </div>
 
@@ -219,18 +221,23 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                       ))}
                     </ScrollArea>
                   ) : (
-                    <div className="text-center">
-                      <p className="text-[#4a5568] text-sm italic">Nenhum registro encontrado para "{searchTerm}"</p>
+                    <div className="text-center space-y-2">
+                      <p className="text-[#4a5568] text-sm italic">
+                        Nenhum registro encontrado para "{searchTerm}".
+                      </p>
+                      <p className="text-primary/70 text-xs font-bold uppercase tracking-widest">
+                        Sugestão: Clique abaixo para cadastrar este novo cliente.
+                      </p>
                     </div>
                   )}
                 </div>
 
                 <button 
                   onClick={handleCreateNew}
-                  className="w-full p-4 border-t border-[#2d3748] flex items-center gap-3 text-primary hover:bg-primary/5 transition-colors font-bold text-xs uppercase tracking-widest"
+                  className="w-full p-4 border-t border-[#2d3748] flex items-center gap-3 text-primary hover:bg-primary/10 transition-colors font-bold text-xs uppercase tracking-widest bg-primary/5"
                 >
                   <Plus className="h-4 w-4" />
-                  Criar Novo Cliente
+                  CRIAR NOVO CLIENTE
                 </button>
               </div>
             )}
