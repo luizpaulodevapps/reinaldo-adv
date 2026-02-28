@@ -160,7 +160,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     try {
       const newClient = {
         name: quickClientData.name.toUpperCase(),
-        documentNumber: quickRegData.cpfCnpj,
+        documentNumber: quickClientData.cpf,
         type: cleanDoc.length > 11 ? 'corporate' : 'individual',
         status: 'Ativo',
         createdAt: serverTimestamp(),
@@ -419,7 +419,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
-              <Input value={quickClientData.name} onChange={(e) => setQuickClientData({...quickRegData, firstName: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white focus:border-primary/50" />
+              <Input value={quickClientData.name} onChange={(e) => setQuickClientData({...quickClientData, name: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white focus:border-primary/50" />
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">

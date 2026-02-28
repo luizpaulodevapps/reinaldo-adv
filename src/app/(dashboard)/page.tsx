@@ -1,10 +1,8 @@
 /**
  * ARQUIVO NEUTRALIZADO RGMJ
- * Forçamos este componente como dinâmico para evitar conflitos de manifesto
- * com a Landing Page na raiz durante o build da Vercel.
+ * Este arquivo foi desativado para evitar conflitos de rota com a Landing Page principal.
+ * A porta de entrada do Dashboard é /dashboard.
  */
-export const dynamic = 'force-dynamic';
-
-export default function InactiveDashboardRoot() {
+export default function InactivePage() {
   return null;
 }
