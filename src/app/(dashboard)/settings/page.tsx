@@ -51,7 +51,10 @@ import {
   Maximize2,
   Monitor,
   MousePointerClick,
-  Square
+  Square,
+  Fingerprint,
+  Zap,
+  ShieldAlert
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -78,14 +81,14 @@ export default function SettingsPage() {
   // --- ESTADO DO LABORATÓRIO DE TEMAS ---
   const [selectedTheme, setSelectedTheme] = useState("dark")
   const [selectedFont, setSelectedFont] = useState("roboto")
-  const [sidebarColor, setSidebarColor] = useState("#213B37")
-  const [dashboardColor, setDashboardColor] = useState("#020617")
-  const [accentColor, setAccentColor] = useState("#818258")
+  const [sidebarColor, setSidebarColor] = useState("#1e1b2e")
+  const [dashboardColor, setDashboardColor] = useState("#0a0a14")
+  const [accentColor, setAccentColor] = useState("#3b82f6")
   const [cardStyle, setCardStyle] = useState("glass")
 
   // --- ESTADO DE DRAWER & NAVEGAÇÃO ---
-  const [drawerWidth, setDrawerWidth] = useState("extra-largo") // normal, largo, extra-largo
-  const [linkBehavior, setLinkBehavior] = useState("drawer") // drawer, navigate
+  const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
+  const [linkBehavior, setLinkBehavior] = useState("drawer") 
 
   // --- CRUD DE USUÁRIOS ---
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
@@ -112,9 +115,9 @@ export default function SettingsPage() {
         const tp = profile.themePreferences
         setSelectedTheme(tp.preset || "dark")
         setSelectedFont(tp.font || "roboto")
-        setSidebarColor(tp.sidebarColor || "#213B37")
-        setDashboardColor(tp.dashboardColor || "#020617")
-        setAccentColor(tp.accentColor || "#818258")
+        setSidebarColor(tp.sidebarColor || "#1e1b2e")
+        setDashboardColor(tp.dashboardColor || "#0a0a14")
+        setAccentColor(tp.accentColor || "#3b82f6")
         setCardStyle(tp.cardStyle || "glass")
         setDrawerWidth(tp.drawerWidth || "extra-largo")
         setLinkBehavior(tp.linkBehavior || "drawer")
@@ -230,24 +233,14 @@ export default function SettingsPage() {
   const applyPreset = (preset: string) => {
     setSelectedTheme(preset)
     if (preset === 'dark') {
-      setSidebarColor("#213B37")
-      setDashboardColor("#020617")
-      setAccentColor("#818258")
+      setSidebarColor("#1e1b2e")
+      setDashboardColor("#0a0a14")
+      setAccentColor("#3b82f6")
       setCardStyle("glass")
     } else if (preset === 'light') {
-      setSidebarColor("#213B37")
+      setSidebarColor("#1e1b2e")
       setDashboardColor("#FFFFFF")
-      setAccentColor("#213B37")
-      setCardStyle("solid")
-    } else if (preset === 'modern') {
-      setSidebarColor("#0f172a")
-      setDashboardColor("#f1f5f9")
-      setAccentColor("#3b82f6")
-      setCardStyle("bordered")
-    } else if (preset === 'contrast') {
-      setSidebarColor("#000000")
-      setDashboardColor("#000000")
-      setAccentColor("#f5d030")
+      setAccentColor("#1e1b2e")
       setCardStyle("solid")
     }
   }
@@ -275,6 +268,7 @@ export default function SettingsPage() {
           {[
             { id: "perfil", label: "Meu Perfil" },
             { id: "google", label: "Integração Google" },
+            { id: "gov", label: "Integração Gov.br" },
             { id: "usuarios", label: "Usuários" },
             { id: "geral", label: "Institucional" },
             { id: "financeiro", label: "Financeiro" },
@@ -287,14 +281,227 @@ export default function SettingsPage() {
               key={tab.id}
               value={tab.id} 
               className={cn(
-                "data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all rounded-md",
-                tab.id === "temas" && "border border-primary/20"
+                "data-[state=active]:bg-primary data-[state=active]:text-white text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all rounded-md",
+                tab.id === "gov" && "border border-primary/20"
               )}
             >
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
+
+        <TabsContent value="gov" className="mt-0 outline-none space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+              <div className="flex items-center gap-4">
+                <Globe className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1 uppercase tracking-tighter">Conecta Gov (Cadastro Base)</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">
+                    GESTÃO DE ACESSO AO CADASTRO BASE DO CIDADÃO (CBC) VIA API GOV.BR.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-12">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-8">
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <Lock className="h-4 w-4" /> Credenciais OAuth2 (Estaleiro Serpro)
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CLIENT ID (CLIENT_ID)</Label>
+                        <Input 
+                          placeholder="EX: 1a2b3c-4d5e-6f7g-8h9i-0j1k2l3m4n5o" 
+                          className="glass border-white/10 h-14 text-white focus:ring-primary/50 font-mono text-xs" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CLIENT SECRET (CLIENT_SECRET)</Label>
+                        <Input 
+                          type="password"
+                          placeholder="••••••••••••••••••••••••••••••••" 
+                          className="glass border-white/10 h-14 text-white focus:ring-primary/50" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                      <Info className="h-4 w-4" /> Parâmetros de Endpoints
+                    </h4>
+                    <div className="space-y-3 font-mono text-[10px] text-muted-foreground">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-white font-bold">TOKEN URL:</span>
+                        <span className="break-all">https://apigateway.conectagov.estaleiro.serpro.gov.br/oauth2/jwt-token</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-white font-bold">API BASE URL:</span>
+                        <span className="break-all">https://apigateway.conectagov.estaleiro.serpro.gov.br/api/v1/cpf/</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                      <Zap className="h-4 w-4" /> Status e Governança
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-white uppercase">Habilitar Busca CBC</p>
+                          <p className="text-[10px] text-muted-foreground">Permitir injeção de dados de CPFs em tempo real.</p>
+                        </div>
+                        <Switch className="data-[state=checked]:bg-primary" />
+                      </div>
+
+                      <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">VALIDADE DO TOKEN JWT</span>
+                          <Badge variant="outline" className="text-[9px] font-black border-emerald-500/50 text-emerald-500 bg-emerald-500/5">ATIVO (120 MIN)</Badge>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 w-3/4" />
+                        </div>
+                        <p className="text-[9px] text-muted-foreground italic text-center">
+                          Recomendamos armazenar o token em cache no servidor por 2 horas.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-8 rounded-3xl border border-dashed border-primary/20 bg-primary/5 flex flex-col items-center justify-center text-center gap-4">
+                    <ShieldAlert className="h-10 w-10 text-primary opacity-50" />
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-white uppercase tracking-widest">Requisito Institucional</p>
+                      <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
+                        A utilização desta API requer Certificado Digital e-CNPJ da banca RGMJ vinculado ao portal Conecta Gov.
+                      </p>
+                    </div>
+                    <Button variant="outline" className="glass border-primary/20 text-primary text-[10px] font-black uppercase h-10 px-6">Solicitar Acesso</Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/5 flex items-center justify-between">
+                <Button variant="ghost" className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">
+                  Restaurar Padrão Serpro
+                </Button>
+                <div className="flex gap-4">
+                  <Button variant="outline" className="glass border-primary/20 text-primary uppercase font-black text-[11px] px-8 h-14">Testar Autenticação</Button>
+                  <Button onClick={handleSaveSettings} className="blue-gradient text-white font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+                    <Save className="h-5 w-5" /> SALVAR CONFIGURAÇÕES GOV.BR
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="perfil" className="mt-0 outline-none space-y-8">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-2xl">
+                  <AvatarFallback className="text-2xl font-black text-primary bg-secondary uppercase">
+                    {profileFormData.name.substring(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1 uppercase tracking-tight">Meu Perfil Estratégico</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">
+                    GESTÃO DE CREDENCIAIS E IDENTIDADE DIGITAL RGMJ.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO</Label>
+                  <Input 
+                    value={profileFormData.name}
+                    onChange={(e) => setProfileFormData({...profileFormData, name: e.target.value.toUpperCase()})}
+                    className="glass border-white/10 h-14 text-white focus:ring-primary/50 uppercase" 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-MAIL DE ACESSO</Label>
+                  <Input 
+                    value={profileFormData.email}
+                    disabled
+                    className="glass border-white/5 h-14 text-muted-foreground opacity-50 cursor-not-allowed" 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PAPEL (ROLE)</Label>
+                  <div className="glass border-white/5 h-14 flex items-center px-4 rounded-md">
+                    <Badge variant="outline" className="text-[10px] font-black text-primary border-primary/30 uppercase tracking-widest">
+                      {role?.toUpperCase() || "MEMBRO"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <Button onClick={handleUpdateMyProfile} className="blue-gradient text-white font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+                <Save className="h-5 w-5" /> SALVAR MEUS DADOS
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="google" className="mt-0 outline-none space-y-8">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <div className="flex items-center gap-4">
+                <Cloud className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Google Workspace Hub</CardTitle>
+                  <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                    Sincronização profunda com Drive, Calendar e Tasks para a banca RGMJ.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-12">
+              <div className="space-y-6">
+                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <HardDrive className="h-4 w-4" /> Google Drive (Documentos)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA RAIZ (BANCA)</Label>
+                    <Input defaultValue="1A2B3C4D5E6F7G8H9I0J" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA DE MODELOS</Label>
+                    <Input defaultValue="MODELOS_RGMJ_MASTER" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Criar Pastas Automaticamente</h4>
+                    <p className="text-xs text-muted-foreground">Gerar estrutura do 'Kit Cliente' ao protocolar novo processo.</p>
+                  </div>
+                  <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <Button onClick={handleSaveSettings} className="blue-gradient text-white font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+                  <Save className="h-5 w-5" /> SALVAR CONFIGURAÇÕES GOOGLE
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="temas" className="mt-0 outline-none space-y-8">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -334,19 +541,7 @@ export default function SettingsPage() {
                         <div className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
                           <p className="text-[11px] text-muted-foreground leading-relaxed">
-                            <span className="text-white font-bold">FORMATO IDEAL:</span> SVG (Vetorial) para nitidez máxima em qualquer dispositivo, ou PNG com fundo transparente.
-                          </p>
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">
-                            <span className="text-white font-bold">DIMENSÕES:</span> Recomendamos logotipos horizontais (400x100px) ou quadrados para o menu lateral.
-                          </p>
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">
-                            <span className="text-white font-bold">CONTRASTE:</span> Utilize versões claras do logo para o tema escuro e versões escuras para o tema claro.
+                            <span className="text-white font-bold">FORMATO IDEAL:</span> SVG (Vetorial) para nitidez máxima.
                           </p>
                         </div>
                       </div>
@@ -378,8 +573,6 @@ export default function SettingsPage() {
                       {[
                         { id: 'dark', label: 'Midnight Elite', icon: Moon, desc: 'Escuro Profundo' },
                         { id: 'light', label: 'Classic Law', icon: Sun, desc: 'Claro Institucional' },
-                        { id: 'modern', label: 'Modern Minimal', icon: Palette, desc: 'Cinza e Azul' },
-                        { id: 'contrast', label: 'Pure Contrast', icon: Contrast, desc: 'Acessibilidade' },
                       ].map((preset) => (
                         <div 
                           key={preset.id}
@@ -427,143 +620,6 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="space-y-6 pt-6 border-t border-white/5">
-                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                      <Type className="h-4 w-4" /> Arquitetura Tipográfica
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-3">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">FONTE DO SISTEMA</Label>
-                        <Select value={selectedFont} onValueChange={setSelectedFont}>
-                          <SelectTrigger className="glass border-white/10 h-14 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="glass border-white/10">
-                            <SelectItem value="roboto">🤖 ROBOTO (EQUILÍBRIO)</SelectItem>
-                            <SelectItem value="playfair">🖋️ PLAYFAIR DISPLAY (ELEGÂNCIA)</SelectItem>
-                            <SelectItem value="inter">⚡ INTER (PRECISÃO)</SelectItem>
-                            <SelectItem value="montserrat">📐 MONTSERRAT (MODERNIDADE)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">ESTILO DOS CARTÕES</Label>
-                        <Select value={cardStyle} onValueChange={setCardStyle}>
-                          <SelectTrigger className="glass border-white/10 h-14 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="glass border-white/10">
-                            <SelectItem value="glass">🧊 GLASS MORPHISM (TRANSPARENTE)</SelectItem>
-                            <SelectItem value="solid">⬜ SÓLIDO (CLÁSSICO)</SelectItem>
-                            <SelectItem value="bordered">🔳 APENAS BORDAS (MINIMALISTA)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* SEÇÃO: DRAWER & NAVEGAÇÃO */}
-              <Card className="glass border-white/5 overflow-hidden shadow-2xl">
-                <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
-                  <div className="flex items-center gap-4">
-                    <Monitor className="h-8 w-8 text-primary" />
-                    <div>
-                      <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Drawer & Navegação</CardTitle>
-                      <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                        Configure a ergonomia de visualização e o fluxo de cliques no sistema.
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-10 space-y-12">
-                  <div className="space-y-6">
-                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                      <Square className="h-4 w-4" /> Largura do Drawer Padrão
-                    </h4>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold">Defina o tamanho preferido para a abertura inicial das gavetas de visualização.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {[
-                        { id: 'normal', label: 'Normal', desc: '600px', icon: Square },
-                        { id: 'largo', label: 'Largo', desc: '900px', icon: Maximize2 },
-                        { id: 'extra-largo', label: 'Extra Largo', desc: '1200px', icon: Monitor },
-                      ].map((size) => (
-                        <div 
-                          key={size.id}
-                          onClick={() => setDrawerWidth(size.id)}
-                          className={cn(
-                            "cursor-pointer p-8 rounded-xl border transition-all duration-300 flex flex-col items-center text-center gap-4",
-                            drawerWidth === size.id ? "bg-[#10b981] border-[#10b981] text-[#0a0f1e]" : "bg-white/5 border-white/5 text-white hover:border-white/20"
-                          )}
-                        >
-                          <size.icon className={cn("h-8 w-8", drawerWidth === size.id ? "text-[#0a0f1e]" : "text-primary")} />
-                          <div>
-                            <p className="text-sm font-black uppercase tracking-tight">{size.label}</p>
-                            <p className={cn("text-[10px] font-bold mt-1", drawerWidth === size.id ? "text-[#0a0f1e]/70" : "text-muted-foreground")}>{size.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6 pt-6 border-t border-white/5">
-                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                      <MousePointerClick className="h-4 w-4" /> Comportamento de Clique em Links
-                    </h4>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold">Escolha como os links de visualização rápida devem se comportar.</p>
-                    
-                    <div className="space-y-4">
-                      <div 
-                        onClick={() => setLinkBehavior('drawer')}
-                        className={cn(
-                          "cursor-pointer p-6 rounded-xl border transition-all flex items-center gap-6",
-                          linkBehavior === 'drawer' ? "border-[#10b981] bg-[#10b981]/5" : "border-white/5 bg-white/[0.02]"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                          linkBehavior === 'drawer' ? "border-[#10b981]" : "border-white/20"
-                        )}>
-                          {linkBehavior === 'drawer' && <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white uppercase">Padrão: Abrir Drawer</p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            Clique normal abre o Drawer. <span className="text-[#10b981] font-black">Ctrl + Clique</span> navega para a página.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div 
-                        onClick={() => setLinkBehavior('navigate')}
-                        className={cn(
-                          "cursor-pointer p-6 rounded-xl border transition-all flex items-center gap-6",
-                          linkBehavior === 'navigate' ? "border-[#10b981] bg-[#10b981]/5" : "border-white/5 bg-white/[0.02]"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                          linkBehavior === 'navigate' ? "border-[#10b981]" : "border-white/20"
-                        )}>
-                          {linkBehavior === 'navigate' && <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white uppercase">Padrão: Navegar (Mesma Aba)</p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            Clique normal navega para a página. <span className="text-[#10b981] font-black">Ctrl + Clique</span> abre o Drawer.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6">
-                    <Button onClick={handleApplyTheme} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-primary/20">
-                      <Save className="h-5 w-5" /> INJETAR PARÂMETROS DE NAVEGAÇÃO
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -576,241 +632,21 @@ export default function SettingsPage() {
                 
                 <Card className="overflow-hidden border-2 border-primary/20 shadow-2xl bg-[#020617]">
                   <div className="flex h-[550px]">
-                    {/* Sidebar Preview */}
                     <div className="w-24 flex flex-col items-center py-8 gap-8" style={{ backgroundColor: sidebarColor }}>
                       <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center border border-white/5">
                         <Scale className="h-6 w-6 text-white" />
                       </div>
-                      <div className="space-y-4">
-                        <div className="w-10 h-10 rounded-lg bg-white/5"></div>
-                        <div className="w-10 h-10 rounded-lg" style={{ backgroundColor: accentColor }}></div>
-                        <div className="w-10 h-10 rounded-lg bg-white/5"></div>
-                      </div>
                     </div>
-                    
-                    {/* Dashboard Preview */}
                     <div className="flex-1 p-10 space-y-10" style={{ backgroundColor: dashboardColor }}>
                       <div className="h-6 w-48 rounded-full bg-white/5 mb-4"></div>
-                      
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className={cn(
-                          "h-32 rounded-2xl border",
-                          cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
-                          cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
-                          "bg-transparent border-white/20"
-                        )}></div>
-                        <div className={cn(
-                          "h-32 rounded-2xl border",
-                          cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
-                          cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
-                          "bg-transparent border-white/20"
-                        )}></div>
-                      </div>
-                      
-                      <div className={cn(
-                        "h-56 w-full rounded-3xl border",
-                        cardStyle === 'glass' ? "bg-white/5 border-white/10 backdrop-blur-md" : 
-                        cardStyle === 'solid' ? "bg-white/[0.03] border-white/5" : 
-                        "bg-transparent border-white/20"
-                      )}></div>
-                      
+                      <div className="h-56 w-full rounded-3xl border bg-white/5 border-white/10"></div>
                       <div className="h-16 w-full rounded-xl shadow-lg" style={{ backgroundColor: accentColor }}></div>
                     </div>
                   </div>
                 </Card>
-                
-                <div className="mt-8 p-8 rounded-3xl border border-white/5 bg-[#0a0f1e]/50">
-                  <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest leading-relaxed text-center">
-                    NOTA: O PREVIEW ACIMA REFLETE COMO A MARCA RGMJ SERÁ INJETADA EM TODOS OS COMPONENTES OPERACIONAIS DO SISTEMA.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="perfil" className="mt-0 outline-none space-y-8">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
-              <div className="flex items-center gap-6">
-                <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-2xl">
-                  <AvatarFallback className="text-2xl font-black text-primary bg-secondary uppercase">
-                    {profileFormData.name.substring(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1 uppercase tracking-tight">Meu Perfil Estratégico</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">
-                    GESTÃO DE CREDENCIAIS E IDENTIDADE DIGITAL RGMJ.
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-10 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO</Label>
-                  <Input 
-                    value={profileFormData.name}
-                    onChange={(e) => setProfileFormData({...profileFormData, name: e.target.value.toUpperCase()})}
-                    className="glass border-white/10 h-14 text-white focus:ring-primary/50 uppercase" 
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-MAIL DE ACESSO</Label>
-                  <Input 
-                    value={profileFormData.email}
-                    disabled
-                    className="glass border-white/5 h-14 text-muted-foreground opacity-50 cursor-not-allowed" 
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PAPEL (ROLE)</Label>
-                  <div className="glass border-white/5 h-14 flex items-center px-4 rounded-md">
-                    <Badge variant="outline" className="text-[10px] font-black text-primary border-primary/30 uppercase tracking-widest">
-                      {role?.toUpperCase() || "MEMBRO"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <Button onClick={handleUpdateMyProfile} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
-                <Save className="h-5 w-5" /> SALVAR MEUS DADOS
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="google" className="mt-0 outline-none space-y-8">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <div className="flex items-center gap-4">
-                <Cloud className="h-8 w-8 text-primary" />
-                <div>
-                  <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Google Workspace Hub</CardTitle>
-                  <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                    Sincronização profunda com Drive, Calendar e Tasks para a banca RGMJ.
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-10 space-y-12">
-              <div className="space-y-6">
-                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                  <HardDrive className="h-4 w-4" /> Google Drive (Documentos)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA RAIZ (BANCA)</Label>
-                    <Input defaultValue="1A2B3C4D5E6F7G8H9I0J" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
-                  </div>
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA DE MODELOS</Label>
-                    <Input defaultValue="MODELOS_RGMJ_MASTER" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Criar Pastas Automaticamente</h4>
-                    <p className="text-xs text-muted-foreground">Gerar estrutura do 'Kit Cliente' ao protocolar novo processo.</p>
-                  </div>
-                  <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-                </div>
-              </div>
-
-              <div className="space-y-6 pt-6 border-t border-white/5">
-                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                  <Calendar className="h-4 w-4" /> Google Calendar (Audiências)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA AGENDA JURÍDICA</Label>
-                    <Input defaultValue="agenda.banca@rgmj.adv.br" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
-                  </div>
-                  <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5 h-14 mt-7">
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-bold text-white uppercase">Sincronizar Atos Judiciais</h4>
-                    </div>
-                    <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6 pt-6 border-t border-white/5">
-                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                  <CheckSquare className="h-4 w-4" /> Google Tasks (Prazos)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA LISTA DE PRAZOS</Label>
-                    <Input defaultValue="TASKS_PRAZOS_CRITICOS" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
-                  </div>
-                  <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5 h-14 mt-7">
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-bold text-white uppercase">Alerta no Celular (Google Tasks)</h4>
-                    </div>
-                    <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-6">
-                <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-16 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg shadow-primary/20">
-                  <Save className="h-5 w-5" /> SALVAR CONFIGURAÇÕES GOOGLE
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass border-primary/20 bg-primary/5">
-            <CardContent className="p-8 flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <Cpu className="h-8 w-8 text-primary animate-pulse" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Status da Conexão API</h4>
-                  <div className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" /> Google Workspace está operando com latência zero.
-                  </div>
-                </div>
-              </div>
-              <Button variant="outline" className="glass border-primary/20 text-primary uppercase font-black text-[10px] px-8">Testar Conectividade</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="geral" className="mt-0 outline-none">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Dados da Instituição</CardTitle>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Informações principais da banca RGMJ para documentos oficiais.
-              </p>
-            </CardHeader>
-            <CardContent className="p-10 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome do Escritório</Label>
-                  <Input defaultValue="RGMJ Advocacia de Elite" className="glass h-12 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-mail Institucional</Label>
-                  <Input defaultValue="contato@rgmj.adv.br" className="glass h-12 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sede Principal</Label>
-                  <Input defaultValue="Av. Paulista, 2000 - São Paulo/SP" className="glass h-12 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PABX / WhatsApp</Label>
-                  <Input defaultValue="(11) 99999-9999" className="glass h-12 text-white" />
-                </div>
-              </div>
-              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-bold gap-2">
-                <Save className="h-4 w-4" /> Atualizar Cadastro
-              </Button>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="usuarios" className="mt-0 outline-none">
@@ -865,20 +701,10 @@ export default function SettingsPage() {
                           {member.role?.toUpperCase() || "MEMBRO"}
                         </Badge>
                         <div className="flex items-center gap-4">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleOpenEditUser(member)}
-                            className="h-10 w-10 text-muted-foreground hover:text-primary transition-colors"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenEditUser(member)} className="h-10 w-10 text-muted-foreground hover:text-primary transition-colors">
                             <SettingsIcon className="h-5 w-5" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteUser(member.id)}
-                            className="h-10 w-10 text-muted-foreground hover:text-destructive transition-colors"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(member.id)} className="h-10 w-10 text-muted-foreground hover:text-destructive transition-colors">
                             <Trash2 className="h-5 w-5" />
                           </Button>
                         </div>
@@ -891,84 +717,50 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="geral" className="mt-0 outline-none">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Dados da Instituição</CardTitle>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                Informações principais da banca RGMJ para documentos oficiais.
+              </p>
+            </CardHeader>
+            <CardContent className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome do Escritório</Label>
+                  <Input defaultValue="RGMJ Advocacia de Elite" className="glass h-12 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-mail Institucional</Label>
+                  <Input defaultValue="contato@rgmj.adv.br" className="glass h-12 text-white" />
+                </div>
+              </div>
+              <Button onClick={handleSaveSettings} className="blue-gradient text-white font-bold gap-2 h-12 px-8 rounded-lg">
+                <Save className="h-4 w-4" /> Atualizar Cadastro
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="financeiro" className="mt-0 outline-none space-y-6">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
               <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Parâmetros Financeiros</CardTitle>
               <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                DEFINA PADRÕES PARA HONORÁRIOS, VENCIMENTOS, MOEDA E ALERTAS FINANCEIROS.
+                DEFINA PADRÕES PARA HONORÁRIOS, VENCIMENTOS E ALERTAS.
               </p>
             </CardHeader>
             <CardContent className="p-10 space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">HONORÁRIOS PADRÃO (%)</Label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">%</span>
-                    <Input defaultValue="20" type="number" className="glass border-white/10 h-14 pl-10 text-sm text-white focus:ring-primary/50" />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">VENCIMENTO PADRÃO (DIAS)</Label>
-                  <Input defaultValue="30" type="number" className="glass border-white/10 h-14 text-sm text-white focus:ring-primary/50" />
+                  <Input defaultValue="20" type="number" className="glass border-white/10 h-14 text-white focus:ring-primary/50" />
                 </div>
               </div>
-
-              <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">Alertas de Inadimplência</h4>
-                  <p className="text-xs text-muted-foreground">Notificar gestores sobre títulos vencidos automaticamente.</p>
-                </div>
-                <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-              </div>
-
-              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+              <Button onClick={handleSaveSettings} className="blue-gradient text-white font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
                 <Save className="h-5 w-5" /> SALVAR PARÂMETROS
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tags" className="mt-0 outline-none">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Dicionário de Tags</CardTitle>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Classificação semântica para o ecossistema RGMJ.
-              </p>
-            </CardHeader>
-            <CardContent className="p-10">
-              <div className="flex flex-wrap gap-4">
-                {["URGENTE", "PRAZOS CRÍTICOS", "SENTENÇA", "ACORDO", "RECURSO", "PROVAS"].map((tag, i) => (
-                  <Badge key={i} className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white hover:bg-primary hover:text-background transition-all cursor-pointer">
-                    {tag}
-                  </Badge>
-                ))}
-                <Button variant="outline" className="glass border-dashed border-white/20 h-12 px-6 text-xs font-bold gap-2">
-                  <Plus className="h-4 w-4" /> NOVA TAG
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="kit" className="mt-0 outline-none">
-          <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Kit Cliente (Google Drive)</CardTitle>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Automação da estrutura de pastas para novos dossiês.
-              </p>
-            </CardHeader>
-            <CardContent className="p-10 space-y-4">
-              {["01. PETIÇÕES", "02. PROVAS", "03. DECISÕES", "04. CÁLCULOS", "05. DOCUMENTOS PESSOAIS"].map((folder, i) => (
-                <div key={i} className="flex items-center justify-between p-5 rounded-xl bg-white/5 border border-white/10">
-                  <span className="text-xs font-bold text-white tracking-widest uppercase flex items-center gap-3">
-                    <FolderOpen className="h-4 w-4 text-primary" /> {folder}
-                  </span>
-                  <Switch defaultChecked className="data-[state=checked]:bg-primary" />
-                </div>
-              ))}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1045,7 +837,7 @@ export default function SettingsPage() {
             <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-bold text-[10px]">
               Cancelar
             </Button>
-            <Button onClick={handleSaveUser} className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest px-8">
+            <Button onClick={handleSaveUser} className="blue-gradient text-white font-black uppercase text-[10px] tracking-widest px-8 h-12 rounded-lg">
               Confirmar Alterações
             </Button>
           </DialogFooter>
