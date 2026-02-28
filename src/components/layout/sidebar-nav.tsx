@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -53,41 +54,41 @@ const menuGroups = [
   {
     title: "ESTRATÉGICO",
     items: [
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { name: "Relatórios BI", href: "/reports", icon: BarChart3 },
-      { name: "Laboratório", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
+      { name: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
+      { name: "RELATÓRIOS BI", href: "/reports", icon: BarChart3 },
+      { name: "LABORATÓRIO", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
     ]
   },
   {
     title: "COMERCIAL",
     items: [
-      { name: "Triagem", href: "/leads", icon: Zap },
-      { name: "Clientes", href: "/clients", icon: Users },
+      { name: "TRIAGEM", href: "/leads", icon: Zap },
+      { name: "CLIENTES", href: "/clients", icon: Users },
     ]
   },
   {
     title: "OPERACIONAL",
     items: [
-      { name: "Processos", href: "/cases", icon: FolderOpen },
-      { name: "Protocolos", href: "/checklists/execucao", icon: ClipboardList },
-      { name: "Prazos", href: "/deadlines", icon: Clock },
-      { name: "Audiências", href: "/agenda", icon: Gavel },
-      { name: "Modelos", href: "/drafting", icon: BookOpen },
+      { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
+      { name: "PROTOCOLOS", href: "/checklists/execucao", icon: ClipboardList },
+      { name: "PRAZOS", href: "/deadlines", icon: Clock },
+      { name: "AUDIÊNCIAS", href: "/agenda", icon: Gavel },
+      { name: "MODELOS", href: "/drafting", icon: BookOpen },
     ]
   },
   {
     title: "FINANCEIRO",
     items: [
-      { name: "Caixa", href: "/billing", icon: Receipt },
-      { name: "Repasses", href: "/financial", icon: Wallet },
+      { name: "CAIXA", href: "/billing", icon: Receipt },
+      { name: "REPASSES", href: "/financial", icon: Wallet },
     ]
   },
   {
     title: "GESTÃO",
     items: [
       { name: "D.P.", href: "/staff", icon: Users2 },
-      { name: "Equipe", href: "/team", icon: UserCheck },
-      { name: "Configurações", href: "/settings", icon: Settings },
+      { name: "EQUIPE", href: "/team", icon: UserCheck },
+      { name: "CONFIGURAÇÕES", href: "/settings", icon: Settings },
     ]
   }
 ]
@@ -109,7 +110,7 @@ export function SidebarNav() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/5">
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0a0a14]">
       <SidebarHeader className="py-8 px-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 border border-primary/30">
@@ -122,14 +123,14 @@ export function SidebarNav() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-3">
         {menuGroups.map((group, idx) => (
-          <SidebarGroup key={idx}>
-            <SidebarGroupLabel className="text-[9px] font-black text-white/30 tracking-[0.3em] uppercase px-4 group-data-[collapsible=icon]:hidden">
+          <SidebarGroup key={idx} className="py-4">
+            <SidebarGroupLabel className="text-[9px] font-black text-white/20 tracking-[0.3em] uppercase px-4 mb-2 group-data-[collapsible=icon]:hidden">
               {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1.5">
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
                   const isActive = pathname === item.href
@@ -141,22 +142,22 @@ export function SidebarNav() {
                         isActive={isActive}
                         tooltip={item.name}
                         className={cn(
-                          "relative flex items-center gap-3 px-4 py-6 rounded-xl transition-all duration-300 group h-12",
+                          "relative flex items-center gap-3 px-4 py-6 transition-all duration-300 group h-12 rounded-full",
                           isActive 
-                            ? "bg-white/10 text-white" 
-                            : "text-white/70 hover:text-white hover:bg-white/5"
+                            ? "bg-[#1e1b2e] text-white border border-primary/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]" 
+                            : "text-white/60 hover:text-white hover:bg-white/5"
                         )}
                       >
                         <Link href={item.href}>
                           <item.icon className={cn(
                             "h-5 w-5 transition-colors shrink-0",
-                            isActive ? "text-primary" : "text-white/40 group-hover:text-primary/70"
+                            isActive ? "text-primary" : "text-white/30 group-hover:text-primary/70"
                           )} />
-                          <span className="text-[11px] uppercase tracking-widest font-bold whitespace-nowrap">
+                          <span className="text-[11px] uppercase tracking-widest font-black whitespace-nowrap">
                             {item.name}
                           </span>
                           {isActive && (
-                            <div className="absolute left-0 w-1 h-6 bg-primary rounded-r-full shadow-[0_0_10px_rgba(124,58,237,0.5)]" />
+                            <div className="absolute left-0 w-1.5 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)] -translate-x-1" />
                           )}
                         </Link>
                       </SidebarMenuButton>
