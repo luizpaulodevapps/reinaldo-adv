@@ -46,7 +46,6 @@ export default function DeadlinesPage() {
     if (!result || !user) return
     setSaving(true)
     
-    // Converte os dados da IA em uma entidade de Deadline real no Firestore
     const newDeadline = {
       title: result.deadlineType || "Prazo Identificado por IA",
       description: result.summary,
@@ -119,7 +118,7 @@ export default function DeadlinesPage() {
                   <Sparkles className="h-5 w-5" />
                   Inteligência de Prazo
                 </CardTitle>
-              </Header>
+              </CardHeader>
               <CardContent className="p-8 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="p-5 rounded-2xl bg-secondary/30 border border-border/50">
