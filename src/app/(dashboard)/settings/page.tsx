@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -14,20 +14,20 @@ import {
   ChevronRight,
   LayoutGrid,
   Save,
-  Instagram,
   ShieldCheck,
-  DollarSign,
   Tag,
   FolderOpen,
-  FileText,
-  Database,
   Key,
-  Globe,
   Plus,
   Loader2,
   Trash2,
-  X,
-  UserCheck
+  UserCheck,
+  Search,
+  Globe,
+  Database,
+  BarChart3,
+  Mail,
+  Smartphone
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -39,7 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("geral")
+  const [activeTab, setActiveTab] = useState("financeiro")
   const db = useFirestore()
   const { user } = useUser()
 
@@ -52,7 +52,6 @@ export default function SettingsPage() {
     role: "lawyer"
   })
 
-  // Busca Equipe Real do Firestore
   const staffQuery = useMemoFirebase(() => {
     if (!user) return null
     return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
@@ -62,8 +61,8 @@ export default function SettingsPage() {
   
   const handleSaveSettings = () => {
     toast({
-      title: "Configurações Atualizadas",
-      description: "Os parâmetros estratégicos da banca foram salvos com sucesso.",
+      title: "Parâmetros Atualizados",
+      description: "As configurações estratégicas foram salvas no ecossistema RGMJ.",
     })
   }
 
@@ -98,7 +97,6 @@ export default function SettingsPage() {
       toast({ title: "Usuário Atualizado", description: `${userFormData.name} teve seu perfil alterado.` })
     } else {
       const newId = crypto.randomUUID()
-      const docRef = doc(db, "staff_profiles", newId)
       addDocumentNonBlocking(collection(db, "staff_profiles"), {
         id: newId,
         googleId: "",
@@ -142,18 +140,20 @@ export default function SettingsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-transparent border-b border-white/5 h-14 p-0 gap-1 w-full justify-start rounded-none mb-10 overflow-x-auto scrollbar-hide">
           {[
-            { id: "geral", label: "GERAL" },
-            { id: "usuarios", label: "USUARIOS" },
-            { id: "financeiro", label: "FINANCEIRO" },
-            { id: "tags", label: "DICIONÁRIO DE TAGS" },
-            { id: "kit", label: "KIT CLIENTE" },
-            { id: "modelos", label: "MODELOS" },
-            { id: "licenca", label: "LICENÇA" }
+            { id: "geral", label: "Geral" },
+            { id: "seo", label: "SEO & Analytics" },
+            { id: "usuarios", label: "Usuarios" },
+            { id: "financeiro", label: "Financeiro" },
+            { id: "tags", label: "Dicionário de Tags" },
+            { id: "kit", label: "Kit Cliente" },
+            { id: "modelos", label: "Modelos" },
+            { id: "backup", label: "Backup" },
+            { id: "licenca", label: "Licença" }
           ].map((tab) => (
             <TabsTrigger 
               key={tab.id}
               value={tab.id} 
-              className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:border-primary border-2 border-transparent text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-full px-6 transition-all rounded-lg"
+              className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-muted-foreground font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all rounded-md"
             >
               {tab.label}
             </TabsTrigger>
@@ -166,29 +166,58 @@ export default function SettingsPage() {
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
               <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Dados da Instituição</CardTitle>
               <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                Informações principais que serão usadas em documentos e notificações oficiais.
+                Informações principais da banca RGMJ para documentos oficiais.
               </p>
             </CardHeader>
-            <CardContent className="p-10 space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Nome do Escritório</Label>
-                  <Input defaultValue="Bueno Gois Advogados e Associados" className="glass border-white/10 h-14 text-sm text-white focus:ring-primary/50" />
+            <CardContent className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome do Escritório</Label>
+                  <Input defaultValue="RGMJ Advocacia de Elite" className="glass h-12 text-white" />
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">E-mail Administrativo</Label>
-                  <Input defaultValue="contato@buenogoisadvogado.com.br" className="glass border-white/10 h-14 text-sm text-white focus:ring-primary/50" />
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-mail Institucional</Label>
+                  <Input defaultValue="contato@rgmj.adv.br" className="glass h-12 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sede Principal</Label>
+                  <Input defaultValue="Av. Paulista, 2000 - São Paulo/SP" className="glass h-12 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PABX / WhatsApp</Label>
+                  <Input defaultValue="(11) 99999-9999" className="glass h-12 text-white" />
                 </div>
               </div>
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Endereço da Sede</Label>
-                <Input defaultValue="Rua Marechal Deodoro, 1594 - Sala 2, São Bernardo do Campo / SP" className="glass border-white/10 h-14 text-sm text-white focus:ring-primary/50" />
+              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-bold gap-2">
+                <Save className="h-4 w-4" /> Atualizar Cadastro
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: SEO */}
+        <TabsContent value="seo" className="mt-0 outline-none">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">SEO & Analytics</CardTitle>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                Gestão de tráfego e visibilidade digital da banca.
+              </p>
+            </CardHeader>
+            <CardContent className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Google Analytics ID</Label>
+                  <Input placeholder="G-XXXXXXXXXX" className="glass h-12 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Meta Pixel ID</Label>
+                  <Input placeholder="1234567890" className="glass h-12 text-white" />
+                </div>
               </div>
-              <div className="pt-6">
-                <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl">
-                  <Save className="h-5 w-5" /> ATUALIZAR CADASTRO
-                </Button>
-              </div>
+              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-bold gap-2">
+                <Globe className="h-4 w-4" /> Salvar Configurações SEO
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -243,7 +272,7 @@ export default function SettingsPage() {
                           variant="outline" 
                           className="text-[9px] font-black text-primary border-primary/40 px-6 py-1.5 rounded-full bg-primary/5 uppercase tracking-[0.2em]"
                         >
-                          {member.role || "MEMBRO"}
+                          {member.role?.toUpperCase() || "MEMBRO"}
                         </Badge>
                         <div className="flex items-center gap-4">
                           <Button 
@@ -272,31 +301,59 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Financeiro */}
-        <TabsContent value="financeiro" className="mt-0 outline-none">
+        {/* Tab: Financeiro (FIDELIDADE TOTAL À REFERÊNCIA VISUAL) */}
+        <TabsContent value="financeiro" className="mt-0 outline-none space-y-6">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1 flex items-center gap-4">
-                <DollarSign className="h-8 w-8 text-primary" /> Parâmetros Financeiros
-              </CardTitle>
+              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Parâmetros Financeiros</CardTitle>
               <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
-                CONFIGURAÇÃO DE TAXAS E REPASSES.
+                Defina padrões para honorários, vencimentos, moeda e alertas financeiros.
               </p>
             </CardHeader>
             <CardContent className="p-10 space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">DIVISÃO BASE ESCRITÓRIO (%)</Label>
-                  <Input defaultValue="70" type="number" className="glass border-white/10 h-14 text-sm text-white" />
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">HONORÁRIOS PADRÃO (%)</Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">%</span>
+                    <Input defaultValue="20" type="number" className="glass border-white/10 h-14 pl-10 text-sm text-white focus:ring-primary/50" />
+                  </div>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">DIVISÃO BASE ADVOGADO (%)</Label>
-                  <Input defaultValue="30" type="number" className="glass border-white/10 h-14 text-sm text-white" />
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">VENCIMENTO PADRÃO (DIAS)</Label>
+                  <Input defaultValue="30" type="number" className="glass border-white/10 h-14 text-sm text-white focus:ring-primary/50" />
                 </div>
               </div>
-              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl">
-                <Save className="h-5 w-5" /> SALVAR REGRAS
+
+              <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-white">Alertas de Inadimplência</h4>
+                  <p className="text-xs text-muted-foreground">Notificar gestores sobre títulos vencidos automaticamente.</p>
+                </div>
+                <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+              </div>
+
+              <Button onClick={handleSaveSettings} className="gold-gradient text-background font-black gap-3 h-14 px-12 uppercase text-[11px] tracking-widest rounded-xl shadow-lg">
+                <Save className="h-5 w-5" /> SALVAR PARÂMETROS
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Controle de Honorários da Equipe</CardTitle>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                Gerencie as configurações de visualização de honorários para os advogados.
+              </p>
+            </CardHeader>
+            <CardContent className="p-10">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-white/[0.02] border border-white/5">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-white">Exibição de Saldos Individuais</h4>
+                  <p className="text-xs text-muted-foreground">Permitir que advogados visualizem seus próprios saldos de honorários e carteira pendente.</p>
+                </div>
+                <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -304,18 +361,22 @@ export default function SettingsPage() {
         {/* Tab: Tags */}
         <TabsContent value="tags" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1 flex items-center gap-4">
-                <Tag className="h-8 w-8 text-primary" /> Dicionário de Tags
-              </CardTitle>
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Dicionário de Tags</CardTitle>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                Classificação semântica para o ecossistema RGMJ.
+              </p>
             </CardHeader>
             <CardContent className="p-10">
               <div className="flex flex-wrap gap-4">
-                {["URGENTE", "PRAZOS CRÍTICOS", "SENTENÇA", "ACORDO"].map((tag, i) => (
-                  <div key={i} className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white">
+                {["URGENTE", "PRAZOS CRÍTICOS", "SENTENÇA", "ACORDO", "RECURSO", "PROVAS"].map((tag, i) => (
+                  <Badge key={i} className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white hover:bg-primary hover:text-background transition-all cursor-pointer">
                     {tag}
-                  </div>
+                  </Badge>
                 ))}
+                <Button variant="outline" className="glass border-dashed border-white/20 h-12 px-6 text-xs font-bold gap-2">
+                  <Plus className="h-4 w-4" /> NOVA TAG
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -324,15 +385,18 @@ export default function SettingsPage() {
         {/* Tab: Kit Cliente */}
         <TabsContent value="kit" className="mt-0 outline-none">
           <Card className="glass border-white/5 overflow-hidden">
-            <CardHeader className="p-10 border-b border-white/5">
-              <CardTitle className="text-3xl font-headline font-bold text-white mb-1 flex items-center gap-4">
-                <FolderOpen className="h-8 w-8 text-primary" /> Automação Drive
-              </CardTitle>
+            <CardHeader className="p-10 border-b border-white/5 bg-white/[0.01]">
+              <CardTitle className="text-3xl font-headline font-bold text-white mb-1">Kit Cliente (Google Drive)</CardTitle>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-50">
+                Automação da estrutura de pastas para novos dossiês.
+              </p>
             </CardHeader>
             <CardContent className="p-10 space-y-4">
-              {["01. PETIÇÕES", "02. PROVAS", "03. DECISÕES"].map((folder, i) => (
+              {["01. PETIÇÕES", "02. PROVAS", "03. DECISÕES", "04. CÁLCULOS", "05. DOCUMENTOS PESSOAIS"].map((folder, i) => (
                 <div key={i} className="flex items-center justify-between p-5 rounded-xl bg-white/5 border border-white/10">
-                  <span className="text-xs font-bold text-white tracking-widest uppercase">{folder}</span>
+                  <span className="text-xs font-bold text-white tracking-widest uppercase flex items-center gap-3">
+                    <FolderOpen className="h-4 w-4 text-primary" /> {folder}
+                  </span>
                   <Switch defaultChecked className="data-[state=checked]:bg-primary" />
                 </div>
               ))}
@@ -349,12 +413,12 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-10">
-              <div className="flex items-center justify-between p-10 rounded-3xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center justify-between p-10 rounded-3xl bg-primary/5 border border-primary/20 shadow-2xl">
                 <div className="space-y-3">
                   <h4 className="text-4xl font-headline font-bold text-white">Plano LexFlow Elite</h4>
-                  <p className="text-xs text-muted-foreground uppercase font-bold">ASSINATURA ATIVA</p>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">ASSINATURA ATIVA E BLINDADA</p>
                 </div>
-                <Badge className="bg-emerald-500 text-white border-0 font-black text-[11px] uppercase px-6 h-9 rounded-full">STATUS: VITALÍCIO</Badge>
+                <Badge className="bg-emerald-500 text-white border-0 font-black text-[11px] uppercase px-8 h-10 rounded-full shadow-lg">STATUS: VITALÍCIO</Badge>
               </div>
             </CardContent>
           </Card>
