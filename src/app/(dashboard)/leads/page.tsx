@@ -238,7 +238,6 @@ export default function LeadsPage() {
             <DialogContent className="glass border-primary/20 sm:max-w-[700px] p-0 overflow-hidden">
               <div className="p-6 bg-secondary/50 border-b border-primary/20">
                 <DialogHeader>
-                  <DialogHeader>
                   <DialogTitle className="text-primary font-headline text-2xl flex items-center gap-2">
                     <FileText className="h-6 w-6" /> Ficha Completa de Cliente
                   </DialogTitle>
