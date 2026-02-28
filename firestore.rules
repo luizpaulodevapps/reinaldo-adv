@@ -22,7 +22,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (request.auth.token.email == 'luizao16@gmail.com' || getStaffRole() == 'admin');
+      // Prioridade máxima para o e-mail do Dr. Reinaldo
+      return isSignedIn() && (
+        request.auth.token.email == 'luizao16@gmail.com' || 
+        getStaffRole() == 'admin'
+      );
     }
 
     function isFinancial() {
@@ -52,56 +56,56 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow get, list: if isAdmin() || isFinancial() || (resource.data.responsibleStaffIds is list && isOneOfAssigned(resource.data.responsibleStaffIds));
+      allow get, list: if isAdmin() || isFinancial() || (resource != null && resource.data.responsibleStaffIds is list && isOneOfAssigned(resource.data.responsibleStaffIds));
       allow create: if isAdmin() || isFinancial();
       allow update: if (isAdmin() || isFinancial()) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /processes/{processId} {
-      allow get, list: if isAdmin() || isFinancial() || isAssigned(resource.data.responsibleStaffId);
+      allow get, list: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.responsibleStaffId));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
-      allow update: if (isAdmin() || isAssigned(resource.data.responsibleStaffId)) && resource != null;
+      allow update: if (isAdmin() || (resource != null && isAssigned(resource.data.responsibleStaffId))) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /defendants/{defendantId} {
-      allow get, list: if isAdmin() || isAssigned(resource.data.processResponsibleStaffId);
+      allow get, list: if isAdmin() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
-      allow update: if (isAdmin() || isAssigned(resource.data.processResponsibleStaffId)) && resource != null;
+      allow update: if (isAdmin() || (resource != null && isAssigned(resource.data.processResponsibleStaffId))) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /leads/{leadId} {
-      allow get, list: if isAdmin() || getStaffRole() == 'assistant' || isAssigned(resource.data.assignedStaffId);
+      allow get, list: if isAdmin() || getStaffRole() == 'assistant' || (resource != null && isAssigned(resource.data.assignedStaffId));
       allow create: if isAdmin() || getStaffRole() == 'assistant' || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
-      allow update: if (isAdmin() || getStaffRole() == 'assistant' || isAssigned(resource.data.assignedStaffId)) && resource != null;
+      allow update: if (isAdmin() || getStaffRole() == 'assistant' || (resource != null && isAssigned(resource.data.assignedStaffId))) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /hearings/{hearingId} {
-      allow get, list: if isAdmin() || isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId);
+      allow get, list: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
       allow create: if isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
-      allow update: if (isAdmin() || isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)) && resource != null;
+      allow update: if (isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)))) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /deadlines/{deadlineId} {
-      allow get, list: if isAdmin() || isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId);
+      allow get, list: if isAdmin() || (resource != null && (isAssigned(resource.data.staffId) || isAssigned(resource.data.processResponsibleStaffId)));
       allow create: if isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
-      allow update: if (isAdmin() || isAssigned(resource.data.staffId)) && resource != null;
+      allow update: if (isAdmin() || (resource != null && isAssigned(resource.data.staffId))) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /financial_titles/{financialTitleId} {
-      allow get, list: if isAdmin() || isFinancial() || isAssigned(resource.data.processResponsibleStaffId);
+      allow get, list: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.processResponsibleStaffId));
       allow create: if isAdmin() || isFinancial();
       allow update: if (isAdmin() || isFinancial()) && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     match /staff_credits/{staffCreditId} {
-      allow get, list: if isAdmin() || isFinancial() || isAssigned(resource.data.staffId);
+      allow get, list: if isAdmin() || isFinancial() || (resource != null && isAssigned(resource.data.staffId));
       allow create: if isAdmin() || isFinancial();
       allow update: if (isAdmin() || isFinancial()) && resource != null;
       allow delete: if isAdmin() && resource != null;

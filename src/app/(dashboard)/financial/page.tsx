@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -42,7 +41,9 @@ export default function FinancialPage() {
   // Sincroniza perfil para autorização
   const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
   const { data: profile } = useDoc(profileRef)
-  const canQuery = !!(user && profile?.role)
+  
+  const isOwner = user?.email === 'luizao16@gmail.com'
+  const canQuery = !!(user && (isOwner || profile?.role))
 
   // Busca Equipe
   const staffQuery = useMemoFirebase(() => {
@@ -62,9 +63,9 @@ export default function FinancialPage() {
   const stats = useMemo(() => {
     if (!credits) return { liquidado: 0, liberado: 0, retido: 0, ativos: 0 }
     
-    const liquidado = credits.filter(c => c.status === 'Pago').reduce((acc, c) => acc + (c.amount || 0), 0)
-    const liberado = credits.filter(c => c.status === 'Disponível').reduce((acc, c) => acc + (c.amount || 0), 0)
-    const retido = credits.filter(c => c.status === 'Retido').reduce((acc, c) => acc + (c.amount || 0), 0)
+    const liquidado = credits.filter(c => c.status === 'Pago').reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
+    const liberado = credits.filter(c => c.status === 'Disponível').reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
+    const retido = credits.filter(c => c.status === 'Retido').reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
     const ativos = new Set(credits.filter(c => c.status === 'Disponível').map(c => c.staffId)).size
 
     return { liquidado, liberado, retido, ativos }
@@ -81,7 +82,7 @@ export default function FinancialPage() {
     if (!credits) return 0
     return credits
       .filter(c => c.staffId === staffId && c.status === 'Disponível')
-      .reduce((acc, c) => acc + (c.amount || 0), 0)
+      .reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
   }
 
   const isLoading = loadingTeam || loadingCredits
@@ -209,7 +210,7 @@ export default function FinancialPage() {
                           <div className="flex items-center gap-4">
                             <Avatar className="h-10 w-10 border border-primary/20 bg-secondary">
                               <AvatarFallback className="text-[10px] font-black text-primary uppercase">
-                                {member.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                {member.name ? member.name.split(' ').map(n => n[0]).join('').substring(0, 2) : '??'}
                               </AvatarFallback>
                             </Avatar>
                             <span className="text-sm font-bold text-white uppercase tracking-tight">

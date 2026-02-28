@@ -25,15 +25,17 @@ export default function DashboardLayout({
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   useEffect(() => {
+    // Se o e-mail for o do administrador, garantimos que o perfil exista com role admin
     if (user && db && profile === null && !isProfileLoading) {
-      // Se o usuário está logado mas o perfil não existe, cria como admin por padrão
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
+      const isOwnerEmail = user.email === 'luizao16@gmail.com';
+      
       setDocumentNonBlocking(newProfileRef, {
         id: user.uid,
         googleId: user.uid,
         name: user.displayName || 'Membro da Equipe',
         email: user.email || '',
-        role: 'admin',
+        role: isOwnerEmail ? 'admin' : 'lawyer',
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -123,9 +125,12 @@ export default function DashboardLayout({
     );
   }
 
-  // 3. Aguarda Perfil de Administrador (Evita erro de permissão nas páginas)
-  // Adicionado check rigoroso de role para garantir que regras de segurança funcionem
-  if (isProfileLoading || !profile || !profile.role) {
+  // 3. Aguarda Perfil do Usuário
+  // Para o administrador principal (e-mail luizao16@gmail.com), permitimos o acesso mesmo se o documento de perfil Firestore estiver carregando,
+  // pois as regras de segurança agora validam o e-mail diretamente no token.
+  const isOwner = user.email === 'luizao16@gmail.com';
+  
+  if (!isOwner && (isProfileLoading || !profile || !profile.role)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
         <div className="w-16 h-16 rounded-2xl border border-primary/20 flex items-center justify-center animate-bounce">
@@ -139,7 +144,7 @@ export default function DashboardLayout({
     );
   }
 
-  // 4. Layout do Dashboard (Somente após perfil estar pronto)
+  // 4. Layout do Dashboard
   return (
     <div className="flex min-h-screen">
       <aside className="w-72 glass border-r border-border/50 hidden md:block sticky top-0 h-screen overflow-y-auto">

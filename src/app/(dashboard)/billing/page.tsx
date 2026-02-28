@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -34,7 +33,10 @@ export default function BillingPage() {
   // Sincroniza perfil para autorização de query
   const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
   const { data: profile } = useDoc(profileRef)
-  const canQuery = !!(user && profile?.role)
+  
+  // Dr. Reinaldo tem acesso garantido pelo e-mail
+  const isOwner = user?.email === 'luizao16@gmail.com'
+  const canQuery = !!(user && (isOwner || profile?.role))
 
   // Busca todos os títulos financeiros
   const financialQuery = useMemoFirebase(() => {
@@ -44,23 +46,23 @@ export default function BillingPage() {
 
   const { data: transactions, isLoading } = useCollection(financialQuery)
 
-  // Cálculos de métricas baseados no screenshot
+  // Cálculos de métricas baseados no real
   const stats = useMemo(() => {
     if (!transactions) return { real: 0, bruto: 0, pendente: 0, custos: 0 }
     
     const bruto = transactions
       .filter(t => t.status === 'Recebido' && (t.type === 'Honorário' || t.type === 'Repasse'))
-      .reduce((acc, t) => acc + (t.value || 0), 0)
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
     const pendente = transactions
       .filter(t => t.status === 'Pendente' && t.type === 'Honorário')
-      .reduce((acc, t) => acc + (t.value || 0), 0)
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
     const custos = transactions
       .filter(t => t.type === 'Custo Processual' || t.type === 'Reembolso')
-      .reduce((acc, t) => acc + (t.value || 0), 0)
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    // Receita Real simula 30% dos honorários recebidos conforme label do screenshot
+    // Receita Real simula 30% dos honorários recebidos
     const real = bruto * 0.3
 
     return { real, bruto, pendente, custos }
@@ -110,7 +112,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Grid de Métricas (Screenshot Style) */}
+      {/* Grid de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Receita Real */}
         <Card className="glass border-primary/20 relative overflow-hidden">
@@ -201,7 +203,7 @@ export default function BillingPage() {
                     </div>
                     <div className="flex items-center gap-8">
                       <div className="text-right">
-                        <div className="text-lg font-black text-white">R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                        <div className="text-lg font-black text-white">R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                         <Badge 
                           variant={t.status === 'Recebido' ? 'default' : 'outline'}
                           className={cn("text-[9px] font-black uppercase h-5", t.status === 'Recebido' ? "bg-emerald-500 text-white" : "border-white/10")}
