@@ -152,13 +152,13 @@ export default function LaboratorioChecklistsPage() {
         ...listData,
         createdAt: serverTimestamp()
       })
-      toast({ title: "Nova Matriz Criada", description: "O modelo está pronto para execução pela equipe." })
+      toast({ title: "Nova Matriz Criada", description: "O roteiro está pronto para uso na rotina da equipe." })
     }
     setIsDialogOpen(false)
   }
 
   const handleDelete = (id: string) => {
-    if (confirm("Deseja realmente remover esta matriz estratégica? Isso não afetará auditorias já iniciadas.")) {
+    if (confirm("Deseja realmente remover esta matriz estratégica? Isso não afetará rotinas já iniciadas.")) {
       deleteDocumentNonBlocking(doc(db, "checklists", id))
       toast({ variant: "destructive", title: "Matriz Removida" })
     }
@@ -173,7 +173,7 @@ export default function LaboratorioChecklistsPage() {
           <p className="text-muted-foreground max-w-md">Apenas administradores da banca RGMJ podem definir matrizes e roteiros estratégicos no laboratório.</p>
         </div>
         <Button asChild variant="outline" className="glass border-primary/20 text-primary">
-          <Link href="/checklists/execucao">Ir para Execução Operacional</Link>
+          <Link href="/checklists/execucao">Ir para Rotinas Operacionais</Link>
         </Button>
       </div>
     )
@@ -263,7 +263,7 @@ export default function LaboratorioChecklistsPage() {
                 </CardContent>
                 <div className="p-6 pt-0 border-t border-white/5 mt-4">
                    <Button asChild variant="ghost" className="w-full text-[9px] font-black uppercase tracking-[0.2em] text-primary hover:bg-primary/5">
-                     <Link href="/checklists/execucao">Simular Execução <ChevronRight className="h-3 w-3 ml-2" /></Link>
+                     <Link href="/checklists/execucao">Simular Rotina <ChevronRight className="h-3 w-3 ml-2" /></Link>
                    </Button>
                 </div>
               </Card>

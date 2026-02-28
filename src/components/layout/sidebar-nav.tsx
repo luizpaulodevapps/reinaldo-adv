@@ -70,7 +70,7 @@ const menuGroups = [
     title: "OPERACIONAL",
     items: [
       { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
-      { name: "PROTOCOLOS", href: "/checklists/execucao", icon: ClipboardList },
+      { name: "ROTINAS", href: "/checklists/execucao", icon: ClipboardList },
       { name: "PRAZOS", href: "/deadlines", icon: Clock },
       { name: "AUDIÊNCIAS", href: "/agenda", icon: Gavel },
       { name: "MODELOS", href: "/drafting", icon: BookOpen },
