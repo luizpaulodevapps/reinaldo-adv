@@ -43,7 +43,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { LeadForm } from "@/components/leads/lead-form"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -119,17 +119,6 @@ export default function LeadsPage() {
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  // New Lead Form State
-  const [newLead, setNewLead] = useState({
-    name: "",
-    type: "Trabalhista",
-    value: "",
-    priority: "media",
-    phone: "",
-    email: "",
-    notes: ""
-  })
-
   // Ferramentas State
   const [calcValue, setCalcValue] = useState("")
   const [calcProb, setCalcProb] = useState("70")
@@ -174,39 +163,25 @@ export default function LeadsPage() {
     setGeneratedChecklist(lists[checklistArea] || [])
   }
 
-  const handleAddLead = () => {
-    if (!newLead.name) {
-      toast({ variant: "destructive", title: "Erro", description: "O nome do cliente é obrigatório." })
-      return
-    }
-
-    const leadToAdd = {
-      ...newLead,
+  const handleCreateLead = (leadData: any) => {
+    const newLead = {
+      ...leadData,
       id: Math.random().toString(36).substr(2, 9),
       date: "Agora",
       stage: "novo",
-      value: parseFloat(newLead.value) || 0,
+      value: parseFloat(leadData.value) || 0,
+      priority: leadData.priority || "media"
     }
 
-    setLeads([leadToAdd, ...leads])
+    setLeads([newLead, ...leads])
     setIsNewLeadDialogOpen(false)
-    setNewLead({
-      name: "",
-      type: "Trabalhista",
-      value: "",
-      priority: "media",
-      phone: "",
-      email: "",
-      notes: ""
-    })
-
     toast({
-      title: "Lead Cadastrado com Sucesso",
-      description: `${leadToAdd.name} foi adicionado à coluna NOVO.`,
+      title: "Lead Criado!",
+      description: `${newLead.name} foi adicionado com sucesso.`
     })
   }
 
-  const totalValue = leads.reduce((acc, lead) => acc + lead.value, 0)
+  const totalValue = leads.reduce((acc, lead) => acc + (lead.value || 0), 0)
   const hotLeadsCount = leads.filter(l => l.priority === 'alta').length
 
   return (
@@ -228,90 +203,24 @@ export default function LeadsPage() {
                 <Plus className="h-4 w-4" /> Novo Lead
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-primary/20 sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle className="text-primary font-headline text-2xl">Cadastrar Novo Lead</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Nome Completo do Cliente</Label>
-                  <Input 
-                    placeholder="Ex: João da Silva" 
-                    className="glass" 
-                    value={newLead.name} 
-                    onChange={(e) => setNewLead({...newLead, name: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Área do Direito</Label>
-                  <Select value={newLead.type} onValueChange={(val) => setNewLead({...newLead, type: val})}>
-                    <SelectTrigger className="glass">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Trabalhista">Trabalhista</SelectItem>
-                      <SelectItem value="Civil">Civil</SelectItem>
-                      <SelectItem value="Previdenciário">Previdenciário</SelectItem>
-                      <SelectItem value="Empresarial">Empresarial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Valor Estimado da Causa (R$)</Label>
-                  <Input 
-                    placeholder="Ex: 25000" 
-                    type="number"
-                    className="glass" 
-                    value={newLead.value} 
-                    onChange={(e) => setNewLead({...newLead, value: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Prioridade de Conversão</Label>
-                  <Select value={newLead.priority} onValueChange={(val) => setNewLead({...newLead, priority: val})}>
-                    <SelectTrigger className="glass">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alta">Alta (Urgente)</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>WhatsApp / Telefone</Label>
-                  <Input 
-                    placeholder="(11) 99999-9999" 
-                    className="glass" 
-                    value={newLead.phone} 
-                    onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>E-mail (Opcional)</Label>
-                  <Input 
-                    placeholder="cliente@email.com" 
-                    className="glass" 
-                    value={newLead.email} 
-                    onChange={(e) => setNewLead({...newLead, email: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Resumo dos Fatos / Notas Iniciais</Label>
-                  <Textarea 
-                    placeholder="Descreva brevemente o caso..." 
-                    className="glass min-h-[100px]" 
-                    value={newLead.notes} 
-                    onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
-                  />
-                </div>
+            <DialogContent className="glass border-primary/20 sm:max-w-[700px] p-0 overflow-hidden">
+              <div className="p-6 bg-secondary/50 border-b border-primary/20">
+                <DialogHeader>
+                  <DialogTitle className="text-primary font-headline text-2xl flex items-center gap-2">
+                    <UserPlus className="h-6 w-6" /> Triagem de Elite
+                  </DialogTitle>
+                </DialogHeader>
               </div>
-              <DialogFooter>
-                <Button onClick={handleAddLead} className="gold-gradient text-background font-bold w-full py-6">
-                  Finalizar Cadastro de Lead
-                </Button>
-              </DialogFooter>
+              <div className="p-6">
+                <LeadForm 
+                  existingLeads={leads} 
+                  onSubmit={handleCreateLead}
+                  onSelectExisting={(lead) => {
+                    handleOpenLead(lead)
+                    setIsNewLeadDialogOpen(false)
+                  }}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -583,7 +492,6 @@ export default function LeadsPage() {
                   variant="ghost" 
                   className="w-full border-2 border-dashed border-border/30 hover:border-primary/50 h-16 text-muted-foreground group"
                   onClick={() => {
-                    setNewLead({...newLead, priority: "media"});
                     setIsNewLeadDialogOpen(true);
                   }}
                 >
