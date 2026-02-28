@@ -18,12 +18,17 @@ import {
   UserCheck, 
   Target,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Plus,
+  UserPlus,
+  ShieldAlert
 } from "lucide-react"
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query, orderBy } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 
 interface ProcessFormProps {
   onSubmit: (data: any) => void
@@ -43,8 +48,13 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
   const [showResults, setShowResults] = useState(false)
+  const [isQuickClientOpen, setIsQuickClientOpen] = useState(false)
+  const [quickClientData, setQuickClientData] = useState({ name: '', cpf: '' })
+  const [isSavingClient, setIsSavingClient] = useState(false)
+  
   const db = useFirestore()
   const { user } = useUser()
+  const { toast } = useToast()
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -95,6 +105,46 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleOpenQuickClient = () => {
+    setQuickClientData({ ...quickClientData, name: searchTerm.toUpperCase() })
+    setIsQuickClientOpen(true)
+    setShowResults(false)
+  }
+
+  const handleSaveQuickClient = async () => {
+    if (!quickClientData.name) {
+      toast({ variant: "destructive", title: "Nome obrigatório" })
+      return
+    }
+
+    setIsSavingClient(true)
+    try {
+      const newClient = {
+        name: quickClientData.name.toUpperCase(),
+        documentNumber: quickClientData.cpf,
+        type: 'individual',
+        status: 'Ativo',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      const docRef = await addDocumentNonBlocking(collection(db, "clients"), newClient)
+      
+      handleInputChange("clientId", docRef.id)
+      handleInputChange("clientName", newClient.name)
+      setIsQuickClientOpen(false)
+      setSearchTerm("")
+      toast({ 
+        title: "Cliente Cadastrado", 
+        description: `${newClient.name} foi adicionado à base e vinculado ao processo.` 
+      })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro ao cadastrar cliente" })
+    } finally {
+      setIsSavingClient(false)
+    }
   }
 
   const progress = (currentStep / 6) * 100
@@ -198,28 +248,38 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                     />
                   </div>
                   {showResults && searchTerm.length >= 2 && (
-                    <div className="absolute z-50 w-full mt-2 glass border-primary/20 rounded-xl overflow-hidden shadow-2xl">
-                      {filteredClients.length > 0 ? (
-                        filteredClients.map(c => (
-                          <button 
-                            key={c.id}
-                            onClick={() => {
-                              handleInputChange("clientId", c.id)
-                              handleInputChange("clientName", c.name)
-                              setShowResults(false)
-                            }}
-                            className="w-full p-4 flex items-center justify-between hover:bg-primary/10 text-left transition-colors border-b border-white/5 last:border-0"
-                          >
-                            <div>
-                              <p className="text-xs font-bold text-white uppercase">{c.name}</p>
-                              <p className="text-[10px] font-mono text-muted-foreground">{c.documentNumber}</p>
-                            </div>
-                            <Badge variant="outline" className="text-[8px] border-primary/30 text-primary">Selecionar</Badge>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="p-4 text-center text-[10px] text-muted-foreground uppercase font-bold">Nenhum cliente encontrado</div>
-                      )}
+                    <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {filteredClients.length > 0 ? (
+                          filteredClients.map(c => (
+                            <button 
+                              key={c.id}
+                              onClick={() => {
+                                handleInputChange("clientId", c.id)
+                                handleInputChange("clientName", c.name)
+                                setShowResults(false)
+                              }}
+                              className="w-full p-4 flex items-center justify-between hover:bg-primary/10 text-left transition-colors border-b border-white/5 last:border-0"
+                            >
+                              <div>
+                                <p className="text-xs font-bold text-white uppercase">{c.name}</p>
+                                <p className="text-[10px] font-mono text-muted-foreground">{c.documentNumber}</p>
+                              </div>
+                              <Badge variant="outline" className="text-[8px] border-primary/30 text-primary">Selecionar</Badge>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center space-y-4">
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum cliente encontrado</p>
+                          </div>
+                        )}
+                      </div>
+                      <button 
+                        onClick={handleOpenQuickClient}
+                        className="w-full p-4 bg-primary/10 border-t border-white/5 flex items-center justify-center gap-3 text-primary hover:bg-primary/20 transition-all font-black text-[10px] uppercase tracking-widest"
+                      >
+                        <UserPlus className="h-4 w-4" /> CRIAR NOVO CLIENTE: "{searchTerm.toUpperCase()}"
+                      </button>
                     </div>
                   )}
                 </div>
@@ -451,6 +511,56 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
           </Button>
         )}
       </div>
+
+      {/* MODAL DE CADASTRO RÁPIDO DE CLIENTE */}
+      <Dialog open={isQuickClientOpen} onOpenChange={setIsQuickClientOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
+                <ShieldAlert className="h-6 w-6 text-primary" /> Cadastro Exclusivo RGMJ
+              </DialogTitle>
+              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] mt-1">Injeção rápida de novo cliente na base estratégica.</p>
+            </DialogHeader>
+          </div>
+          
+          <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO / RAZÃO *</Label>
+              <Input 
+                value={quickClientData.name} 
+                onChange={(e) => setQuickClientData({...quickClientData, name: e.target.value.toUpperCase()})}
+                className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50 uppercase"
+                placeholder="EX: LUIZ PAULO GONÇALVES"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ</Label>
+              <Input 
+                value={quickClientData.cpf} 
+                onChange={(e) => setQuickClientData({...quickClientData, cpf: e.target.value})}
+                className="bg-[#0d121f] border-white/10 h-14 text-white text-sm focus:ring-1 focus:ring-primary/50"
+                placeholder="000.000.000-00"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between gap-4">
+            <Button variant="ghost" onClick={() => setIsQuickClientOpen(false)} className="text-muted-foreground uppercase font-bold text-[11px] tracking-widest">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveQuickClient} 
+              disabled={isSavingClient || !quickClientData.name}
+              className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black uppercase text-[11px] tracking-widest px-8 h-14 rounded-xl shadow-xl transition-all flex items-center gap-3"
+            >
+              {isSavingClient ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Cadastrar e Vincular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
