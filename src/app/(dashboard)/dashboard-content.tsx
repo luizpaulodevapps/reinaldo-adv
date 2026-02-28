@@ -16,7 +16,8 @@ import {
   Target,
   Plus,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  FileText
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, where, limit, orderBy } from "firebase/firestore"
@@ -72,7 +73,7 @@ export function DashboardContent() {
   const displayName = profile?.name || user?.displayName || "DR. REINALDO GONÇALVES"
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 font-sans">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-white/5 pb-10">
         <div className="space-y-2">
@@ -214,13 +215,13 @@ export function DashboardContent() {
           <Card className="glass border-white/5 p-8 space-y-6">
             <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Protocolo Rápido</h4>
             <div className="grid grid-cols-2 gap-4">
-              <Button asChild variant="outline" className="glass border-white/5 h-20 rounded-2xl flex flex-col gap-2 hover:border-primary/30 group transition-all">
+              <Button asChild variant="outline" className="glass border-white/5 h-20 rounded-2xl flex flex-col gap-2 hover:border-primary/30 group transition-all text-white">
                 <Link href="/leads">
                   <Zap className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
                   <span className="text-[8px] font-black uppercase">Triagem</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="glass border-white/5 h-20 rounded-2xl flex flex-col gap-2 hover:border-primary/30 group transition-all">
+              <Button asChild variant="outline" className="glass border-white/5 h-20 rounded-2xl flex flex-col gap-2 hover:border-primary/30 group transition-all text-white">
                 <Link href="/drafting">
                   <FileText className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
                   <span className="text-[8px] font-black uppercase">Minuta IA</span>

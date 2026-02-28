@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+
 /**
  * ARQUIVO NEUTRALIZADO - RGMJ ELITE ERP
  * 
@@ -5,9 +7,6 @@
  * A Landing Page oficial reside em src/app/page.tsx.
  * O Dashboard oficial reside em src/app/(dashboard)/dashboard/page.tsx.
  */
-
-import { redirect } from 'next/navigation';
-
 export default function NeutralizedPage() {
   redirect('/dashboard');
   return null;
