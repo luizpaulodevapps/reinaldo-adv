@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -7,43 +8,60 @@ import {
   Users2, 
   Search, 
   Plus, 
-  MoreVertical, 
   Mail, 
   Phone, 
   Calendar, 
-  ShieldCheck, 
   Briefcase,
   Loader2,
-  X,
-  FileText,
   Trash2,
-  Settings2
+  Settings2,
+  FileText,
+  MapPin,
+  ShieldCheck,
+  Fingerprint,
+  User,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsUserDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState("geral")
+  const [loadingCep, setLoadingCep] = useState(false)
+
   const [formData, setFormData] = useState({
     name: "",
     cpf: "",
+    rg: "",
+    pis: "",
+    ctps: "",
+    birthDate: "",
     oab: "",
     role: "Advogado",
     email: "",
     phone: "",
     hiringDate: new Date().toISOString().split('T')[0],
     status: "Ativo",
-    specialty: "Trabalhista"
+    specialty: "Trabalhista",
+    zipCode: "",
+    address: "",
+    number: "",
+    neighborhood: "",
+    city: "",
+    state: ""
   })
 
   const db = useFirestore()
@@ -61,7 +79,8 @@ export default function StaffPage() {
     if (!employees) return []
     return employees.filter(e => 
       e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.role.toLowerCase().includes(searchTerm.toLowerCase())
+      e.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.cpf?.includes(searchTerm)
     )
   }, [employees, searchTerm])
 
@@ -70,21 +89,57 @@ export default function StaffPage() {
     setFormData({
       name: "",
       cpf: "",
+      rg: "",
+      pis: "",
+      ctps: "",
+      birthDate: "",
       oab: "",
       role: "Advogado",
       email: "",
       phone: "",
       hiringDate: new Date().toISOString().split('T')[0],
       status: "Ativo",
-      specialty: "Trabalhista"
+      specialty: "Trabalhista",
+      zipCode: "",
+      address: "",
+      number: "",
+      neighborhood: "",
+      city: "",
+      state: ""
     })
+    setActiveTab("geral")
     setIsUserDialogOpen(true)
   }
 
   const handleOpenEdit = (staff: any) => {
     setEditingStaff(staff)
     setFormData({ ...staff })
+    setActiveTab("geral")
     setIsUserDialogOpen(true)
+  }
+
+  const handleCepBlur = async () => {
+    const cep = formData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+
+    setLoadingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          address: data.logradouro,
+          neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf
+        }))
+      }
+    } catch (error) {
+      console.error("Erro ao buscar CEP")
+    } finally {
+      setLoadingCep(false)
+    }
   }
 
   const handleSave = () => {
@@ -119,24 +174,26 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-headline font-bold text-white mb-2">Departamento Pessoal</h1>
-          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Gestão técnica de colaboradores e recursos humanos RGMJ</p>
+          <h1 className="text-4xl font-headline font-bold text-white mb-2 tracking-tight">Departamento Pessoal</h1>
+          <p className="text-muted-foreground uppercase tracking-[0.2em] text-[10px] font-bold opacity-70">
+            Gestão técnica de colaboradores e capital humano da banca RGMJ.
+          </p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar funcionário..." 
-              className="pl-10 glass border-primary/10 h-11 text-xs"
+              placeholder="Pesquisar por nome ou CPF..." 
+              className="pl-12 glass border-white/5 h-12 text-xs text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleOpenCreate} className="gold-gradient text-background font-bold gap-2 px-6 h-11 uppercase text-[10px] tracking-widest rounded-lg">
+          <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-lg shadow-primary/10">
             <Plus className="h-4 w-4" /> Novo Colaborador
           </Button>
         </div>
@@ -146,73 +203,73 @@ export default function StaffPage() {
         {isLoading ? (
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Departamento Pessoal...</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sincronizando DP RGMJ...</span>
           </div>
         ) : filtered.length > 0 ? (
           filtered.map((staff) => (
-            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all duration-500 group overflow-hidden">
+            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all duration-500 group overflow-hidden flex flex-col">
               <div className={cn(
                 "h-1.5 w-full",
                 staff.status === 'Ativo' ? "bg-emerald-500" : "bg-amber-500"
               )} />
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="p-8 space-y-6 flex-1">
                 <div className="flex items-start justify-between">
-                  <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-xl">
+                  <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-2xl">
                     <AvatarImage src={`https://picsum.photos/seed/${staff.id}/200`} />
                     <AvatarFallback className="bg-secondary text-primary font-black text-xl">
                       {staff.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className="text-[9px] uppercase font-bold border-primary/30 text-primary bg-primary/5">
+                    <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 py-1">
                       {staff.role}
                     </Badge>
-                    <Badge variant="outline" className="text-[8px] uppercase border-white/10 text-muted-foreground">
+                    <Badge variant="outline" className="text-[8px] uppercase font-bold border-white/10 text-muted-foreground">
                       {staff.status}
                     </Badge>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors">
-                    {staff.name.toUpperCase()}
+                  <h3 className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors tracking-tight uppercase">
+                    {staff.name}
                   </h3>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
-                    <Briefcase className="h-3 w-3" /> {staff.specialty} • OAB: {staff.oab || "N/A"}
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                    <Briefcase className="h-3 w-3 text-primary/50" /> {staff.specialty} • OAB: {staff.oab || "N/A"}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5 text-primary/50" /> {staff.email}
+                <div className="grid grid-cols-1 gap-3 pt-6 border-t border-white/5">
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 text-primary/40" /> {staff.email || "Sem e-mail"}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5 text-primary/50" /> {staff.phone}
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5 text-primary/40" /> {staff.phone || "Sem contato"}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5 text-primary/50" /> Admissão: {staff.hiringDate}
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5 text-primary/40" /> Admitido em: {staff.hiringDate}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4">
+                <div className="flex items-center justify-between pt-6 mt-auto">
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-primary" onClick={() => handleOpenEdit(staff)}>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-primary hover:bg-primary/5 transition-all" onClick={() => handleOpenEdit(staff)}>
                       <Settings2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-destructive" onClick={() => handleDelete(staff.id)}>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:text-destructive hover:bg-destructive/5 transition-all" onClick={() => handleDelete(staff.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Button variant="outline" className="glass border-primary/10 text-[9px] font-bold uppercase h-8">
-                    Ver Histórico
+                  <Button variant="outline" className="glass border-primary/10 text-[9px] font-black uppercase h-9 px-4 tracking-widest hover:border-primary/50">
+                    Abrir Prontuário
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))
         ) : (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-primary/10">
-            <Users2 className="h-16 w-16 text-muted-foreground opacity-20" />
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
+            <Users2 className="h-16 w-16 text-muted-foreground" />
             <div className="text-center space-y-2">
               <p className="text-sm font-bold text-white uppercase tracking-widest">Base de Funcionários Vazia</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">Cadastre os colaboradores da banca RGMJ para iniciar a gestão operacional.</p>
@@ -225,108 +282,240 @@ export default function StaffPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+              <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
                 {editingStaff ? "Editar Colaborador" : "Novo Colaborador"}
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Ficha técnica para o Departamento Pessoal RGMJ.</p>
+              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] mt-1 opacity-60">Ficha técnica para o Departamento Pessoal RGMJ.</p>
             </DialogHeader>
           </div>
           
-          <div className="p-10 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome Completo *</Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})}
-                  className="glass border-white/10 h-12 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF</Label>
-                <Input 
-                  value={formData.cpf} 
-                  onChange={(e) => setFormData({...formData, cpf: e.target.value})}
-                  className="glass border-white/10 h-12 text-white"
-                  placeholder="000.000.000-00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Cargo / Função *</Label>
-                <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
-                  <SelectTrigger className="glass border-white/10 h-12 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass border-white/10">
-                    <SelectItem value="Advogado">Advogado</SelectItem>
-                    <SelectItem value="Estagiário">Estagiário</SelectItem>
-                    <SelectItem value="Secretária">Secretária</SelectItem>
-                    <SelectItem value="Administrativo">Administrativo</SelectItem>
-                    <SelectItem value="Financeiro">Financeiro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Inscrição OAB</Label>
-                <Input 
-                  value={formData.oab} 
-                  onChange={(e) => setFormData({...formData, oab: e.target.value.toUpperCase()})}
-                  className="glass border-white/10 h-12 text-white"
-                  placeholder="SP 000.000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-mail para Contato</Label>
-                <Input 
-                  value={formData.email} 
-                  onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})}
-                  className="glass border-white/10 h-12 text-white"
-                  type="email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Telefone / WhatsApp</Label>
-                <Input 
-                  value={formData.phone} 
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="glass border-white/10 h-12 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data de Admissão</Label>
-                <Input 
-                  value={formData.hiringDate} 
-                  onChange={(e) => setFormData({...formData, hiringDate: e.target.value})}
-                  className="glass border-white/10 h-12 text-white"
-                  type="date"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status Contratual</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
-                  <SelectTrigger className="glass border-white/10 h-12 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass border-white/10">
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Férias">Férias</SelectItem>
-                    <SelectItem value="Afastado">Afastado</SelectItem>
-                    <SelectItem value="Desligado">Desligado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="bg-[#0a0f1e] px-8 pt-4">
+              <TabsList className="bg-white/5 border border-white/5 h-12 p-1 gap-1 w-full justify-start rounded-xl">
+                <TabsTrigger value="geral" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase tracking-widest h-full px-6 gap-2">
+                  <User className="h-3.5 w-3.5" /> Informações Iniciais
+                </TabsTrigger>
+                <TabsTrigger value="documentos" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase tracking-widest h-full px-6 gap-2">
+                  <Fingerprint className="h-3.5 w-3.5" /> Documentação
+                </TabsTrigger>
+                <TabsTrigger value="endereco" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase tracking-widest h-full px-6 gap-2">
+                  <MapPin className="h-3.5 w-3.5" /> Endereço & Contato
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </div>
 
-          <DialogFooter className="p-10 bg-black/20 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-bold text-[10px] tracking-widest">
-              Cancelar
+            <ScrollArea className="max-h-[500px]">
+              <div className="p-10">
+                <TabsContent value="geral" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
+                      <Input 
+                        value={formData.name} 
+                        onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})}
+                        className="glass border-white/10 h-14 text-white text-base focus:ring-primary/50"
+                        placeholder="EX: DR. REINALDO GONÇALVES"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CARGO / FUNÇÃO *</Label>
+                      <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
+                        <SelectTrigger className="glass border-white/10 h-14 text-white text-base">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass border-white/10">
+                          <SelectItem value="Advogado">Advogado</SelectItem>
+                          <SelectItem value="Estagiário">Estagiário</SelectItem>
+                          <SelectItem value="Secretária">Secretária</SelectItem>
+                          <SelectItem value="Administrativo">Administrativo</SelectItem>
+                          <SelectItem value="Financeiro">Financeiro</SelectItem>
+                          <SelectItem value="Sócio">Sócio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ESPECIALIDADE JURÍDICA</Label>
+                      <Input 
+                        value={formData.specialty} 
+                        onChange={(e) => setFormData({...formData, specialty: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="Ex: Trabalhista / Cível"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">INSCRIÇÃO OAB</Label>
+                      <Input 
+                        value={formData.oab} 
+                        onChange={(e) => setFormData({...formData, oab: e.target.value.toUpperCase()})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="SP 000.000"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA DE ADMISSÃO</Label>
+                      <Input 
+                        value={formData.hiringDate} 
+                        onChange={(e) => setFormData({...formData, hiringDate: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        type="date"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">STATUS CONTRATUAL</Label>
+                      <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+                        <SelectTrigger className="glass border-white/10 h-14 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass border-white/10">
+                          <SelectItem value="Ativo">Ativo</SelectItem>
+                          <SelectItem value="Férias">Férias</SelectItem>
+                          <SelectItem value="Afastado">Afastado</SelectItem>
+                          <SelectItem value="Desligado">Desligado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="documentos" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF</Label>
+                      <Input 
+                        value={formData.cpf} 
+                        onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">RG / ÓRGÃO EMISSOR</Label>
+                      <Input 
+                        value={formData.rg} 
+                        onChange={(e) => setFormData({...formData, rg: e.target.value.toUpperCase()})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="00.000.000-0"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">PIS / PASEP</Label>
+                      <Input 
+                        value={formData.pis} 
+                        onChange={(e) => setFormData({...formData, pis: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="000.00000.00-0"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CARTEIRA DE TRABALHO (CTPS)</Label>
+                      <Input 
+                        value={formData.ctps} 
+                        onChange={(e) => setFormData({...formData, ctps: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="0000000 / 000-0"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA DE NASCIMENTO</Label>
+                      <Input 
+                        value={formData.birthDate} 
+                        onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        type="date"
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="endereco" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-MAIL INSTITUCIONAL</Label>
+                      <Input 
+                        value={formData.email} 
+                        onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})}
+                        className="glass border-white/10 h-14 text-white"
+                        type="email"
+                        placeholder="contato@rgmj.adv.br"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">WHATSAPP / CELULAR</Label>
+                      <Input 
+                        value={formData.phone} 
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="(11) 99999-9999"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                        CEP {loadingCep && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                      </Label>
+                      <Input 
+                        value={formData.zipCode} 
+                        onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                        onBlur={handleCepBlur}
+                        className="glass border-white/10 h-14 text-white"
+                        placeholder="00000-000"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">LOGRADOURO</Label>
+                      <Input 
+                        value={formData.address} 
+                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO / COMPLEMENTO</Label>
+                      <Input 
+                        value={formData.number} 
+                        onChange={(e) => setFormData({...formData, number: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">BAIRRO</Label>
+                      <Input 
+                        value={formData.neighborhood} 
+                        onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CIDADE</Label>
+                      <Input 
+                        value={formData.city} 
+                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                        className="glass border-white/10 h-14 text-white"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                      <Input 
+                        value={formData.state} 
+                        onChange={(e) => setFormData({...formData, state: e.target.value.toUpperCase()})}
+                        className="glass border-white/10 h-14 text-white"
+                        maxLength={2}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+              </div>
+            </ScrollArea>
+          </Tabs>
+
+          <DialogFooter className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">
+              Cancelar Operação
             </Button>
-            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl">
-              Confirmar Registro
+            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-12 h-16 rounded-xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5" /> Confirmar Registro
             </Button>
           </DialogFooter>
         </DialogContent>
