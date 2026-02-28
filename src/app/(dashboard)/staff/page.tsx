@@ -53,7 +53,7 @@ export default function StaffPage() {
     role: "Secretária",
     email: "",
     phone: "",
-    hiringDate: "2026-02-28",
+    hiringDate: new Date().toISOString().split('T')[0],
     status: "Ativo",
     specialty: "Trabalhista / Cível",
     zipCode: "",
@@ -134,6 +134,9 @@ export default function StaffPage() {
           city: data.localidade,
           state: data.uf
         }))
+        toast({ title: "Localização Encontrada", description: data.logradouro })
+      } else {
+        toast({ variant: "destructive", title: "CEP Inválido", description: "Verifique o número digitado." })
       }
     } catch (error) {
       console.error("Erro ao buscar CEP")
@@ -283,12 +286,12 @@ export default function StaffPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsUserDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] p-0 overflow-hidden shadow-2xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+          <div className="p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-5xl uppercase tracking-tighter">
-                {editingStaff ? "Editar Colaborador" : "Novo Colaborador"}
+              <DialogTitle className="text-white font-headline text-6xl uppercase tracking-tighter leading-none mb-2">
+                {editingStaff ? "EDITAR COLABORADOR" : "NOVO COLABORADOR"}
               </DialogTitle>
-              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] mt-2 opacity-60">Ficha técnica para o Departamento Pessoal RGMJ.</p>
+              <p className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.3em] opacity-60">FICHA TÉCNICA PARA O DEPARTAMENTO PESSOAL RGMJ.</p>
             </DialogHeader>
           </div>
           
