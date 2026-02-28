@@ -4,7 +4,6 @@ import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
-  DollarSign, 
   Plus, 
   History, 
   Clock, 
@@ -34,10 +33,9 @@ export default function RefundsPage() {
   const refundsQuery = useMemoFirebase(() => {
     if (!canQuery) return null
     
-    // Se for o dono ou admin, vê todos os reembolsos. Caso contrário, vê apenas os seus.
-    // Para simplificar e evitar o erro de permissão, o dono sempre pode listar tudo.
     const baseQuery = collection(db, "financial_titles")
     
+    // Se for o dono ou admin, vê todos os reembolsos sem filtros de UID
     if (isOwner || role === 'admin' || role === 'financial') {
       return query(
         baseQuery, 
@@ -46,6 +44,7 @@ export default function RefundsPage() {
       )
     }
 
+    // Colaboradores vêm apenas os seus
     return query(
       baseQuery, 
       where("type", "==", "Reembolso"),

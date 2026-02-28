@@ -13,8 +13,8 @@ import {
   ChevronRight,
   Loader2
 } from "lucide-react"
-import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase"
-import { collection, query, where, limit, orderBy, doc } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
+import { collection, query, where, limit, orderBy } from "firebase/firestore"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
