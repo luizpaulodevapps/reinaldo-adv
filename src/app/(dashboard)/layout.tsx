@@ -2,7 +2,7 @@
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
-import { useAuth, useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { useEffect } from 'react';
 import { signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -12,15 +12,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { auth, user, isUserLoading } = useUser() as any;
-  const db = useFirestore();
+  const { auth, user, isUserLoading, firestore: db } = useFirebase();
 
   useEffect(() => {
     if (isUserLoading) return;
     
     if (!user) {
       signInAnonymously(auth);
-    } else {
+    } else if (db) {
       // Garante que o perfil de Staff (Admin) exista para o desenvolvedor
       const profileRef = doc(db, 'staff_profiles', user.uid);
       getDoc(profileRef).then(snap => {
