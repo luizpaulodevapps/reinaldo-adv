@@ -21,7 +21,8 @@ import {
   Fingerprint,
   User,
   X,
-  Heart
+  Heart,
+  Users
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +36,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Textarea } from "@/components/ui/textarea"
 
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -68,7 +70,10 @@ export default function StaffPage() {
     number: "",
     neighborhood: "",
     city: "",
-    state: ""
+    state: "",
+    maritalStatus: "Solteiro(a)",
+    spouseName: "",
+    childrenInfo: ""
   })
 
   const db = useFirestore()
@@ -118,7 +123,10 @@ export default function StaffPage() {
       number: "",
       neighborhood: "",
       city: "",
-      state: ""
+      state: "",
+      maritalStatus: "Solteiro(a)",
+      spouseName: "",
+      childrenInfo: ""
     })
     setActiveTab("geral")
     setIsUserDialogOpen(true)
@@ -312,15 +320,18 @@ export default function StaffPage() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="bg-[#0a0f1e] px-8 pt-6">
-              <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl">
-                <TabsTrigger value="geral" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all">
+              <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl overflow-x-auto scrollbar-hide">
+                <TabsTrigger value="geral" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <User className="h-4 w-4" /> Informações Iniciais
                 </TabsTrigger>
-                <TabsTrigger value="documentos" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all">
+                <TabsTrigger value="documentos" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <Fingerprint className="h-4 w-4" /> Documentação
                 </TabsTrigger>
-                <TabsTrigger value="endereco" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all">
+                <TabsTrigger value="endereco" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
                   <MapPin className="h-4 w-4" /> Endereço & Contato
+                </TabsTrigger>
+                <TabsTrigger value="familia" className="data-[state=active]:bg-[#f5d030] data-[state=active]:text-[#0a0f1e] text-white font-bold text-[10px] uppercase tracking-widest h-full px-8 gap-3 rounded-lg transition-all whitespace-nowrap">
+                  <Heart className="h-4 w-4" /> Família & Dependentes
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -605,6 +616,51 @@ export default function StaffPage() {
                         className="bg-[#0d121f] border-white/10 h-14 text-white"
                         maxLength={2}
                       />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="familia" className="mt-0 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">ESTADO CIVIL</Label>
+                      <Select value={formData.maritalStatus} onValueChange={(v) => setFormData({...formData, maritalStatus: v})}>
+                        <SelectTrigger className="bg-[#0d121f] border-white/10 h-14 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                          <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                          <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                          <SelectItem value="União Estável">União Estável</SelectItem>
+                          <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                          <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">NOME DO CÔNJUGE (SE HOUVER)</Label>
+                      <Input 
+                        value={formData.spouseName} 
+                        onChange={(e) => setFormData({...formData, spouseName: e.target.value.toUpperCase()})}
+                        className="bg-[#0d121f] border-white/10 h-14 text-white"
+                        placeholder="NOME COMPLETO DO PARCEIRO(A)"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2 space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2">
+                        <Users className="h-3 w-3 text-primary" /> DEPENDENTES / FILHOS (NOME E DATA NASCIMENTO)
+                      </Label>
+                      <Textarea 
+                        value={formData.childrenInfo} 
+                        onChange={(e) => setFormData({...formData, childrenInfo: e.target.value})}
+                        className="bg-[#0d121f] border-white/10 min-h-[150px] text-white text-sm"
+                        placeholder="EX: 1. João Silva Jesus - 12/05/2015&#10;2. Maria Silva Jesus - 30/08/2018"
+                      />
+                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest italic">
+                        * Informações essenciais para IRRF e benefícios corporativos.
+                      </p>
                     </div>
                   </div>
                 </TabsContent>
