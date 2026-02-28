@@ -12,7 +12,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-headline font-bold text-primary mb-2">
-          Bem-vindo, Dr. Reinaldo Gonçalves
+          Bem-vindo, Dr. Reinaldo Gonçalves Miguel de Jesus
         </h1>
         <p className="text-muted-foreground">Visão geral da sua operação jurídica hoje.</p>
       </div>

@@ -66,7 +66,7 @@ export function SidebarNav() {
             <AvatarFallback className="bg-primary/10 text-primary font-bold">RG</AvatarFallback>
           </Avatar>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold truncate text-foreground">Dr. Reinaldo Gonçalves</span>
+            <span className="text-sm font-bold truncate text-foreground">Dr. Reinaldo G. M. de Jesus</span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">OAB/SP 000.000</span>
           </div>
         </div>
