@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Design Tokens RGMJ - Tema Deep Blue Elite (Fidelidade à Referência) */
+    /* Design Tokens RGMJ - Tema Deep Blue Elite (Blue Version) */
     --background: 240 10% 4%; /* #0a0a14 - Quase Preto */
     --foreground: 210 40% 98%;
     
@@ -14,8 +14,8 @@
     --popover: 240 10% 5%;
     --popover-foreground: 210 40% 98%;
     
-    /* Primária: Violeta Neon para Contraste Moderno */
-    --primary: 262 83% 58%; /* #7c3aed - Violeta */
+    /* Primária: Azul Vibrante para Contraste Moderno */
+    --primary: 217 91% 60%; /* #3b82f6 - Azul */
     --primary-foreground: 210 40% 98%;
     
     /* Secundária: Azul Profundo da Sidebar */
@@ -25,7 +25,7 @@
     --muted: 244 20% 12%;
     --muted-foreground: 215 20% 65%;
     
-    --accent: 262 83% 58%;
+    --accent: 217 91% 60%;
     --accent-foreground: 210 40% 98%;
     
     --destructive: 0 84% 60%;
@@ -33,19 +33,19 @@
     
     --border: 244 28% 20%;
     --input: 244 28% 20%;
-    --ring: 262 83% 58%;
+    --ring: 217 91% 60%;
     
     --radius: 1rem;
 
     /* Sidebar specific tokens */
     --sidebar-background: 244 28% 15%;
-    --sidebar-foreground: 0 0% 100%; /* Texto Branco */
-    --sidebar-primary: 262 83% 58%;
+    --sidebar-foreground: 0 0% 100%; /* Texto Branco Puro */
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 244 28% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 244 28% 20%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -70,14 +70,19 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.violet-gradient {
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+.blue-gradient {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
 }
 
+/* Mantendo por compatibilidade se houver referências antigas, mas agora azul */
+.violet-gradient {
+  @apply blue-gradient;
+}
+
 .hover-gold:hover {
-  border-color: rgba(124, 58, 237, 0.4);
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
 }
 
 /* Scrollbar Invisível para SaaS */

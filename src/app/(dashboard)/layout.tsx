@@ -95,7 +95,7 @@ export default function DashboardLayout({
             <Button 
               onClick={handleGoogleLogin}
               disabled={isLoggingIn}
-              className="w-full h-14 violet-gradient hover:opacity-90 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-4"
+              className="w-full h-14 blue-gradient hover:opacity-90 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-4"
             >
               {isLoggingIn ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
