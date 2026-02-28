@@ -36,6 +36,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
+import { addMonths, format, parseISO } from "date-fns"
 
 export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -85,21 +86,35 @@ export default function BillingPage() {
   const handleCreateTitle = (data: any) => {
     if (!user) return
 
-    const newTitle = {
-      ...data,
-      value: data.numericValue,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+    const iterations = data.isRecurring ? (data.recurrenceMonths || 1) : 1
+    const baseDueDate = parseISO(data.dueDate)
+
+    for (let i = 0; i < iterations; i++) {
+      const currentDueDate = addMonths(baseDueDate, i)
+      const formattedDueDate = format(currentDueDate, 'yyyy-MM-dd')
+      
+      const newTitle = {
+        ...data,
+        dueDate: formattedDueDate,
+        value: data.numericValue,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+      
+      // Limpeza de campos internos de UI
+      delete newTitle.numericValue
+      delete newTitle.recurrenceMonths
+
+      addDocumentNonBlocking(collection(db, "financial_titles"), newTitle)
     }
 
-    addDocumentNonBlocking(collection(db, "financial_titles"), newTitle)
-      .then(() => {
-        setIsNewTitleOpen(false)
-        toast({
-          title: "Operação Registrada",
-          description: `O lançamento de R$ ${data.value} foi injetado no fluxo.`
-        })
-      })
+    setIsNewTitleOpen(false)
+    toast({
+      title: iterations > 1 ? "Recorrência Programada" : "Operação Registrada",
+      description: iterations > 1 
+        ? `${iterations} lançamentos de R$ ${data.value} foram injetados no fluxo.`
+        : `O lançamento de R$ ${data.value} foi injetado no fluxo.`
+    })
   }
 
   const TransactionList = ({ items }: { items: any[] }) => (

@@ -7,7 +7,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Search, ShieldCheck, Wallet, Gavel, Scale, Loader2, X, Plus, Calculator, Building2, UserCircle, Zap } from "lucide-react"
+import { 
+  Search, 
+  ShieldCheck, 
+  Wallet, 
+  Gavel, 
+  Scale, 
+  Loader2, 
+  X, 
+  Plus, 
+  Calculator, 
+  Building2, 
+  UserCircle, 
+  Zap,
+  Calendar
+} from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
 import { cn } from "@/lib/utils"
@@ -32,7 +46,8 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
     description: "",
     value: "0,00",
     dueDate: new Date().toISOString().split('T')[0],
-    isRecurring: false
+    isRecurring: false,
+    recurrenceMonths: 1
   })
 
   const processesQuery = useMemoFirebase(() => {
@@ -133,6 +148,7 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
               onChange={(e) => {
                 setProcessSearch(e.target.value)
                 setShowProcessSearch(true)
+                if (formData.processNumber) setFormData({...formData, processNumber: "", processId: ""})
               }}
               onFocus={() => setShowProcessSearch(true)}
             />
@@ -198,16 +214,50 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
         </div>
       </div>
 
-      <div className="p-6 rounded-xl glass border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
-        <div className="space-y-1">
-          <h4 className="text-sm font-bold text-white uppercase tracking-tight">Lançamento Recorrente?</h4>
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Habilitar para despesas fixas mensais</p>
+      <div className="space-y-6">
+        <div className="p-6 rounded-xl glass border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-white uppercase tracking-tight">Lançamento Recorrente?</h4>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Habilitar para despesas fixas mensais</p>
+          </div>
+          <Switch 
+            checked={formData.isRecurring} 
+            onCheckedChange={(v) => setFormData({...formData, isRecurring: v})}
+            className="data-[state=checked]:bg-primary"
+          />
         </div>
-        <Switch 
-          checked={formData.isRecurring} 
-          onCheckedChange={(v) => setFormData({...formData, isRecurring: v})}
-          className="data-[state=checked]:bg-primary"
-        />
+
+        {formData.isRecurring && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5" /> DURAÇÃO DA RECORRÊNCIA (MESES)
+                </Label>
+                <div className="relative">
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max="60"
+                    className="glass border-primary/30 h-16 text-2xl font-black text-white text-center focus:ring-primary/50"
+                    value={formData.recurrenceMonths}
+                    onChange={(e) => setFormData({...formData, recurrenceMonths: parseInt(e.target.value) || 1})}
+                  />
+                  <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary uppercase tracking-widest pointer-events-none">
+                    MESES
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-4">
+                <Zap className="h-5 w-5 text-primary animate-pulse" />
+                <p className="text-[10px] text-primary font-bold uppercase tracking-tight leading-relaxed">
+                  A INTELIGÊNCIA FINANCEIRA DA RGMJ CRIARÁ {formData.recurrenceMonths} LANÇAMENTOS AUTOMÁTICOS COM VENCIMENTOS ESCALONADOS.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4">
