@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -10,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Search, Target, ShieldCheck, X, Globe, Zap, ShieldAlert } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { queryCpfGovBr } from "@/services/gov-br"
 
 interface ClientFormProps {
   onSubmit: (data: any) => void
@@ -63,47 +63,63 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     const doc = formData.cpf.replace(/\D/g, "")
     
     if (doc.length === 11) {
-      toast({ 
-        title: "Consulta CPF (Gov.br)", 
-        description: "A integração com o Cadastro Base do Cidadão requer chaves de acesso Gov.br Gold/Silver. Por ora, preencha manualmente." 
-      })
+      setLoadingApi(true)
+      try {
+        const data = await queryCpfGovBr(doc)
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            personType: "Pessoa Física",
+            firstName: data.nome?.split(' ')[0] || "",
+            lastName: data.nome?.split(' ').slice(1).join(' ') || "",
+            birthDate: data.data_nascimento || prev.birthDate,
+            motherName: data.nome_mae || prev.motherName,
+          }))
+          toast({ title: "Injeção CBC Gov.br", description: `Cidadão: ${data.nome} localizado.` })
+        } else {
+          toast({ variant: "destructive", title: "CPF não localizado", description: "O documento não consta no Cadastro Base." })
+        }
+      } catch (error) {
+        toast({ variant: "destructive", title: "Erro Gov.br", description: "Verifique as credenciais da API no servidor." })
+      } finally {
+        setLoadingApi(false)
+      }
       return
     }
 
-    if (doc.length !== 14) {
-      toast({ variant: "destructive", title: "Documento Inválido", description: "Insira 11 dígitos para CPF ou 14 para CNPJ." })
+    if (doc.length === 14) {
+      setLoadingApi(true)
+      try {
+        const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
+        if (!response.ok) throw new Error()
+        const data = await response.json()
+        
+        setFormData(prev => ({
+          ...prev,
+          personType: "Pessoa Jurídica",
+          firstName: data.razao_social,
+          lastName: data.nome_fantasia || "",
+          email: data.email || prev.email,
+          phone: data.ddd_telefone_1 || prev.phone,
+          zipCode: data.cep,
+          address: data.logradouro,
+          number: data.numero,
+          complement: data.complemento || "",
+          neighborhood: data.bairro,
+          city: data.municipio,
+          state: data.uf
+        }))
+
+        toast({ title: "Dados Receita Federal", description: `Empresa: ${data.razao_social} injetada com sucesso.` })
+      } catch (error) {
+        toast({ variant: "destructive", title: "Erro na Consulta", description: "CNPJ não localizado." })
+      } finally {
+        setLoadingApi(false)
+      }
       return
     }
 
-    setLoadingApi(true)
-    try {
-      // Consulta Pública via BrasilAPI para CNPJ
-      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
-      if (!response.ok) throw new Error()
-      const data = await response.json()
-      
-      setFormData(prev => ({
-        ...prev,
-        personType: "Pessoa Jurídica",
-        firstName: data.razao_social,
-        lastName: data.nome_fantasia || "",
-        email: data.email || prev.email,
-        phone: data.ddd_telefone_1 || prev.phone,
-        zipCode: data.cep,
-        address: data.logradouro,
-        number: data.numero,
-        complement: data.complemento || "",
-        neighborhood: data.bairro,
-        city: data.municipio,
-        state: data.uf
-      }))
-
-      toast({ title: "Dados Receita Federal", description: `Empresa: ${data.razao_social} injetada com sucesso.` })
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro na Consulta", description: "CNPJ não encontrado ou falha na API externa." })
-    } finally {
-      setLoadingApi(false)
-    }
+    toast({ variant: "destructive", title: "Documento Inválido", description: "Insira 11 dígitos para CPF ou 14 para CNPJ." })
   }
 
   const handleCepBlur = async () => {
@@ -179,7 +195,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                 <div className="relative">
                   <Input 
                     placeholder="000.000.000-00 ou 00.000.000/0000-00" 
-                    className={cn(inputClass, "pr-40")} 
+                    className={cn(inputClass, "pr-44")} 
                     value={formData.cpf} 
                     onChange={(e) => handleInputChange("cpf", e.target.value)} 
                   />
@@ -190,11 +206,11 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
                     className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 gap-2 text-[9px] font-black uppercase px-4 rounded-md border border-primary/20"
                   >
                     {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-                    Consultar API Gov.br
+                    Consulta Oficial API
                   </Button>
                 </div>
                 <p className="text-[9px] text-primary/50 font-bold uppercase tracking-widest mt-1">
-                  * Consulta via CBC (Gov.br) ou Receita Federal
+                  * Consulta via CBC (Gov.br) para CPF ou RFB para CNPJ.
                 </p>
               </div>
               <div className="space-y-1">

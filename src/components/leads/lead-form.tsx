@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -13,6 +12,7 @@ import { Search, Loader2, AlertCircle, Target, X, Plus, ShieldAlert, Zap, Globe 
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { queryCpfGovBr } from "@/services/gov-br"
 
 interface Lead {
   id: string
@@ -103,37 +103,51 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     const doc = quickRegData.cpfCnpj.replace(/\D/g, "")
     
     if (doc.length === 11) {
-      toast({ 
-        title: "API Gov.br Restrita", 
-        description: "A consulta oficial de CPF requer convênio Conecta Gov. Favor preencher o nome manualmente." 
-      })
+      setLoadingApi(true)
+      try {
+        const data = await queryCpfGovBr(doc)
+        if (data) {
+          setQuickRegData(prev => ({
+            ...prev,
+            firstName: data.nome?.split(' ')[0] || "",
+            lastName: data.nome?.split(' ').slice(1).join(' ') || "",
+          }))
+          toast({ title: "Consulta Gov.br CBC", description: `Dados de ${data.nome} injetados.` })
+        } else {
+          toast({ variant: "destructive", title: "CPF não localizado" })
+        }
+      } catch (error) {
+        toast({ variant: "destructive", title: "Erro na API Gov.br", description: "Verifique credenciais no servidor." })
+      } finally {
+        setLoadingApi(false)
+      }
       return
     }
 
-    if (doc.length !== 14) {
-      toast({ variant: "destructive", title: "Documento Inválido", description: "CNPJ requer 14 dígitos." })
+    if (doc.length === 14) {
+      setLoadingApi(true)
+      try {
+        const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
+        if (!response.ok) throw new Error()
+        const data = await response.json()
+        
+        setQuickRegData(prev => ({
+          ...prev,
+          firstName: data.razao_social,
+          lastName: data.nome_fantasia || "",
+          whatsapp: data.ddd_telefone_1 || prev.whatsapp
+        }))
+
+        toast({ title: "Consulta Base RFB", description: "Dados da empresa injetados com sucesso." })
+      } catch (error) {
+        toast({ variant: "destructive", title: "Falha na API", description: "Empresa não localizada." })
+      } finally {
+        setLoadingApi(false)
+      }
       return
     }
 
-    setLoadingApi(true)
-    try {
-      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`)
-      if (!response.ok) throw new Error()
-      const data = await response.json()
-      
-      setQuickRegData(prev => ({
-        ...prev,
-        firstName: data.razao_social,
-        lastName: data.nome_fantasia || "",
-        whatsapp: data.ddd_telefone_1 || prev.whatsapp
-      }))
-
-      toast({ title: "Consulta Base RFB", description: "Dados da empresa injetados com sucesso." })
-    } catch (error) {
-      toast({ variant: "destructive", title: "Falha na API", description: "Empresa não localizada." })
-    } finally {
-      setLoadingApi(false)
-    }
+    toast({ variant: "destructive", title: "Documento Inválido" })
   }
 
   const handleCepBlur = async () => {
@@ -181,7 +195,10 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     setQuickRegData({
       ...quickRegData,
       firstName: names[0] || "",
-      lastName: names.slice(1).join(" ") || ""
+      lastName: names.slice(1).join(" ") || "",
+      cpfCnpj: "",
+      whatsapp: "",
+      area: "Trabalhista"
     })
     setIsQuickRegOpen(true)
     setIsSearchOpen(false)
@@ -459,7 +476,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               <div className="relative">
                 <Input 
                   placeholder="000.000.000-00 ou 00.000.000/0000-00" 
-                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50 pr-32" 
+                  className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50 pr-36" 
                   value={quickRegData.cpfCnpj}
                   onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: e.target.value})}
                 />
@@ -469,7 +486,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
                   className="absolute right-1 top-1 h-10 bg-primary/10 text-primary hover:bg-primary/20 px-4 text-[9px] font-black uppercase border border-primary/20"
                 >
                   {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-                  API Gov.br
+                  Consultar API
                 </Button>
               </div>
             </div>
