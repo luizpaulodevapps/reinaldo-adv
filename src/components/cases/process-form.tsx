@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -161,14 +160,14 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     try {
       const newClient = {
         name: quickClientData.name.toUpperCase(),
-        documentNumber: quickClientData.cpf,
+        documentNumber: quickRegData.cpfCnpj,
         type: cleanDoc.length > 11 ? 'corporate' : 'individual',
         status: 'Ativo',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }
 
-      const docResult = await addDocumentNonBlocking(collection(db, "clients"), newClient) as DocumentReference;
+      const docResult = await addDocumentNonBlocking(collection(db, "clients"), newClient) as any;
       
       if (docResult && docResult.id) {
         handleInputChange("clientId", docResult.id)
@@ -399,7 +398,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
       </div>
 
       <Dialog open={isQuickClientOpen} onOpenChange={setIsQuickClientOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
@@ -412,7 +411,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ *</Label>
               <div className="relative">
-                <Input value={quickClientData.cpf} onChange={(e) => setQuickRegData({...quickClientData, cpf: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white" placeholder="000.000.000-00" />
+                <Input value={quickClientData.cpf} onChange={(e) => setQuickClientData({...quickClientData, cpf: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white" placeholder="000.000.000-00" />
                 <Button variant="ghost" onClick={handleDocumentLookup} disabled={loadingApi} className="absolute right-1 top-1 h-12 bg-primary/10 text-primary uppercase text-[9px] px-4">
                   {loadingApi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />} VALORAR
                 </Button>
@@ -420,7 +419,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
-              <Input value={quickClientData.name} onChange={(e) => setQuickRegData({...quickClientData, name: e.target.value.toUpperCase()})} className="bg-[#0d121f] border-white/10 h-14 text-white uppercase" />
+              <Input value={quickClientData.name} onChange={(e) => setQuickClientData({...quickRegData, firstName: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white focus:border-primary/50" />
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">

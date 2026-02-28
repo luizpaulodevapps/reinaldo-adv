@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -352,7 +351,7 @@ export default function LaboratorioChecklistsPage() {
                       <SelectItem value="Previdenciário">👴 Previdenciário</SelectItem>
                       <SelectItem value="Criminal">🚔 Criminal</SelectItem>
                       <SelectItem value="Família">❤️ Família</SelectItem>
-                      <SelectItem value="Tributário">💰 Tributário</SelectItem>
+                      <SelectItem value="Tributário">Tributário</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
