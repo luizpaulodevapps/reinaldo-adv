@@ -11,8 +11,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-headline font-bold text-primary mb-2">Bem-vindo ao LexFlow</h1>
-        <p className="text-muted-foreground">Visão geral da operação jurídica hoje.</p>
+        <h1 className="text-4xl font-headline font-bold text-primary mb-2">
+          Bem-vindo, Dr. Reinaldo Gonçalves
+        </h1>
+        <p className="text-muted-foreground">Visão geral da sua operação jurídica hoje.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
