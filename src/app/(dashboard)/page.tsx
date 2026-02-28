@@ -1,19 +1,8 @@
-"use client"
-
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
 
 /**
- * Rota raiz do grupo Dashboard. 
- * Alterada para renderização nula para evitar conflito com a Landing Page (src/app/page.tsx).
+ * Rota interna neutralizada para evitar conflito com a Landing Page (src/app/page.tsx).
+ * O acesso ao Dashboard é feito exclusivamente via /dashboard.
  */
-export default function DashboardRootRedirect() {
-  const router = useRouter()
-
-  useEffect(() => {
-    // Se por algum motivo o usuário cair aqui, redirecionamos para o dashboard real
-    router.replace("/dashboard")
-  }, [router])
-
-  return null
+export default function DashboardRootPlaceholder() {
+  return null;
 }

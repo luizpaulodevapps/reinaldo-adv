@@ -1,42 +1,40 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore';
 
 /**
- * Inicializa os serviços do Firebase de forma resiliente para ambientes de build (Vercel/CI).
- * Evita o erro 'app/no-options' e garante que a aplicação não trave durante a compilação estática.
+ * Inicializa os serviços do Firebase de forma resiliente.
+ * Se as variáveis de ambiente não estiverem disponíveis (como no build time),
+ * utiliza uma configuração dummy para não travar a compilação.
  */
 export function initializeFirebase() {
   if (getApps().length > 0) {
     return getSdks(getApp());
   }
 
-  let firebaseApp;
+  let firebaseApp: FirebaseApp;
   
-  try {
-    // 1. Tenta inicialização automática (específica para Firebase App Hosting)
-    firebaseApp = initializeApp();
-  } catch (autoInitError) {
-    // 2. Fallback para configuração manual via variáveis de ambiente
-    // Verifica se temos uma configuração válida antes de inicializar
-    if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined") {
-      firebaseApp = initializeApp(firebaseConfig);
-    } else {
-      // Durante o build em CI/CD, as variáveis NEXT_PUBLIC podem não estar presentes.
-      // Inicializamos com um placeholder para permitir que o Next.js complete o rastreamento de dependências.
-      console.warn("Aviso RGMJ: Configuração do Firebase ausente no ambiente de Build. Usando modo de segurança.");
-      firebaseApp = initializeApp({
-        apiKey: "BUILD_TIME_PLACEHOLDER",
-        authDomain: "BUILD_TIME_PLACEHOLDER",
-        projectId: "BUILD_TIME_PLACEHOLDER",
-        storageBucket: "BUILD_TIME_PLACEHOLDER",
-        messagingSenderId: "BUILD_TIME_PLACEHOLDER",
-        appId: "BUILD_TIME_PLACEHOLDER"
-      });
-    }
+  const isConfigValid = firebaseConfig && 
+                        firebaseConfig.apiKey && 
+                        firebaseConfig.apiKey !== "undefined" &&
+                        !firebaseConfig.apiKey.startsWith("NEXT_PUBLIC");
+
+  if (isConfigValid) {
+    firebaseApp = initializeApp(firebaseConfig);
+  } else {
+    // Modo de Build Seguro: Evita erro 'app/no-options' durante a geração estática
+    firebaseApp = initializeApp({
+      apiKey: "BUILD_TIME_PLACEHOLDER",
+      authDomain: "BUILD_TIME_PLACEHOLDER",
+      projectId: "BUILD_TIME_PLACEHOLDER",
+      storageBucket: "BUILD_TIME_PLACEHOLDER",
+      messagingSenderId: "BUILD_TIME_PLACEHOLDER",
+      appId: "BUILD_TIME_PLACEHOLDER"
+    });
   }
 
   return getSdks(firebaseApp);
