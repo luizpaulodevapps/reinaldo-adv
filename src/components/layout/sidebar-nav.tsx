@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from "next/link"
@@ -46,13 +45,13 @@ const menuGroups = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Relatórios BI", href: "/reports", icon: BarChart3 },
-      { name: "Laboratório (Templates)", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
+      { name: "Laboratório", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
     ]
   },
   {
     title: "COMERCIAL",
     items: [
-      { name: "Leads (Triagem)", href: "/leads", icon: Zap },
+      { name: "Triagem", href: "/leads", icon: Zap },
       { name: "Clientes", href: "/clients", icon: Users },
     ]
   },
@@ -60,17 +59,16 @@ const menuGroups = [
     title: "OPERACIONAL",
     items: [
       { name: "Processos", href: "/cases", icon: FolderOpen },
-      { name: "Execução de Protocolos", href: "/checklists/execucao", icon: ClipboardList },
-      { name: "Agenda de Prazos", href: "/deadlines", icon: Clock },
+      { name: "Protocolos", href: "/checklists/execucao", icon: ClipboardList },
+      { name: "Prazos", href: "/deadlines", icon: Clock },
       { name: "Audiências", href: "/agenda", icon: Gavel },
       { name: "Modelos", href: "/drafting", icon: BookOpen },
-      { name: "Arquivo", href: "/archive", icon: Archive },
     ]
   },
   {
     title: "FINANCEIRO",
     items: [
-      { name: "Faturamento", href: "/billing", icon: Receipt },
+      { name: "Caixa", href: "/billing", icon: Receipt },
       { name: "Repasses", href: "/financial", icon: Wallet },
     ]
   },
@@ -101,41 +99,27 @@ export function SidebarNav() {
   }
 
   return (
-    <nav className="flex flex-col h-full bg-[#162a27] border-r border-white/5 shadow-2xl">
-      {/* Bloco de Marca */}
-      <div className="flex items-center gap-4 px-8 py-10">
-        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20">
-          <Scale className="text-primary h-6 w-6" />
+    <nav className="flex flex-col h-[calc(100vh-40px)] m-5 rounded-[2rem] bg-[#1e1b2e] border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
+      {/* Bloco de Marca - Estilo "Your Logo" */}
+      <div className="flex items-center gap-3 px-8 py-10">
+        <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30">
+          <Scale className="text-primary h-5 w-5" />
         </div>
-        <div>
-          <span className="text-lg font-black text-white uppercase tracking-tighter block leading-none">Portal RGMJ</span>
-          <span className="text-[8px] text-primary font-bold uppercase tracking-[0.3em] mt-1 opacity-70">Advocacia de Elite</span>
+        <div className="flex flex-col">
+          <span className="text-sm font-black text-white uppercase tracking-tighter leading-none">RGMJ Elite</span>
+          <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1">Portal de Comando</span>
         </div>
       </div>
       
       <ScrollArea className="flex-1 px-4">
-        <div className="space-y-10 pb-10">
-          {/* Botão de Conta Tático */}
-          <div className="px-2">
-            <p className="px-4 text-[9px] font-black text-white/30 tracking-[0.3em] uppercase mb-3">Minha Conta</p>
-            <Button 
-              asChild 
-              className="w-full gold-gradient hover:opacity-90 text-[#0a0f1e] font-black h-12 rounded-xl uppercase text-[10px] tracking-[0.15em] shadow-xl shadow-primary/10 active:scale-95 transition-all gap-2"
-            >
-              <Link href="/settings?tab=perfil">
-                <UserIcon className="h-3.5 w-3.5" /> Acessar Meu Perfil
-              </Link>
-            </Button>
-          </div>
-
+        <div className="space-y-8 pb-10">
           {menuGroups.map((group, idx) => (
             <div key={idx} className="space-y-2">
-              <h3 className="px-4 text-[9px] font-black text-white/20 tracking-[0.4em] uppercase">
+              <h3 className="px-4 text-[9px] font-black text-white/20 tracking-[0.3em] uppercase">
                 {group.title}
               </h3>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.items.map((item) => {
-                  // Filtragem por Perfil
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
 
                   const isActive = pathname === item.href
@@ -144,23 +128,25 @@ export function SidebarNav() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-300 group",
+                        "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
                         isActive 
-                          ? "bg-[#818258]/20 text-white border border-[#818258]/30 shadow-lg" 
-                          : "text-white/40 hover:text-white hover:bg-white/5"
+                          ? "bg-white/5 text-white" 
+                          : "text-white/40 hover:text-white hover:bg-white/[0.03]"
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <item.icon className={cn(
-                          "h-4 w-4 transition-colors",
-                          isActive ? "text-primary" : "text-white/20 group-hover:text-primary/50"
-                        )} />
-                        <span className={cn(
-                          "text-[11px] uppercase tracking-widest font-bold",
-                          isActive ? "opacity-100" : "opacity-80"
-                        )}>{item.name}</span>
-                      </div>
-                      {isActive && <ChevronRight className="h-3 w-3 text-primary/50" />}
+                      {/* Indicador Lateral da Referência */}
+                      {isActive && (
+                        <div className="absolute left-0 w-1 h-5 bg-primary rounded-r-full shadow-[0_0_10px_rgba(124,58,237,0.5)]" />
+                      )}
+                      
+                      <item.icon className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive ? "text-primary" : "text-white/20 group-hover:text-primary/50"
+                      )} />
+                      <span className={cn(
+                        "text-[11px] uppercase tracking-widest font-bold",
+                        isActive ? "opacity-100" : "opacity-80"
+                      )}>{item.name}</span>
                     </Link>
                   )
                 })}
@@ -170,41 +156,35 @@ export function SidebarNav() {
         </div>
       </ScrollArea>
 
-      {/* Footer de Usuário */}
-      <div className="p-6 border-t border-white/5 bg-black/20">
+      {/* Footer de Usuário SaaS */}
+      <div className="p-6 bg-black/20 mt-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-white/5 transition-all outline-none group border border-transparent hover:border-white/5">
-              <Avatar className="h-10 w-10 border-2 border-primary/30 group-hover:border-primary/60 transition-all">
-                <AvatarFallback className="bg-secondary text-white text-[11px] font-black uppercase">
+            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-white/5 transition-all outline-none group border border-transparent">
+              <Avatar className="h-9 w-9 border-2 border-primary/20">
+                <AvatarFallback className="bg-secondary text-white text-[10px] font-black uppercase">
                   {displayName.substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left overflow-hidden">
-                <span className="text-[11px] font-black truncate text-white uppercase tracking-tight">{displayName}</span>
-                <span className="text-[9px] text-primary font-bold uppercase tracking-[0.2em] mt-0.5">{userRoleDisplay}</span>
+                <span className="text-[10px] font-black truncate text-white uppercase">{displayName}</span>
+                <span className="text-[8px] text-primary font-bold uppercase tracking-widest">{userRoleDisplay}</span>
               </div>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="w-64 bg-[#162a27] border-white/10 text-white p-2 shadow-2xl">
-            <DropdownMenuLabel className="text-[10px] font-black text-white/40 uppercase px-4 py-3 tracking-[0.2em]">Gestão de Comando</DropdownMenuLabel>
+          <DropdownMenuContent align="end" side="top" className="w-64 bg-[#1e1b2e] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
+            <DropdownMenuLabel className="text-[9px] font-black text-white/40 uppercase px-4 py-3 tracking-widest">Opções</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/5" />
             <DropdownMenuItem asChild>
-              <Link href="/settings?tab=perfil" className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-white/5 cursor-pointer rounded-lg transition-colors">
-                <UserIcon className="h-4 w-4 text-primary" /> Meu Perfil Estratégico
+              <Link href="/settings?tab=perfil" className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-white/5 cursor-pointer rounded-xl transition-colors">
+                <UserIcon className="h-4 w-4 text-primary" /> Meu Perfil
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-white/5 cursor-pointer rounded-lg transition-colors">
-                <Settings className="h-4 w-4 text-primary" /> Configurações de Sistema
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-white/5" />
             <DropdownMenuItem 
               onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 text-xs text-rose-400 hover:bg-rose-400/10 cursor-pointer rounded-lg transition-colors font-bold"
+              className="flex items-center gap-3 px-4 py-3 text-xs text-rose-400 hover:bg-rose-400/10 cursor-pointer rounded-xl transition-colors font-bold"
             >
-              <LogOut className="h-4 w-4" /> Encerrar Sessão Segura
+              <LogOut className="h-4 w-4" /> Sair com Segurança
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

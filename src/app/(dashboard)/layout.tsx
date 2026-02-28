@@ -5,8 +5,9 @@ import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/
 import { useEffect, useState } from 'react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Scale, LogIn } from "lucide-react";
+import { Loader2, Scale, LogIn, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default function DashboardLayout({
 }) {
   const { auth, user, isUserLoading, firestore: db, setProfile, profile, role } = useFirebase();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -66,42 +68,42 @@ export default function DashboardLayout({
 
   if (isUserLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#020617] flex-col gap-4">
-        <div className="w-16 h-16 rounded bg-[#213B37] flex items-center justify-center animate-pulse border border-white/5">
-          <Scale className="text-white h-8 w-8" />
+      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
+        <div className="w-16 h-16 rounded-[1.5rem] bg-[#1e1b2e] flex items-center justify-center animate-pulse border border-white/5">
+          <Scale className="text-primary h-8 w-8" />
         </div>
-        <p className="text-white font-bold tracking-widest uppercase text-[10px] opacity-50">Sincronizando Ecossistema RGMJ...</p>
+        <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">Ecossistema RGMJ</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#020617] p-6">
+      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] p-6">
         <div className="max-w-md w-full space-y-10 text-center">
           <div className="flex flex-col items-center gap-6">
-            <div className="w-20 h-20 rounded bg-[#213B37] flex items-center justify-center shadow-2xl border border-white/10">
-              <Scale className="text-white h-10 w-10" />
+            <div className="w-20 h-20 rounded-[2rem] bg-[#1e1b2e] flex items-center justify-center shadow-2xl border border-white/10">
+              <Scale className="text-primary h-10 w-10" />
             </div>
             <div className="space-y-2">
               <h1 className="text-4xl text-white font-bold tracking-tighter">Portal RGMJ</h1>
-              <p className="text-[#818258] uppercase tracking-[0.3em] text-[10px] font-bold">Acesso Restrito ao Comando</p>
+              <p className="text-primary uppercase tracking-[0.3em] text-[10px] font-bold">Acesso de Elite</p>
             </div>
           </div>
 
-          <div className="glass p-10 rounded-2xl border border-white/5 space-y-8">
-            <p className="text-sm text-white/70 font-medium">Autentique-se com sua conta corporativa Google.</p>
+          <div className="glass p-10 rounded-[2rem] border border-white/5 space-y-8">
+            <p className="text-sm text-white/70 font-medium">Autenticação Corporativa Obrigatória.</p>
             <Button 
               onClick={handleGoogleLogin}
               disabled={isLoggingIn}
-              className="w-full h-14 bg-[#818258] hover:bg-[#bbbd7e] text-white font-bold rounded-lg transition-all flex items-center justify-center gap-4"
+              className="w-full h-14 violet-gradient hover:opacity-90 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-4"
             >
               {isLoggingIn ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
                   <LogIn className="h-5 w-5" />
-                  Entrar com Google
+                  Entrar via Google
                 </>
               )}
             </Button>
@@ -111,25 +113,43 @@ export default function DashboardLayout({
     );
   }
 
-  if (!isOwner && !role && isProfileLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#020617] flex-col gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-[#818258]" />
-        <p className="text-white font-bold tracking-widest uppercase text-[10px] opacity-50">Validando Credenciais...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen bg-[#020617]">
-      <aside className="w-[300px] bg-[#213B37] hidden lg:block sticky top-0 h-screen overflow-y-auto border-r border-white/5">
+    <div className="flex min-h-screen bg-[#0a0a14]">
+      {/* Sidebar Desktop */}
+      <aside className="w-[320px] hidden lg:block sticky top-0 h-screen">
         <SidebarNav />
       </aside>
-      <main className="flex-1 overflow-y-auto">
-        <div className="py-10 px-12 max-w-[1400px] mx-auto">
-          {children}
-        </div>
-      </main>
+
+      {/* Mobile Trigger & Header */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="lg:hidden h-20 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#1e1b2e] rounded-xl flex items-center justify-center border border-white/5">
+              <Scale className="text-primary h-5 w-5" />
+            </div>
+            <span className="text-sm font-black text-white uppercase">RGMJ</span>
+          </div>
+          
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-[320px] bg-[#0a0a14] border-r border-white/5">
+              <div className="h-full flex flex-col pt-10">
+                <SidebarNav />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </header>
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="py-8 px-6 lg:py-12 lg:px-16 max-w-[1600px] mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
