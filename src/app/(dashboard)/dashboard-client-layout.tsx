@@ -3,19 +3,18 @@
 import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { useEffect, useState } from 'react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Scale, LogIn, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Scale } from "lucide-react";
+import { useRouter } from 'next/navigation';
 
 export function DashboardClientLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { auth, user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const router = useRouter();
+  const { user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -52,19 +51,6 @@ export function DashboardClientLayout({
     }
   }, [user, db, profileData, isProfileLoading, isOwner, setProfile]);
 
-  const handleGoogleLogin = async () => {
-    if (!auth) return;
-    setIsLoggingIn(true);
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Erro ao autenticar com Google:", error);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
@@ -77,37 +63,15 @@ export function DashboardClientLayout({
   }
 
   if (!user) {
+    // Redirecionar para login se não estiver autenticado
+    useEffect(() => {
+      router.push('/login');
+    }, [router]);
+    
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] p-6">
-        <div className="max-w-md w-full space-y-10 text-center">
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-20 h-20 rounded-[2rem] bg-[#1e1b2e] flex items-center justify-center shadow-2xl border border-white/10">
-              <Scale className="text-primary h-10 w-10" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-4xl text-white font-bold tracking-tighter">Portal RGMJ</h1>
-              <p className="text-primary uppercase tracking-[0.3em] text-[10px] font-bold">Acesso de Elite</p>
-            </div>
-          </div>
-
-          <div className="glass p-10 rounded-[2rem] border border-white/5 space-y-8">
-            <p className="text-sm text-white/70 font-medium">Autenticação Corporativa Obrigatória.</p>
-            <Button 
-              onClick={handleGoogleLogin}
-              disabled={isLoggingIn}
-              className="w-full h-14 blue-gradient hover:opacity-90 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-4"
-            >
-              {isLoggingIn ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="h-5 w-5" />
-                  Entrar via Google
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">Redirecionando...</p>
       </div>
     );
   }
