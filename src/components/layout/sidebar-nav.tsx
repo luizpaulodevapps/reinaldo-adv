@@ -16,16 +16,27 @@ import {
   Archive, 
   Receipt, 
   Wallet, 
-  Contact, 
   Settings,
   Scale,
   Users2,
-  UserCheck
+  UserCheck,
+  LogOut,
+  User as UserIcon,
+  Settings as SettingsIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useUser } from "@/firebase"
+import { useUser, useAuth } from "@/firebase"
+import { signOut } from "firebase/auth"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const menuGroups = [
   {
@@ -73,9 +84,18 @@ const menuGroups = [
 export function SidebarNav() {
   const pathname = usePathname()
   const { user, profile, role } = useUser()
+  const auth = useAuth()
 
   const displayName = profile?.name || user?.displayName || "Membro RGMJ"
   const userRole = role === 'admin' ? 'Administrador' : role === 'lawyer' ? 'Advogado' : role === 'financial' ? 'Financeiro' : 'Equipe'
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+    } catch (error) {
+      console.error("Erro ao sair:", error)
+    }
+  }
 
   return (
     <nav className="flex flex-col h-full bg-[#020617] border-r border-white/5">
@@ -125,19 +145,44 @@ export function SidebarNav() {
         </div>
       </ScrollArea>
 
-      {/* User Section */}
+      {/* User Section with Dropdown Menu */}
       <div className="p-4 border-t border-white/5 bg-black/20">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/30 border border-white/5">
-          <Avatar className="h-10 w-10 border border-primary/20">
-            <AvatarFallback className="bg-primary/10 text-primary font-bold">
-              {displayName.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold truncate text-white uppercase tracking-tighter">{displayName}</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{userRole}</span>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/30 border border-white/5 hover:bg-secondary/50 transition-all outline-none focus:ring-1 focus:ring-primary/50 text-left group">
+              <Avatar className="h-10 w-10 border border-primary/20 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                  {displayName.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-bold truncate text-white uppercase tracking-tighter group-hover:text-primary transition-colors">{displayName}</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{userRole}</span>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 glass border-white/10 bg-[#0a0f1e] text-white p-2">
+            <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4 py-3">Minha Conta</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-white/5" />
+            <DropdownMenuItem asChild>
+              <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/5 cursor-pointer transition-colors rounded-lg">
+                <UserIcon className="h-4 w-4 text-primary" /> Meu Perfil
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/5 cursor-pointer transition-colors rounded-lg">
+                <SettingsIcon className="h-4 w-4 text-primary" /> Configurações
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/5" />
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 cursor-pointer transition-colors rounded-lg focus:bg-destructive/10 focus:text-destructive"
+            >
+              <LogOut className="h-4 w-4" /> Sair do Sistema
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </nav>
   )
