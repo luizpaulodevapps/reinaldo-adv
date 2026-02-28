@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* LexFlow ERP - Paleta Oficial PRD */
+    /* LexFlow ERP - Paleta Oficial RGMJ */
     --background: 222 84% 5%; /* #020617 - Deep Navy */
     --foreground: 210 40% 98%;
     
@@ -57,7 +57,7 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Roboto', sans-serif;
-    @apply font-bold;
+    @apply font-bold tracking-tight;
   }
 }
 

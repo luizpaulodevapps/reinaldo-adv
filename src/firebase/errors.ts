@@ -1,6 +1,5 @@
-
 'use client';
-import { getAuth, type User } from 'firebase/auth';
+import { getAuth, type User, type Auth } from 'firebase/auth';
 import { getApps } from 'firebase/app';
 
 type SecurityRuleContext = {
@@ -69,9 +68,10 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   let authObject: FirebaseAuthObject | null = null;
   try {
     // Proteção: Só tenta acessar o Auth se houver apps inicializados
-    if (getApps().length > 0) {
-      const firebaseAuth = getAuth();
-      const currentUser = firebaseAuth.currentUser;
+    // e se não estivermos em ambiente de build do Next.js
+    if (typeof window !== 'undefined' && getApps().length > 0) {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
       if (currentUser) {
         authObject = buildAuthObject(currentUser);
       }

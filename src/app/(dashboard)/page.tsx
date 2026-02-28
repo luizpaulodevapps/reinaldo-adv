@@ -1,8 +1,11 @@
+import { redirect } from 'next/navigation';
+
 /**
- * ARQUIVO REMOVIDO PARA EVITAR CONFLITO DE ROTA RAIZ (/)
+ * Redirecionamento tático para evitar conflitos de rota raiz (/)
  * A Landing Page oficial reside em src/app/page.tsx.
- * O Dashboard reside em src/app/(dashboard)/dashboard/page.tsx.
+ * Este arquivo como componente de servidor puro evita erros de manifesto na Vercel.
  */
-export default function RemovedPage() {
+export default function DashboardRedirectPage() {
+  redirect('/dashboard');
   return null;
 }
