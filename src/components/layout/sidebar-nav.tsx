@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -21,7 +22,8 @@ import {
   UserCheck,
   LogOut,
   User as UserIcon,
-  ChevronRight
+  ChevronRight,
+  ClipboardList
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -44,7 +46,7 @@ const menuGroups = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Relatórios BI", href: "/reports", icon: BarChart3 },
-      { name: "Checklists", href: "/checklists", icon: ClipboardCheck },
+      { name: "Laboratório (Templates)", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
     ]
   },
   {
@@ -58,6 +60,7 @@ const menuGroups = [
     title: "OPERACIONAL",
     items: [
       { name: "Processos", href: "/cases", icon: FolderOpen },
+      { name: "Execução de Protocolos", href: "/checklists/execucao", icon: ClipboardList },
       { name: "Agenda de Prazos", href: "/deadlines", icon: Clock },
       { name: "Audiências", href: "/agenda", icon: Gavel },
       { name: "Modelos", href: "/drafting", icon: BookOpen },
@@ -87,7 +90,7 @@ export function SidebarNav() {
   const auth = useAuth()
 
   const displayName = profile?.name || user?.displayName || "Membro RGMJ"
-  const userRole = role === 'admin' ? 'Administrador' : 'Equipe'
+  const userRoleDisplay = role === 'admin' ? 'Administrador' : 'Equipe'
 
   const handleLogout = async () => {
     try {
@@ -132,6 +135,9 @@ export function SidebarNav() {
               </h3>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
+                  // Filtragem por Perfil
+                  if (item.roleRequired === 'admin' && role !== 'admin') return null
+
                   const isActive = pathname === item.href
                   return (
                     <Link
@@ -176,7 +182,7 @@ export function SidebarNav() {
               </Avatar>
               <div className="flex flex-col text-left overflow-hidden">
                 <span className="text-[11px] font-black truncate text-white uppercase tracking-tight">{displayName}</span>
-                <span className="text-[9px] text-primary font-bold uppercase tracking-[0.2em] mt-0.5">{userRole}</span>
+                <span className="text-[9px] text-primary font-bold uppercase tracking-[0.2em] mt-0.5">{userRoleDisplay}</span>
               </div>
             </button>
           </DropdownMenuTrigger>

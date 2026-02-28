@@ -86,28 +86,43 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Checklist",
       "type": "object",
-      "description": "Strategic or operational checklist template, including interview models for specific legal areas.",
+      "description": "Strategic or operational checklist template (The Blueprint).",
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
         "category": { "type": "string", "enum": ["Operacional", "Financeiro", "Entrevista de Triagem", "Comercial", "Gestão"] },
-        "legalArea": { "type": "string", "description": "Used specifically for Interview Models to link with Lead areas." },
+        "legalArea": { "type": "string" },
         "items": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "text": { "type": "string" },
-              "completed": { "type": "boolean" }
+              "type": { "type": "string", "enum": ["checkbox", "boolean", "ternary", "text", "number"] }
             }
           }
         },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ChecklistInstance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChecklistInstance",
+      "type": "object",
+      "description": "A specific execution of a checklist template (The Audit).",
+      "properties": {
+        "id": { "type": "string" },
+        "templateId": { "type": "string" },
+        "title": { "type": "string" },
+        "executorId": { "type": "string" },
+        "relatedEntityId": { "type": "string", "description": "Can be a ProcessId or LeadId" },
+        "status": { "type": "string", "enum": ["Em Execução", "Finalizado"] },
         "progress": { "type": "number" },
+        "responses": { "type": "object" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "title", "category", "items", "createdAt"]
+      }
     }
   },
   "auth": {
@@ -119,7 +134,8 @@
       { "path": "/clients/{clientId}", "definition": { "entityName": "Client", "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." } },
       { "path": "/processes/{processId}", "definition": { "entityName": "Process", "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." } },
       { "path": "/leads/{leadId}", "definition": { "entityName": "Lead", "schema": { "$ref": "#/backend/entities/Lead" }, "description": "Lead triaging data." } },
-      { "path": "/checklists/{checklistId}", "definition": { "entityName": "Checklist", "schema": { "$ref": "#/backend/entities/Checklist" }, "description": "Firm standardization protocols and interview models." } }
+      { "path": "/checklists/{checklistId}", "definition": { "entityName": "Checklist", "schema": { "$ref": "#/backend/entities/Checklist" }, "description": "Firm standardization templates." } },
+      { "path": "/checklist_executions/{executionId}", "definition": { "entityName": "ChecklistInstance", "schema": { "$ref": "#/backend/entities/ChecklistInstance" }, "description": "Active audits and filled protocols." } }
     ]
   }
 }

@@ -23,7 +23,9 @@ import {
   Shield,
   Type,
   Hash,
-  ToggleLeft
+  ToggleLeft,
+  Settings2,
+  BookOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -42,6 +44,7 @@ import { collection, query, orderBy, serverTimestamp, doc } from "firebase/fires
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import Link from "next/link"
 
 const CATEGORIES = [
   { id: "Operacional", label: "Operacional", icon: Star, color: "text-amber-400" },
@@ -59,7 +62,7 @@ const ITEM_TYPES = [
   { id: "number", label: "Valor Numérico", icon: Hash },
 ]
 
-export default function ChecklistsPage() {
+export default function LaboratorioChecklistsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
@@ -69,13 +72,17 @@ export default function ChecklistsPage() {
   const [category, setCategory] = useState("Operacional")
   const [description, setDescription] = useState("")
   const [legalArea, setLegalArea] = useState("Trabalhista")
-  const [items, setItems] = useState<{ text: string; type: string; completed: boolean }[]>([])
+  const [items, setItems] = useState<{ text: string; type: string }[]>([])
   const [newItemText, setNewItemText] = useState("")
   const [newItemType, setNewItemType] = useState("checkbox")
 
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, role } = useUser()
   const { toast } = useToast()
+
+  // Somente Admins acessam o Laboratório
+  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
+  const canManage = isOwner || role === 'admin'
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!user) return null
@@ -94,7 +101,7 @@ export default function ChecklistsPage() {
 
   const handleAddItem = () => {
     if (!newItemText.trim()) return
-    setItems([...items, { text: newItemText.toUpperCase(), type: newItemType, completed: false }])
+    setItems([...items, { text: newItemText.toUpperCase(), type: newItemType }])
     setNewItemText("")
   }
 
@@ -128,51 +135,63 @@ export default function ChecklistsPage() {
       return
     }
 
-    const progress = Math.round((items.filter(i => i.completed).length / items.length) * 100)
-
     const listData = {
       title: title.toUpperCase(),
       category,
       description,
       legalArea,
       items,
-      progress,
       updatedAt: serverTimestamp()
     }
 
     if (editingList) {
       updateDocumentNonBlocking(doc(db, "checklists", editingList.id), listData)
-      toast({ title: "Template Atualizado", description: "O protocolo foi modificado no acervo RGMJ." })
+      toast({ title: "Matriz Atualizada", description: "O modelo estratégico foi modificado." })
     } else {
       addDocumentNonBlocking(collection(db, "checklists"), {
         ...listData,
         createdAt: serverTimestamp()
       })
-      toast({ title: "Novo Protocolo Criado", description: "O modelo foi disponibilizado para a banca." })
+      toast({ title: "Nova Matriz Criada", description: "O modelo está pronto para execução pela equipe." })
     }
     setIsDialogOpen(false)
   }
 
   const handleDelete = (id: string) => {
-    if (confirm("Deseja realmente remover este template estratégico?")) {
+    if (confirm("Deseja realmente remover esta matriz estratégica? Isso não afetará auditorias já iniciadas.")) {
       deleteDocumentNonBlocking(doc(db, "checklists", id))
-      toast({ variant: "destructive", title: "Template Removido" })
+      toast({ variant: "destructive", title: "Matriz Removida" })
     }
   }
 
+  if (!canManage && !isLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-6 text-center">
+        <Shield className="h-16 w-16 text-destructive animate-pulse" />
+        <div className="space-y-2">
+          <h2 className="text-2xl font-headline font-bold text-white">ACESSO RESTRITO AO COMANDO</h2>
+          <p className="text-muted-foreground max-w-md">Apenas administradores da banca RGMJ podem definir matrizes e roteiros estratégicos no laboratório.</p>
+        </div>
+        <Button asChild variant="outline" className="glass border-primary/20 text-primary">
+          <Link href="/checklists/execucao">Ir para Execução Operacional</Link>
+        </Button>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-10 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-5xl font-headline font-bold text-white mb-2 tracking-tighter">Laboratório de Checklists</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Padronização Operacional e Entrevistas de Elite RGMJ</p>
+        <div className="space-y-1">
+          <h1 className="text-5xl font-headline font-bold text-white tracking-tighter">Laboratório de Matrizes</h1>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Design Estratégico de Protocolos e Entrevistas RGMJ.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar modelos..." 
+              placeholder="Pesquisar matrizes..." 
               className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -198,10 +217,7 @@ export default function ChecklistsPage() {
             const CatIcon = CATEGORIES.find(c => c.id === list.category)?.icon || Star
             return (
               <Card key={list.id} className="glass border-primary/10 hover-gold transition-all group relative overflow-hidden flex flex-col h-full">
-                <div className={cn(
-                  "h-1 w-full",
-                  list.progress === 100 ? "bg-emerald-500" : "bg-primary"
-                )} />
+                <div className="h-1 w-full bg-primary/20 group-hover:bg-primary transition-all" />
                 
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between mb-3">
@@ -225,17 +241,13 @@ export default function ChecklistsPage() {
                       Área: {list.legalArea || "Geral"}
                     </Badge>
                   )}
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{list.items?.length} REQUISITOS</span>
-                    <span className="text-[9px] text-muted-foreground font-bold uppercase">Multimodal</span>
-                  </div>
                 </CardHeader>
 
                 <CardContent className="space-y-3 flex-1">
                   <p className="text-[10px] text-muted-foreground line-clamp-2 italic mb-4">
-                    {list.description || "Sem descrição definida."}
+                    {list.description || "Sem descrição estratégica definida."}
                   </p>
-                  <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                  <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
                     {list.items?.map((item: any, i: number) => {
                       const TypeIcon = ITEM_TYPES.find(t => t.id === item.type)?.icon || CheckCircle2
                       return (
@@ -249,18 +261,23 @@ export default function ChecklistsPage() {
                     })}
                   </div>
                 </CardContent>
+                <div className="p-6 pt-0 border-t border-white/5 mt-4">
+                   <Button asChild variant="ghost" className="w-full text-[9px] font-black uppercase tracking-[0.2em] text-primary hover:bg-primary/5">
+                     <Link href="/checklists/execucao">Simular Execução <ChevronRight className="h-3 w-3 ml-2" /></Link>
+                   </Button>
+                </div>
               </Card>
             )
           })
         ) : (
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
-            <ClipboardList className="h-16 w-16 text-muted-foreground" />
+            <BookOpen className="h-16 w-16 text-muted-foreground" />
             <div className="text-center space-y-2">
-              <p className="text-sm font-bold text-white uppercase tracking-widest">Acervo de Protocolos Vazio</p>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">Inicie o registro das rotinas e entrevistas padrão da banca RGMJ.</p>
+              <p className="text-sm font-bold text-white uppercase tracking-widest">Biblioteca de Matrizes Vazia</p>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">Desenhe o primeiro protocolo padrão para garantir a excelência da banca RGMJ.</p>
             </div>
             <Button onClick={handleOpenCreate} className="gold-gradient text-background font-bold gap-2 px-8">
-              Configurar Primeiro Modelo
+              Configurar Matriz Inicial
             </Button>
           </div>
         )}
@@ -271,16 +288,16 @@ export default function ChecklistsPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-3">
-                <Edit3 className="h-7 w-7 text-[#f5d030]" /> Editor de Modelo Multimodal
+                <Settings2 className="h-7 w-7 text-[#f5d030]" /> Editor de Matriz Estratégica
               </DialogTitle>
-              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">Crie protocolos com diferentes tipos de respostas para auditoria técnica.</p>
+              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-60">Defina o roteiro obrigatório e o tipo de coleta para a equipe técnica.</p>
             </DialogHeader>
           </div>
 
           <div className="p-8 md:p-10 space-y-10 bg-[#0a0f1e]/50 max-h-[70vh] overflow-y-auto">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
               <div className="md:col-span-8 space-y-3">
-                <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">TÍTULO DO CHECKLIST *</Label>
+                <Label className="text-[10px] font-black text-[#a0a5b1] uppercase tracking-[0.2em]">TÍTULO DA MATRIZ *</Label>
                 <Input 
                   value={title} 
                   onChange={(e) => setTitle(e.target.value.toUpperCase())}
@@ -314,7 +331,7 @@ export default function ChecklistsPage() {
                 <Textarea 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descreva quando e por quem este checklist deve ser executado..."
+                  placeholder="Descreva o objetivo técnico deste protocolo..."
                   className="bg-[#0d121f] border-white/10 min-h-[100px] text-white focus:ring-1 focus:ring-[#f5d030]/50 resize-none"
                 />
               </div>
@@ -340,7 +357,7 @@ export default function ChecklistsPage() {
 
             <div className="space-y-6 pt-6 border-t border-white/5">
               <Label className="text-[11px] font-black text-[#f5d030] uppercase tracking-[0.3em] flex items-center gap-3">
-                <ClipboardList className="h-5 w-5" /> Configurar Perguntas / Passos
+                <ClipboardList className="h-5 w-5" /> Configurar Itens / Perguntas
               </Label>
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -349,7 +366,7 @@ export default function ChecklistsPage() {
                     value={newItemText} 
                     onChange={(e) => setNewItemText(e.target.value)}
                     className="bg-[#0d121f] border-white/10 h-14 text-white"
-                    placeholder="Enunciado da pergunta ou passo..."
+                    placeholder="Enunciado do passo..."
                   />
                 </div>
                 <div className="md:col-span-4">
@@ -391,7 +408,7 @@ export default function ChecklistsPage() {
                         <div>
                           <p className="text-sm font-bold text-white/90 uppercase tracking-tight">{item.text}</p>
                           <p className="text-[9px] text-muted-foreground uppercase font-black flex items-center gap-1 mt-1">
-                            <TypeIcon className="h-2.5 w-2.5" /> Tipo: {ITEM_TYPES.find(t => t.id === item.type)?.label}
+                            <TypeIcon className="h-2.5 w-2.5" /> Coleta: {ITEM_TYPES.find(t => t.id === item.type)?.label}
                           </p>
                         </div>
                       </div>
@@ -413,7 +430,7 @@ export default function ChecklistsPage() {
               onClick={handleSave} 
               className="w-full md:w-auto gold-gradient h-16 px-16 rounded-xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 font-black uppercase text-[12px] tracking-[0.2em]"
             >
-              <CheckCircle2 className="h-5 w-5" /> Salvar Modelo de Elite
+              <CheckCircle2 className="h-5 w-5" /> Salvar Matriz Estratégica
             </Button>
           </DialogFooter>
         </DialogContent>
