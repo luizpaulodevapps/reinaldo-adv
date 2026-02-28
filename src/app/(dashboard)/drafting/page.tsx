@@ -76,15 +76,12 @@ export default function DraftingPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="glass border-primary/20 sm:max-w-[1200px] bg-[#0a0f1e] p-0 overflow-hidden shadow-2xl">
-                <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex justify-between items-center">
+                <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
                   <DialogHeader>
                     <DialogTitle className="text-white font-headline text-2xl flex items-center gap-4 uppercase tracking-tighter">
                       <Brain className="h-7 w-7 text-primary" /> Central de Inteligência
                     </DialogTitle>
                   </DialogHeader>
-                  <Button variant="ghost" size="icon" onClick={() => setIsAiToolOpen(false)} className="text-muted-foreground hover:text-white">
-                    <X className="h-5 w-5" />
-                  </Button>
                 </div>
                 <div className="p-10 bg-[#0a0f1e]/50">
                   <DraftingTool />

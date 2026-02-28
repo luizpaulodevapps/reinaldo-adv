@@ -196,15 +196,12 @@ export default function ClientsPage() {
 
       <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
         <DialogContent className="glass border-[#2d3748] sm:max-w-[800px] p-0 overflow-hidden bg-[#0a0f1e]">
-          <div className="p-6 bg-[#0a0f1e] border-b border-[#1a1f2e] flex justify-between items-center">
+          <div className="p-6 bg-[#0a0f1e] border-b border-[#1a1f2e]">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-2xl flex items-center gap-4 uppercase tracking-tighter">
                 <FileText className="h-7 w-7 text-primary" /> Ficha de Cliente
               </DialogTitle>
             </DialogHeader>
-            <Button variant="ghost" size="icon" onClick={() => setIsNewClientOpen(false)} className="text-muted-foreground hover:text-white">
-              <X className="h-5 w-5" />
-            </Button>
           </div>
           <LeadForm 
             existingLeads={clientsData || []} 

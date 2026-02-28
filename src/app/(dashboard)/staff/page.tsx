@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -227,16 +226,13 @@ export default function StaffPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsUserDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex justify-between items-center">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 {editingStaff ? "Editar Colaborador" : "Novo Colaborador"}
               </DialogTitle>
               <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Ficha técnica para o Departamento Pessoal RGMJ.</p>
             </DialogHeader>
-            <Button variant="ghost" size="icon" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground hover:text-white">
-              <X className="h-5 w-5" />
-            </Button>
           </div>
           
           <div className="p-10 space-y-6">

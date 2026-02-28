@@ -273,16 +273,13 @@ export default function BillingPage() {
       {/* Dialog de Novo Título (High Fidelity) */}
       <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex justify-between items-center">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 Novo Título Financeiro
               </DialogTitle>
               <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Lançamento manual de entrada ou saída para controle de caixa.</p>
             </DialogHeader>
-            <Button variant="ghost" size="icon" onClick={() => setIsNewTitleOpen(false)} className="text-muted-foreground hover:text-white">
-              <X className="h-5 w-5" />
-            </Button>
           </div>
           <div className="px-10 py-8 bg-[#0a0f1e]/50">
             <FinancialTitleForm onSubmit={handleCreateTitle} onCancel={() => setIsNewTitleOpen(false)} />
