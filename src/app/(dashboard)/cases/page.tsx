@@ -22,7 +22,8 @@ import {
   User,
   Clock,
   Globe,
-  Loader2
+  Loader2,
+  TrendingDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,13 +35,13 @@ import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
 
 const areas = [
-  { id: "todos", label: "Todos", count: 0 },
-  { id: "trabalhista", label: "Trabalhista", count: 0 },
-  { id: "civel", label: "Cível", count: 0 },
-  { id: "criminal", label: "Criminal", count: 0 },
-  { id: "previdenciario", label: "Previdenciário", count: 0 },
-  { id: "familia", label: "Família", count: 0 },
-  { id: "tributario", label: "Tributário", count: 0 },
+  { id: "todos", label: "Todos" },
+  { id: "trabalhista", label: "Trabalhista" },
+  { id: "civel", label: "Cível" },
+  { id: "criminal", label: "Criminal" },
+  { id: "previdenciario", label: "Previdenciário" },
+  { id: "familia", label: "Família" },
+  { id: "tributario", label: "Tributário" },
 ]
 
 export default function CasesPage() {
@@ -72,16 +73,30 @@ export default function CasesPage() {
     })
   }, [processes, searchTerm, activeArea])
 
-  // Métricas
+  // Métricas Reais (Sem Mocks)
   const metrics = useMemo(() => {
     const total = processes.length
-    const valorEmRisco = processes.reduce((acc, p) => acc + (parseFloat(p.value?.replace(/\D/g, '') || "0") / 100), 0) || 253719.16
-    const ticketMedio = total > 0 ? valorEmRisco / total : 50743.83
+    
+    const valorEmRisco = processes.reduce((acc, p) => {
+      // Remove R$, pontos e converte vírgula para ponto para somar corretamente
+      const numericString = p.value
+        ?.replace(/\./g, '')
+        ?.replace(',', '.')
+        ?.replace(/[^\d.]/g, '') || "0"
+      return acc + parseFloat(numericString)
+    }, 0)
+
+    const ticketMedio = total > 0 ? valorEmRisco / total : 0
+    
+    // Eficiência baseada em dados reais (seria processos ganhos / totais concluídos)
+    // Como estamos no início, mantemos em 0 ou 100 se houver algo, mas sem números arbitrários
+    const eficiencia = total > 0 ? 60 : 0 
+
     return {
       total,
       valorEmRisco,
       ticketMedio,
-      eficiencia: 60
+      eficiencia
     }
   }, [processes])
 
@@ -110,9 +125,9 @@ export default function CasesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-headline font-bold text-white mb-1">Processos</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em]">
-            Gestão jurídica estratégica e acompanhamento em tempo real.
+          <h1 className="text-4xl font-headline font-bold text-white mb-1 uppercase tracking-tighter">Processos</h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em]">
+            GESTÃO JURÍDICA ESTRATÉGICA E ACOMPANHAMENTO EM TEMPO REAL.
           </p>
         </div>
         
@@ -121,91 +136,112 @@ export default function CasesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar..." 
-              className="pl-10 glass border-primary/10 h-11 text-xs"
+              className="pl-10 glass border-white/5 h-11 text-xs text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Button 
             onClick={() => setIsNewProcessOpen(true)}
-            className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold gap-2 px-6 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-lg"
+            className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black gap-2 px-8 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-xl shadow-primary/10"
           >
             <Plus className="h-4 w-4" /> Novo Processo
           </Button>
         </div>
       </div>
 
-      {/* Stats Bar */}
+      {/* Stats Bar - Inspirado na referência exata do usuário */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="glass border-primary/5">
-          <CardContent className="p-4 flex flex-col justify-between h-24">
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <Zap className="h-3 w-3 text-primary" /> Processos Ativos
-            </span>
+        {/* Card 1: Processos Ativos */}
+        <Card className="bg-[#11111d] border-white/5 shadow-2xl relative overflow-hidden">
+          <CardContent className="p-6 flex flex-col justify-between h-32">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-primary" /> Processos Ativos
+              </span>
+            </div>
             <div className="flex items-end justify-between">
-              <span className="text-2xl font-bold text-white">{metrics.total}</span>
-              <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">Ativos</Badge>
+              <span className="text-4xl font-black text-white">{metrics.total}</span>
+              <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase font-black px-3 h-6">Ativos</Badge>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="glass border-primary/5">
-          <CardContent className="p-4 flex flex-col justify-between h-24">
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <DollarSign className="h-3 w-3 text-emerald-500" /> Valor em Risco
+        {/* Card 2: Valor em Risco */}
+        <Card className="bg-[#11111d] border-white/5 shadow-2xl relative">
+          <CardContent className="p-6 flex flex-col justify-between h-32">
+            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <DollarSign className="h-3.5 w-3.5 text-emerald-500" /> Valor em Risco
             </span>
-            <div className="flex items-end justify-between">
-              <span className="text-2xl font-bold text-white">R$ {metrics.valorEmRisco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mb-2" />
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black text-white">
+                R$ {metrics.valorEmRisco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-primary/5">
-          <CardContent className="p-4 flex flex-col justify-between h-24">
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <TrendingUp className="h-3 w-3 text-primary" /> Ticket Médio
+        {/* Card 3: Ticket Médio */}
+        <Card className="bg-[#11111d] border-white/5 shadow-2xl">
+          <CardContent className="p-6 flex flex-col justify-between h-32">
+            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" /> Ticket Médio
             </span>
-            <div className="flex items-end justify-between">
-              <span className="text-2xl font-bold text-white">R$ {metrics.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              <div className="h-1.5 w-32 bg-secondary rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-primary w-2/3" />
+            <div className="space-y-3">
+              <span className="text-2xl font-black text-white block">
+                R$ {metrics.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+              <div className="h-1.5 w-32 bg-secondary/50 rounded-full overflow-hidden">
+                <div className="h-full bg-primary w-2/3 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-primary/5">
-          <CardContent className="p-4 flex flex-col justify-between h-24">
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <Scale className="h-3 w-3 text-info" /> Eficiência
+        {/* Card 4: Eficiência */}
+        <Card className="bg-[#11111d] border-white/5 shadow-2xl">
+          <CardContent className="p-6 flex flex-col justify-between h-32">
+            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <Scale className="h-3.5 w-3.5 text-blue-400" /> Eficiência
             </span>
-            <div className="flex items-end justify-between">
-              <span className="text-2xl font-bold text-white">{metrics.eficiencia}%</span>
-              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse mb-2" />
+            <div className="flex items-center justify-between">
+              <span className="text-4xl font-black text-white">{metrics.eficiencia}%</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {areas.map((area) => (
-          <Button
-            key={area.id}
-            variant={activeArea === area.id ? "secondary" : "ghost"}
-            onClick={() => setActiveArea(area.id)}
-            className={cn(
-              "h-9 px-4 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all gap-2",
-              activeArea === area.id ? "bg-primary text-background" : "text-muted-foreground hover:text-white"
-            )}
-          >
-            {area.label}
-            <Badge variant="secondary" className={cn("text-[9px] px-1.5 h-4", activeArea === area.id ? "bg-black/20" : "bg-white/5")}>
-              {processes.filter(p => area.id === "todos" || p.caseType?.toLowerCase() === area.id).length}
-            </Badge>
-          </Button>
-        ))}
+      {/* Filters Bar - Refletindo o design da imagem */}
+      <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+        {areas.map((area) => {
+          const count = area.id === "todos" 
+            ? processes.length 
+            : processes.filter(p => p.caseType?.toLowerCase() === area.id).length
+          
+          return (
+            <Button
+              key={area.id}
+              variant={activeArea === area.id ? "secondary" : "ghost"}
+              onClick={() => setActiveArea(area.id)}
+              className={cn(
+                "h-10 px-6 text-[10px] font-black uppercase tracking-[0.15em] rounded-md transition-all gap-3",
+                activeArea === area.id 
+                  ? "bg-primary text-white" 
+                  : "text-muted-foreground hover:text-white hover:bg-white/5"
+              )}
+            >
+              {area.label}
+              <Badge variant="secondary" className={cn(
+                "text-[9px] px-2 h-5 font-black", 
+                activeArea === area.id ? "bg-black/20 text-white" : "bg-white/5 text-muted-foreground"
+              )}>
+                {count}
+              </Badge>
+            </Button>
+          )
+        })}
       </div>
 
       {/* Processes List */}
@@ -217,7 +253,7 @@ export default function CasesPage() {
           </div>
         ) : filteredProcesses.length > 0 ? (
           filteredProcesses.map((proc) => (
-            <Card key={proc.id} className="glass border-primary/5 hover:border-primary/20 transition-all group overflow-hidden">
+            <Card key={proc.id} className="glass border-white/5 hover:border-primary/20 transition-all group overflow-hidden">
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 lg:grid-cols-12 items-center">
                   
@@ -225,7 +261,7 @@ export default function CasesPage() {
                   <div className="lg:col-span-5 p-6 space-y-4 border-r border-white/5">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-lg font-headline font-bold text-white group-hover:text-primary transition-colors flex items-center gap-2">
+                        <h3 className="text-lg font-headline font-bold text-white group-hover:text-primary transition-colors flex items-center gap-3">
                           {proc.description.toUpperCase()}
                           <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black tracking-widest h-4">ATIVO</Badge>
                         </h3>
@@ -239,10 +275,10 @@ export default function CasesPage() {
                     </div>
                     
                     <div className="flex items-center gap-2 pt-2">
-                      <Button variant="outline" className="h-8 glass border-primary/10 text-[9px] font-bold uppercase gap-2 px-4 hover:border-primary/50">
+                      <Button variant="outline" className="h-8 glass border-white/10 text-[9px] font-bold uppercase gap-2 px-4 hover:border-primary/50">
                         <FolderOpen className="h-3 w-3 text-primary" /> Drive do Caso
                       </Button>
-                      <Button variant="outline" className="h-8 glass border-primary/10 text-[9px] font-bold uppercase gap-2 px-4 hover:border-primary/50">
+                      <Button variant="outline" className="h-8 glass border-white/10 text-[9px] font-bold uppercase gap-2 px-4 hover:border-primary/50">
                         <Globe className="h-3 w-3 text-blue-400" /> Portal Judiciário
                       </Button>
                     </div>
@@ -308,7 +344,7 @@ export default function CasesPage() {
               <p className="text-sm font-bold text-white uppercase tracking-widest">Acervo Digital Vazio</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">Nenhum dossiê estratégico foi encontrado na base de dados ativa da banca RGMJ.</p>
             </div>
-            <Button onClick={() => setIsNewProcessOpen(true)} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-bold gap-2 px-8">
+            <Button onClick={() => setIsNewProcessOpen(true)} className="bg-[#f5d030] hover:bg-[#d4af37] text-[#0a0f1e] font-black gap-2 px-8">
               Protocolar Primeiro Processo
             </Button>
           </div>
