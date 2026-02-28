@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Configuração do Firebase App
  * Consome as variáveis de ambiente definidas no .env para garantir portabilidade e segurança.

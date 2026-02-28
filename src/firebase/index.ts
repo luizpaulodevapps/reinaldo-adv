@@ -1,4 +1,3 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -18,6 +17,7 @@ export function initializeFirebase() {
 
   let firebaseApp: FirebaseApp;
   
+  // Validação robusta: verifica se a chave existe e não é um placeholder de build
   const isConfigValid = firebaseConfig && 
                         firebaseConfig.apiKey && 
                         firebaseConfig.apiKey !== "undefined" &&
@@ -26,7 +26,7 @@ export function initializeFirebase() {
   if (isConfigValid) {
     firebaseApp = initializeApp(firebaseConfig);
   } else {
-    // Modo de Build Seguro: Evita erro 'app/no-options' durante a geração estática
+    // Safe Build Mode: Evita o erro 'app/no-options' na Vercel/NextJS durante static generation
     firebaseApp = initializeApp({
       apiKey: "BUILD_TIME_PLACEHOLDER",
       authDomain: "BUILD_TIME_PLACEHOLDER",
