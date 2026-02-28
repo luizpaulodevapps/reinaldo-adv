@@ -66,35 +66,35 @@ export default function DashboardLayout({
 
   if (isUserLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#F8F9FA] flex-col gap-4">
-        <div className="w-16 h-16 rounded bg-[#213B37] flex items-center justify-center animate-pulse">
+      <div className="flex h-screen w-full items-center justify-center bg-[#020617] flex-col gap-4">
+        <div className="w-16 h-16 rounded bg-[#213B37] flex items-center justify-center animate-pulse border border-white/5">
           <Scale className="text-white h-8 w-8" />
         </div>
-        <p className="text-[#213B37] font-bold tracking-widest uppercase text-[10px]">Sincronizando Ecossistema...</p>
+        <p className="text-white font-bold tracking-widest uppercase text-[10px] opacity-50">Sincronizando Ecossistema RGMJ...</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#F8F9FA] p-6">
+      <div className="flex h-screen w-full items-center justify-center bg-[#020617] p-6">
         <div className="max-w-md w-full space-y-10 text-center">
           <div className="flex flex-col items-center gap-6">
-            <div className="w-20 h-20 rounded bg-[#213B37] flex items-center justify-center shadow-xl">
+            <div className="w-20 h-20 rounded bg-[#213B37] flex items-center justify-center shadow-2xl border border-white/10">
               <Scale className="text-white h-10 w-10" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-4xl text-[#213B37] font-bold">Portal RGMJ</h1>
+              <h1 className="text-4xl text-white font-bold tracking-tighter">Portal RGMJ</h1>
               <p className="text-[#818258] uppercase tracking-[0.3em] text-[10px] font-bold">Acesso Restrito ao Comando</p>
             </div>
           </div>
 
-          <div className="bg-white p-10 rounded shadow-2xl border border-[#818258]/10 space-y-8">
-            <p className="text-sm text-[#213B37]/70 font-medium">Autentique-se com sua conta corporativa Google.</p>
+          <div className="glass p-10 rounded-2xl border border-white/5 space-y-8">
+            <p className="text-sm text-white/70 font-medium">Autentique-se com sua conta corporativa Google.</p>
             <Button 
               onClick={handleGoogleLogin}
               disabled={isLoggingIn}
-              className="w-full h-14 bg-[#818258] hover:bg-[#bbbd7e] text-white font-bold rounded-[0.3em] transition-all flex items-center justify-center gap-4"
+              className="w-full h-14 bg-[#818258] hover:bg-[#bbbd7e] text-white font-bold rounded-lg transition-all flex items-center justify-center gap-4"
             >
               {isLoggingIn ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -113,16 +113,16 @@ export default function DashboardLayout({
 
   if (!isOwner && !role && isProfileLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#F8F9FA] flex-col gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-[#213B37]" />
-        <p className="text-[#213B37] font-bold tracking-widest uppercase text-[10px]">Validando Credenciais...</p>
+      <div className="flex h-screen w-full items-center justify-center bg-[#020617] flex-col gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-[#818258]" />
+        <p className="text-white font-bold tracking-widest uppercase text-[10px] opacity-50">Validando Credenciais...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA]">
-      <aside className="w-[300px] bg-[#213B37] hidden lg:block sticky top-0 h-screen overflow-y-auto">
+    <div className="flex min-h-screen bg-[#020617]">
+      <aside className="w-[300px] bg-[#213B37] hidden lg:block sticky top-0 h-screen overflow-y-auto border-r border-white/5">
         <SidebarNav />
       </aside>
       <main className="flex-1 overflow-y-auto">

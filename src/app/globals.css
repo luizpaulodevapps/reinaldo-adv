@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    /* Design Tokens RGMJ - Institucional */
-    --background: 210 20% 98%; /* #F8F9FA */
-    --foreground: 171 28% 18%; /* #213B37 */
+    /* Design Tokens RGMJ - Tema Escuro de Elite */
+    --background: 222 47% 4%; /* #020617 */
+    --foreground: 210 40% 98%;
     
-    --card: 0 0% 100%;
-    --card-foreground: 171 28% 18%;
+    --card: 222 47% 7%;
+    --card-foreground: 210 40% 98%;
     
-    --popover: 0 0% 100%;
-    --popover-foreground: 171 28% 18%;
+    --popover: 222 47% 5%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 171 28% 18%; /* #213B37 */
+    --primary: 171 28% 18%; /* #213B37 - Verde RGMJ */
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 61 19% 43%; /* #818258 */
+    --secondary: 61 19% 43%; /* #818258 - Oliva RGMJ */
     --secondary-foreground: 0 0% 100%;
     
-    --muted: 45 5% 91%; /* #E9E8E6 */
-    --muted-foreground: 171 10% 40%;
+    --muted: 217 32% 12%;
+    --muted-foreground: 215 20% 65%;
     
     --accent: 61 19% 43%;
     --accent-foreground: 0 0% 100%;
@@ -29,11 +29,11 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 171 10% 90%;
-    --input: 45 5% 91%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
     --ring: 61 19% 43%;
     
-    --radius: 0.3rem;
+    --radius: 0.5rem;
   }
 }
 
@@ -74,10 +74,21 @@
   @apply font-bold px-[1.7em] py-[1em] transition-all duration-300 rounded-[0.3em];
 }
 
-/* Glass Institutional */
+/* Glass Institutional Dark */
 .glass {
-  background: rgba(255, 255, 255, 1);
-  border: 1px solid rgba(129, 130, 88, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #f5d030 0%, #d4af37 100%);
+  color: #0a0f1e;
+}
+
+.hover-gold:hover {
+  border-color: rgba(245, 208, 48, 0.3);
+  box-shadow: 0 0 20px rgba(245, 208, 48, 0.05);
 }
 
 /* Scrollbar */
