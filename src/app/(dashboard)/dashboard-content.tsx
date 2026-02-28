@@ -13,7 +13,9 @@ import {
   Loader2,
   Calendar,
   Users,
-  Target
+  Target,
+  Plus,
+  ArrowRight
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, where, limit, orderBy } from "firebase/firestore"
@@ -155,7 +157,7 @@ export function DashboardContent() {
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" className="text-muted-foreground group-hover:text-primary">
-                      <ExternalLink className="h-4 w-4" />
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -196,7 +198,7 @@ export function DashboardContent() {
                   ))
                 ) : (
                   <div className="p-10 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center space-y-4">
-                    <ShieldCheck className="h-8 w-8 text-emerald-500" />
+                    <CheckCircle2 className="h-8 w-8 text-emerald-500" />
                     <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Ambiente Seguro</p>
                   </div>
                 )}
@@ -229,20 +231,5 @@ export function DashboardContent() {
 
       </div>
     </div>
-  )
-}
-
-function ExternalLink({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className}
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" stroke="currentColor" 
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    >
-      <path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-    </svg>
   )
 }
