@@ -17,7 +17,7 @@ import {
   Calendar as CalendarIcon,
   Filter
 } from "lucide-react"
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase"
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
 import { format, isSameDay, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -25,17 +25,20 @@ import { ptBR } from "date-fns/locale"
 export default function AgendaPage() {
   const [date, setDate] = useState<Date | undefined>(new Date())
   const db = useFirestore()
+  const { user } = useUser()
 
-  // Busca Audiências
+  // Busca Audiências - Protegido por user
   const hearingsQuery = useMemoFirebase(() => {
+    if (!user) return null
     return query(collection(db, "hearings"), orderBy("startDateTime", "asc"))
-  }, [db])
+  }, [db, user])
   const { data: hearings } = useCollection(hearingsQuery)
 
-  // Busca Prazos
+  // Busca Prazos - Protegido por user
   const deadlinesQuery = useMemoFirebase(() => {
+    if (!user) return null
     return query(collection(db, "deadlines"), orderBy("dueDate", "asc"))
-  }, [db])
+  }, [db, user])
   const { data: deadlines } = useCollection(deadlinesQuery)
 
   // Filtra eventos para o dia selecionado
