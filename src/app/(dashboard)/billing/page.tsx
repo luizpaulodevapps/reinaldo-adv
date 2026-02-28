@@ -29,7 +29,7 @@ export default function BillingPage() {
   const { user, isUserLoading, role } = useUser()
 
   // Dr. Reinaldo tem acesso garantido pelo e-mail ou pela role na sessão
-  const isOwner = user?.email === 'luizao16@gmail.com'
+  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
   const canQuery = !!(user && (isOwner || role))
 
   // Busca todos os títulos financeiros - SÓ dispara se canQuery for true

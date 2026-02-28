@@ -42,7 +42,7 @@ export default function FinancialPage() {
   const profileRef = useMemoFirebase(() => user ? doc(db, 'staff_profiles', user.uid) : null, [user, db])
   const { data: profile } = useDoc(profileRef)
   
-  const isOwner = user?.email === 'luizao16@gmail.com'
+  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
   const canQuery = !!(user && (isOwner || profile?.role))
 
   // Busca Equipe

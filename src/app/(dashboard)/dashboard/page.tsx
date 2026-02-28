@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const { user, role } = useUser()
 
   // O dono (e-mail específico) ou qualquer um com role na sessão pode disparar as queries
-  const isOwner = user?.email === 'luizao16@gmail.com'
+  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com'
   const canQuery = !!(user && (isOwner || role))
 
   const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])

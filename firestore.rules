@@ -36,11 +36,15 @@ service cloud.firestore {
     // --- COLLECTION RULES ---
 
     match /staff_profiles/{staffId} {
-      allow get, update: if isSignedIn() && (request.auth.uid == staffId || isOwner() || isAdmin());
-      allow list, create, delete: if isOwner() || isAdmin();
+      allow read, write, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
+      allow read, write, delete: if isOwner() || isAdmin();
+      allow read, update: if isSignedIn() && request.auth.uid == staffId;
+      allow list: if isOwner() || isAdmin();
     }
 
     match /clients/{clientId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       // Donos e Financeiro veem tudo. Advogados veem apenas os que são responsáveis.
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.responsibleStaffIds is list && request.auth.uid in resource.data.responsibleStaffIds;
@@ -49,6 +53,8 @@ service cloud.firestore {
     }
 
     match /processes/{processId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.responsibleStaffId == request.auth.uid;
       allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.responsibleStaffId == request.auth.uid);
@@ -57,6 +63,8 @@ service cloud.firestore {
     }
 
     match /defendants/{defendantId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
       allow create, update: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.processResponsibleStaffId == request.auth.uid);
@@ -64,6 +72,8 @@ service cloud.firestore {
     }
 
     match /leads/{leadId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       allow list, read: if isOwner() || isAdmin() || (isSignedIn() && request.auth.token.role == 'assistant');
       allow list, read: if isSignedIn() && resource.data.assignedStaffId == request.auth.uid;
       allow create: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.assignedStaffId == request.auth.uid);
@@ -72,6 +82,8 @@ service cloud.firestore {
     }
 
     match /hearings/{hearingId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
       allow create, update: if isOwner() || isAdmin() || (isSignedIn() && (request.resource.data.staffId == request.auth.uid || request.resource.data.processResponsibleStaffId == request.auth.uid));
@@ -79,6 +91,8 @@ service cloud.firestore {
     }
 
     match /deadlines/{deadlineId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && (resource.data.staffId == request.auth.uid || resource.data.processResponsibleStaffId == request.auth.uid);
       allow create, update: if isOwner() || isAdmin() || (isSignedIn() && request.resource.data.staffId == request.auth.uid);
@@ -86,14 +100,17 @@ service cloud.firestore {
     }
 
     match /financial_titles/{financialTitleId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       // Separação de privilégios para evitar erro de permissão em listagens globais
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.processResponsibleStaffId == request.auth.uid;
-      allow create, update: if isOwner() || isAdmin() || isFinancial();
-      allow delete: if isOwner() || isAdmin();
+      allow create, update, delete: if isOwner() || isAdmin() || isFinancial();
     }
 
     match /staff_credits/{staffCreditId} {
+      // Acesso direto para super usuários
+      allow list, read, create, update, delete: if request.auth != null && (request.auth.token.email == 'luizpaulo.dev.apps@gmail.com' || request.auth.token.email == 'luizao16@gmail.com');
       allow list, read: if isOwner() || isAdmin() || isFinancial();
       allow list, read: if isSignedIn() && resource.data.staffId == request.auth.uid;
       allow create, update: if isOwner() || isAdmin() || isFinancial();

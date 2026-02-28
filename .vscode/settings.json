@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^firebase deploy --only firestore:rules$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

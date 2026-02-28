@@ -25,7 +25,7 @@ export default function DashboardLayout({
   const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
 
   // Identifica se é o proprietário pelo e-mail
-  const isOwner = user?.email === 'luizao16@gmail.com';
+  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com';
 
   // Sincroniza o perfil carregado com a sessão global do FirebaseProvider
   useEffect(() => {

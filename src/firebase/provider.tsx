@@ -76,7 +76,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     setUserAuthState(prev => ({ 
       ...prev, 
       profile, 
-      role: profile?.role || (prev.user?.email === 'luizao16@gmail.com' ? 'admin' : null) 
+      role: profile?.role || (prev.user?.email === 'luizao16@gmail.com' || prev.user?.email === 'luizpaulo.dev.apps@gmail.com' ? 'admin' : null) 
     }));
   };
 
@@ -94,7 +94,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           user: firebaseUser, 
           isUserLoading: false, 
           userError: null,
-          role: firebaseUser?.email === 'luizao16@gmail.com' ? 'admin' : prev.role
+          role: firebaseUser?.email === 'luizao16@gmail.com' || firebaseUser?.email === 'luizpaulo.dev.apps@gmail.com' ? 'admin' : prev.role
         }));
       },
       (error) => {
