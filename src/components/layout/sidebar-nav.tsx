@@ -23,7 +23,6 @@ import {
   DollarSign,
   Wallet,
   Users2,
-  MessageSquare,
   User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -63,7 +62,6 @@ const menuGroups = [
   {
     title: "COMERCIAL",
     items: [
-      { name: "ENTREVISTAS", href: "/interviews", icon: MessageSquare },
       { name: "TRIAGEM (FUNIL)", href: "/leads", icon: Zap },
       { name: "CLIENTES", href: "/clients", icon: Users },
     ]

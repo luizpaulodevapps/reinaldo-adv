@@ -84,7 +84,7 @@ export function DashboardContent() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest h-12 px-6" asChild>
-            <Link href="/interviews"><Calendar className="mr-2 h-4 w-4 text-primary" /> Realizar Entrevista</Link>
+            <Link href="/leads"><Zap className="mr-2 h-4 w-4 text-primary" /> Iniciar Triagem</Link>
           </Button>
           <Button className="gold-gradient font-black text-[10px] uppercase tracking-widest h-12 px-8 rounded-xl shadow-xl shadow-primary/10" asChild>
             <Link href="/cases"><Plus className="mr-2 h-4 w-4" /> Novo Processo</Link>

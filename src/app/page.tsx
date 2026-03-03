@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { 
   ArrowRight, 
   Scale, 
-  Gavel, 
   CheckCircle2, 
   ShieldCheck, 
   MessageSquare, 

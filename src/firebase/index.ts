@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -10,20 +11,16 @@ import { getFirestore, Firestore } from 'firebase/firestore';
  * Garante que o build e o SSR não quebrem na ausência de chaves reais.
  */
 export function initializeFirebase() {
-  // Se já houver um app inicializado, retorna as instâncias dele
   if (getApps().length > 0) {
     return getSdks(getApp());
   }
 
-  // Verifica se temos uma API Key minimamente válida
   const hasValidConfig = 
     firebaseConfig.apiKey && 
     firebaseConfig.apiKey !== "BUILD_TIME_PLACEHOLDER" &&
     !firebaseConfig.apiKey.includes("YOUR_");
 
   if (!hasValidConfig) {
-    // Retorna nulos controlados se não houver configuração válida.
-    // Isso evita o erro auth/api-key-not-valid durante o build.
     return {
       firebaseApp: null,
       auth: null,

@@ -26,7 +26,9 @@ import {
   ExternalLink,
   ArrowRight,
   ClipboardCheck,
-  Send
+  Send,
+  MessageSquare,
+  Sparkles
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -49,6 +51,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { collection, query, serverTimestamp, doc, where, limit } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
+import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -78,9 +81,17 @@ export default function LeadsPage() {
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
 
+  // Busca Matrizes de Entrevista do Laboratório
+  const checklistsQuery = useMemoFirebase(() => {
+    if (!user) return null
+    return query(collection(db, "checklists"), where("category", "==", "Entrevista de Triagem"))
+  }, [db, user])
+  const { data: interviewTemplates } = useCollection(checklistsQuery)
+
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
+  const [isInterviewOpen, setIsInterviewOpen] = useState(false)
   
   // Estados de formulário para os estágios
   const [atendimentoData, setAtendimentoData] = useState({ defendant: "", viability: "Alta", details: "" })
@@ -186,14 +197,23 @@ export default function LeadsPage() {
     toast({ title: "PROCESSO DISTRIBUÍDO!", description: "Dossiê migrado para a base de Processos Ativos." })
   }
 
-  const handleDiscardLead = () => {
-    if (!selectedLead) return
-    deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))
-    setIsSheetOpen(false)
-    toast({ variant: "destructive", title: "Lead Descartado" })
+  const handleInterviewSubmit = (responses: any) => {
+    const leadRef = doc(db, "leads", selectedLead.id)
+    updateDocumentNonBlocking(leadRef, {
+      interviewResponses: responses,
+      status: "atendimento",
+      updatedAt: serverTimestamp()
+    })
+    setIsInterviewOpen(false)
+    toast({ title: "Entrevista Concluída", description: "Os dados foram injetados no dossiê do lead." })
   }
 
-  // Lógica de Largura de Drawer baseada nas preferências do usuário
+  const activeTemplate = useMemo(() => {
+    if (!selectedLead || !interviewTemplates) return null
+    // Tenta achar um template com o nome exato do tipo de caso (ex: TRABALHISTA)
+    return interviewTemplates.find(t => t.title.includes(selectedLead.type.toUpperCase())) || interviewTemplates[0]
+  }, [selectedLead, interviewTemplates])
+
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
     switch (pref) {
@@ -209,14 +229,14 @@ export default function LeadsPage() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-headline font-bold text-white mb-2">CRM & Triagem Estratégica</h1>
-          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Fluxo de conversão e produção jurídica RGMJ.</p>
+          <h1 className="text-4xl font-headline font-bold text-white mb-2 uppercase tracking-tighter">CRM & Triagem Estratégica</h1>
+          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">FLUXO DE CONVERSÃO E PRODUÇÃO JURÍDICA RGMJ.</p>
         </div>
         <Button 
           onClick={() => setIsNewEntryOpen(true)} 
           className="blue-gradient text-white font-bold gap-3 px-8 h-12 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
         >
-          <PlusCircle className="h-5 w-5" /> NOVO ATENDIMENTO
+          <PlusCircle className="h-5 w-5" /> NOVO LEAD
         </Button>
       </div>
 
@@ -297,9 +317,32 @@ export default function LeadsPage() {
 
                 <ScrollArea className="flex-1">
                   <div className="p-10 pb-20 space-y-10">
-                    {/* ... (Conteúdo das Abas mantido igual) ... */}
                     <TabsContent value="atendimento" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="flex gap-4">
+                        <Button 
+                          onClick={() => setIsInterviewOpen(true)}
+                          className="flex-1 h-20 glass border-primary/20 text-primary font-black uppercase text-xs tracking-widest gap-4 hover:bg-primary/10 transition-all rounded-2xl"
+                        >
+                          <MessageSquare className="h-6 w-6" /> Iniciar Entrevista Técnica
+                        </Button>
+                        <Button className="flex-1 h-20 glass border-white/5 text-white font-black uppercase text-xs tracking-widest gap-4 hover:bg-white/5 transition-all rounded-2xl">
+                          <Brain className="h-6 w-6 text-primary" /> Análise IA do Caso
+                        </Button>
+                      </div>
+
+                      {selectedLead.interviewResponses && (
+                        <div className="p-8 rounded-3xl bg-emerald-500/5 border border-emerald-500/20 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                            <h4 className="text-sm font-black text-white uppercase tracking-tight">Entrevista Coletada</h4>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground leading-relaxed uppercase font-bold tracking-widest">
+                            O roteiro técnico foi concluído. {Object.keys(selectedLead.interviewResponses).length} pontos de prova capturados.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5">
                         <div className="space-y-3">
                           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Réu / Reclamada Principal</Label>
                           <Input 
@@ -320,15 +363,6 @@ export default function LeadsPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Resumo Estratégico (Briefing)</Label>
-                        <Textarea 
-                          value={atendimentoData.details}
-                          onChange={(e) => setAtendimentoData({...atendimentoData, details: e.target.value})}
-                          className="glass border-white/10 min-h-[200px] text-white text-sm focus:ring-primary/50 resize-none"
-                          placeholder="Descreva os fatos principais, pedidos e possíveis testemunhas..."
-                        />
                       </div>
                     </TabsContent>
                     
@@ -359,20 +393,6 @@ export default function LeadsPage() {
                           </div>
                         ))}
                       </div>
-                      <Button className="w-full glass border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest h-14 gap-2">
-                        <Brain className="h-4 w-4" /> Gerar Minutas via IA
-                      </Button>
-                    </TabsContent>
-
-                    <TabsContent value="burocracia" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                      <div className="p-8 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center space-y-6 opacity-50">
-                        <ClipboardCheck className="h-12 w-12 text-primary" />
-                        <div>
-                          <h4 className="text-sm font-bold text-white uppercase tracking-tight">Produção de Peças & Provas</h4>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Status: Em elaboração de Petição Inicial</p>
-                        </div>
-                        <Button variant="outline" className="glass border-white/10 text-white font-bold h-10 px-8">Acessar Pasta no Drive</Button>
-                      </div>
                     </TabsContent>
 
                     <TabsContent value="distribuicao" className="mt-0 space-y-8 animate-in fade-in duration-500">
@@ -395,24 +415,6 @@ export default function LeadsPage() {
                             placeholder="EX: TRT 2ª REGIÃO - SÃO PAULO"
                           />
                         </div>
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Vara Judicial</Label>
-                          <Input 
-                            value={distributionData.vara}
-                            onChange={(e) => setDistributionData({...distributionData, vara: e.target.value.toUpperCase()})}
-                            className="glass border-white/10 h-12 text-white" 
-                            placeholder="EX: 45ª VARA DO TRABALHO"
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data da Audiência (Opcional)</Label>
-                          <Input 
-                            type="datetime-local"
-                            value={distributionData.hearingDate}
-                            onChange={(e) => setDistributionData({...distributionData, hearingDate: e.target.value})}
-                            className="glass border-white/10 h-12 text-white" 
-                          />
-                        </div>
                       </div>
                       <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-center">
                         <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-4">Ação Final de Fluxo</p>
@@ -429,7 +431,7 @@ export default function LeadsPage() {
               </Tabs>
 
               <div className="p-10 border-t border-white/5 bg-black/60 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button onClick={handleDiscardLead} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-bold h-14 uppercase text-[10px] tracking-widest">Descartar Lead</Button>
+                <Button onClick={() => deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-bold h-14 uppercase text-[10px] tracking-widest">Descartar Lead</Button>
                 <Button onClick={handleUpdateLead} className="glass border-white/10 text-white font-bold h-14 uppercase text-[10px] tracking-widest">Salvar Alterações</Button>
                 <Button 
                   onClick={handleAdvanceStage} 
@@ -444,12 +446,23 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
+      {/* DIALOG DE EXECUÇÃO DE ENTREVISTA */}
+      <Dialog open={isInterviewOpen} onOpenChange={setIsInterviewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl h-[90vh]">
+          <DynamicInterviewExecution 
+            template={activeTemplate}
+            onSubmit={handleInterviewSubmit}
+            onCancel={() => setIsInterviewOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className={cn("w-full glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <div className="p-8 border-b border-white/5 bg-[#0a0f1e]">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
-                <UserPlus className="h-8 w-8 text-primary" /> Registro de Novo Atendimento
+                <UserPlus className="h-8 w-8 text-primary" /> Registro de Novo Lead
               </SheetTitle>
               <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
                 Inicie uma triagem rápida ou realize o cadastro completo na base RGMJ.
