@@ -23,9 +23,7 @@ export function DashboardClientLayout({
 
   const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com';
-
-  // REDIRECIONAMENTO: Movido para o topo para respeitar as regras de Hooks (sempre chamado)
+  // REGRA DE HOOKS: Redirecionamento sempre chamado no topo
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -41,6 +39,7 @@ export function DashboardClientLayout({
   useEffect(() => {
     if (user && db && profileData === null && !isProfileLoading) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
+      const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com';
       
       const initialProfile = {
         id: user.uid,
@@ -56,25 +55,17 @@ export function DashboardClientLayout({
       setDocumentNonBlocking(newProfileRef, initialProfile, { merge: true });
       setProfile(initialProfile);
     }
-  }, [user, db, profileData, isProfileLoading, isOwner, setProfile]);
+  }, [user, db, profileData, isProfileLoading, setProfile]);
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
         <div className="w-16 h-16 rounded-[1.5rem] bg-[#1e1b2e] flex items-center justify-center animate-pulse border border-white/5">
           <Scale className="text-primary h-8 w-8" />
         </div>
-        <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">Ecossistema RGMJ</p>
-      </div>
-    );
-  }
-
-  // Enquanto o redirect não acontece, mostramos um loader se não houver user
-  if (!user) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">Redirecionando...</p>
+        <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">
+          {!user ? 'Redirecionando...' : 'Ecossistema RGMJ'}
+        </p>
       </div>
     );
   }

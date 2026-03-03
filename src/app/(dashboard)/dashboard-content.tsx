@@ -6,18 +6,15 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
-  ArrowUpRight,
   Gavel,
   Zap,
   ChevronRight,
-  Loader2,
   Calendar,
-  Users,
-  Target,
   Plus,
   ArrowRight,
   CheckCircle2,
-  FileText
+  FileText,
+  Target
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, where, limit, orderBy } from "firebase/firestore"
@@ -60,17 +57,17 @@ export function DashboardContent() {
 
   if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center space-y-6">
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-6 text-white">
         <div className="relative">
           <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
           <Scale className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-primary" />
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 animate-pulse">Sincronizando Centro de Comando RGMJ...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 animate-pulse">Sincronizando Centro de Comando RGMJ...</p>
       </div>
     )
   }
 
-  const displayName = profile?.name || user?.displayName || "DR. REINALDO GONÇALVES"
+  const displayName = profile?.name || user?.displayName || "REINALDO GONÇALVES"
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -81,7 +78,7 @@ export function DashboardContent() {
             Sessão de Comando Ativa
           </Badge>
           <h1 className="text-5xl font-black text-white tracking-tighter uppercase">
-            Comandante, <span className="text-primary">{displayName.split(' ')[0]}</span>
+            Dr. <span className="text-primary">{displayName.split(' ')[0]}</span>
           </h1>
           <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-[0.3em]">Monitoramento Estratégico da Banca RGMJ Elite.</p>
         </div>
@@ -216,13 +213,13 @@ export function DashboardContent() {
             <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Protocolo Rápido</h4>
             <div className="grid grid-cols-2 gap-4">
               <Button asChild variant="outline" className="glass border-white/5 h-20 rounded-2xl flex flex-col gap-2 hover:border-primary/30 group transition-all text-white">
-                <Link href="/leads">
+                <Link href="/leads" className="flex flex-col items-center gap-2">
                   <Zap className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
                   <span className="text-[8px] font-black uppercase">Triagem</span>
                 </Link>
               </Button>
               <Button asChild variant="outline" className="glass border-white/5 h-20 rounded-2xl flex flex-col gap-2 hover:border-primary/30 group transition-all text-white">
-                <Link href="/drafting">
+                <Link href="/drafting" className="flex flex-col items-center gap-2">
                   <FileText className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
                   <span className="text-[8px] font-black uppercase">Minuta IA</span>
                 </Link>
