@@ -15,7 +15,8 @@ import {
   ArrowRight,
   CheckCircle2,
   FileText,
-  Target
+  Target,
+  Loader2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, where, limit, orderBy } from "firebase/firestore"
