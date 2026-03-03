@@ -14,17 +14,16 @@ import {
   Clock, 
   Gavel, 
   BookOpen, 
-  Receipt, 
-  Wallet, 
   Settings,
   Scale,
-  Users2,
   UserCheck,
   LogOut,
-  User as UserIcon,
   ChevronRight,
   ClipboardList,
-  DollarSign
+  DollarSign,
+  Wallet,
+  Users2,
+  MessageSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -63,7 +62,8 @@ const menuGroups = [
   {
     title: "COMERCIAL",
     items: [
-      { name: "TRIAGEM", href: "/leads", icon: Zap },
+      { name: "ENTREVISTAS", href: "/interviews", icon: MessageSquare },
+      { name: "TRIAGEM (FUNIL)", href: "/leads", icon: Zap },
       { name: "CLIENTES", href: "/clients", icon: Users },
     ]
   },
@@ -111,7 +111,7 @@ export function SidebarNav() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0a0a14]">
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0a0a14] font-sans">
       <SidebarHeader className="py-8 px-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 border border-primary/30">
@@ -145,7 +145,7 @@ export function SidebarNav() {
                         className={cn(
                           "relative flex items-center gap-3 px-4 py-6 transition-all duration-300 group h-12 rounded-full",
                           isActive 
-                            ? "bg-[#1e1b2e] text-white border border-primary/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]" 
+                            ? "bg-[#1e1b2e] text-white border border-primary/20 shadow-[0_0_15px_rgba(245,208,48,0.1)]" 
                             : "text-white/60 hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -158,7 +158,7 @@ export function SidebarNav() {
                             {item.name}
                           </span>
                           {isActive && (
-                            <div className="absolute left-0 w-1.5 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)] -translate-x-1" />
+                            <div className="absolute left-0 w-1.5 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(245,208,48,0.8)] -translate-x-1" />
                           )}
                         </Link>
                       </SidebarMenuButton>

@@ -16,35 +16,48 @@
         "city": { "type": "string" },
         "state": { "type": "string" },
         "zipCode": { "type": "string" },
-        "birthDateOrFoundationDate": { "type": "string", "format": "date" },
         "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "documentNumber", "type", "createdAt"]
+    },
+    "Interview": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Interview",
+      "type": "object",
+      "description": "Captured details from a potential client intake or witness interview.",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "type": { "type": "string", "enum": ["Inicial Trabalhista", "Cível", "Preparação de Testemunha"] },
+        "status": { "type": "string", "enum": ["Em Rascunho", "Concluída", "Convertida em Processo"] },
+        "interviewerId": { "type": "string" },
+        "data": { "type": "object" },
+        "aiSummary": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "documentNumber", "email", "phone", "address", "city", "state", "zipCode", "type", "createdAt"]
+      }
     },
     "StaffProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StaffProfile",
       "type": "object",
-      "description": "Represents a legal team member with their profile information and access roles.",
+      "description": "Represents a legal team member.",
       "properties": {
         "id": { "type": "string" },
-        "googleId": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string" },
         "isActive": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "googleId", "name", "email", "role", "isActive", "createdAt"]
+        "themePreferences": { "type": "object" }
+      }
     },
     "Process": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Process",
       "type": "object",
-      "description": "Details of a legal process, including its current status, associated client, and key legal information.",
+      "description": "Details of a legal process.",
       "properties": {
         "id": { "type": "string" },
         "clientId": { "type": "string" },
@@ -53,44 +66,21 @@
         "status": { "type": "string" },
         "description": { "type": "string" },
         "court": { "type": "string" },
-        "vara": { "type": "string" },
         "responsibleStaffId": { "type": "string" },
         "startDate": { "type": "string", "format": "date" },
-        "lastUpdateDate": { "type": "string", "format": "date" },
-        "driveFolderId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "clientId", "processNumber", "caseType", "status", "description", "court", "responsibleStaffId", "startDate", "createdAt"]
-    },
-    "FinancialTitle": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FinancialTitle",
-      "type": "object",
-      "description": "Financial records including revenue (honoraries) and expenses (administrative costs).",
-      "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["Entrada (Receita)", "Saída (Despesa)"] },
-        "category": { "type": "string" },
-        "description": { "type": "string" },
-        "value": { "type": "number" },
-        "status": { "type": "string", "enum": ["Pendente", "Recebido", "Pago"] },
-        "dueDate": { "type": "string", "format": "date" },
-        "processId": { "type": "string" },
-        "isRecurring": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }
   },
   "auth": {
-    "providers": ["password", "google"]
+    "providers": ["google"]
   },
   "firestore": {
     "structure": [
       { "path": "/staff_profiles/{staffId}", "definition": { "entityName": "StaffProfile", "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." } },
       { "path": "/clients/{clientId}", "definition": { "entityName": "Client", "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." } },
       { "path": "/processes/{processId}", "definition": { "entityName": "Process", "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." } },
-      { "path": "/financial_titles/{titleId}", "definition": { "entityName": "FinancialTitle", "schema": { "$ref": "#/backend/entities/FinancialTitle" }, "description": "Cash flow records." } }
+      { "path": "/interviews/{interviewId}", "definition": { "entityName": "Interview", "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." } }
     ]
   }
 }

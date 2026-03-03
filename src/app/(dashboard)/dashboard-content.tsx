@@ -1,3 +1,4 @@
+
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -70,29 +71,27 @@ export function DashboardContent() {
   const displayName = profile?.name || user?.displayName || "REINALDO GONÇALVES"
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      {/* Welcome Header */}
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-white/5 pb-10">
         <div className="space-y-2">
           <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1 text-[9px] font-black uppercase tracking-widest">
             Sessão de Comando Ativa
           </Badge>
           <h1 className="text-5xl font-black text-white tracking-tighter uppercase">
-            Dr. <span className="text-primary">{displayName.split(' ')[0]}</span>
+            DR. <span className="text-primary">{displayName.split(' ')[0]}</span>
           </h1>
           <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-[0.3em]">Monitoramento Estratégico da Banca RGMJ Elite.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest h-12 px-6">
-            <Calendar className="mr-2 h-4 w-4 text-primary" /> Relatório Diário
+          <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest h-12 px-6" asChild>
+            <Link href="/interviews"><Calendar className="mr-2 h-4 w-4 text-primary" /> Realizar Entrevista</Link>
           </Button>
-          <Button className="gold-gradient font-black text-[10px] uppercase tracking-widest h-12 px-8 rounded-xl shadow-xl shadow-primary/10">
-            <Plus className="mr-2 h-4 w-4" /> Novo Ato
+          <Button className="gold-gradient font-black text-[10px] uppercase tracking-widest h-12 px-8 rounded-xl shadow-xl shadow-primary/10" asChild>
+            <Link href="/cases"><Plus className="mr-2 h-4 w-4" /> Novo Processo</Link>
           </Button>
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className={cn("glass border-white/5 shadow-2xl hover-gold transition-all group relative overflow-hidden", stat.bg)}>
@@ -114,10 +113,7 @@ export function DashboardContent() {
         ))}
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        
-        {/* Hearings Section */}
         <Card className="lg:col-span-2 glass border-white/5 shadow-2xl overflow-hidden flex flex-col">
           <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e]/50 flex flex-row items-center justify-between">
             <div className="flex items-center gap-4">
@@ -170,7 +166,6 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Critical Alerts */}
         <div className="space-y-8">
           <Card className="glass border-destructive/20 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-destructive/50" />
@@ -208,7 +203,6 @@ export function DashboardContent() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions Card */}
           <Card className="glass border-white/5 p-8 space-y-6">
             <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Protocolo Rápido</h4>
             <div className="grid grid-cols-2 gap-4">
@@ -227,7 +221,6 @@ export function DashboardContent() {
             </div>
           </Card>
         </div>
-
       </div>
     </div>
   )

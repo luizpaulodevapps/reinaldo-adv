@@ -1,3 +1,4 @@
+
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -5,7 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Scale } from "lucide-react";
+import { Scale } from "lucide-react";
 import { useRouter } from 'next/navigation';
 
 export function DashboardClientLayout({
@@ -23,7 +24,7 @@ export function DashboardClientLayout({
 
   const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // REGRA DE HOOKS: Redirecionamento sempre chamado no topo
+  // REDIRECIONAMENTO GLOBAL - Sempre no topo
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -72,7 +73,7 @@ export function DashboardClientLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen bg-[#0a0a14] w-full">
+      <div className="flex min-h-screen bg-[#0a0a14] w-full font-sans">
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14] sticky top-0 z-40">

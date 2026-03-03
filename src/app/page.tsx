@@ -1,3 +1,4 @@
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,15 +10,12 @@ import {
   ShieldCheck, 
   MessageSquare, 
   Clock, 
-  ChevronRight,
   Zap,
   Users,
   Mail,
   Phone,
   MapPin,
-  Briefcase,
-  TrendingUp,
-  Hammer
+  Briefcase
 } from 'lucide-react'
 
 export default function HomePage() {
