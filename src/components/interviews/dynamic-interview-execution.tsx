@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CheckCircle2, ShieldCheck, ArrowRight, Brain, Loader2 } from "lucide-react"
+import { CheckCircle2, ShieldCheck, ArrowRight, Brain, Loader2, Circle, XCircle, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 interface DynamicInterviewProps {
   template: any
@@ -26,6 +27,13 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
   }
 
   const handleSubmit = () => {
+    // Validação de obrigatoriedade
+    const missingFields = template.items?.filter((item: any) => item.required && !responses[item.label])
+    if (missingFields?.length > 0) {
+      alert(`Os seguintes campos são obrigatórios: ${missingFields.map((f: any) => f.label).join(", ")}`)
+      return
+    }
+
     setLoading(true)
     setTimeout(() => {
       onSubmit(responses)
@@ -78,27 +86,57 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
                 />
               )}
 
-              {field.type === 'date' && (
-                <Input 
-                  type="date"
-                  className="bg-black/20 border-white/10 h-14 text-white focus:ring-1 focus:ring-primary/50"
-                  value={responses[field.label] || ""}
-                  onChange={(e) => handleInputChange(field.label, e.target.value)}
-                />
+              {field.type === 'boolean' && (
+                <RadioGroup 
+                  value={responses[field.label]} 
+                  onValueChange={(v) => handleInputChange(field.label, v)}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer",
+                    responses[field.label] === "Sim" ? "border-emerald-500 bg-emerald-500/10" : "border-white/5 bg-white/[0.02]"
+                  )}>
+                    <RadioGroupItem value="Sim" id={`yes-${idx}`} className="border-emerald-500 text-emerald-500" />
+                    <Label htmlFor={`yes-${idx}`} className="text-xs font-bold text-white uppercase cursor-pointer">Sim</Label>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer",
+                    responses[field.label] === "Não" ? "border-rose-500 bg-rose-500/10" : "border-white/5 bg-white/[0.02]"
+                  )}>
+                    <RadioGroupItem value="Não" id={`no-${idx}`} className="border-rose-500 text-rose-500" />
+                    <Label htmlFor={`no-${idx}`} className="text-xs font-bold text-white uppercase cursor-pointer">Não</Label>
+                  </div>
+                </RadioGroup>
               )}
 
-              {field.type === 'boolean' && (
-                <div className="flex items-center gap-4 p-6 rounded-2xl bg-white/[0.02] border border-white/5 group hover:border-primary/20 transition-all">
-                  <Checkbox 
-                    id={`field-${idx}`}
-                    checked={responses[field.label] || false}
-                    onCheckedChange={(checked) => handleInputChange(field.label, !!checked)}
-                    className="border-primary/50 h-6 w-6"
-                  />
-                  <Label htmlFor={`field-${idx}`} className="text-sm font-bold text-muted-foreground uppercase cursor-pointer group-hover:text-white transition-colors">
-                    Confirmado / Sim
-                  </Label>
-                </div>
+              {field.type === 'boolean_partial' && (
+                <RadioGroup 
+                  value={responses[field.label]} 
+                  onValueChange={(v) => handleInputChange(field.label, v)}
+                  className="grid grid-cols-3 gap-4"
+                >
+                  <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer",
+                    responses[field.label] === "Sim" ? "border-emerald-500 bg-emerald-500/10" : "border-white/5 bg-white/[0.02]"
+                  )}>
+                    <RadioGroupItem value="Sim" id={`pyes-${idx}`} className="border-emerald-500 text-emerald-500" />
+                    <Label htmlFor={`pyes-${idx}`} className="text-[10px] font-bold text-white uppercase cursor-pointer">Sim</Label>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer",
+                    responses[field.label] === "Parcial" ? "border-amber-500 bg-amber-500/10" : "border-white/5 bg-white/[0.02]"
+                  )}>
+                    <RadioGroupItem value="Parcial" id={`ppart-${idx}`} className="border-amber-500 text-amber-500" />
+                    <Label htmlFor={`ppart-${idx}`} className="text-[10px] font-bold text-white uppercase cursor-pointer">Parcial</Label>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer",
+                    responses[field.label] === "Não" ? "border-rose-500 bg-rose-500/10" : "border-white/5 bg-white/[0.02]"
+                  )}>
+                    <RadioGroupItem value="Não" id={`pno-${idx}`} className="border-rose-500 text-rose-500" />
+                    <Label htmlFor={`pno-${idx}`} className="text-[10px] font-bold text-white uppercase cursor-pointer">Não</Label>
+                  </div>
+                </RadioGroup>
               )}
             </div>
           ))}

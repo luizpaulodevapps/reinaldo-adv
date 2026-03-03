@@ -24,7 +24,10 @@ import {
   Scale,
   FileEdit,
   ShieldCheck,
-  LayoutGrid
+  LayoutGrid,
+  Circle,
+  FileText,
+  AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -39,6 +42,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
@@ -65,10 +69,10 @@ const LEGAL_AREAS = [
 ]
 
 const FIELD_TYPES = [
-  { id: "text", label: "Texto Livre", icon: Type },
-  { id: "number", label: "Numérico", icon: Hash },
-  { id: "boolean", label: "Sim/Não (Check)", icon: ToggleLeft },
-  { id: "date", label: "Data", icon: ListPlus },
+  { id: "boolean", label: "Sim / Não", icon: ToggleLeft },
+  { id: "boolean_partial", label: "Sim / Não / Parcial", icon: Circle },
+  { id: "text", label: "Resposta em Texto", icon: FileText },
+  { id: "number", label: "Valor Numérico", icon: Hash },
 ]
 
 export default function LaboratorioChecklistsPage() {
@@ -125,7 +129,7 @@ export default function LaboratorioChecklistsPage() {
   }
 
   const handleAddField = () => {
-    setItems([...items, { label: "", type: "text", required: false }])
+    setItems([...items, { label: "", type: "boolean", required: true }])
   }
 
   const handleUpdateField = (index: number, field: string, value: any) => {
@@ -251,7 +255,7 @@ export default function LaboratorioChecklistsPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh] font-sans">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh] font-sans">
           {/* Header Editor de Modelo */}
           <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
@@ -337,9 +341,9 @@ export default function LaboratorioChecklistsPage() {
                   </h4>
                   <Button 
                     onClick={handleAddField} 
-                    className="bg-primary/5 text-primary border border-primary/20 font-black uppercase text-[10px] tracking-widest gap-2 h-10 px-6 hover:bg-primary/10"
+                    className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest gap-2 h-10 px-6"
                   >
-                    <Plus className="h-3.5 w-3.5" /> ADICIONAR PASSO
+                    <Plus className="h-3.5 w-3.5" /> ADICIONAR PERGUNTA
                   </Button>
                 </div>
 
@@ -356,7 +360,7 @@ export default function LaboratorioChecklistsPage() {
                       {items.map((item, idx) => (
                         <div key={idx} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4 relative group hover:border-primary/20 transition-all">
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
-                            <div className="md:col-span-7 space-y-2">
+                            <div className="md:col-span-6 space-y-2">
                               <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">PERGUNTA / RÓTULO</Label>
                               <Input 
                                 value={item.label} 
@@ -365,10 +369,12 @@ export default function LaboratorioChecklistsPage() {
                                 placeholder="EX: Qual o último salário?"
                               />
                             </div>
-                            <div className="md:col-span-4 space-y-2">
-                              <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE DADO</Label>
+                            <div className="md:col-span-3 space-y-2">
+                              <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE RESPOSTA</Label>
                               <Select value={item.type} onValueChange={(v) => handleUpdateField(idx, 'type', v)}>
-                                <SelectTrigger className="bg-black/20 border-white/10 h-12 text-[10px] text-white uppercase"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="bg-black/20 border-primary h-12 text-[10px] text-white uppercase ring-1 ring-primary/20">
+                                  <SelectValue />
+                                </SelectTrigger>
                                 <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                                   {FIELD_TYPES.map(type => (
                                     <SelectItem key={type.id} value={type.id}>
@@ -381,7 +387,18 @@ export default function LaboratorioChecklistsPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="md:col-span-1 flex justify-end">
+                            <div className="md:col-span-2 flex items-center gap-3 pb-3">
+                              <Switch 
+                                id={`req-${idx}`} 
+                                checked={item.required} 
+                                onCheckedChange={(v) => handleUpdateField(idx, 'required', v)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                              <Label htmlFor={`req-${idx}`} className="text-[8px] font-black text-white uppercase tracking-tighter flex items-center gap-1">
+                                <ShieldCheck className="h-3 w-3 text-primary" /> OBRIGATÓRIO
+                              </Label>
+                            </div>
+                            <div className="md:col-span-1 flex justify-end pb-1">
                               <button 
                                 onClick={() => handleRemoveField(idx)} 
                                 className="text-rose-500 hover:text-white hover:bg-rose-500/20 p-3 rounded-xl transition-all opacity-0 group-hover:opacity-100"
