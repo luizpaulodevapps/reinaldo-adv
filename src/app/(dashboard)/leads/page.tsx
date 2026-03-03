@@ -28,7 +28,8 @@ import {
   ClipboardCheck,
   Send,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -210,8 +211,8 @@ export default function LeadsPage() {
 
   const activeTemplate = useMemo(() => {
     if (!selectedLead || !interviewTemplates) return null
-    // Tenta achar um template com o nome exato do tipo de caso (ex: TRABALHISTA)
-    return interviewTemplates.find(t => t.title.includes(selectedLead.type.toUpperCase())) || interviewTemplates[0]
+    // Busca matriz vinculada à área jurídica do lead
+    return interviewTemplates.find(t => t.legalArea === selectedLead.type) || interviewTemplates[0]
   }, [selectedLead, interviewTemplates])
 
   const getDrawerWidthClass = () => {
@@ -226,7 +227,7 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-headline font-bold text-white mb-2 uppercase tracking-tighter">CRM & Triagem Estratégica</h1>
@@ -236,7 +237,7 @@ export default function LeadsPage() {
           onClick={() => setIsNewEntryOpen(true)} 
           className="blue-gradient text-white font-bold gap-3 px-8 h-12 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
         >
-          <PlusCircle className="h-5 w-5" /> NOVO LEAD
+          <PlusCircle className="h-5 w-5 text-amber-500" /> NOVO LEAD
         </Button>
       </div>
 
@@ -336,9 +337,13 @@ export default function LeadsPage() {
                             <ShieldCheck className="h-5 w-5 text-emerald-500" />
                             <h4 className="text-sm font-black text-white uppercase tracking-tight">Entrevista Coletada</h4>
                           </div>
-                          <p className="text-[10px] text-muted-foreground leading-relaxed uppercase font-bold tracking-widest">
-                            O roteiro técnico foi concluído. {Object.keys(selectedLead.interviewResponses).length} pontos de prova capturados.
-                          </p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {Object.entries(selectedLead.interviewResponses).map(([q, a]: any) => (
+                              <div key={q} className="text-[9px] uppercase font-bold text-muted-foreground border-l border-white/5 pl-3">
+                                <span className="text-white/40">{q}:</span> {String(a)}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -480,4 +485,8 @@ export default function LeadsPage() {
       </Sheet>
     </div>
   )
+}
+
+function PlusCircle(props: any) {
+  return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
 }
