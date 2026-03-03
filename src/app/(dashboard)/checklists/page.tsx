@@ -27,7 +27,9 @@ import {
   LayoutGrid,
   Circle,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Gavel,
+  CheckCircle2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -255,7 +257,7 @@ export default function LaboratorioChecklistsPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh] font-sans">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh] font-sans">
           {/* Header Editor de Modelo */}
           <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
@@ -279,8 +281,8 @@ export default function LaboratorioChecklistsPage() {
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO DO CHECKLIST *</Label>
                   <Input 
                     value={title} 
-                    onChange={(e) => setTitle(e.target.value)} 
-                    placeholder="Ex: Protocolo de Inicial Trabalhista"
+                    onChange={(e) => setTitle(e.target.value.toUpperCase())} 
+                    placeholder="Ex: PROTOCOLO DE INICIAL TRABALHISTA"
                     className="bg-black/40 border-white/10 h-14 text-white font-bold focus:ring-1 focus:ring-primary/50" 
                   />
                 </div>
@@ -318,7 +320,7 @@ export default function LaboratorioChecklistsPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-[9px] text-muted-foreground italic font-medium uppercase tracking-tight">
-                    * Este formulário aparecerá automaticamente ao triar novos leads desta área.
+                    * ESTE FORMULÁRIO APARECERÁ AUTOMATICAMENTE AO TRIAR NOVOS LEADS DESTA ÁREA.
                   </p>
                 </div>
 
@@ -334,52 +336,64 @@ export default function LaboratorioChecklistsPage() {
               </div>
 
               {/* Itens de Verificação */}
-              <div className="space-y-6 pt-6 border-t border-white/5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3">
-                    <LayoutGrid className="h-4 w-4" /> ITENS DE VERIFICAÇÃO
-                  </h4>
+              <div className="space-y-8 pt-8 border-t border-white/5">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3">
+                      <LayoutGrid className="h-5 w-5" /> ELEMENTOS DA ENTREVISTA
+                    </h4>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Defina as perguntas e campos de captura de dados.</p>
+                  </div>
                   <Button 
                     onClick={handleAddField} 
-                    className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest gap-2 h-10 px-6"
+                    className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-2 h-12 px-8 rounded-xl shadow-xl shadow-primary/10"
                   >
-                    <Plus className="h-3.5 w-3.5" /> ADICIONAR PERGUNTA
+                    <Plus className="h-4 w-4" /> ADICIONAR PERGUNTA
                   </Button>
                 </div>
 
                 <div className="space-y-4">
                   {items.length === 0 ? (
-                    <div className="p-16 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-4 opacity-20">
-                      <div className="w-16 h-16 rounded-full border border-white/10 mx-auto flex items-center justify-center">
-                        <ListPlus className="h-8 w-8" />
+                    <div className="p-20 border-2 border-dashed border-white/5 rounded-[2rem] text-center space-y-6 opacity-20">
+                      <div className="w-20 h-20 rounded-full border border-white/10 mx-auto flex items-center justify-center">
+                        <ListPlus className="h-10 w-10 text-primary" />
                       </div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.4em]">Nenhum passo definido para este modelo.</p>
+                      <p className="text-xs font-black uppercase tracking-[0.5em]">Nenhum elemento tático definido.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {items.map((item, idx) => (
-                        <div key={idx} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4 relative group hover:border-primary/20 transition-all">
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                        <div key={idx} className="p-8 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-6 relative group hover:border-primary/20 transition-all">
+                          <div className="flex justify-between items-center">
+                            <Badge variant="outline" className="text-[10px] font-black text-primary border-primary/20 bg-primary/5 px-4">ITEM #{idx + 1}</Badge>
+                            <button 
+                              onClick={() => handleRemoveField(idx)} 
+                              className="text-rose-500 hover:text-white hover:bg-rose-500/20 p-2.5 rounded-xl transition-all"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
                             <div className="md:col-span-6 space-y-2">
-                              <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">PERGUNTA / RÓTULO</Label>
+                              <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">PERGUNTA / RÓTULO DE CAMPO</Label>
                               <Input 
                                 value={item.label} 
-                                onChange={(e) => handleUpdateField(idx, 'label', e.target.value)}
-                                className="bg-black/20 border-white/10 h-12 text-sm text-white focus:ring-1 focus:ring-primary/50" 
-                                placeholder="EX: Qual o último salário?"
+                                onChange={(e) => handleUpdateField(idx, 'label', e.target.value.toUpperCase())}
+                                className="bg-black/20 border-white/10 h-14 text-sm text-white font-bold focus:ring-1 focus:ring-primary/50" 
+                                placeholder="EX: QUAL O ÚLTIMO SALÁRIO NOMINAL?"
                               />
                             </div>
                             <div className="md:col-span-3 space-y-2">
-                              <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE RESPOSTA</Label>
+                              <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">INTELIGÊNCIA DE RESPOSTA</Label>
                               <Select value={item.type} onValueChange={(v) => handleUpdateField(idx, 'type', v)}>
-                                <SelectTrigger className="bg-black/20 border-primary h-12 text-[10px] text-white uppercase ring-1 ring-primary/20">
+                                <SelectTrigger className="bg-black/20 border-primary h-14 text-[10px] text-white uppercase font-black ring-1 ring-primary/20">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                                   {FIELD_TYPES.map(type => (
                                     <SelectItem key={type.id} value={type.id}>
-                                      <div className="flex items-center gap-2">
-                                        <type.icon className="h-3.5 w-3.5 opacity-50" />
+                                      <div className="flex items-center gap-3">
+                                        <type.icon className="h-4 w-4 opacity-50" />
                                         {type.label.toUpperCase()}
                                       </div>
                                     </SelectItem>
@@ -387,24 +401,16 @@ export default function LaboratorioChecklistsPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="md:col-span-2 flex items-center gap-3 pb-3">
+                            <div className="md:col-span-3 flex items-center gap-4 pb-3">
                               <Switch 
                                 id={`req-${idx}`} 
                                 checked={item.required} 
                                 onCheckedChange={(v) => handleUpdateField(idx, 'required', v)}
-                                className="data-[state=checked]:bg-primary"
+                                className="data-[state=checked]:bg-emerald-500"
                               />
-                              <Label htmlFor={`req-${idx}`} className="text-[8px] font-black text-white uppercase tracking-tighter flex items-center gap-1">
-                                <ShieldCheck className="h-3 w-3 text-primary" /> OBRIGATÓRIO
+                              <Label htmlFor={`req-${idx}`} className="text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer">
+                                <ShieldCheck className="h-4 w-4 text-emerald-500" /> OBRIGATÓRIO
                               </Label>
-                            </div>
-                            <div className="md:col-span-1 flex justify-end pb-1">
-                              <button 
-                                onClick={() => handleRemoveField(idx)} 
-                                className="text-rose-500 hover:text-white hover:bg-rose-500/20 p-3 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                              >
-                                <X className="h-5 w-5" />
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -420,15 +426,15 @@ export default function LaboratorioChecklistsPage() {
           <div className="p-8 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
             <button 
               onClick={() => setIsDialogOpen(false)} 
-              className="text-muted-foreground uppercase font-black text-[11px] tracking-widest hover:text-white transition-colors"
+              className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors"
             >
-              CANCELAR
+              DESCARTAR ALTERAÇÕES
             </button>
             <Button 
               onClick={handleSave} 
-              className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3"
+              className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-2xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-4"
             >
-              <ShieldCheck className="h-5 w-5" /> SALVAR E DISPONIBILIZAR NA BANCA
+              <ShieldCheck className="h-6 w-6" /> SALVAR E DISPONIBILIZAR NA BANCA
             </Button>
           </div>
         </DialogContent>
