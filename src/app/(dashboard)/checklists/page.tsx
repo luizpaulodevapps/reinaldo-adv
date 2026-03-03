@@ -29,7 +29,8 @@ import {
   FileText,
   AlertCircle,
   Gavel,
-  CheckCircle2
+  CheckCircle2,
+  PlusCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
