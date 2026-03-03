@@ -23,7 +23,8 @@ import {
   DollarSign,
   Wallet,
   Users2,
-  MessageSquare
+  MessageSquare,
+  User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {

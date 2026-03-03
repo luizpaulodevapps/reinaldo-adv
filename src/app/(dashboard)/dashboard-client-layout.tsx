@@ -6,7 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Scale } from "lucide-react";
+import { Scale, Loader2 } from "lucide-react";
 import { useRouter } from 'next/navigation';
 
 export function DashboardClientLayout({
@@ -17,19 +17,19 @@ export function DashboardClientLayout({
   const router = useRouter();
   const { user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
 
+  // REDIRECIONAMENTO GLOBAL - Deve ser incondicional para manter a ordem dos hooks
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'staff_profiles', user.uid);
   }, [user, db]);
 
   const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
-
-  // REDIRECIONAMENTO GLOBAL - Sempre no topo
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isUserLoading, router]);
 
   useEffect(() => {
     if (profileData && !profile) {
@@ -60,7 +60,7 @@ export function DashboardClientLayout({
 
   if (isUserLoading || !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4">
+      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4 font-sans">
         <div className="w-16 h-16 rounded-[1.5rem] bg-[#1e1b2e] flex items-center justify-center animate-pulse border border-white/5">
           <Scale className="text-primary h-8 w-8" />
         </div>
