@@ -3,19 +3,23 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { TrendingUp, Users, Scale, AlertCircle, Calendar, Loader2 } from "lucide-react"
+import { TrendingUp, Users, Scale, AlertCircle, Calendar, Loader2, ChevronRight, LayoutGrid } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query } from "firebase/firestore"
 import { useMemo } from "react"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export default function ReportsPage() {
   const db = useFirestore()
   const { user } = useUser()
 
-  const casesQuery = useMemoFirebase(() => user ? collection(db, "processes") : null, [db, user])
-  const clientsQuery = useMemoFirebase(() => user ? collection(db, "clients") : null, [db, user])
-  const financialQuery = useMemoFirebase(() => user ? collection(db, "financial_titles") : null, [db, user])
-  const deadlinesQuery = useMemoFirebase(() => user ? collection(db, "deadlines") : null, [db, user])
+  const canQuery = !!user && !!db
+
+  const casesQuery = useMemoFirebase(() => canQuery ? collection(db!, "processes") : null, [db, canQuery])
+  const clientsQuery = useMemoFirebase(() => canQuery ? collection(db!, "clients") : null, [db, canQuery])
+  const financialQuery = useMemoFirebase(() => canQuery ? collection(db!, "financial_titles") : null, [db, canQuery])
+  const deadlinesQuery = useMemoFirebase(() => canQuery ? collection(db!, "deadlines") : null, [db, canQuery])
 
   const { data: cases, isLoading: loadingCases } = useCollection(casesQuery)
   const { data: clients, isLoading: loadingClients } = useCollection(clientsQuery)
@@ -25,7 +29,6 @@ export default function ReportsPage() {
   const isLoading = loadingCases || loadingClients || loadingFinancial
 
   const performanceData = useMemo(() => {
-    // Agrupa faturamento por mês (simulação baseada em dados reais)
     return [
       { month: "Jan", processos: 5, faturamento: 12000 },
       { month: "Fev", processos: 8, faturamento: 15000 },
@@ -55,20 +58,26 @@ export default function ReportsPage() {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Processando Inteligência BI...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Processando Inteligência BI...</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-headline font-bold text-white mb-2">Relatórios BI</h1>
-          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Inteligência de Negócio e Performance da Banca</p>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
+            <LayoutGrid className="h-3 w-3" />
+            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+            <ChevronRight className="h-2 w-2" />
+            <span className="text-white uppercase tracking-tighter">Business Intelligence</span>
+          </div>
+          <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">Relatórios BI</h1>
+          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Inteligência de Negócio RGMJ.</p>
         </div>
         <div className="flex gap-2">
-           <div className="glass px-4 py-2 rounded-lg flex items-center gap-2 text-xs font-bold text-primary">
+           <div className="glass px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary border-primary/20">
             <Calendar className="h-4 w-4" /> Dados Consolidados
           </div>
         </div>
@@ -81,11 +90,11 @@ export default function ReportsPage() {
           { label: "Dossiês Estratégicos", value: cases?.length || 0, icon: Scale, color: "text-info" },
           { label: "Prazos Críticos", value: deadlines?.filter(d => d.status === "Aberto").length || 0, icon: AlertCircle, color: "text-destructive" },
         ].map((stat, i) => (
-          <Card key={i} className="glass border-primary/10">
+          <Card key={i} className="glass border-white/5 hover-gold transition-all">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
-                <p className="text-2xl font-bold mt-1 text-white">{stat.value}</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{stat.label}</p>
+                <p className="text-2xl font-black mt-1 text-white tracking-tighter">{stat.value}</p>
               </div>
               <div className={`p-3 rounded-xl bg-secondary/50 ${stat.color}`}>
                 <stat.icon className="h-5 w-5" />
@@ -96,19 +105,19 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="glass border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-lg font-headline text-white">Evolução de Performance</CardTitle>
+        <Card className="glass border-primary/20 shadow-2xl">
+          <CardHeader className="border-b border-white/5">
+            <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Evolução de Performance</CardTitle>
           </CardHeader>
-          <CardContent className="h-[350px]">
+          <CardContent className="h-[350px] p-8">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={performanceData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: "#020617", border: "1px solid #1e293b", borderRadius: "8px" }}
-                  itemStyle={{ color: "#F5D030" }}
+                  itemStyle={{ color: "#F5D030", fontWeight: 'bold', fontSize: '10px' }}
                 />
                 <Bar dataKey="faturamento" fill="#F5D030" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -116,11 +125,11 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-lg font-headline text-white">Distribuição Jurídica</CardTitle>
+        <Card className="glass border-primary/20 shadow-2xl">
+          <CardHeader className="border-b border-white/5">
+            <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Distribuição Jurídica</CardTitle>
           </CardHeader>
-          <CardContent className="h-[350px] flex items-center justify-center">
+          <CardContent className="h-[350px] flex items-center justify-center p-8">
             {areaData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height="100%">
@@ -143,17 +152,18 @@ export default function ReportsPage() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="space-y-2">
+                <div className="space-y-3 pl-8 border-l border-white/5">
                   {areaData.map((area, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: area.color }} />
-                      <span className="text-xs text-muted-foreground">{area.name} ({area.value})</span>
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: area.color }} />
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{area.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">({area.value})</span>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div className="text-muted-foreground text-xs uppercase tracking-widest">Sem dados para classificação</div>
+              <div className="text-muted-foreground text-[10px] uppercase tracking-[0.4em] font-black opacity-30">Sem dados para classificação</div>
             )}
           </CardContent>
         </Card>

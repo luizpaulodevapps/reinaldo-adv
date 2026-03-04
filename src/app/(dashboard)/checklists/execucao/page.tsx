@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -12,11 +12,8 @@ import {
   Plus, 
   Play, 
   Clock, 
-  CheckCircle2, 
   Loader2,
-  Filter,
   User,
-  LayoutGrid,
   ChevronRight,
   ArrowRight,
   ShieldCheck,
@@ -38,6 +35,7 @@ import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 export default function ChecklistExecutionPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -50,14 +48,14 @@ export default function ChecklistExecutionPage() {
 
   // Busca Templates (Matrizes)
   const templatesQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !db) return null
     return query(collection(db, "checklists"), orderBy("title", "asc"))
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
   // Busca Execuções Ativas (Instâncias)
   const executionsQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !db) return null
     return query(collection(db, "checklist_executions"), orderBy("updatedAt", "desc"))
   }, [db, user])
   const { data: executions, isLoading } = useCollection(executionsQuery)
@@ -71,7 +69,7 @@ export default function ChecklistExecutionPage() {
   }, [executions, searchTerm])
 
   const handleStartExecution = (template: any) => {
-    if (!user) return
+    if (!user || !db) return
 
     const newExecution = {
       templateId: template.id,
@@ -98,6 +96,7 @@ export default function ChecklistExecutionPage() {
   }
 
   const handleMarkComplete = (executionId: string) => {
+    if (!db) return
     updateDocumentNonBlocking(doc(db, "checklist_executions", executionId), {
       status: "Finalizado",
       progress: 100,
@@ -107,11 +106,16 @@ export default function ChecklistExecutionPage() {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-5xl font-headline font-bold text-white tracking-tighter">Rotinas Operacionais</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Execução padronizada das rotinas estratégicas RGMJ.</p>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
+            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+            <ChevronRight className="h-2 w-2" />
+            <span className="text-white uppercase tracking-tighter">Rotinas Estratégicas</span>
+          </div>
+          <h1 className="text-5xl font-black text-white tracking-tighter uppercase">Rotinas Operacionais</h1>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Execução padronizada RGMJ Elite.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
@@ -119,15 +123,14 @@ export default function ChecklistExecutionPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar rotinas..." 
-              className="pl-12 glass border-white/5 h-12 text-xs text-white"
+              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => setIsStartDialogOpen(true)}
-            className="w-12 h-12 rounded-xl bg-[#f5d030] flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all border-2 border-[#f5d030] ring-offset-2 ring-offset-[#0a0f1e] ring-1 ring-[#f5d030]/50"
-            title="Nova Rotina"
+            className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
             <Plus className="h-6 w-6 text-[#0a0f1e]" />
           </button>
@@ -142,7 +145,7 @@ export default function ChecklistExecutionPage() {
           </div>
         ) : filteredExecutions.length > 0 ? (
           filteredExecutions.map((exec) => (
-            <Card key={exec.id} className="glass border-primary/10 hover-gold transition-all group overflow-hidden flex flex-col">
+            <Card key={exec.id} className="glass border-primary/10 hover-gold transition-all group overflow-hidden flex flex-col shadow-2xl">
               <div className={cn(
                 "h-1.5 w-full transition-all",
                 exec.status === 'Finalizado' ? "bg-emerald-500" : "bg-amber-500"
@@ -154,7 +157,7 @@ export default function ChecklistExecutionPage() {
                     <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3">
                       {exec.category?.toUpperCase() || "GERAL"}
                     </Badge>
-                    <h3 className="text-xl font-headline font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight">
                       {exec.title}
                     </h3>
                   </div>
@@ -168,7 +171,7 @@ export default function ChecklistExecutionPage() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
-                    <span>Progresso Técnico</span>
+                    <span>Nível de Conformidade</span>
                     <span className="text-white">{exec.progress}%</span>
                   </div>
                   <Progress value={exec.progress} className="h-1.5 bg-secondary" />
@@ -177,15 +180,15 @@ export default function ChecklistExecutionPage() {
                 <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/5">
                   <div className="space-y-1">
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                      <User className="h-3 w-3" /> Executor
+                      <User className="h-3 w-3" /> Responsável
                     </p>
                     <p className="text-xs font-bold text-white uppercase">{exec.executorName}</p>
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 justify-end">
-                      <Clock className="h-3 w-3" /> Última Ação
+                      <Clock className="h-3 w-3" /> Último Ato
                     </p>
-                    <p className="text-xs font-mono text-white">
+                    <p className="text-xs font-mono font-bold text-white">
                       {exec.updatedAt?.toDate ? format(exec.updatedAt.toDate(), "dd/MM HH:mm") : "--/--"}
                     </p>
                   </div>
@@ -193,14 +196,14 @@ export default function ChecklistExecutionPage() {
 
                 <div className="flex items-center justify-between pt-2">
                   <button className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest">
-                    <ArrowRight className="h-4 w-4" /> Retomar Rotina
+                    <ArrowRight className="h-4 w-4" /> Retomar Auditoria
                   </button>
                   {exec.status !== 'Finalizado' && (
                     <button 
                       onClick={() => handleMarkComplete(exec.id)}
                       className="flex items-center gap-2 text-[10px] font-black text-emerald-500 hover:text-emerald-400 transition-colors uppercase tracking-widest"
                     >
-                      <ShieldCheck className="h-4 w-4" /> Finalizar Rotina
+                      <ShieldCheck className="h-4 w-4" /> Finalizar
                     </button>
                   )}
                 </div>
@@ -208,29 +211,25 @@ export default function ChecklistExecutionPage() {
             </Card>
           ))
         ) : (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[2rem] border-dashed border-2 border-white/5 opacity-30">
             <ClipboardList className="h-16 w-16 text-muted-foreground" />
-            <div className="text-center space-y-2">
-              <p className="text-sm font-bold text-white uppercase tracking-widest">Nenhuma Rotina Ativa</p>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">Sua banca está em conformidade. Nenhum roteiro operacional em aberto no momento.</p>
-            </div>
-            <Button onClick={() => setIsStartDialogOpen(true)} className="gold-gradient text-background font-bold gap-2">
-              Iniciar Nova Rotina
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center">Nenhuma rotina técnica em execução</p>
+            <Button onClick={() => setIsStartDialogOpen(true)} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12">
+              Nova Rotina de Elite
             </Button>
           </div>
         )}
       </div>
 
-      {/* DIALOG PARA ESCOLHER TEMPLATE */}
       <Dialog open={isStartDialogOpen} onOpenChange={setIsStartDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                Selecionar Matriz de Rotina
+                Matrizes de Rotina
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Escolha o roteiro padrão para iniciar a rotina técnica.
+                Escolha o roteiro para iniciar a execução técnica.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -251,27 +250,18 @@ export default function ChecklistExecutionPage() {
                       <h4 className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">
                         {template.title}
                       </h4>
-                      <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1 italic">
-                        {template.description || "Sem descrição técnica."}
-                      </p>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                       <Play className="h-4 w-4 fill-current" />
                     </div>
                   </button>
                 ))}
-                {templates?.length === 0 && (
-                  <div className="py-10 text-center space-y-4 opacity-40">
-                    <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Nenhuma matriz cadastrada no laboratório.</p>
-                  </div>
-                )}
               </div>
             </ScrollArea>
           </div>
 
-          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsStartDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsStartDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">
               Cancelar Operação
             </Button>
           </DialogFooter>

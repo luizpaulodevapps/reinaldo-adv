@@ -7,20 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
   Plus, 
-  Wallet, 
   Calculator, 
   ChevronRight, 
   ArrowUpRight, 
   ArrowDownRight,
-  Receipt,
   Loader2,
-  BarChart3,
-  Gavel,
   Scale,
-  FileText,
-  DollarSign,
-  AlertCircle,
-  X,
   Printer,
   TrendingUp,
   Building2,
@@ -46,7 +38,7 @@ export default function BillingPage() {
   const { toast } = useToast()
 
   const financialQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !db) return null
     return query(collection(db, "financial_titles"), orderBy("dueDate", "desc"))
   }, [db, user])
 
@@ -84,7 +76,7 @@ export default function BillingPage() {
   }, [transactions, searchTerm])
 
   const handleCreateTitle = (data: any) => {
-    if (!user) return
+    if (!user || !db) return
 
     const iterations = data.isRecurring ? (data.recurrenceMonths || 1) : 1
     const baseDueDate = parseISO(data.dueDate)
@@ -101,7 +93,6 @@ export default function BillingPage() {
         updatedAt: serverTimestamp(),
       }
       
-      // Limpeza de campos internos de UI
       delete newTitle.numericValue
       delete newTitle.recurrenceMonths
 
@@ -168,19 +159,19 @@ export default function BillingPage() {
   )
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
-            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+            <Link href="/" className="hover:text-primary transition-colors uppercase">Início</Link>
             <ChevronRight className="h-2 w-2" />
-            <span>Dashboard</span>
+            <span className="uppercase">Dashboard</span>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white">Central Financeira</span>
+            <span className="text-white uppercase tracking-tighter">Central Financeira</span>
           </div>
-          <h1 className="text-4xl font-headline font-bold text-white tracking-tight">Gestão Financeira Central</h1>
-          <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest opacity-70">
-            Controle 360º: Honorários, Despesas de Backoffice e Folha de Pagamento.
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão Financeira Central</h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-70">
+            CONTROLE 360º: HONORÁRIOS, DESPESAS E FOLHA RGMJ.
           </p>
         </div>
         
@@ -196,7 +187,7 @@ export default function BillingPage() {
           </div>
           <Button 
             onClick={() => setIsNewTitleOpen(true)}
-            className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-lg shadow-primary/10"
+            className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
           >
             <Plus className="h-4 w-4" /> Novo Lançamento
           </Button>
@@ -204,35 +195,35 @@ export default function BillingPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="glass border-primary/20 relative overflow-hidden h-32 flex flex-col justify-center">
+        <Card className="glass border-primary/20 relative overflow-hidden h-32 flex flex-col justify-center shadow-2xl">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <TrendingUp className="h-3 w-3" /> Saldo Operacional (Líquido)
+              <TrendingUp className="h-3 w-3" /> Saldo Operacional
             </p>
-            <div className={cn("text-3xl font-black tabular-nums", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>
+            <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>
               R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-emerald-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
+        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
               <ArrowUpRight className="h-3 w-3" /> Receita Bruta
             </p>
-            <div className="text-3xl font-black text-white tabular-nums">
+            <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
               R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-rose-500/10 relative overflow-hidden h-32 flex flex-col justify-center">
+        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-rose-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <ArrowDownRight className="h-3 w-3" /> Total Despesas (OPEX)
+              <ArrowDownRight className="h-3 w-3" /> Total Despesas
             </p>
-            <div className="text-3xl font-black text-white tabular-nums">
+            <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
               R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
@@ -241,28 +232,28 @@ export default function BillingPage() {
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <Building2 className="h-3 w-3" /> Custo de Estrutura
+              <Building2 className="h-3 w-3" /> Custo Estrutura
             </p>
-            <div className="text-3xl font-black text-white tabular-nums">
+            <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
               R$ {stats.admin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="todos" className="space-y-0">
+      <Tabs defaultValue="todos" className="space-y-0 shadow-2xl">
         <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-t-xl rounded-b-none border-b-0 overflow-x-auto scrollbar-hide">
-          <TabsTrigger value="todos" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <Calculator className="h-3.5 w-3.5" /> Tudo
+          <TabsTrigger value="todos" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <Calculator className="h-3.5 w-3.5" /> Todos
           </TabsTrigger>
-          <TabsTrigger value="receitas" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Receitas Jurídicas
+          <TabsTrigger value="receitas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Receitas
           </TabsTrigger>
-          <TabsTrigger value="administrativo" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <Building2 className="h-3.5 w-3.5 text-primary" /> Administrativo & Backoffice
+          <TabsTrigger value="administrativo" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <Building2 className="h-3.5 w-3.5 text-primary" /> Administrativo
           </TabsTrigger>
-          <TabsTrigger value="folha" className="text-muted-foreground font-bold text-[10px] uppercase h-full px-8 gap-2">
-            <Users className="h-3.5 w-3.5 text-blue-400" /> Folha de Pagamento
+          <TabsTrigger value="folha" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <Users className="h-3.5 w-3.5 text-blue-400" /> Folha
           </TabsTrigger>
         </TabsList>
 
@@ -270,7 +261,7 @@ export default function BillingPage() {
           {isLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-4">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Auditando Fluxo RGMJ...</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Auditando Fluxo RGMJ...</span>
             </div>
           ) : (
             <>
@@ -278,7 +269,10 @@ export default function BillingPage() {
                 {filteredTransactions.length > 0 ? (
                   <TransactionList items={filteredTransactions} />
                 ) : (
-                  <EmptyState />
+                  <div className="flex-1 flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
+                    <Calculator className="h-16 w-16 text-muted-foreground" />
+                    <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum registro financeiro no radar</p>
+                  </div>
                 )}
               </TabsContent>
               
@@ -299,14 +293,14 @@ export default function BillingPage() {
       </Tabs>
 
       <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 Novo Lançamento Financeiro
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Gestão de caixa, despesas fixas e recebíveis.
+                Gestão de caixa e despesas RGMJ.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -315,15 +309,6 @@ export default function BillingPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function EmptyState() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
-      <Calculator className="h-16 w-16 text-muted-foreground" />
-      <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum registro financeiro no radar</p>
     </div>
   )
 }

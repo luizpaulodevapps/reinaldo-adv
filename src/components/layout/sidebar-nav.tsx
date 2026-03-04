@@ -102,6 +102,7 @@ export function SidebarNav() {
   const userRoleDisplay = role === 'admin' ? 'Administrador' : 'Equipe'
 
   const handleLogout = async () => {
+    if (!auth) return
     try {
       await signOut(auth)
     } catch (error) {
