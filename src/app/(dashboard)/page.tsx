@@ -1,20 +1,9 @@
 
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
 /**
  * REDIRECIONADOR TÁTICO RGMJ
- * Neutraliza o conflito de rota raiz (/) no grupo (dashboard).
- * Garante que a Landing Page em src/app/page.tsx seja a autoridade primária.
+ * Este arquivo foi desativado para evitar conflito de rota com a Landing Page na raiz (/).
+ * A autoridade primária da rota / reside agora em src/app/page.tsx.
  */
-export default function DashboardRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/dashboard');
-  }, [router]);
-
+export default function RedirectPage() {
   return null;
 }

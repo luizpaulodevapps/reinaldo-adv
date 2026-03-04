@@ -816,6 +816,31 @@ export default function LeadsPage() {
     toast({ title: "Dados Injetados" })
   }
 
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    if (digits.length <= 5) return digits
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  }
+
+  const formatCpfCnpj = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 14)
+    if (digits.length <= 11) {
+      if (digits.length <= 3) return digits
+      if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+      if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+    }
+    return digits
+  }
+
   const toggleInterviewKey = (question: string, checked: boolean) => {
     setDistributionData((prev) => ({
       ...prev,
@@ -932,36 +957,6 @@ export default function LeadsPage() {
     const normalizedStatus = normalizeLeadStatus(status)
     const found = columns.find((col) => col.id === normalizedStatus)
     return found?.title || String(status || "NOVO").toUpperCase()
-  }
-
-  const formatCep = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 8)
-    if (digits.length <= 5) return digits
-    return `${digits.slice(0, 5)}-${digits.slice(5)}`
-  }
-
-  const formatCpfCnpj = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 14)
-    if (digits.length <= 11) {
-      if (digits.length <= 3) return digits
-      if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
-      if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
-      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
-    }
-    return digits
-  }
-
-  const resolveAddressByCep = async () => {
-    const cep = scheduleData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
-    setIsResolvingCep(true)
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await response.json()
-      if (!data?.erro) {
-        setScheduleData(prev => ({ ...prev, address: data.logradouro, neighborhood: data.bairro, city: data.localidade, state: data.uf }))
-      }
-    } finally { setIsResolvingCep(false) }
   }
 
   const resolveClientAddressByCep = async () => {
@@ -1246,4 +1241,10 @@ export default function LeadsPage() {
       </Sheet>
     </div>
   )
+}
+
+// Lógica de Largura de Drawer
+function getDrawerWidthClass() {
+  // Simplificado para o protótipo, no futuro pode vir das preferências do perfil
+  return "sm:max-w-4xl";
 }
