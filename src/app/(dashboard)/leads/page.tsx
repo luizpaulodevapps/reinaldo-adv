@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -41,9 +41,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { collection, query, serverTimestamp, doc, where, limit } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
-import { aiSummarizeInterviewCaseDetails } from "@/ai/flows/ai-summarize-interview-case-details"
 import Link from "next/link"
 
 const columns = [
@@ -75,7 +74,6 @@ export default function LeadsPage() {
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
-  const migratedLeadIdsRef = useRef<Set<string>>(new Set())
 
   // Busca Matrizes de Entrevista do Laboratório
   const checklistsQuery = useMemoFirebase(() => {
@@ -129,7 +127,7 @@ export default function LeadsPage() {
     date: "",
     time: "",
     placeType: "office",
-    lawyerName: "Dr. Reinaldo Gonçalves",
+    lawyerName: "",
     meetingLink: "",
     zipCode: "",
     address: "",
@@ -140,8 +138,6 @@ export default function LeadsPage() {
     placeName: "",
     locationHint: "",
   })
-  const [isGeneratingCaseDetails, setIsGeneratingCaseDetails] = useState(false)
-  const [showRegistrationErrors, setShowRegistrationErrors] = useState(false)
 
   const getLoggedLawyerName = () => profile?.name || user?.displayName || "Dr. Reinaldo Gonçalves"
 
@@ -177,51 +173,9 @@ export default function LeadsPage() {
     return requiredDocuments.every((docName) => checklist?.[docName] === true)
   }
 
-  const registrationMissingMap = useMemo(() => ({
-    "client.fullName": !clientRegistrationData.fullName.trim(),
-    "client.cpf": !clientRegistrationData.cpf.trim(),
-    "client.rg": !clientRegistrationData.rg.trim(),
-    "client.rgIssueDate": !clientRegistrationData.rgIssueDate.trim(),
-    "client.motherName": !clientRegistrationData.motherName.trim(),
-    "client.ctps": !clientRegistrationData.ctps.trim(),
-    "client.zipCode": !clientRegistrationData.zipCode.trim(),
-    "client.address": !clientRegistrationData.address.trim(),
-    "client.city": !clientRegistrationData.city.trim(),
-    "client.state": !clientRegistrationData.state.trim(),
-    "claimant.fullName": !claimantData.fullName.trim(),
-    "claimant.documentNumber": !claimantData.documentNumber.trim(),
-    "claimant.zipCode": !claimantData.zipCode.trim(),
-    "claimant.address": !claimantData.address.trim(),
-    "claimant.city": !claimantData.city.trim(),
-    "claimant.state": !claimantData.state.trim(),
-  }), [clientRegistrationData, claimantData])
-
-  const registrationMissingLabels = useMemo(() => {
-    const labels: Record<string, string> = {
-      "client.fullName": "Cliente: Nome completo",
-      "client.cpf": "Cliente: CPF",
-      "client.rg": "Cliente: RG",
-      "client.rgIssueDate": "Cliente: Data expedição RG",
-      "client.motherName": "Cliente: Nome da mãe",
-      "client.ctps": "Cliente: CTPS",
-      "client.zipCode": "Cliente: CEP",
-      "client.address": "Cliente: Endereço",
-      "client.city": "Cliente: Cidade",
-      "client.state": "Cliente: UF",
-      "claimant.fullName": "Reclamante: Nome completo",
-      "claimant.documentNumber": "Reclamante: CPF/CNPJ",
-      "claimant.zipCode": "Reclamante: CEP",
-      "claimant.address": "Reclamante: Endereço",
-      "claimant.city": "Reclamante: Cidade",
-      "claimant.state": "Reclamante: UF",
-    }
-
-    return Object.entries(registrationMissingMap)
-      .filter(([, isMissing]) => isMissing)
-      .map(([field]) => labels[field])
-  }, [registrationMissingMap])
-
-  const isRegistrationComplete = () => registrationMissingLabels.length === 0
+  const isRegistrationComplete = () => {
+    return !!(clientRegistrationData.fullName && clientRegistrationData.cpf && claimantData.fullName)
+  }
 
   const computePipelineStatus = (params: {
     currentStatus?: string
@@ -563,8 +517,8 @@ export default function LeadsPage() {
 
                     <TabsContent value="distribuicao" className="mt-0 space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Input value={distributionData.processTitle} onChange={(e) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })} className="glass border-white/10 h-14 text-white uppercase font-bold" placeholder="NOME DA AÇÃO" />
-                        <Input value={distributionData.processNumber} onChange={(e) => setDistributionData({...distributionData, processNumber: e.target.value})} className="glass border-white/10 h-14 text-white font-mono font-bold" placeholder="NÚMERO CNJ" />
+                        <Input value={distributionData.processTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })} className="glass border-white/10 h-14 text-white uppercase font-bold" placeholder="NOME DA AÇÃO" />
+                        <Input value={distributionData.processNumber} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistributionData({...distributionData, processNumber: e.target.value})} className="glass border-white/10 h-14 text-white font-mono font-bold" placeholder="NÚMERO CNJ" />
                       </div>
                       <Button onClick={handleDistribute} className="w-full h-16 bg-emerald-600 text-white font-black uppercase text-xs rounded-xl shadow-xl tracking-widest">Protocolar Distribuição</Button>
                     </TabsContent>

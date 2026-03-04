@@ -217,7 +217,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                       placeholder="Pesquisar por nome ou CPF..." 
                       className="pl-12 bg-black/20 border-white/10 h-14 text-white text-sm font-bold"
                       value={formData.clientName || searchTerm}
-                      onChange={(e) => {
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setSearchTerm(e.target.value)
                         setShowResults(true)
                         if (formData.clientName) handleInputChange("clientName", "")
@@ -258,11 +258,11 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
-                  <Input value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
+                  <Input value={formData.defendantName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantName", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
                 </div>
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
-                  <Input value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
+                  <Input value={formData.defendantDocument} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantDocument", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
                 </div>
               </div>
             </div>
@@ -274,7 +274,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
-                  <Input value={formData.processNumber} onChange={(e) => handleInputChange("processNumber", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono text-lg font-black" placeholder="0000000-00.0000.0.00.0000" />
+                  <Input value={formData.processNumber} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("processNumber", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono text-lg font-black" placeholder="0000000-00.0000.0.00.0000" />
                 </div>
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ÁREA JURÍDICA</Label>
@@ -299,11 +299,11 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TRIBUNAL / ÓRGÃO *</Label>
-                    <Input value={formData.court} onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: TRT 2ª REGIÃO" />
+                    <Input value={formData.court} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("court", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: TRT 2ª REGIÃO" />
                   </div>
                   <div className="space-y-3">
                     <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">VARA / CÂMARA</Label>
-                    <Input value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: 45ª VARA DO TRABALHO" />
+                    <Input value={formData.vara} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("vara", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: 45ª VARA DO TRABALHO" />
                   </div>
                 </div>
               </div>
@@ -333,11 +333,11 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
               <div className="space-y-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">OBJETO DA AÇÃO (RESUMO)</Label>
-                  <Input value={formData.description} onChange={(e) => handleInputChange("description", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS E ASSÉDIO" />
+                  <Input value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("description", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS E ASSÉDIO" />
                 </div>
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ESTRATÉGIA / NOTAS INTERNAS</Label>
-                  <Textarea value={formData.strategyNotes} onChange={(e) => handleInputChange("strategyNotes", e.target.value)} className="bg-black/20 border-white/10 min-h-[150px] text-white resize-none text-sm" placeholder="Inisira as teses principais ou alertas para a audiência..." />
+                  <Textarea value={formData.strategyNotes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange("strategyNotes", e.target.value)} className="bg-black/20 border-white/10 min-h-[150px] text-white resize-none text-sm" placeholder="Inisira as teses principais ou alertas para a audiência..." />
                 </div>
               </div>
             </div>
@@ -380,11 +380,11 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
           <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
-              <Input value={quickClientData.name} onChange={(e) => setQuickRegData({...quickClientData, name: e.target.value.toUpperCase()})} className="bg-[#0d121f] border-white/10 h-14 text-white uppercase font-bold" />
+              <Input value={quickClientData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickClientData({...quickClientData, name: e.target.value.toUpperCase()})} className="bg-[#0d121f] border-white/10 h-14 text-white uppercase font-bold" />
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ *</Label>
-              <Input value={quickClientData.cpf} onChange={(e) => setQuickRegData({...quickClientData, cpf: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white font-mono" />
+              <Input value={quickClientData.cpf} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickClientData({...quickClientData, cpf: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white font-mono" />
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
@@ -397,8 +397,4 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
       </Dialog>
     </div>
   )
-}
-
-function setQuickRegData(arg0: { name: string; cpf: string }) {
-  throw new Error("Function not implemented.")
 }
