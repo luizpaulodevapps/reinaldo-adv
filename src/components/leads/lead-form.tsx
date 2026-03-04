@@ -29,11 +29,18 @@ interface LeadFormProps {
   existingLeads: Lead[]
   onSubmit: (leadData: any) => void
   onSelectExisting: (lead: Lead) => void
+  onQuickCreateClient?: (clientData: {
+    name: string
+    phone: string
+    documentNumber?: string
+    legalArea?: string
+  }) => Promise<string | null>
+  defaultResponsibleLawyer?: string
   initialMode?: "quick" | "complete"
   lockMode?: boolean
 }
 
-export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMode = "quick", lockMode = false }: LeadFormProps) {
+export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCreateClient, defaultResponsibleLawyer, initialMode = "quick", lockMode = false }: LeadFormProps) {
   const [mode, setMode] = useState<"quick" | "complete">(initialMode)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -45,7 +52,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
   const [formData, setFormData] = useState({
     name: "",
     demandTitle: "",
-    responsibleLawyer: "Dr. Reinaldo Gonçalves",
+    responsibleLawyer: defaultResponsibleLawyer || "Dr. Reinaldo Gonçalves",
     type: "Trabalhista",
     priority: "media",
     prescriptionDate: "",
@@ -65,6 +72,11 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     value: ""
   })
 
+  const lawyerOptions = useMemo(() => {
+    const options = [defaultResponsibleLawyer, "Dr. Reinaldo Gonçalves", "Equipe de Apoio"].filter(Boolean) as string[]
+    return Array.from(new Set(options))
+  }, [defaultResponsibleLawyer])
+
   const [quickRegData, setQuickRegData] = useState({
     firstName: "",
     lastName: "",
@@ -72,6 +84,36 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     whatsapp: "",
     area: "Trabalhista"
   })
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
+
+  const formatCpfCnpj = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 14)
+    if (digits.length <= 11) {
+      if (digits.length <= 3) return digits
+      if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+      if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+    }
+
+    if (digits.length <= 2) return digits
+    if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`
+    if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`
+    if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`
+  }
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    if (digits.length <= 5) return digits
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -82,6 +124,14 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!defaultResponsibleLawyer) return
+    setFormData((prev) => {
+      if (prev.name || prev.demandTitle || prev.notes) return prev
+      return { ...prev, responsibleLawyer: defaultResponsibleLawyer }
+    })
+  }, [defaultResponsibleLawyer])
 
   const filteredLeads = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return []
@@ -148,12 +198,17 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     setIsSearchOpen(false)
   }
 
-  const handleSaveQuickClient = () => {
+  const handleSaveQuickClient = async () => {
     const fullName = `${quickRegData.firstName} ${quickRegData.lastName}`.trim()
     const doc = quickRegData.cpfCnpj.replace(/\D/g, "");
     
     if (!fullName) {
       toast({ variant: "destructive", title: "Nome obrigatório" })
+      return
+    }
+
+    if (!quickRegData.whatsapp.trim()) {
+      toast({ variant: "destructive", title: "Telefone obrigatório" })
       return
     }
 
@@ -172,11 +227,24 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
       }
     }
 
+    if (onQuickCreateClient) {
+      const createdClientId = await onQuickCreateClient({
+        name: fullName,
+        phone: formatPhone(quickRegData.whatsapp),
+        documentNumber: formatCpfCnpj(quickRegData.cpfCnpj),
+        legalArea: quickRegData.area,
+      })
+
+      if (!createdClientId) {
+        return
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       name: fullName,
-      phone: quickRegData.whatsapp,
-      cpf: quickRegData.cpfCnpj,
+      phone: formatPhone(quickRegData.whatsapp),
+      cpf: formatCpfCnpj(quickRegData.cpfCnpj),
       type: quickRegData.area
     }))
 
@@ -187,8 +255,13 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
 
   const handleSubmit = () => {
     const finalName = formData.name || searchTerm
-    if (!finalName) {
-      toast({ variant: "destructive", title: "Selecione ou busque um cliente." })
+    if (!finalName?.trim() || !formData.phone?.trim()) {
+      toast({ variant: "destructive", title: "Nome e telefone são obrigatórios nesta etapa." })
+      return
+    }
+
+    if (mode === "complete" && !formData.demandTitle.trim()) {
+      toast({ variant: "destructive", title: "No modo completo, informe o título da demanda." })
       return
     }
 
@@ -211,9 +284,11 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
     return false;
   }
 
+  const isCompleteMode = mode === "complete"
+
   return (
-    <div className="flex flex-col h-full bg-[#0a0f1e]">
-      <ScrollArea className="flex-1 px-8 py-4 max-h-[70vh]">
+    <div className="flex min-h-0 flex-col h-full bg-[#0a0f1e]">
+      <ScrollArea className="flex-1 min-h-0 px-8 py-4">
         <div className="space-y-6 pb-6">
           {!lockMode && (
             <div className="flex items-center justify-between mb-4">
@@ -273,59 +348,75 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">TÍTULO DA DEMANDA <span className="text-destructive">*</span></Label>
-            <Input placeholder="Ex: Revisional de Horas Extras..." className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value)} />
+            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">TELEFONE / WHATSAPP <span className="text-destructive">*</span></Label>
+            <Input placeholder="(11) 99999-9999" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.phone} onChange={(e) => handleInputChange("phone", formatPhone(e.target.value))} />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ADVOGADO RESPONSÁVEL <span className="text-destructive">*</span></Label>
-              <Select value={formData.responsibleLawyer} onValueChange={(v) => handleInputChange("responsibleLawyer", v)}>
-                <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
-                  <SelectItem value="Dr. Reinaldo Gonçalves">Dr. Reinaldo Gonçalves</SelectItem>
-                  <SelectItem value="Equipe de Apoio">Equipe de Apoio</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ÁREA JURÍDICA <span className="text-destructive">*</span></Label>
-              <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
-                <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
-                  <SelectItem value="Trabalhista">Trabalhista</SelectItem>
-                  <SelectItem value="Civil">Civil</SelectItem>
-                  <SelectItem value="Previdenciário">Previdenciário</SelectItem>
-                  <SelectItem value="Empresarial">Empresarial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {isCompleteMode ? (
+            <>
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">TÍTULO DA DEMANDA <span className="text-destructive">*</span></Label>
+                <Input placeholder="Ex: Revisional de Horas Extras..." className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value)} />
+              </div>
 
-          <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">BRIEFING INICIAL</Label>
-            <Textarea placeholder="Relato inicial do caso..." className="bg-[#1a1f2e] border-[#2d3748] min-h-[140px] text-white focus:border-primary/50 resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} />
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ADVOGADO RESPONSÁVEL</Label>
+                  <Select value={formData.responsibleLawyer} onValueChange={(v) => handleInputChange("responsibleLawyer", v)}>
+                    <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
+                      {lawyerOptions.map((lawyerName) => (
+                        <SelectItem key={lawyerName} value={lawyerName}>{lawyerName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ÁREA JURÍDICA</Label>
+                  <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
+                    <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
+                      <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                      <SelectItem value="Civil">Civil</SelectItem>
+                      <SelectItem value="Previdenciário">Previdenciário</SelectItem>
+                      <SelectItem value="Empresarial">Empresarial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#1a1f2e]">
-            <div className="space-y-2">
-              <Label className={cn("text-[10px] uppercase font-bold", formData.cpf.length >= 11 && (validateCPF(formData.cpf) || validateCNPJ(formData.cpf) ? "text-emerald-500" : "text-rose-500"))}>
-                CPF / CNPJ <span className="text-destructive">*</span>
-              </Label>
-              <Input placeholder="000.000.000-00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">BRIEFING INICIAL</Label>
+                <Textarea placeholder="Relato inicial do caso..." className="bg-[#1a1f2e] border-[#2d3748] min-h-[140px] text-white focus:border-primary/50 resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#1a1f2e]">
+                <div className="space-y-2">
+                  <Label className={cn("text-[10px] uppercase font-bold", formData.cpf.length >= 11 && (validateCPF(formData.cpf) || validateCNPJ(formData.cpf) ? "text-emerald-500" : "text-rose-500"))}>
+                    CPF / CNPJ
+                  </Label>
+                  <Input placeholder="000.000.000-00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.cpf} onChange={(e) => handleInputChange("cpf", formatCpfCnpj(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CEP</Label>
+                  <Input placeholder="00000-000" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", formatCep(e.target.value))} onBlur={handleCepBlur} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                Modo Triagem: somente nome e telefone são obrigatórios neste momento.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-bold text-[#a0a5b1]">CEP</Label>
-              <Input placeholder="00000-000" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} onBlur={handleCepBlur} />
-            </div>
-          </div>
+          )}
         </div>
       </ScrollArea>
 
-      <div className="p-8 bg-[#0a0f1e] border-t border-[#1a1f2e] flex flex-col md:flex-row gap-4 items-center justify-between">
-        <Button variant="ghost" className="text-[#a0a5b1] hover:text-white font-bold uppercase tracking-widest text-[11px]" onClick={() => setFormData({ ...formData, name: "" })}>Cancelar</Button>
-        <Button onClick={handleSubmit} className="w-full md:w-[240px] bg-primary text-white font-bold h-14 text-[12px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex items-center justify-center gap-3">
-          Confirmar Cadastro
+      <div className="p-4 md:p-6 bg-[#0a0f1e] border-t border-[#1a1f2e] flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        <Button variant="ghost" className="w-full lg:w-auto text-[#a0a5b1] hover:text-white font-bold uppercase tracking-widest text-[11px]" onClick={() => setFormData({ ...formData, name: "" })}>Cancelar</Button>
+        <Button onClick={handleSubmit} className="w-full lg:w-[260px] bg-primary text-white font-bold h-14 text-[12px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex items-center justify-center gap-3">
+          {isCompleteMode ? "Confirmar Cadastro Completo" : "Iniciar Triagem"}
         </Button>
       </div>
 
@@ -340,9 +431,9 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
           <div className="px-8 py-6 space-y-8 border-t border-[#1a1f2e]/50">
             <div className="space-y-4">
               <Label className={cn("text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest", quickRegData.cpfCnpj.length >= 11 && (isQuickDocValid() ? "text-emerald-500" : "text-rose-500"))}>
-                CPF / CNPJ * {quickRegData.cpfCnpj.length >= 11 && (isQuickDocValid() ? "(VÁLIDO)" : "(INVÁLIDO)")}
+                CPF / CNPJ {quickRegData.cpfCnpj.length >= 11 && (isQuickDocValid() ? "(VÁLIDO)" : "(INVÁLIDO)")}
               </Label>
-              <Input placeholder="000.000.000-00 ou 00.000.000/0000-00" className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:ring-1 focus:ring-primary/50" value={quickRegData.cpfCnpj} onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: e.target.value})} />
+              <Input placeholder="000.000.000-00 ou 00.000.000/0000-00" className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:ring-1 focus:ring-primary/50" value={quickRegData.cpfCnpj} onChange={(e) => setQuickRegData({...quickRegData, cpfCnpj: formatCpfCnpj(e.target.value)})} />
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -352,6 +443,24 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, initialMod
               <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">SOBRENOME / FANTASIA</Label>
                 <Input placeholder="Ex: Silva" className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" value={quickRegData.lastName} onChange={(e) => setQuickRegData({...quickRegData, lastName: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">TELEFONE / WHATSAPP *</Label>
+                <Input placeholder="(11) 99999-9999" className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white focus:border-primary/50" value={quickRegData.whatsapp} onChange={(e) => setQuickRegData({...quickRegData, whatsapp: formatPhone(e.target.value)})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">ÁREA JURÍDICA</Label>
+                <Select value={quickRegData.area} onValueChange={(value) => setQuickRegData({ ...quickRegData, area: value })}>
+                  <SelectTrigger className="bg-[#0a0f1e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
+                    <SelectItem value="Trabalhista">Trabalhista</SelectItem>
+                    <SelectItem value="Civil">Civil</SelectItem>
+                    <SelectItem value="Previdenciário">Previdenciário</SelectItem>
+                    <SelectItem value="Empresarial">Empresarial</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

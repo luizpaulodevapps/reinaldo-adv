@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -53,12 +53,12 @@ import { collection, query, serverTimestamp, doc, where, limit } from "firebase/
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
+import { aiSummarizeInterviewCaseDetails } from "@/ai/flows/ai-summarize-interview-case-details"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
   { id: "atendimento", title: "ATENDIMENTO", color: "text-amber-400" },
-  { id: "contratual", title: "CONTRATUAL", color: "text-emerald-400" },
-  { id: "burocracia", title: "BUROCRACIA", color: "text-primary" },
+  { id: "burocracia", title: "BUROCRACIA", color: "text-emerald-400" },
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
 
@@ -68,6 +68,9 @@ const DOCUMENT_KITS: Record<string, string[]> = {
   "Previdenciário": ["Contrato de Honorários", "Procuração", "CNIS Atualizado", "Laudo Médico"],
   "Empresarial": ["Contrato de Prestação de Serviços", "Estatuto Social", "Certidões Negativas"],
 }
+
+const LEAD_TABS = ["atendimento", "burocracia", "distribuicao"]
+const LEAD_STATUS_ORDER = ["novo", "atendimento", "burocracia", "distribuicao"] as const
 
 export default function LeadsPage() {
   const db = useFirestore()
@@ -81,6 +84,7 @@ export default function LeadsPage() {
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
+  const migratedLeadIdsRef = useRef<Set<string>>(new Set())
 
   // Busca Matrizes de Entrevista do Laboratório
   const checklistsQuery = useMemoFirebase(() => {
@@ -97,9 +101,148 @@ export default function LeadsPage() {
   // Estados de formulário para os estágios
   const [atendimentoData, setAtendimentoData] = useState({ defendant: "", viability: "Alta", details: "" })
   const [contractualChecklist, setContractualChecklist] = useState<Record<string, boolean>>({})
-  const [distributionData, setDistributionData] = useState({ processNumber: "", forum: "", vara: "", link: "", hearingDate: "" })
+  const [distributionData, setDistributionData] = useState({
+    processTitle: "",
+    processNumber: "",
+    forum: "",
+    vara: "",
+    link: "",
+    hearingDate: "",
+    caseDetails: "",
+    selectedInterviewKeys: [] as string[],
+  })
+  const [clientRegistrationData, setClientRegistrationData] = useState({
+    fullName: "",
+    cpf: "",
+    rg: "",
+    rgIssueDate: "",
+    motherName: "",
+    ctps: "",
+    zipCode: "",
+    address: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+  })
+  const [claimantData, setClaimantData] = useState({
+    fullName: "",
+    documentType: "CPF",
+    documentNumber: "",
+    zipCode: "",
+    address: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+  })
+  const [scheduleData, setScheduleData] = useState({
+    date: "",
+    time: "",
+    placeType: "office",
+    lawyerName: "Dr. Reinaldo Gonçalves",
+    meetingLink: "",
+    zipCode: "",
+    address: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    placeQuery: "",
+    placeName: "",
+    locationHint: "",
+  })
+  const [isResolvingCep, setIsResolvingCep] = useState(false)
+  const [isResolvingPlace, setIsResolvingPlace] = useState(false)
+  const [isResolvingClientCep, setIsResolvingClientCep] = useState(false)
+  const [isResolvingClaimantCep, setIsResolvingClaimantCep] = useState(false)
+  const [showRegistrationErrors, setShowRegistrationErrors] = useState(false)
+  const [isGeneratingCaseDetails, setIsGeneratingCaseDetails] = useState(false)
+
+  const getLoggedLawyerName = () => profile?.name || user?.displayName || "Dr. Reinaldo Gonçalves"
+
+  const getNowStamp = () => new Date().toLocaleString("pt-BR")
+
+  const normalizeLeadStatus = (status?: string) => {
+    if (status === "contratual") return "burocracia"
+    return status || "novo"
+  }
+
+  const splitDateTime = (dateTime?: string) => {
+    if (!dateTime || !dateTime.includes("T")) {
+      return { date: "", time: "" }
+    }
+
+    const [date, fullTime] = dateTime.split("T")
+    const time = fullTime?.slice(0, 5) || ""
+    return { date, time }
+  }
+
+  const getStatusRank = (status?: string) => {
+    const normalizedStatus = normalizeLeadStatus(status)
+    const index = LEAD_STATUS_ORDER.findIndex((item) => item === normalizedStatus)
+    return index >= 0 ? index : 0
+  }
+
+  const pickMostAdvancedStatus = (...statuses: Array<string | undefined>) => {
+    return statuses.reduce((mostAdvanced, current) => {
+      return getStatusRank(current) > getStatusRank(mostAdvanced) ? (current || mostAdvanced) : mostAdvanced
+    }, "novo")
+  }
+
+  const isContractualStageComplete = (leadType: string, checklist: Record<string, boolean>) => {
+    const requiredDocuments = DOCUMENT_KITS[leadType] || DOCUMENT_KITS["Civil"] || []
+    if (requiredDocuments.length === 0) return false
+    return requiredDocuments.every((docName) => checklist?.[docName] === true)
+  }
+
+  const buildProcessProtocol = () => {
+    const year = new Date().getFullYear()
+    const random = Math.floor(Math.random() * 900000) + 100000
+    return `PROC-${year}-${random}`
+  }
+
+  const getDistributionBlockers = () => {
+    const blockers: string[] = []
+    if (!isRegistrationComplete()) blockers.push("Cadastro completo de cliente e reclamante")
+    if (!selectedLead?.interviewResponses) blockers.push("Entrevista técnica concluída")
+    if (!isContractualStageComplete(selectedLead?.type || "Civil", contractualChecklist)) blockers.push("Checklist de burocracia (contratos/procuração)")
+    if (!distributionData.processTitle.trim()) blockers.push("Nome da ação/processo")
+    if (!distributionData.processNumber.trim()) blockers.push("Número CNJ")
+    if (!distributionData.link.trim()) blockers.push("Link do CNJ")
+    return blockers
+  }
+
+  const computePipelineStatus = (params: {
+    currentStatus?: string
+    leadType: string
+    hasSchedule: boolean
+    hasInterview: boolean
+    checklist: Record<string, boolean>
+    hasProcessNumber: boolean
+    hasRegistrationComplete: boolean
+  }) => {
+    const bySchedule = params.hasSchedule ? "atendimento" : "novo"
+    const byInterview = params.hasInterview && params.hasRegistrationComplete ? "burocracia" : "novo"
+    const byChecklist = params.hasRegistrationComplete && isContractualStageComplete(params.leadType, params.checklist) ? "burocracia" : "novo"
+    const byProcess = params.hasProcessNumber && params.hasRegistrationComplete ? "distribuicao" : "novo"
+
+    return pickMostAdvancedStatus(params.currentStatus, bySchedule, byInterview, byChecklist, byProcess)
+  }
+
+  useEffect(() => {
+    leads.forEach((lead) => {
+      if (lead.status !== "contratual") return
+      if (migratedLeadIdsRef.current.has(lead.id)) return
+
+      migratedLeadIdsRef.current.add(lead.id)
+      updateDocumentNonBlocking(doc(db, "leads", lead.id), {
+        status: "burocracia",
+        updatedAt: serverTimestamp(),
+      })
+    })
+  }, [leads, db])
 
   const handleOpenLead = (lead: any) => {
+    const appointmentParts = splitDateTime(lead.nextAppointmentAt)
+
     setSelectedLead(lead)
     setAtendimentoData({ 
       defendant: lead.defendant || "", 
@@ -107,12 +250,71 @@ export default function LeadsPage() {
       details: lead.details || "" 
     })
     setContractualChecklist(lead.contractualChecklist || {})
-    setDistributionData(lead.distributionData || { processNumber: "", forum: "", vara: "", link: "", hearingDate: "" })
+    const interviewKeys = lead?.interviewResponses ? Object.keys(lead.interviewResponses) : []
+    const reusableKeysFromSnapshot = (lead?.interviewTemplateSnapshot || [])
+      .filter((item: any) => item?.reuseEnabled && lead?.interviewResponses?.[item.label] !== undefined)
+      .map((item: any) => item.label)
+    const savedDistribution = lead.distributionData || {}
+    setDistributionData({
+      processTitle: savedDistribution.processTitle || "",
+      processNumber: savedDistribution.processNumber || "",
+      forum: savedDistribution.forum || "",
+      vara: savedDistribution.vara || "",
+      link: savedDistribution.link || "",
+      hearingDate: savedDistribution.hearingDate || "",
+      caseDetails: savedDistribution.caseDetails || "",
+      selectedInterviewKeys: savedDistribution.selectedInterviewKeys || (reusableKeysFromSnapshot.length > 0 ? reusableKeysFromSnapshot : interviewKeys),
+    })
+    setClientRegistrationData(lead.clientRegistrationData || {
+      fullName: lead.name || "",
+      cpf: "",
+      rg: "",
+      rgIssueDate: "",
+      motherName: "",
+      ctps: "",
+      zipCode: "",
+      address: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+    })
+    setClaimantData(lead.claimantData || {
+      fullName: "",
+      documentType: "CPF",
+      documentNumber: "",
+      zipCode: "",
+      address: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+    })
+    setScheduleData({
+      date: appointmentParts.date,
+      time: appointmentParts.time,
+      placeType: "office",
+      lawyerName: lead.responsibleLawyer || getLoggedLawyerName(),
+      meetingLink: "",
+      zipCode: "",
+      address: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      placeQuery: "",
+      placeName: "",
+      locationHint: "",
+    })
     setIsSheetOpen(true)
   }
 
-  const handleCreateEntry = (data: any) => {
-    if (!user) return
+  const handleCreateEntry = async (data: any) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sessão não autenticada",
+        description: "Faça login novamente para cadastrar o lead."
+      })
+      return
+    }
     const newLead = {
       ...data,
       assignedStaffId: user.uid,
@@ -120,21 +322,132 @@ export default function LeadsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db, "leads"), newLead)
+    const createdRef = await addDocumentNonBlocking(collection(db, "leads"), newLead)
+
+    if (!createdRef?.id) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao Cadastrar Lead",
+        description: "Não foi possível salvar no Firestore. Verifique permissões/regras e tente novamente."
+      })
+      return
+    }
+
     setIsNewEntryOpen(false)
-    toast({ title: "Triagem Iniciada!", description: `${data.name} foi adicionado com sucesso.` })
+    toast({
+      title: "Triagem Iniciada!",
+      description: `${data.name} salvo no Firestore • ID: ${createdRef.id} • ${getNowStamp()}`
+    })
+  }
+
+  const handleQuickCreateClient = async (clientData: {
+    name: string
+    phone: string
+    documentNumber?: string
+    legalArea?: string
+  }) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sessão não autenticada",
+        description: "Faça login novamente para salvar o cliente."
+      })
+      return null
+    }
+
+    const newClient = {
+      id: crypto.randomUUID(),
+      name: clientData.name,
+      documentNumber: clientData.documentNumber || "",
+      phone: clientData.phone,
+      email: "",
+      type: "individual",
+      status: "ativo",
+      legalArea: clientData.legalArea || "Trabalhista",
+      responsibleStaffIds: [user.uid],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    const createdRef = await addDocumentNonBlocking(collection(db, "clients"), newClient)
+    if (!createdRef?.id) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao Salvar Cliente",
+        description: "Não foi possível salvar o cliente no Firestore."
+      })
+      return null
+    }
+
+    toast({
+      title: "Cliente Salvo",
+      description: `${clientData.name} salvo em clients • ID: ${createdRef.id} • ${getNowStamp()}`
+    })
+
+    return createdRef.id
   }
 
   const handleUpdateLead = () => {
     if (!selectedLead) return
     const leadRef = doc(db, "leads", selectedLead.id)
+    const scheduleDateTime = scheduleData.date && scheduleData.time
+      ? `${scheduleData.date}T${scheduleData.time}`
+      : selectedLead.nextAppointmentAt || ""
+
+    const nextStatus = computePipelineStatus({
+      currentStatus: selectedLead.status,
+      leadType: selectedLead.type,
+      hasSchedule: Boolean(scheduleDateTime),
+      hasInterview: Boolean(selectedLead.interviewResponses),
+      checklist: contractualChecklist,
+      hasProcessNumber: Boolean(distributionData.processNumber),
+      hasRegistrationComplete: isRegistrationComplete(),
+    })
+
+    if (Boolean(selectedLead.interviewResponses) && nextStatus === "atendimento" && !isRegistrationComplete()) {
+      notifyRegistrationPending()
+    }
+
     updateDocumentNonBlocking(leadRef, {
+      status: nextStatus,
       ...atendimentoData,
       contractualChecklist,
       distributionData,
+      clientRegistrationData,
+      claimantData,
+      nextAppointmentAt: scheduleDateTime,
+      nextAppointmentLawyer: scheduleData.lawyerName,
       updatedAt: serverTimestamp()
     })
-    toast({ title: "Dados Atualizados", description: "O dossiê do lead foi salvo." })
+
+    setSelectedLead((prev: any) => prev ? {
+      ...prev,
+      status: nextStatus,
+      ...atendimentoData,
+      contractualChecklist,
+      distributionData,
+      clientRegistrationData,
+      claimantData,
+      nextAppointmentAt: scheduleDateTime,
+      nextAppointmentLawyer: scheduleData.lawyerName,
+    } : prev)
+
+    toast({
+      title: "Dados Atualizados",
+      description: `Lead ${selectedLead.id} atualizado • fase ${nextStatus.toUpperCase()} • ${getNowStamp()}`
+    })
+  }
+
+  const handleDeleteLead = (leadId: string) => {
+    const confirmed = window.confirm("Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.")
+    if (!confirmed) return
+
+    deleteDocumentNonBlocking(doc(db, "leads", leadId))
+    setIsSheetOpen(false)
+    toast({
+      title: "Lead Excluído",
+      description: `Lead ${leadId} removido • ${getNowStamp()}`
+    })
   }
 
   const handleAdvanceStage = () => {
@@ -158,35 +471,66 @@ export default function LeadsPage() {
   }
 
   const handleDistribute = async () => {
-    if (!selectedLead || !distributionData.processNumber) {
-      toast({ variant: "destructive", title: "Dados Incompletos", description: "O número do processo é obrigatório para distribuição." })
+    if (!selectedLead) return
+
+    const blockers = getDistributionBlockers()
+    if (blockers.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Distribuição bloqueada",
+        description: blockers.slice(0, 3).join(" • "),
+      })
       return
     }
 
+    const internalProcessProtocol = buildProcessProtocol()
+
     const newProcess = {
+      protocolId: internalProcessProtocol,
+      sourceLeadId: selectedLead.id,
       clientId: selectedLead.id,
       clientName: selectedLead.name,
       processNumber: distributionData.processNumber,
+      processLink: distributionData.link,
+      processTitle: distributionData.processTitle,
+      caseDetails: distributionData.caseDetails,
+      selectedInterviewKeys: distributionData.selectedInterviewKeys,
       caseType: selectedLead.type,
       status: "Em Andamento",
       court: distributionData.forum,
       vara: distributionData.vara,
-      description: selectedLead.demandTitle || "Ação Judicial",
+      description: distributionData.caseDetails || distributionData.processTitle || selectedLead.demandTitle || "Ação Judicial",
+      claimantData,
+      clientRegistrationData,
+      leadInterviewResponses: selectedLead.interviewResponses || null,
+      selectedInterviewResponses: selectedLead.interviewResponses
+        ? Object.fromEntries(
+            Object.entries(selectedLead.interviewResponses).filter(([question]) =>
+              (distributionData.selectedInterviewKeys || []).includes(question)
+            )
+          )
+        : null,
       startDate: new Date().toISOString().split('T')[0],
       responsibleStaffId: user?.uid || "",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
 
-    await addDocumentNonBlocking(collection(db, "processes"), newProcess)
+    const processRef = await addDocumentNonBlocking(collection(db, "processes"), newProcess)
+    if (!processRef?.id) {
+      toast({ variant: "destructive", title: "Falha ao protocolar distribuição" })
+      return
+    }
 
     if (distributionData.hearingDate) {
       const newHearing = {
-        title: `Audiência: ${selectedLead.name}`,
+        title: `Audiência: ${distributionData.processTitle || selectedLead.name}`,
         startDateTime: distributionData.hearingDate,
         processId: distributionData.processNumber,
         location: distributionData.forum,
         type: "Inicial",
+        protocolId: internalProcessProtocol,
+        processRefId: processRef.id,
         createdAt: serverTimestamp(),
       }
       await addDocumentNonBlocking(collection(db, "hearings"), newHearing)
@@ -195,18 +539,73 @@ export default function LeadsPage() {
     deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))
 
     setIsSheetOpen(false)
-    toast({ title: "PROCESSO DISTRIBUÍDO!", description: "Dossiê migrado para a base de Processos Ativos." })
+    toast({ title: "PROCESSO PROTOCOLADO!", description: `Protocolo ${internalProcessProtocol} • ID ${processRef.id}` })
   }
 
-  const handleInterviewSubmit = (responses: any) => {
+  const handleInterviewSubmit = (payload: { responses: any; templateSnapshot: any[] }) => {
+    const responses = payload.responses || {}
+    const templateSnapshot = payload.templateSnapshot || []
+    const { nextClient, nextClaimant, appliedCount } = applyInterviewTargetsToRegistration({
+      responses,
+      templateSnapshot,
+    })
+    const { nextDistribution, appliedCount: distributionAppliedCount } = applyInterviewTargetsToDistribution({
+      responses,
+      templateSnapshot,
+      baseDistribution: distributionData,
+    })
     const leadRef = doc(db, "leads", selectedLead.id)
+    const nextStatus = computePipelineStatus({
+      currentStatus: selectedLead.status,
+      leadType: selectedLead.type,
+      hasSchedule: Boolean(selectedLead.nextAppointmentAt),
+      hasInterview: true,
+      checklist: contractualChecklist,
+      hasProcessNumber: Boolean(nextDistribution.processNumber),
+      hasRegistrationComplete: isRegistrationComplete(),
+    })
+
+    if (nextStatus === "atendimento" && !isRegistrationComplete()) {
+      notifyRegistrationPending()
+    }
+
     updateDocumentNonBlocking(leadRef, {
       interviewResponses: responses,
-      status: "atendimento",
+      interviewTemplateSnapshot: templateSnapshot,
+      clientRegistrationData: nextClient,
+      claimantData: nextClaimant,
+      distributionData: nextDistribution,
+      status: nextStatus,
       updatedAt: serverTimestamp()
     })
+
+    setClientRegistrationData(nextClient)
+    setClaimantData(nextClaimant)
+    setDistributionData(nextDistribution)
+
+    setSelectedLead((prev: any) => prev ? {
+      ...prev,
+      interviewResponses: responses,
+      interviewTemplateSnapshot: templateSnapshot,
+      clientRegistrationData: nextClient,
+      claimantData: nextClaimant,
+      distributionData: nextDistribution,
+      status: nextStatus,
+    } : prev)
+
+    setDistributionData((prev) => {
+      if (prev.selectedInterviewKeys.length > 0) return prev
+      const reusableKeys = templateSnapshot
+        .filter((item: any) => item?.reuseEnabled && responses?.[item.label] !== undefined)
+        .map((item: any) => item.label)
+      return {
+        ...prev,
+        selectedInterviewKeys: reusableKeys.length > 0 ? reusableKeys : Object.keys(responses || {}),
+      }
+    })
+
     setIsInterviewOpen(false)
-    toast({ title: "Entrevista Concluída", description: "Os dados foram injetados no dossiê do lead." })
+    toast({ title: "Entrevista Concluída", description: `Dados injetados no dossiê • ${appliedCount + distributionAppliedCount} campo(s) reaproveitado(s) • fase ${nextStatus.toUpperCase()}.` })
   }
 
   const activeTemplate = useMemo(() => {
@@ -214,6 +613,301 @@ export default function LeadsPage() {
     // Busca matriz vinculada à área jurídica do lead
     return interviewTemplates.find(t => t.legalArea === selectedLead.type) || interviewTemplates[0]
   }, [selectedLead, interviewTemplates])
+
+  const interviewTemplateSnapshot = useMemo(() => {
+    return selectedLead?.interviewTemplateSnapshot || activeTemplate?.items || []
+  }, [selectedLead, activeTemplate])
+
+  const interviewMetaByLabel = useMemo(() => {
+    const map: Record<string, any> = {}
+    ;(interviewTemplateSnapshot || []).forEach((item: any) => {
+      if (!item?.label) return
+      map[item.label] = item
+    })
+    return map
+  }, [interviewTemplateSnapshot])
+
+  const interviewEntries = useMemo(() => {
+    if (!selectedLead?.interviewResponses) return []
+    return Object.entries(selectedLead.interviewResponses) as Array<[string, any]>
+  }, [selectedLead])
+
+  const buildInterviewSummary = (selectedKeys?: string[]) => {
+    const keysToUse = selectedKeys && selectedKeys.length > 0
+      ? selectedKeys
+      : interviewEntries.map(([question]) => question)
+
+    return interviewEntries
+      .filter(([question]) => keysToUse.includes(question))
+      .map(([question, answer]) => `${question}: ${String(answer)}`)
+      .join("\n")
+  }
+
+  const hasReusableConfigured = useMemo(() => {
+    return interviewEntries.some(([question]) => Boolean(interviewMetaByLabel[question]?.reuseEnabled))
+  }, [interviewEntries, interviewMetaByLabel])
+
+  const mapClientFieldFromQuestion = (question: string) => {
+    const q = question.toLowerCase()
+    if ((q.includes("cliente") || q.includes("nome")) && q.includes("mãe")) return "motherName"
+    if ((q.includes("cliente") || q.includes("nome")) && q.includes("completo")) return "fullName"
+    if (q.includes("cpf")) return "cpf"
+    if (q.includes("rg") && q.includes("data")) return "rgIssueDate"
+    if (q.includes("rg")) return "rg"
+    if (q.includes("ctps") || q.includes("carteira de trabalho")) return "ctps"
+    if (q.includes("cep")) return "zipCode"
+    if (q.includes("endereço") || q.includes("logradouro")) return "address"
+    if (q.includes("bairro")) return "neighborhood"
+    if (q.includes("cidade")) return "city"
+    if (q.includes("uf") || q.includes("estado")) return "state"
+    return null
+  }
+
+  const mapClaimantFieldFromQuestion = (question: string) => {
+    const q = question.toLowerCase()
+    if ((q.includes("reclamante") || q.includes("réu") || q.includes("reclamada") || q.includes("empresa")) && q.includes("nome")) return "fullName"
+    if (q.includes("cpf") || q.includes("cnpj")) return "documentNumber"
+    if (q.includes("cep")) return "zipCode"
+    if (q.includes("endereço") || q.includes("logradouro")) return "address"
+    if (q.includes("bairro")) return "neighborhood"
+    if (q.includes("cidade")) return "city"
+    if (q.includes("uf") || q.includes("estado")) return "state"
+    return null
+  }
+
+  const normalizeRegistrationValue = (fieldName: string, rawValue: any) => {
+    const value = String(rawValue || "").trim()
+    if (!value) return ""
+
+    if (fieldName === "cpf" || fieldName === "documentNumber") return formatCpfCnpj(value)
+    if (fieldName === "zipCode") return formatCep(value)
+    if (fieldName === "state") return value.toUpperCase().slice(0, 2)
+    if (fieldName === "rgIssueDate") {
+      const dateMatch = value.match(/\d{4}-\d{2}-\d{2}/)
+      return dateMatch ? dateMatch[0] : value
+    }
+
+    return value.toUpperCase()
+  }
+
+  const applyInterviewTargetsToRegistration = (params: { responses: Record<string, any>; templateSnapshot: any[] }) => {
+    const responses = params.responses || {}
+    const templateSnapshot = params.templateSnapshot || []
+
+    let nextClient = { ...clientRegistrationData }
+    let nextClaimant = { ...claimantData }
+    let appliedCount = 0
+    const allowedClientFields = new Set(["fullName", "cpf", "rg", "rgIssueDate", "motherName", "ctps", "zipCode", "address", "neighborhood", "city", "state"])
+    const allowedClaimantFields = new Set(["fullName", "documentNumber", "documentType", "zipCode", "address", "neighborhood", "city", "state"])
+
+    templateSnapshot.forEach((item: any) => {
+      if (!item?.reuseEnabled) return
+      if (item.reuseTarget !== "client" && item.reuseTarget !== "claimant") return
+
+      const question = item.label
+      const answer = responses?.[question]
+      if (answer === undefined || answer === null || String(answer).trim() === "") return
+
+      if (item.reuseTarget === "client") {
+        const explicitField = item.targetField && allowedClientFields.has(item.targetField) ? item.targetField : null
+        const field = explicitField || mapClientFieldFromQuestion(question)
+        if (!field) return
+        if (String((nextClient as any)[field] || "").trim()) return
+
+        ;(nextClient as any)[field] = normalizeRegistrationValue(field, answer)
+        appliedCount += 1
+      }
+
+      if (item.reuseTarget === "claimant") {
+        const explicitField = item.targetField && allowedClaimantFields.has(item.targetField) ? item.targetField : null
+        const field = explicitField || mapClaimantFieldFromQuestion(question)
+        if (!field) return
+        if (String((nextClaimant as any)[field] || "").trim()) return
+
+        if (field === "documentType") {
+          const normalizedType = String(answer || "").toUpperCase()
+          if (normalizedType.includes("CNPJ")) {
+            nextClaimant.documentType = "CNPJ"
+          } else {
+            nextClaimant.documentType = "CPF"
+          }
+          appliedCount += 1
+          return
+        }
+
+        ;(nextClaimant as any)[field] = normalizeRegistrationValue(field, answer)
+        if (field === "documentNumber") {
+          const digits = String(answer || "").replace(/\D/g, "")
+          nextClaimant.documentType = digits.length > 11 ? "CNPJ" : "CPF"
+        }
+        appliedCount += 1
+      }
+    })
+
+    return { nextClient, nextClaimant, appliedCount }
+  }
+
+  const normalizeDistributionValue = (fieldName: string, rawValue: any) => {
+    const value = String(rawValue || "").trim()
+    if (!value) return ""
+
+    if (fieldName === "processTitle" || fieldName === "forum" || fieldName === "vara") return value.toUpperCase()
+    return value
+  }
+
+  const applyInterviewTargetsToDistribution = (params: {
+    responses: Record<string, any>
+    templateSnapshot: any[]
+    baseDistribution: typeof distributionData
+  }) => {
+    const responses = params.responses || {}
+    const templateSnapshot = params.templateSnapshot || []
+    let nextDistribution = { ...params.baseDistribution }
+    let appliedCount = 0
+    const allowedDistributionFields = new Set(["processTitle", "processNumber", "link", "forum", "vara", "hearingDate", "caseDetails"])
+
+    templateSnapshot.forEach((item: any) => {
+      if (!item?.reuseEnabled) return
+      if (item.reuseTarget !== "distribution" && item.reuseTarget !== "caseDetails") return
+
+      const question = item.label
+      const answer = responses?.[question]
+      if (answer === undefined || answer === null || String(answer).trim() === "") return
+
+      const explicitField = item.targetField && allowedDistributionFields.has(item.targetField)
+        ? item.targetField
+        : (item.reuseTarget === "caseDetails" ? "caseDetails" : null)
+      if (!explicitField) return
+
+      const normalizedValue = normalizeDistributionValue(explicitField, answer)
+      if (!normalizedValue) return
+
+      if (explicitField === "caseDetails") {
+        const fragment = `${question}: ${String(answer)}`
+        if (!nextDistribution.caseDetails.trim()) {
+          nextDistribution.caseDetails = fragment
+          appliedCount += 1
+          return
+        }
+
+        if (!nextDistribution.caseDetails.includes(fragment)) {
+          nextDistribution.caseDetails = `${nextDistribution.caseDetails}\n${fragment}`
+          appliedCount += 1
+        }
+        return
+      }
+
+      if (String((nextDistribution as any)[explicitField] || "").trim()) return
+
+      ;(nextDistribution as any)[explicitField] = normalizedValue
+      appliedCount += 1
+    })
+
+    return { nextDistribution, appliedCount }
+  }
+
+  const applyReuseTargetsNow = () => {
+    if (!selectedLead?.interviewResponses) {
+      toast({ variant: "destructive", title: "Entrevista ainda não concluída" })
+      return
+    }
+
+    const { nextClient, nextClaimant, appliedCount } = applyInterviewTargetsToRegistration({
+      responses: selectedLead.interviewResponses,
+      templateSnapshot: interviewTemplateSnapshot,
+    })
+    const { nextDistribution, appliedCount: distributionAppliedCount } = applyInterviewTargetsToDistribution({
+      responses: selectedLead.interviewResponses,
+      templateSnapshot: interviewTemplateSnapshot,
+      baseDistribution: distributionData,
+    })
+
+    setClientRegistrationData(nextClient)
+    setClaimantData(nextClaimant)
+    setDistributionData(nextDistribution)
+    setSelectedLead((prev: any) => prev ? {
+      ...prev,
+      clientRegistrationData: nextClient,
+      claimantData: nextClaimant,
+      distributionData: nextDistribution,
+    } : prev)
+
+    updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), {
+      clientRegistrationData: nextClient,
+      claimantData: nextClaimant,
+      distributionData: nextDistribution,
+      updatedAt: serverTimestamp(),
+    })
+
+    const totalApplied = appliedCount + distributionAppliedCount
+
+    if (totalApplied > 0) {
+      toast({ title: "Dossiê enriquecido", description: `${totalApplied} campo(s) preenchido(s) via entrevista.` })
+      return
+    }
+
+    toast({ title: "Nada para preencher", description: "Campos de cadastro já estavam preenchidos ou sem mapeamento válido." })
+  }
+
+  const toggleInterviewKey = (question: string, checked: boolean) => {
+    setDistributionData((prev) => ({
+      ...prev,
+      selectedInterviewKeys: checked
+        ? Array.from(new Set([...prev.selectedInterviewKeys, question]))
+        : prev.selectedInterviewKeys.filter((item) => item !== question),
+    }))
+  }
+
+  const applyInterviewSummaryToCaseDetails = () => {
+    const summary = buildInterviewSummary(distributionData.selectedInterviewKeys)
+    if (!summary) {
+      toast({ variant: "destructive", title: "Sem dados da entrevista para resumir" })
+      return
+    }
+
+    setDistributionData((prev) => ({
+      ...prev,
+      caseDetails: summary,
+    }))
+
+    toast({ title: "Resumo aplicado", description: "Detalhes do caso preenchidos com base na entrevista." })
+  }
+
+  const generateCaseDetailsWithGemini = async () => {
+    const selectedAnswers = interviewEntries
+      .filter(([question]) => distributionData.selectedInterviewKeys.includes(question))
+      .map(([question, answer]) => ({
+        question,
+        answer: String(answer),
+        priority: interviewMetaByLabel[question]?.reusePriority || "media",
+        target: interviewMetaByLabel[question]?.reuseTarget || "caseDetails",
+      }))
+
+    if (selectedAnswers.length === 0) {
+      toast({ variant: "destructive", title: "Selecione respostas para gerar com IA" })
+      return
+    }
+
+    setIsGeneratingCaseDetails(true)
+    try {
+      const result = await aiSummarizeInterviewCaseDetails({
+        legalArea: selectedLead?.type || "Geral",
+        leadName: selectedLead?.name || "Cliente não informado",
+        selectedAnswers,
+      })
+
+      setDistributionData((prev) => ({
+        ...prev,
+        caseDetails: result.caseDetails,
+      }))
+
+      toast({ title: "Síntese gerada com Gemini", description: "Detalhes do caso atualizados com IA." })
+    } catch {
+      toast({ variant: "destructive", title: "Falha ao gerar síntese com IA" })
+    } finally {
+      setIsGeneratingCaseDetails(false)
+    }
+  }
 
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
@@ -224,6 +918,320 @@ export default function LeadsPage() {
       case "full": return "sm:max-w-full"
       default: return "sm:max-w-4xl"
     }
+  }
+
+  const getDefaultLeadTab = (status?: string) => {
+    const normalizedStatus = normalizeLeadStatus(status)
+    return LEAD_TABS.includes(normalizedStatus || "") ? (normalizedStatus as "atendimento" | "burocracia" | "distribuicao") : "atendimento"
+  }
+
+  const registrationMissingMap = useMemo(() => ({
+    "client.fullName": !clientRegistrationData.fullName.trim(),
+    "client.cpf": !clientRegistrationData.cpf.trim(),
+    "client.rg": !clientRegistrationData.rg.trim(),
+    "client.rgIssueDate": !clientRegistrationData.rgIssueDate.trim(),
+    "client.motherName": !clientRegistrationData.motherName.trim(),
+    "client.ctps": !clientRegistrationData.ctps.trim(),
+    "client.zipCode": !clientRegistrationData.zipCode.trim(),
+    "client.address": !clientRegistrationData.address.trim(),
+    "client.city": !clientRegistrationData.city.trim(),
+    "client.state": !clientRegistrationData.state.trim(),
+    "claimant.fullName": !claimantData.fullName.trim(),
+    "claimant.documentNumber": !claimantData.documentNumber.trim(),
+    "claimant.zipCode": !claimantData.zipCode.trim(),
+    "claimant.address": !claimantData.address.trim(),
+    "claimant.city": !claimantData.city.trim(),
+    "claimant.state": !claimantData.state.trim(),
+  }), [clientRegistrationData, claimantData])
+
+  const registrationMissingLabels = useMemo(() => {
+    const labels: Record<string, string> = {
+      "client.fullName": "Cliente: Nome completo",
+      "client.cpf": "Cliente: CPF",
+      "client.rg": "Cliente: RG",
+      "client.rgIssueDate": "Cliente: Data expedição RG",
+      "client.motherName": "Cliente: Nome da mãe",
+      "client.ctps": "Cliente: CTPS",
+      "client.zipCode": "Cliente: CEP",
+      "client.address": "Cliente: Endereço",
+      "client.city": "Cliente: Cidade",
+      "client.state": "Cliente: UF",
+      "claimant.fullName": "Reclamante: Nome completo",
+      "claimant.documentNumber": "Reclamante: CPF/CNPJ",
+      "claimant.zipCode": "Reclamante: CEP",
+      "claimant.address": "Reclamante: Endereço",
+      "claimant.city": "Reclamante: Cidade",
+      "claimant.state": "Reclamante: UF",
+    }
+
+    return Object.entries(registrationMissingMap)
+      .filter(([, isMissing]) => isMissing)
+      .map(([field]) => labels[field])
+  }, [registrationMissingMap])
+
+  const isRegistrationComplete = () => registrationMissingLabels.length === 0
+
+  const isMissingRegistrationField = (fieldName: string) => showRegistrationErrors && Boolean(registrationMissingMap[fieldName as keyof typeof registrationMissingMap])
+
+  const notifyRegistrationPending = () => {
+    setShowRegistrationErrors(true)
+    const preview = registrationMissingLabels.slice(0, 4).join(" • ")
+    const extraCount = registrationMissingLabels.length - 4
+    toast({
+      variant: "destructive",
+      title: "Cadastro incompleto para avançar",
+      description: extraCount > 0 ? `${preview} • +${extraCount} pendência(s)` : preview,
+    })
+  }
+
+  const getStatusLabel = (status?: string) => {
+    const normalizedStatus = normalizeLeadStatus(status)
+    const found = columns.find((col) => col.id === normalizedStatus)
+    return found?.title || String(status || "NOVO").toUpperCase()
+  }
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    if (digits.length <= 5) return digits
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  }
+
+  const formatCpfCnpj = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 14)
+    if (digits.length <= 11) {
+      if (digits.length <= 3) return digits
+      if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+      if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+    }
+    if (digits.length <= 2) return digits
+    if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`
+    if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`
+    if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`
+  }
+
+  const resolveAddressByCep = async () => {
+    const cep = scheduleData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) {
+      toast({ variant: "destructive", title: "CEP inválido", description: "Informe um CEP com 8 dígitos." })
+      return
+    }
+
+    setIsResolvingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (data?.erro) {
+        toast({ variant: "destructive", title: "CEP não encontrado" })
+        return
+      }
+
+      setScheduleData(prev => ({
+        ...prev,
+        address: data.logradouro || prev.address,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.localidade || prev.city,
+        state: data.uf || prev.state,
+      }))
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao buscar CEP" })
+    } finally {
+      setIsResolvingCep(false)
+    }
+  }
+
+  const resolveClientAddressByCep = async () => {
+    const cep = clientRegistrationData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) {
+      toast({ variant: "destructive", title: "CEP do cliente inválido" })
+      return
+    }
+
+    setIsResolvingClientCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (data?.erro) {
+        toast({ variant: "destructive", title: "CEP do cliente não encontrado" })
+        return
+      }
+
+      setClientRegistrationData((prev) => ({
+        ...prev,
+        address: data.logradouro || prev.address,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.localidade || prev.city,
+        state: data.uf || prev.state,
+      }))
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao buscar CEP do cliente" })
+    } finally {
+      setIsResolvingClientCep(false)
+    }
+  }
+
+  const resolveClaimantAddressByCep = async () => {
+    const cep = claimantData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) {
+      toast({ variant: "destructive", title: "CEP do reclamante inválido" })
+      return
+    }
+
+    setIsResolvingClaimantCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (data?.erro) {
+        toast({ variant: "destructive", title: "CEP do reclamante não encontrado" })
+        return
+      }
+
+      setClaimantData((prev) => ({
+        ...prev,
+        address: data.logradouro || prev.address,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.localidade || prev.city,
+        state: data.uf || prev.state,
+      }))
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao buscar CEP do reclamante" })
+    } finally {
+      setIsResolvingClaimantCep(false)
+    }
+  }
+
+  const resolveCommonPlace = async () => {
+    if (!scheduleData.placeQuery.trim()) {
+      toast({ variant: "destructive", title: "Informe o local", description: "Digite shopping, praça ou outro ponto de referência." })
+      return
+    }
+
+    setIsResolvingPlace(true)
+    try {
+      const q = encodeURIComponent(`${scheduleData.placeQuery} Brasil`)
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${q}`)
+      const places = await response.json()
+      const firstPlace = Array.isArray(places) ? places[0] : null
+
+      if (!firstPlace?.display_name) {
+        toast({ variant: "destructive", title: "Local não encontrado" })
+        return
+      }
+
+      setScheduleData(prev => ({
+        ...prev,
+        placeName: firstPlace.display_name,
+      }))
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao buscar local" })
+    } finally {
+      setIsResolvingPlace(false)
+    }
+  }
+
+  const handleScheduleAttendance = async () => {
+    if (!selectedLead) return
+
+    if (!scheduleData.date || !scheduleData.time) {
+      toast({ variant: "destructive", title: "Data e hora obrigatórias" })
+      return
+    }
+
+    if (!scheduleData.lawyerName.trim()) {
+      toast({ variant: "destructive", title: "Informe o advogado responsável" })
+      return
+    }
+
+    let location = ""
+
+    if (scheduleData.placeType === "office") {
+      location = "Escritório RGMJ - Endereço oficial da banca"
+    }
+
+    if (scheduleData.placeType === "online") {
+      if (!scheduleData.meetingLink.trim()) {
+        toast({ variant: "destructive", title: "Informe o link da reunião online" })
+        return
+      }
+      location = `Online • ${scheduleData.meetingLink.trim()}`
+    }
+
+    if (scheduleData.placeType === "client_home") {
+      if (!scheduleData.zipCode || !scheduleData.address || !scheduleData.city || !scheduleData.state) {
+        toast({ variant: "destructive", title: "Endereço incompleto", description: "Preencha CEP e endereço da casa do cliente." })
+        return
+      }
+      location = `${scheduleData.address}, ${scheduleData.neighborhood || ""} - ${scheduleData.city}/${scheduleData.state} • CEP ${scheduleData.zipCode}`
+    }
+
+    if (scheduleData.placeType === "client_indicated") {
+      if (!scheduleData.placeName && !scheduleData.placeQuery.trim()) {
+        toast({ variant: "destructive", title: "Informe o local indicado" })
+        return
+      }
+      const placeBase = scheduleData.placeName || scheduleData.placeQuery.trim()
+      location = scheduleData.locationHint.trim() ? `${placeBase} • ${scheduleData.locationHint.trim()}` : placeBase
+    }
+
+    const startDateTime = `${scheduleData.date}T${scheduleData.time}`
+    const hearingPayload = {
+      title: `Atendimento: ${selectedLead.name}`,
+      startDateTime,
+      location,
+      type: "Atendimento",
+      processId: selectedLead.id,
+      clientId: selectedLead.id,
+      clientName: selectedLead.name,
+      responsibleLawyer: scheduleData.lawyerName,
+      modality: scheduleData.placeType,
+      notes: scheduleData.locationHint,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    const createdRef = await addDocumentNonBlocking(collection(db, "hearings"), hearingPayload)
+    if (!createdRef?.id) {
+      toast({ variant: "destructive", title: "Falha ao agendar atendimento" })
+      return
+    }
+
+    const nextLeadStatus = computePipelineStatus({
+      currentStatus: selectedLead.status,
+      leadType: selectedLead.type,
+      hasSchedule: true,
+      hasInterview: Boolean(selectedLead.interviewResponses),
+      checklist: contractualChecklist,
+      hasProcessNumber: Boolean(distributionData.processNumber),
+      hasRegistrationComplete: isRegistrationComplete(),
+    })
+
+    updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), {
+      status: nextLeadStatus,
+      ...atendimentoData,
+      clientRegistrationData,
+      claimantData,
+      nextAppointmentAt: startDateTime,
+      nextAppointmentLocation: location,
+      nextAppointmentLawyer: scheduleData.lawyerName,
+      updatedAt: serverTimestamp(),
+    })
+
+    setSelectedLead((prev: any) => prev ? {
+      ...prev,
+      status: nextLeadStatus,
+      ...atendimentoData,
+      clientRegistrationData,
+      claimantData,
+      nextAppointmentAt: startDateTime,
+      nextAppointmentLocation: location,
+      nextAppointmentLawyer: scheduleData.lawyerName,
+    } : prev)
+
+    toast({
+      title: "Atendimento Agendado",
+      description: `${selectedLead.name} • ${scheduleData.date} ${scheduleData.time} • ID ${createdRef.id} • fase ${nextLeadStatus.toUpperCase()}`,
+    })
   }
 
   return (
@@ -249,7 +1257,12 @@ export default function LeadsPage() {
       ) : (
         <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
           {columns.map((col) => {
-            const leadsInCol = leads.filter(l => l.status === col.id)
+            const leadsInCol = leads.filter(l => {
+              if (col.id === "burocracia") {
+                return l.status === "burocracia" || l.status === "contratual"
+              }
+              return l.status === col.id
+            })
             return (
               <div key={col.id} className="min-w-[320px] flex-1">
                 <div className="flex items-center justify-between mb-4 px-2">
@@ -287,12 +1300,12 @@ export default function LeadsPage() {
       )}
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className={cn("w-full glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
+        <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           {selectedLead && (
             <>
               <div className="p-10 pb-6 border-b border-white/5 bg-black/20">
                 <div className="flex items-center gap-3 mb-4">
-                  <Badge className="bg-primary/10 text-primary border-primary/30 font-black uppercase text-[9px] px-4 py-1">Fase: {selectedLead.status?.toUpperCase()}</Badge>
+                  <Badge className="bg-primary/10 text-primary border-primary/30 font-black uppercase text-[9px] px-4 py-1">Fase: {getStatusLabel(selectedLead.status)}</Badge>
                   <Badge variant="outline" className="text-[9px] uppercase border-white/10 text-muted-foreground font-black tracking-widest">{selectedLead.type}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
@@ -306,17 +1319,16 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <Tabs defaultValue={selectedLead.status} className="flex-1 flex flex-col">
+              <Tabs key={selectedLead.id} defaultValue={getDefaultLeadTab(selectedLead.status)} className="flex-1 min-h-0 flex flex-col">
                 <div className="px-10 bg-black/40">
                   <TabsList className="bg-transparent h-14 p-0 gap-8 w-full justify-start rounded-none border-b border-white/5">
                     <TabsTrigger value="atendimento" className="h-full px-0 font-black text-[10px] uppercase tracking-widest data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">1. Atendimento</TabsTrigger>
-                    <TabsTrigger value="contratual" className="h-full px-0 font-black text-[10px] uppercase tracking-widest data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">2. Contratual</TabsTrigger>
-                    <TabsTrigger value="burocracia" className="h-full px-0 font-black text-[10px] uppercase tracking-widest data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">3. Burocracia</TabsTrigger>
-                    <TabsTrigger value="distribuicao" className="h-full px-0 font-black text-[10px] uppercase tracking-widest data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">4. Distribuição</TabsTrigger>
+                    <TabsTrigger value="burocracia" className="h-full px-0 font-black text-[10px] uppercase tracking-widest data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">2. Burocracia</TabsTrigger>
+                    <TabsTrigger value="distribuicao" className="h-full px-0 font-black text-[10px] uppercase tracking-widest data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">3. Distribuição</TabsTrigger>
                   </TabsList>
                 </div>
 
-                <ScrollArea className="flex-1">
+                <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className="p-10 pb-20 space-y-10">
                     <TabsContent value="atendimento" className="mt-0 space-y-8 animate-in fade-in duration-500">
                       <div className="flex gap-4">
@@ -369,9 +1381,190 @@ export default function LeadsPage() {
                           </Select>
                         </div>
                       </div>
+
+                      <div className="space-y-6 pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Agendar Atendimento</h4>
+                          <Badge variant="outline" className="text-[9px] uppercase border-primary/30 text-primary">Agenda</Badge>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data *</Label>
+                            <Input type="date" value={scheduleData.date} onChange={(e) => setScheduleData(prev => ({ ...prev, date: e.target.value }))} className="glass border-white/10 h-12 text-white" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Hora *</Label>
+                            <Input type="time" value={scheduleData.time} onChange={(e) => setScheduleData(prev => ({ ...prev, time: e.target.value }))} className="glass border-white/10 h-12 text-white" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Advogado *</Label>
+                            <Input
+                              value={scheduleData.lawyerName}
+                              onChange={(e) => setScheduleData(prev => ({ ...prev, lawyerName: e.target.value }))}
+                              className="glass border-white/10 h-12 text-white"
+                              placeholder="Nome do advogado"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modalidade / Local *</Label>
+                          <Select value={scheduleData.placeType} onValueChange={(v) => setScheduleData(prev => ({ ...prev, placeType: v }))}>
+                            <SelectTrigger className="glass border-white/10 h-12 text-white"><SelectValue /></SelectTrigger>
+                            <SelectContent className="glass border-white/10 text-white">
+                              <SelectItem value="office">Presencial no Escritório</SelectItem>
+                              <SelectItem value="online">Online (link)</SelectItem>
+                              <SelectItem value="client_home">Casa do Cliente (CEP)</SelectItem>
+                              <SelectItem value="client_indicated">Local Indicado pelo Cliente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {scheduleData.placeType === "online" && (
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Link da Reunião *</Label>
+                            <Input
+                              value={scheduleData.meetingLink}
+                              onChange={(e) => setScheduleData(prev => ({ ...prev, meetingLink: e.target.value }))}
+                              className="glass border-white/10 h-12 text-white"
+                              placeholder="https://meet.google.com/..."
+                            />
+                          </div>
+                        )}
+
+                        {scheduleData.placeType === "client_home" && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                              <div className="space-y-2 md:col-span-1">
+                                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CEP *</Label>
+                                <Input
+                                  value={scheduleData.zipCode}
+                                  onChange={(e) => setScheduleData(prev => ({ ...prev, zipCode: formatCep(e.target.value) }))}
+                                  className="glass border-white/10 h-12 text-white"
+                                  placeholder="00000-000"
+                                />
+                              </div>
+                              <Button onClick={resolveAddressByCep} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest md:col-span-1" disabled={isResolvingCep}>
+                                {isResolvingCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar Endereço"}
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <Input value={scheduleData.address} onChange={(e) => setScheduleData(prev => ({ ...prev, address: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="Logradouro" />
+                              <Input value={scheduleData.neighborhood} onChange={(e) => setScheduleData(prev => ({ ...prev, neighborhood: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="Bairro" />
+                              <Input value={scheduleData.city} onChange={(e) => setScheduleData(prev => ({ ...prev, city: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="Cidade" />
+                              <Input value={scheduleData.state} onChange={(e) => setScheduleData(prev => ({ ...prev, state: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="UF" />
+                            </div>
+                          </div>
+                        )}
+
+                        {scheduleData.placeType === "client_indicated" && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                              <div className="space-y-2 md:col-span-2">
+                                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Local (ex.: Shopping) *</Label>
+                                <Input
+                                  value={scheduleData.placeQuery}
+                                  onChange={(e) => setScheduleData(prev => ({ ...prev, placeQuery: e.target.value }))}
+                                  className="glass border-white/10 h-12 text-white"
+                                  placeholder="Digite o local indicado"
+                                />
+                              </div>
+                              <Button onClick={resolveCommonPlace} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest" disabled={isResolvingPlace}>
+                                {isResolvingPlace ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar Local"}
+                              </Button>
+                            </div>
+                            {scheduleData.placeName && (
+                              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Local encontrado: {scheduleData.placeName}</p>
+                            )}
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Descrição / Dicas de Encontro</Label>
+                              <Textarea
+                                value={scheduleData.locationHint}
+                                onChange={(e) => setScheduleData(prev => ({ ...prev, locationHint: e.target.value }))}
+                                className="glass border-white/10 min-h-[90px] text-white"
+                                placeholder="Ex.: Próximo à entrada principal, piso L2..."
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Cliente: <span className="text-white">{selectedLead.name}</span>
+                        </div>
+
+                        <Button onClick={handleScheduleAttendance} className="w-full h-12 gold-gradient text-background font-black uppercase text-[11px] tracking-widest">
+                          Agendar Atendimento
+                        </Button>
+                      </div>
+
+                      <div className="space-y-6 pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Cadastro Completo Obrigatório</h4>
+                          <Badge variant="outline" className={cn("text-[9px] uppercase", isRegistrationComplete() ? "border-emerald-500/40 text-emerald-400" : "border-amber-500/40 text-amber-300")}>
+                            {isRegistrationComplete() ? "Completo" : "Pendente"}
+                          </Badge>
+                        </div>
+                        {!isRegistrationComplete() && (
+                          <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-[10px] uppercase font-bold tracking-wider text-amber-300">
+                            Sem cadastro completo de cliente e reclamante, o lead não avança para Burocracia.
+                          </div>
+                        )}
+
+                        <div className="space-y-4">
+                          <h5 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Dados do Cliente</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input value={clientRegistrationData.fullName} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, fullName: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.fullName") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Nome completo *" />
+                            <Input value={clientRegistrationData.cpf} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, cpf: formatCpfCnpj(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.cpf") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CPF *" />
+                            <Input value={clientRegistrationData.rg} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, rg: e.target.value }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.rg") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="RG *" />
+                            <Input type="date" value={clientRegistrationData.rgIssueDate} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, rgIssueDate: e.target.value }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.rgIssueDate") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Data expedição RG *" />
+                            <Input value={clientRegistrationData.motherName} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, motherName: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.motherName") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Nome da mãe *" />
+                            <Input value={clientRegistrationData.ctps} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, ctps: e.target.value }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.ctps") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Carteira de trabalho (CTPS) *" />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <Input value={clientRegistrationData.zipCode} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, zipCode: formatCep(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.zipCode") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CEP *" />
+                            <Button onClick={resolveClientAddressByCep} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest" disabled={isResolvingClientCep}>
+                              {isResolvingClientCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar CEP Cliente"}
+                            </Button>
+                            <Input value={clientRegistrationData.city} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, city: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.city") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Cidade *" />
+                            <Input value={clientRegistrationData.state} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.state") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="UF *" />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input value={clientRegistrationData.address} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, address: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.address") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Endereço *" />
+                            <Input value={clientRegistrationData.neighborhood} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, neighborhood: e.target.value.toUpperCase() }))} className="glass border-white/10 h-12 text-white" placeholder="Bairro" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                          <h5 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Dados do Reclamante</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input value={claimantData.fullName} onChange={(e) => setClaimantData(prev => ({ ...prev, fullName: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.fullName") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Nome completo *" />
+                            <Select value={claimantData.documentType} onValueChange={(v) => setClaimantData(prev => ({ ...prev, documentType: v }))}>
+                              <SelectTrigger className="glass border-white/10 h-12 text-white"><SelectValue /></SelectTrigger>
+                              <SelectContent className="glass border-white/10 text-white">
+                                <SelectItem value="CPF">CPF</SelectItem>
+                                <SelectItem value="CNPJ">CNPJ</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input value={claimantData.documentNumber} onChange={(e) => setClaimantData(prev => ({ ...prev, documentNumber: formatCpfCnpj(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.documentNumber") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CPF/CNPJ *" />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <Input value={claimantData.zipCode} onChange={(e) => setClaimantData(prev => ({ ...prev, zipCode: formatCep(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.zipCode") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CEP *" />
+                            <Button onClick={resolveClaimantAddressByCep} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest" disabled={isResolvingClaimantCep}>
+                              {isResolvingClaimantCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar CEP Reclamante"}
+                            </Button>
+                            <Input value={claimantData.city} onChange={(e) => setClaimantData(prev => ({ ...prev, city: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.city") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Cidade *" />
+                            <Input value={claimantData.state} onChange={(e) => setClaimantData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.state") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="UF *" />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input value={claimantData.address} onChange={(e) => setClaimantData(prev => ({ ...prev, address: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.address") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Endereço *" />
+                            <Input value={claimantData.neighborhood} onChange={(e) => setClaimantData(prev => ({ ...prev, neighborhood: e.target.value.toUpperCase() }))} className="glass border-white/10 h-12 text-white" placeholder="Bairro" />
+                          </div>
+                        </div>
+                      </div>
                     </TabsContent>
                     
-                    <TabsContent value="contratual" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                    <TabsContent value="burocracia" className="mt-0 space-y-8 animate-in fade-in duration-500">
                       <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
                         <div className="flex items-center gap-3">
                           <Brain className="h-5 w-5 text-primary" />
@@ -398,12 +1591,133 @@ export default function LeadsPage() {
                           </div>
                         ))}
                       </div>
+
+                      <div className="space-y-4 p-5 rounded-2xl border border-white/10 bg-white/[0.02]">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Resumo da Entrevista para Inicial</p>
+                            <p className="text-[11px] text-muted-foreground">Selecione os pontos relevantes da entrevista para compor os detalhes do caso.</p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              onClick={applyReuseTargetsNow}
+                              className="glass border-white/10 text-white font-black uppercase text-[10px] tracking-widest"
+                              disabled={!selectedLead?.interviewResponses}
+                            >
+                              Aplicar no Dossiê
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={applyInterviewSummaryToCaseDetails}
+                              className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest"
+                              disabled={!selectedLead?.interviewResponses}
+                            >
+                              Aplicar na Distribuição
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={generateCaseDetailsWithGemini}
+                              className="glass border-white/10 text-white font-black uppercase text-[10px] tracking-widest"
+                              disabled={!selectedLead?.interviewResponses || isGeneratingCaseDetails}
+                            >
+                              {isGeneratingCaseDetails ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />} Gerar com Gemini
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/30 text-primary bg-primary/5">
+                            {distributionData.selectedInterviewKeys.length} ITENS SELECIONADOS
+                          </Badge>
+                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-emerald-500/30 text-emerald-300 bg-emerald-500/5">
+                            {interviewEntries.filter(([question]) => Boolean(interviewMetaByLabel[question]?.reuseEnabled)).length} MARCADOS NO MODELO
+                          </Badge>
+                        </div>
+
+                        {!selectedLead?.interviewResponses ? (
+                          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-200">
+                            Conclua a entrevista para habilitar a síntese jurídica automática.
+                          </div>
+                        ) : (
+                          <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                            {interviewEntries.map(([question, answer], index) => {
+                              const isChecked = distributionData.selectedInterviewKeys.includes(question)
+                              const metadata = interviewMetaByLabel[question]
+                              const isReusable = Boolean(metadata?.reuseEnabled)
+                              const mustRestrictByTemplate = hasReusableConfigured
+                              const canSelect = !mustRestrictByTemplate || isReusable
+                              return (
+                                <div key={`${question}-${index}`} className="p-3 rounded-xl border border-white/10 bg-black/20 space-y-2">
+                                  <div className="flex items-start gap-3">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => canSelect && toggleInterviewKey(question, !!checked)}
+                                      disabled={!canSelect}
+                                      className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary disabled:opacity-40"
+                                    />
+                                    <div className="space-y-1 min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-[11px] font-black text-white uppercase tracking-wide">{question}</p>
+                                        {isReusable && (
+                                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-wider border-primary/40 text-primary bg-primary/10">
+                                            REAPROVEITAR
+                                          </Badge>
+                                        )}
+                                        {metadata?.balizaObrigatoria && (
+                                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-wider border-amber-500/40 text-amber-300 bg-amber-500/10">
+                                            BALIZA
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] text-muted-foreground break-words">{String(answer)}</p>
+                                      {isReusable && (
+                                        <p className="text-[9px] text-primary uppercase tracking-widest">
+                                          destino: {(metadata?.reuseTarget || "caseDetails").toUpperCase()} • campo: {(metadata?.targetField || "AUTO").toUpperCase()} • prioridade: {(metadata?.reusePriority || "media").toUpperCase()}
+                                        </p>
+                                      )}
+                                      {!canSelect && (
+                                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Não marcado como reaproveitável no modelo.</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Prévia do Resumo Selecionado</p>
+                          <p className="text-[11px] text-white/80 whitespace-pre-wrap">
+                            {buildInterviewSummary(distributionData.selectedInterviewKeys) || "Selecione ao menos um item da entrevista para gerar a prévia."}
+                          </p>
+                        </div>
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="distribuicao" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                      <div className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Pré-requisitos para protocolar</p>
+                        <ul className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          <li className={cn(isRegistrationComplete() ? "text-emerald-400" : "text-amber-300")}>• Cadastro completo do cliente e reclamante</li>
+                          <li className={cn(selectedLead.interviewResponses ? "text-emerald-400" : "text-amber-300")}>• Entrevista técnica concluída</li>
+                          <li className={cn(isContractualStageComplete(selectedLead.type, contractualChecklist) ? "text-emerald-400" : "text-amber-300")}>• Burocracia (contratos/procuração) concluída</li>
+                        </ul>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo Judicial *</Label>
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome da Ação / Processo *</Label>
+                          <Input
+                            value={distributionData.processTitle}
+                            onChange={(e) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })}
+                            className="glass border-white/10 h-12 text-white"
+                            placeholder="EX: FULANO X CICLANO - RECLAMAÇÃO TRABALHISTA"
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo CNJ *</Label>
                           <Input 
                             value={distributionData.processNumber}
                             onChange={(e) => setDistributionData({...distributionData, processNumber: e.target.value})}
@@ -411,6 +1725,30 @@ export default function LeadsPage() {
                             placeholder="0000000-00.0000.0.00.0000"
                           />
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Link do CNJ *</Label>
+                          <Input 
+                            value={distributionData.link}
+                            onChange={(e) => setDistributionData({...distributionData, link: e.target.value})}
+                            className="glass border-white/10 h-12 text-white" 
+                            placeholder="https://pje..."
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data/Hora de Audiência (opcional)</Label>
+                          <Input 
+                            type="datetime-local"
+                            value={distributionData.hearingDate}
+                            onChange={(e) => setDistributionData({...distributionData, hearingDate: e.target.value})}
+                            className="glass border-white/10 h-12 text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
                           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum</Label>
                           <Input 
@@ -421,30 +1759,46 @@ export default function LeadsPage() {
                           />
                         </div>
                       </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detalhes do Caso (base da inicial)</Label>
+                        <Textarea
+                          value={distributionData.caseDetails}
+                          onChange={(e) => setDistributionData({ ...distributionData, caseDetails: e.target.value })}
+                          className="glass border-white/10 text-white min-h-[130px]"
+                          placeholder="Resumo jurídico consolidado da entrevista, fatos, pedidos e fundamentos iniciais."
+                        />
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                          Esse conteúdo é salvo no processo distribuído para apoiar petição inicial e fluxos seguintes.
+                        </p>
+                      </div>
+
                       <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-center">
                         <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-4">Ação Final de Fluxo</p>
                         <Button 
                           onClick={handleDistribute}
                           className="bg-emerald-600 hover:bg-emerald-500 text-white font-black h-16 px-12 uppercase text-xs tracking-widest shadow-xl shadow-emerald-900/20 rounded-xl"
                         >
-                          Efetuar Distribuição & Criar Processo
+                          Protocolar Distribuição
                         </Button>
                       </div>
                     </TabsContent>
                   </div>
-                </ScrollArea>
+                </div>
               </Tabs>
 
-              <div className="p-10 border-t border-white/5 bg-black/60 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button onClick={() => deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-bold h-14 uppercase text-[10px] tracking-widest">Descartar Lead</Button>
-                <Button onClick={handleUpdateLead} className="glass border-white/10 text-white font-bold h-14 uppercase text-[10px] tracking-widest">Salvar Alterações</Button>
-                <Button 
-                  onClick={handleAdvanceStage} 
-                  disabled={selectedLead.status === 'distribuicao'}
-                  className="blue-gradient text-white font-black h-14 uppercase text-[10px] tracking-widest shadow-xl rounded-xl"
+              <div className="p-4 md:p-6 border-t border-white/5 bg-black/60 grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <Button
+                  onClick={() => {
+                    setIsSheetOpen(false)
+                    setIsNewEntryOpen(true)
+                  }}
+                  className="glass border-white/10 text-white font-bold h-12 uppercase text-[10px] tracking-widest"
                 >
-                  Avançar para Próxima Fase <ChevronRight className="ml-2 h-4 w-4" />
+                  Novo Lead
                 </Button>
+                <Button onClick={handleUpdateLead} className="glass border-white/10 text-white font-bold h-12 uppercase text-[10px] tracking-widest">Salvar Alterações</Button>
+                <Button onClick={() => handleDeleteLead(selectedLead.id)} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-bold h-12 uppercase text-[10px] tracking-widest border border-rose-500/30">Descartar Lead</Button>
               </div>
             </>
           )}
@@ -454,6 +1808,10 @@ export default function LeadsPage() {
       {/* DIALOG DE EXECUÇÃO DE ENTREVISTA */}
       <Dialog open={isInterviewOpen} onOpenChange={setIsInterviewOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl h-[90vh]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Execução de Entrevista Técnica</DialogTitle>
+            <DialogDescription>Formulário de entrevista para coleta de dados do lead selecionado.</DialogDescription>
+          </DialogHeader>
           <DynamicInterviewExecution 
             template={activeTemplate}
             onSubmit={handleInterviewSubmit}
@@ -463,7 +1821,7 @@ export default function LeadsPage() {
       </Dialog>
 
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
-        <SheetContent className={cn("w-full glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
+        <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <div className="p-8 border-b border-white/5 bg-[#0a0f1e]">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
@@ -478,6 +1836,8 @@ export default function LeadsPage() {
             existingLeads={leads} 
             onSubmit={handleCreateEntry} 
             onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
+            onQuickCreateClient={handleQuickCreateClient}
+            defaultResponsibleLawyer={getLoggedLawyerName()}
             initialMode="quick" 
             lockMode={false} 
           />
@@ -485,8 +1845,4 @@ export default function LeadsPage() {
       </Sheet>
     </div>
   )
-}
-
-function PlusCircle(props: any) {
-  return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
 }

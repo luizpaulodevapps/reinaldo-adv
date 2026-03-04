@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 interface DynamicInterviewProps {
   template: any
-  onSubmit: (responses: any) => void
+  onSubmit: (payload: { responses: any; templateSnapshot: any[] }) => void
   onCancel: () => void
 }
 
@@ -28,15 +28,26 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
 
   const handleSubmit = () => {
     // Validação de obrigatoriedade
-    const missingFields = template.items?.filter((item: any) => item.required && !responses[item.label])
+    const missingFields = template.items?.filter((item: any) => (item.required || item.balizaObrigatoria) && !responses[item.label])
     if (missingFields?.length > 0) {
       alert(`Os seguintes campos são obrigatórios: ${missingFields.map((f: any) => f.label).join(", ")}`)
       return
     }
 
+    const templateSnapshot = (template.items || []).map((item: any) => ({
+      label: item.label,
+      type: item.type,
+      required: Boolean(item.required),
+      reuseEnabled: Boolean(item.reuseEnabled),
+      reuseTarget: item.reuseTarget || "caseDetails",
+      targetField: item.targetField || "",
+      reusePriority: item.reusePriority || "media",
+      balizaObrigatoria: Boolean(item.balizaObrigatoria),
+    }))
+
     setLoading(true)
     setTimeout(() => {
-      onSubmit(responses)
+      onSubmit({ responses, templateSnapshot })
       setLoading(false)
     }, 800)
   }
