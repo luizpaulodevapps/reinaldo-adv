@@ -157,7 +157,7 @@ export default function LaboratorioChecklistsPage() {
   const canManage = role === 'admin'
 
   const checklistsQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !db) return null
     return query(collection(db, "checklists"), orderBy("createdAt", "desc"))
   }, [db, user])
 
@@ -233,8 +233,8 @@ export default function LaboratorioChecklistsPage() {
   }
 
   const handleSave = () => {
-    if (!title) {
-      toast({ variant: "destructive", title: "Título Necessário" })
+    if (!title || !db) {
+      toast({ variant: "destructive", title: "Dados Incompletos" })
       return
     }
 
@@ -342,9 +342,11 @@ export default function LaboratorioChecklistsPage() {
                     <button onClick={() => handleOpenEdit(list)} className="text-muted-foreground hover:text-primary transition-colors p-1">
                       <Edit3 className="h-4 w-4" />
                     </button>
-                    <button onClick={() => deleteDocumentNonBlocking(doc(db, "checklists", list.id))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {db && (
+                      <button onClick={() => deleteDocumentNonBlocking(doc(db, "checklists", list.id))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <CardTitle className="text-xl font-black text-white uppercase tracking-tight leading-tight">
@@ -767,7 +769,7 @@ export default function LaboratorioChecklistsPage() {
               {isLastStep ? (
                 <Button
                   onClick={handleSave}
-                  className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-10 h-12 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3"
+                  className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-10 h-12 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                 >
                   <ShieldCheck className="h-5 w-5" /> SALVAR E DISPONIBILIZAR NA BANCA
                 </Button>
@@ -775,7 +777,7 @@ export default function LaboratorioChecklistsPage() {
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-10 h-12 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3"
+                  className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-10 h-12 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                 >
                   PRÓXIMO <ChevronRight className="h-4 w-4" />
                 </Button>

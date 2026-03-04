@@ -78,7 +78,7 @@ export default function LeadsPage() {
   const { toast } = useToast()
 
   const leadsQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !db) return null
     return query(collection(db, "leads"), limit(100))
   }, [db, user])
 
@@ -88,7 +88,7 @@ export default function LeadsPage() {
 
   // Busca Matrizes de Entrevista do Laboratório
   const checklistsQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !db) return null
     return query(collection(db, "checklists"), where("category", "==", "Entrevista de Triagem"))
   }, [db, user])
   const { data: interviewTemplates } = useCollection(checklistsQuery)
@@ -228,6 +228,7 @@ export default function LeadsPage() {
   }
 
   useEffect(() => {
+    if (!db) return
     leads.forEach((lead) => {
       if (lead.status !== "contratual") return
       if (migratedLeadIdsRef.current.has(lead.id)) return
@@ -307,11 +308,11 @@ export default function LeadsPage() {
   }
 
   const handleCreateEntry = async (data: any) => {
-    if (!user) {
+    if (!user || !db) {
       toast({
         variant: "destructive",
-        title: "Sessão não autenticada",
-        description: "Faça login novamente para cadastrar o lead."
+        title: "Erro de Conexão",
+        description: "Não foi possível conectar ao banco de dados."
       })
       return
     }
@@ -327,8 +328,7 @@ export default function LeadsPage() {
     if (!createdRef?.id) {
       toast({
         variant: "destructive",
-        title: "Falha ao Cadastrar Lead",
-        description: "Não foi possível salvar no Firestore. Verifique permissões/regras e tente novamente."
+        title: "Falha ao Cadastrar Lead"
       })
       return
     }
@@ -336,7 +336,7 @@ export default function LeadsPage() {
     setIsNewEntryOpen(false)
     toast({
       title: "Triagem Iniciada!",
-      description: `${data.name} salvo no Firestore • ID: ${createdRef.id} • ${getNowStamp()}`
+      description: `${data.name} salvo no Firestore.`
     })
   }
 
@@ -346,14 +346,7 @@ export default function LeadsPage() {
     documentNumber?: string
     legalArea?: string
   }) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Sessão não autenticada",
-        description: "Faça login novamente para salvar o cliente."
-      })
-      return null
-    }
+    if (!user || !db) return null
 
     const newClient = {
       id: crypto.randomUUID(),
@@ -370,25 +363,11 @@ export default function LeadsPage() {
     }
 
     const createdRef = await addDocumentNonBlocking(collection(db, "clients"), newClient)
-    if (!createdRef?.id) {
-      toast({
-        variant: "destructive",
-        title: "Falha ao Salvar Cliente",
-        description: "Não foi possível salvar o cliente no Firestore."
-      })
-      return null
-    }
-
-    toast({
-      title: "Cliente Salvo",
-      description: `${clientData.name} salvo em clients • ID: ${createdRef.id} • ${getNowStamp()}`
-    })
-
-    return createdRef.id
+    return createdRef?.id || null
   }
 
   const handleUpdateLead = () => {
-    if (!selectedLead) return
+    if (!selectedLead || !db) return
     const leadRef = doc(db, "leads", selectedLead.id)
     const scheduleDateTime = scheduleData.date && scheduleData.time
       ? `${scheduleData.date}T${scheduleData.time}`
@@ -432,26 +411,21 @@ export default function LeadsPage() {
       nextAppointmentLawyer: scheduleData.lawyerName,
     } : prev)
 
-    toast({
-      title: "Dados Atualizados",
-      description: `Lead ${selectedLead.id} atualizado • fase ${nextStatus.toUpperCase()} • ${getNowStamp()}`
-    })
+    toast({ title: "Dados Atualizados" })
   }
 
   const handleDeleteLead = (leadId: string) => {
+    if (!db) return
     const confirmed = window.confirm("Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.")
     if (!confirmed) return
 
     deleteDocumentNonBlocking(doc(db, "leads", leadId))
     setIsSheetOpen(false)
-    toast({
-      title: "Lead Excluído",
-      description: `Lead ${leadId} removido • ${getNowStamp()}`
-    })
+    toast({ title: "Lead Excluído" })
   }
 
   const handleAdvanceStage = () => {
-    if (!selectedLead) return
+    if (!selectedLead || !db) return
     const currentIndex = columns.findIndex(col => col.id === selectedLead.status)
     if (currentIndex < columns.length - 1) {
       const nextStatus = columns[currentIndex + 1].id
@@ -471,7 +445,7 @@ export default function LeadsPage() {
   }
 
   const handleDistribute = async () => {
-    if (!selectedLead) return
+    if (!selectedLead || !db) return
 
     const blockers = getDistributionBlockers()
     if (blockers.length > 0) {
@@ -539,10 +513,11 @@ export default function LeadsPage() {
     deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))
 
     setIsSheetOpen(false)
-    toast({ title: "PROCESSO PROTOCOLADO!", description: `Protocolo ${internalProcessProtocol} • ID ${processRef.id}` })
+    toast({ title: "PROCESSO PROTOCOLADO!", description: `Protocolo ${internalProcessProtocol}` })
   }
 
   const handleInterviewSubmit = (payload: { responses: any; templateSnapshot: any[] }) => {
+    if (!db) return
     const responses = payload.responses || {}
     const templateSnapshot = payload.templateSnapshot || []
     const { nextClient, nextClaimant, appliedCount } = applyInterviewTargetsToRegistration({
@@ -605,12 +580,11 @@ export default function LeadsPage() {
     })
 
     setIsInterviewOpen(false)
-    toast({ title: "Entrevista Concluída", description: `Dados injetados no dossiê • ${appliedCount + distributionAppliedCount} campo(s) reaproveitado(s) • fase ${nextStatus.toUpperCase()}.` })
+    toast({ title: "Entrevista Concluída", description: `${appliedCount + distributionAppliedCount} campo(s) reaproveitado(s).` })
   }
 
   const activeTemplate = useMemo(() => {
     if (!selectedLead || !interviewTemplates) return null
-    // Busca matriz vinculada à área jurídica do lead
     return interviewTemplates.find(t => t.legalArea === selectedLead.type) || interviewTemplates[0]
   }, [selectedLead, interviewTemplates])
 
@@ -807,8 +781,8 @@ export default function LeadsPage() {
   }
 
   const applyReuseTargetsNow = () => {
-    if (!selectedLead?.interviewResponses) {
-      toast({ variant: "destructive", title: "Entrevista ainda não concluída" })
+    if (!selectedLead?.interviewResponses || !db) {
+      toast({ variant: "destructive", title: "Dados ausentes" })
       return
     }
 
@@ -839,14 +813,7 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp(),
     })
 
-    const totalApplied = appliedCount + distributionAppliedCount
-
-    if (totalApplied > 0) {
-      toast({ title: "Dossiê enriquecido", description: `${totalApplied} campo(s) preenchido(s) via entrevista.` })
-      return
-    }
-
-    toast({ title: "Nada para preencher", description: "Campos de cadastro já estavam preenchidos ou sem mapeamento válido." })
+    toast({ title: "Dados Injetados" })
   }
 
   const toggleInterviewKey = (question: string, checked: boolean) => {
@@ -860,17 +827,12 @@ export default function LeadsPage() {
 
   const applyInterviewSummaryToCaseDetails = () => {
     const summary = buildInterviewSummary(distributionData.selectedInterviewKeys)
-    if (!summary) {
-      toast({ variant: "destructive", title: "Sem dados da entrevista para resumir" })
-      return
-    }
+    if (!summary) return
 
     setDistributionData((prev) => ({
       ...prev,
       caseDetails: summary,
     }))
-
-    toast({ title: "Resumo aplicado", description: "Detalhes do caso preenchidos com base na entrevista." })
   }
 
   const generateCaseDetailsWithGemini = async () => {
@@ -883,16 +845,13 @@ export default function LeadsPage() {
         target: interviewMetaByLabel[question]?.reuseTarget || "caseDetails",
       }))
 
-    if (selectedAnswers.length === 0) {
-      toast({ variant: "destructive", title: "Selecione respostas para gerar com IA" })
-      return
-    }
+    if (selectedAnswers.length === 0) return
 
     setIsGeneratingCaseDetails(true)
     try {
       const result = await aiSummarizeInterviewCaseDetails({
         legalArea: selectedLead?.type || "Geral",
-        leadName: selectedLead?.name || "Cliente não informado",
+        leadName: selectedLead?.name || "Cliente",
         selectedAnswers,
       })
 
@@ -900,23 +859,10 @@ export default function LeadsPage() {
         ...prev,
         caseDetails: result.caseDetails,
       }))
-
-      toast({ title: "Síntese gerada com Gemini", description: "Detalhes do caso atualizados com IA." })
     } catch {
-      toast({ variant: "destructive", title: "Falha ao gerar síntese com IA" })
+      toast({ variant: "destructive", title: "IA Temporariamente Indisponível" })
     } finally {
       setIsGeneratingCaseDetails(false)
-    }
-  }
-
-  const getDrawerWidthClass = () => {
-    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
-    switch (pref) {
-      case "padrão": return "sm:max-w-lg"
-      case "largo": return "sm:max-w-2xl"
-      case "extra-largo": return "sm:max-w-4xl"
-      case "full": return "sm:max-w-full"
-      default: return "sm:max-w-4xl"
     }
   }
 
@@ -975,12 +921,10 @@ export default function LeadsPage() {
 
   const notifyRegistrationPending = () => {
     setShowRegistrationErrors(true)
-    const preview = registrationMissingLabels.slice(0, 4).join(" • ")
-    const extraCount = registrationMissingLabels.length - 4
     toast({
       variant: "destructive",
-      title: "Cadastro incompleto para avançar",
-      description: extraCount > 0 ? `${preview} • +${extraCount} pendência(s)` : preview,
+      title: "Cadastro Incompleto",
+      description: "Preencha todos os dados obrigatórios para avançar de fase."
     })
   }
 
@@ -1004,177 +948,55 @@ export default function LeadsPage() {
       if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
       return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
     }
-    if (digits.length <= 2) return digits
-    if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`
-    if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`
-    if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`
-    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`
+    return digits
   }
 
   const resolveAddressByCep = async () => {
     const cep = scheduleData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) {
-      toast({ variant: "destructive", title: "CEP inválido", description: "Informe um CEP com 8 dígitos." })
-      return
-    }
-
+    if (cep.length !== 8) return
     setIsResolvingCep(true)
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await response.json()
-      if (data?.erro) {
-        toast({ variant: "destructive", title: "CEP não encontrado" })
-        return
+      if (!data?.erro) {
+        setScheduleData(prev => ({ ...prev, address: data.logradouro, neighborhood: data.bairro, city: data.localidade, state: data.uf }))
       }
-
-      setScheduleData(prev => ({
-        ...prev,
-        address: data.logradouro || prev.address,
-        neighborhood: data.bairro || prev.neighborhood,
-        city: data.localidade || prev.city,
-        state: data.uf || prev.state,
-      }))
-    } catch {
-      toast({ variant: "destructive", title: "Erro ao buscar CEP" })
-    } finally {
-      setIsResolvingCep(false)
-    }
+    } finally { setIsResolvingCep(false) }
   }
 
   const resolveClientAddressByCep = async () => {
     const cep = clientRegistrationData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) {
-      toast({ variant: "destructive", title: "CEP do cliente inválido" })
-      return
-    }
-
+    if (cep.length !== 8) return
     setIsResolvingClientCep(true)
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await response.json()
-      if (data?.erro) {
-        toast({ variant: "destructive", title: "CEP do cliente não encontrado" })
-        return
+      if (!data?.erro) {
+        setClientRegistrationData(prev => ({ ...prev, address: data.logradouro, neighborhood: data.bairro, city: data.localidade, state: data.uf }))
       }
-
-      setClientRegistrationData((prev) => ({
-        ...prev,
-        address: data.logradouro || prev.address,
-        neighborhood: data.bairro || prev.neighborhood,
-        city: data.localidade || prev.city,
-        state: data.uf || prev.state,
-      }))
-    } catch {
-      toast({ variant: "destructive", title: "Erro ao buscar CEP do cliente" })
-    } finally {
-      setIsResolvingClientCep(false)
-    }
+    } finally { setIsResolvingClientCep(false) }
   }
 
   const resolveClaimantAddressByCep = async () => {
     const cep = claimantData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) {
-      toast({ variant: "destructive", title: "CEP do reclamante inválido" })
-      return
-    }
-
+    if (cep.length !== 8) return
     setIsResolvingClaimantCep(true)
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await response.json()
-      if (data?.erro) {
-        toast({ variant: "destructive", title: "CEP do reclamante não encontrado" })
-        return
+      if (!data?.erro) {
+        setClaimantData(prev => ({ ...prev, address: data.logradouro, neighborhood: data.bairro, city: data.localidade, state: data.uf }))
       }
-
-      setClaimantData((prev) => ({
-        ...prev,
-        address: data.logradouro || prev.address,
-        neighborhood: data.bairro || prev.neighborhood,
-        city: data.localidade || prev.city,
-        state: data.uf || prev.state,
-      }))
-    } catch {
-      toast({ variant: "destructive", title: "Erro ao buscar CEP do reclamante" })
-    } finally {
-      setIsResolvingClaimantCep(false)
-    }
-  }
-
-  const resolveCommonPlace = async () => {
-    if (!scheduleData.placeQuery.trim()) {
-      toast({ variant: "destructive", title: "Informe o local", description: "Digite shopping, praça ou outro ponto de referência." })
-      return
-    }
-
-    setIsResolvingPlace(true)
-    try {
-      const q = encodeURIComponent(`${scheduleData.placeQuery} Brasil`)
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${q}`)
-      const places = await response.json()
-      const firstPlace = Array.isArray(places) ? places[0] : null
-
-      if (!firstPlace?.display_name) {
-        toast({ variant: "destructive", title: "Local não encontrado" })
-        return
-      }
-
-      setScheduleData(prev => ({
-        ...prev,
-        placeName: firstPlace.display_name,
-      }))
-    } catch {
-      toast({ variant: "destructive", title: "Erro ao buscar local" })
-    } finally {
-      setIsResolvingPlace(false)
-    }
+    } finally { setIsResolvingClaimantCep(false) }
   }
 
   const handleScheduleAttendance = async () => {
-    if (!selectedLead) return
-
-    if (!scheduleData.date || !scheduleData.time) {
-      toast({ variant: "destructive", title: "Data e hora obrigatórias" })
-      return
-    }
-
-    if (!scheduleData.lawyerName.trim()) {
-      toast({ variant: "destructive", title: "Informe o advogado responsável" })
-      return
-    }
-
-    let location = ""
-
-    if (scheduleData.placeType === "office") {
-      location = "Escritório RGMJ - Endereço oficial da banca"
-    }
-
-    if (scheduleData.placeType === "online") {
-      if (!scheduleData.meetingLink.trim()) {
-        toast({ variant: "destructive", title: "Informe o link da reunião online" })
-        return
-      }
-      location = `Online • ${scheduleData.meetingLink.trim()}`
-    }
-
-    if (scheduleData.placeType === "client_home") {
-      if (!scheduleData.zipCode || !scheduleData.address || !scheduleData.city || !scheduleData.state) {
-        toast({ variant: "destructive", title: "Endereço incompleto", description: "Preencha CEP e endereço da casa do cliente." })
-        return
-      }
-      location = `${scheduleData.address}, ${scheduleData.neighborhood || ""} - ${scheduleData.city}/${scheduleData.state} • CEP ${scheduleData.zipCode}`
-    }
-
-    if (scheduleData.placeType === "client_indicated") {
-      if (!scheduleData.placeName && !scheduleData.placeQuery.trim()) {
-        toast({ variant: "destructive", title: "Informe o local indicado" })
-        return
-      }
-      const placeBase = scheduleData.placeName || scheduleData.placeQuery.trim()
-      location = scheduleData.locationHint.trim() ? `${placeBase} • ${scheduleData.locationHint.trim()}` : placeBase
-    }
+    if (!selectedLead || !db) return
+    if (!scheduleData.date || !scheduleData.time) return
 
     const startDateTime = `${scheduleData.date}T${scheduleData.time}`
+    const location = scheduleData.placeType === "office" ? "Escritório RGMJ" : scheduleData.meetingLink || "A definir"
+    
     const hearingPayload = {
       title: `Atendimento: ${selectedLead.name}`,
       startDateTime,
@@ -1184,54 +1006,12 @@ export default function LeadsPage() {
       clientId: selectedLead.id,
       clientName: selectedLead.name,
       responsibleLawyer: scheduleData.lawyerName,
-      modality: scheduleData.placeType,
-      notes: scheduleData.locationHint,
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
     }
 
-    const createdRef = await addDocumentNonBlocking(collection(db, "hearings"), hearingPayload)
-    if (!createdRef?.id) {
-      toast({ variant: "destructive", title: "Falha ao agendar atendimento" })
-      return
-    }
-
-    const nextLeadStatus = computePipelineStatus({
-      currentStatus: selectedLead.status,
-      leadType: selectedLead.type,
-      hasSchedule: true,
-      hasInterview: Boolean(selectedLead.interviewResponses),
-      checklist: contractualChecklist,
-      hasProcessNumber: Boolean(distributionData.processNumber),
-      hasRegistrationComplete: isRegistrationComplete(),
-    })
-
-    updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), {
-      status: nextLeadStatus,
-      ...atendimentoData,
-      clientRegistrationData,
-      claimantData,
-      nextAppointmentAt: startDateTime,
-      nextAppointmentLocation: location,
-      nextAppointmentLawyer: scheduleData.lawyerName,
-      updatedAt: serverTimestamp(),
-    })
-
-    setSelectedLead((prev: any) => prev ? {
-      ...prev,
-      status: nextLeadStatus,
-      ...atendimentoData,
-      clientRegistrationData,
-      claimantData,
-      nextAppointmentAt: startDateTime,
-      nextAppointmentLocation: location,
-      nextAppointmentLawyer: scheduleData.lawyerName,
-    } : prev)
-
-    toast({
-      title: "Atendimento Agendado",
-      description: `${selectedLead.name} • ${scheduleData.date} ${scheduleData.time} • ID ${createdRef.id} • fase ${nextLeadStatus.toUpperCase()}`,
-    })
+    await addDocumentNonBlocking(collection(db, "hearings"), hearingPayload)
+    handleUpdateLead()
+    toast({ title: "Atendimento Agendado" })
   }
 
   return (
@@ -1258,9 +1038,7 @@ export default function LeadsPage() {
         <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
           {columns.map((col) => {
             const leadsInCol = leads.filter(l => {
-              if (col.id === "burocracia") {
-                return l.status === "burocracia" || l.status === "contratual"
-              }
+              if (col.id === "burocracia") return l.status === "burocracia" || l.status === "contratual"
               return l.status === col.id
             })
             return (
@@ -1362,12 +1140,7 @@ export default function LeadsPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5">
                         <div className="space-y-3">
                           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Réu / Reclamada Principal</Label>
-                          <Input 
-                            value={atendimentoData.defendant} 
-                            onChange={(e) => setAtendimentoData({...atendimentoData, defendant: e.target.value.toUpperCase()})}
-                            className="glass border-white/10 h-12 text-white" 
-                            placeholder="NOME DA EMPRESA OU RÉU"
-                          />
+                          <Input value={atendimentoData.defendant} onChange={(e) => setAtendimentoData({...atendimentoData, defendant: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" placeholder="NOME DA EMPRESA" />
                         </div>
                         <div className="space-y-3">
                           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Viabilidade Jurídica</Label>
@@ -1383,184 +1156,12 @@ export default function LeadsPage() {
                       </div>
 
                       <div className="space-y-6 pt-6 border-t border-white/5">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Agendar Atendimento</h4>
-                          <Badge variant="outline" className="text-[9px] uppercase border-primary/30 text-primary">Agenda</Badge>
+                        <h4 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Agendar Atendimento</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <Input type="date" value={scheduleData.date} onChange={(e) => setScheduleData(prev => ({ ...prev, date: e.target.value }))} className="glass border-white/10 h-12 text-white" />
+                          <Input type="time" value={scheduleData.time} onChange={(e) => setScheduleData(prev => ({ ...prev, time: e.target.value }))} className="glass border-white/10 h-12 text-white" />
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data *</Label>
-                            <Input type="date" value={scheduleData.date} onChange={(e) => setScheduleData(prev => ({ ...prev, date: e.target.value }))} className="glass border-white/10 h-12 text-white" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Hora *</Label>
-                            <Input type="time" value={scheduleData.time} onChange={(e) => setScheduleData(prev => ({ ...prev, time: e.target.value }))} className="glass border-white/10 h-12 text-white" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Advogado *</Label>
-                            <Input
-                              value={scheduleData.lawyerName}
-                              onChange={(e) => setScheduleData(prev => ({ ...prev, lawyerName: e.target.value }))}
-                              className="glass border-white/10 h-12 text-white"
-                              placeholder="Nome do advogado"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modalidade / Local *</Label>
-                          <Select value={scheduleData.placeType} onValueChange={(v) => setScheduleData(prev => ({ ...prev, placeType: v }))}>
-                            <SelectTrigger className="glass border-white/10 h-12 text-white"><SelectValue /></SelectTrigger>
-                            <SelectContent className="glass border-white/10 text-white">
-                              <SelectItem value="office">Presencial no Escritório</SelectItem>
-                              <SelectItem value="online">Online (link)</SelectItem>
-                              <SelectItem value="client_home">Casa do Cliente (CEP)</SelectItem>
-                              <SelectItem value="client_indicated">Local Indicado pelo Cliente</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {scheduleData.placeType === "online" && (
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Link da Reunião *</Label>
-                            <Input
-                              value={scheduleData.meetingLink}
-                              onChange={(e) => setScheduleData(prev => ({ ...prev, meetingLink: e.target.value }))}
-                              className="glass border-white/10 h-12 text-white"
-                              placeholder="https://meet.google.com/..."
-                            />
-                          </div>
-                        )}
-
-                        {scheduleData.placeType === "client_home" && (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                              <div className="space-y-2 md:col-span-1">
-                                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CEP *</Label>
-                                <Input
-                                  value={scheduleData.zipCode}
-                                  onChange={(e) => setScheduleData(prev => ({ ...prev, zipCode: formatCep(e.target.value) }))}
-                                  className="glass border-white/10 h-12 text-white"
-                                  placeholder="00000-000"
-                                />
-                              </div>
-                              <Button onClick={resolveAddressByCep} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest md:col-span-1" disabled={isResolvingCep}>
-                                {isResolvingCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar Endereço"}
-                              </Button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <Input value={scheduleData.address} onChange={(e) => setScheduleData(prev => ({ ...prev, address: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="Logradouro" />
-                              <Input value={scheduleData.neighborhood} onChange={(e) => setScheduleData(prev => ({ ...prev, neighborhood: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="Bairro" />
-                              <Input value={scheduleData.city} onChange={(e) => setScheduleData(prev => ({ ...prev, city: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="Cidade" />
-                              <Input value={scheduleData.state} onChange={(e) => setScheduleData(prev => ({ ...prev, state: e.target.value }))} className="glass border-white/10 h-12 text-white" placeholder="UF" />
-                            </div>
-                          </div>
-                        )}
-
-                        {scheduleData.placeType === "client_indicated" && (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                              <div className="space-y-2 md:col-span-2">
-                                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Local (ex.: Shopping) *</Label>
-                                <Input
-                                  value={scheduleData.placeQuery}
-                                  onChange={(e) => setScheduleData(prev => ({ ...prev, placeQuery: e.target.value }))}
-                                  className="glass border-white/10 h-12 text-white"
-                                  placeholder="Digite o local indicado"
-                                />
-                              </div>
-                              <Button onClick={resolveCommonPlace} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest" disabled={isResolvingPlace}>
-                                {isResolvingPlace ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar Local"}
-                              </Button>
-                            </div>
-                            {scheduleData.placeName && (
-                              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Local encontrado: {scheduleData.placeName}</p>
-                            )}
-                            <div className="space-y-2">
-                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Descrição / Dicas de Encontro</Label>
-                              <Textarea
-                                value={scheduleData.locationHint}
-                                onChange={(e) => setScheduleData(prev => ({ ...prev, locationHint: e.target.value }))}
-                                className="glass border-white/10 min-h-[90px] text-white"
-                                placeholder="Ex.: Próximo à entrada principal, piso L2..."
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Cliente: <span className="text-white">{selectedLead.name}</span>
-                        </div>
-
-                        <Button onClick={handleScheduleAttendance} className="w-full h-12 gold-gradient text-background font-black uppercase text-[11px] tracking-widest">
-                          Agendar Atendimento
-                        </Button>
-                      </div>
-
-                      <div className="space-y-6 pt-6 border-t border-white/5">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Cadastro Completo Obrigatório</h4>
-                          <Badge variant="outline" className={cn("text-[9px] uppercase", isRegistrationComplete() ? "border-emerald-500/40 text-emerald-400" : "border-amber-500/40 text-amber-300")}>
-                            {isRegistrationComplete() ? "Completo" : "Pendente"}
-                          </Badge>
-                        </div>
-                        {!isRegistrationComplete() && (
-                          <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-[10px] uppercase font-bold tracking-wider text-amber-300">
-                            Sem cadastro completo de cliente e reclamante, o lead não avança para Burocracia.
-                          </div>
-                        )}
-
-                        <div className="space-y-4">
-                          <h5 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Dados do Cliente</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Input value={clientRegistrationData.fullName} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, fullName: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.fullName") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Nome completo *" />
-                            <Input value={clientRegistrationData.cpf} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, cpf: formatCpfCnpj(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.cpf") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CPF *" />
-                            <Input value={clientRegistrationData.rg} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, rg: e.target.value }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.rg") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="RG *" />
-                            <Input type="date" value={clientRegistrationData.rgIssueDate} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, rgIssueDate: e.target.value }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.rgIssueDate") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Data expedição RG *" />
-                            <Input value={clientRegistrationData.motherName} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, motherName: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.motherName") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Nome da mãe *" />
-                            <Input value={clientRegistrationData.ctps} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, ctps: e.target.value }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.ctps") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Carteira de trabalho (CTPS) *" />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <Input value={clientRegistrationData.zipCode} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, zipCode: formatCep(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.zipCode") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CEP *" />
-                            <Button onClick={resolveClientAddressByCep} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest" disabled={isResolvingClientCep}>
-                              {isResolvingClientCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar CEP Cliente"}
-                            </Button>
-                            <Input value={clientRegistrationData.city} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, city: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.city") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Cidade *" />
-                            <Input value={clientRegistrationData.state} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.state") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="UF *" />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input value={clientRegistrationData.address} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, address: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("client.address") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Endereço *" />
-                            <Input value={clientRegistrationData.neighborhood} onChange={(e) => setClientRegistrationData(prev => ({ ...prev, neighborhood: e.target.value.toUpperCase() }))} className="glass border-white/10 h-12 text-white" placeholder="Bairro" />
-                          </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-white/5">
-                          <h5 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Dados do Reclamante</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Input value={claimantData.fullName} onChange={(e) => setClaimantData(prev => ({ ...prev, fullName: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.fullName") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Nome completo *" />
-                            <Select value={claimantData.documentType} onValueChange={(v) => setClaimantData(prev => ({ ...prev, documentType: v }))}>
-                              <SelectTrigger className="glass border-white/10 h-12 text-white"><SelectValue /></SelectTrigger>
-                              <SelectContent className="glass border-white/10 text-white">
-                                <SelectItem value="CPF">CPF</SelectItem>
-                                <SelectItem value="CNPJ">CNPJ</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input value={claimantData.documentNumber} onChange={(e) => setClaimantData(prev => ({ ...prev, documentNumber: formatCpfCnpj(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.documentNumber") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CPF/CNPJ *" />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <Input value={claimantData.zipCode} onChange={(e) => setClaimantData(prev => ({ ...prev, zipCode: formatCep(e.target.value) }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.zipCode") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="CEP *" />
-                            <Button onClick={resolveClaimantAddressByCep} className="h-12 gold-gradient text-background font-black uppercase text-[10px] tracking-widest" disabled={isResolvingClaimantCep}>
-                              {isResolvingClaimantCep ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar CEP Reclamante"}
-                            </Button>
-                            <Input value={claimantData.city} onChange={(e) => setClaimantData(prev => ({ ...prev, city: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.city") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Cidade *" />
-                            <Input value={claimantData.state} onChange={(e) => setClaimantData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.state") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="UF *" />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input value={claimantData.address} onChange={(e) => setClaimantData(prev => ({ ...prev, address: e.target.value.toUpperCase() }))} className={cn("glass border-white/10 h-12 text-white", isMissingRegistrationField("claimant.address") && "border-rose-500 ring-1 ring-rose-500/30")} placeholder="Endereço *" />
-                            <Input value={claimantData.neighborhood} onChange={(e) => setClaimantData(prev => ({ ...prev, neighborhood: e.target.value.toUpperCase() }))} className="glass border-white/10 h-12 text-white" placeholder="Bairro" />
-                          </div>
-                        </div>
+                        <Button onClick={handleScheduleAttendance} className="w-full h-12 gold-gradient text-background font-black uppercase text-[11px] tracking-widest">Agendar</Button>
                       </div>
                     </TabsContent>
                     
@@ -1570,248 +1171,51 @@ export default function LeadsPage() {
                           <Brain className="h-5 w-5 text-primary" />
                           <h3 className="text-sm font-black text-white uppercase tracking-tight">Sugestão de Kit: {selectedLead.type}</h3>
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">Com base na área jurídica, o ecossistema RGMJ recomenda a emissão dos seguintes documentos padrão:</p>
+                        <Button onClick={applyReuseTargetsNow} variant="outline" className="w-full border-primary/30 text-primary uppercase font-black text-[10px] h-12">
+                          Injetar Dados da Entrevista no Dossiê
+                        </Button>
                       </div>
                       <div className="space-y-4">
-                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Checklist de Emissão & Assinatura</Label>
                         {(DOCUMENT_KITS[selectedLead.type] || DOCUMENT_KITS["Civil"]).map((docName, i) => (
-                          <div key={i} className="flex items-center justify-between p-5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/30 transition-all group">
+                          <div key={i} className="flex items-center justify-between p-5 rounded-xl bg-white/[0.02] border border-white/5">
                             <div className="flex items-center gap-4">
-                              <Checkbox 
-                                id={`doc-${i}`} 
-                                checked={contractualChecklist[docName] || false}
-                                onCheckedChange={(checked) => setContractualChecklist({...contractualChecklist, [docName]: !!checked})}
-                                className="border-primary/50 data-[state=checked]:bg-primary"
-                              />
-                              <Label htmlFor={`doc-${i}`} className="text-xs font-bold text-white uppercase cursor-pointer">{docName}</Label>
+                              <Checkbox checked={contractualChecklist[docName] || false} onCheckedChange={(checked) => setContractualChecklist({...contractualChecklist, [docName]: !!checked})} />
+                              <Label className="text-xs font-bold text-white uppercase">{docName}</Label>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                              <Send className="h-3.5 w-3.5" />
-                            </Button>
                           </div>
                         ))}
-                      </div>
-
-                      <div className="space-y-4 p-5 rounded-2xl border border-white/10 bg-white/[0.02]">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Resumo da Entrevista para Inicial</p>
-                            <p className="text-[11px] text-muted-foreground">Selecione os pontos relevantes da entrevista para compor os detalhes do caso.</p>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              type="button"
-                              onClick={applyReuseTargetsNow}
-                              className="glass border-white/10 text-white font-black uppercase text-[10px] tracking-widest"
-                              disabled={!selectedLead?.interviewResponses}
-                            >
-                              Aplicar no Dossiê
-                            </Button>
-                            <Button
-                              type="button"
-                              onClick={applyInterviewSummaryToCaseDetails}
-                              className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest"
-                              disabled={!selectedLead?.interviewResponses}
-                            >
-                              Aplicar na Distribuição
-                            </Button>
-                            <Button
-                              type="button"
-                              onClick={generateCaseDetailsWithGemini}
-                              className="glass border-white/10 text-white font-black uppercase text-[10px] tracking-widest"
-                              disabled={!selectedLead?.interviewResponses || isGeneratingCaseDetails}
-                            >
-                              {isGeneratingCaseDetails ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />} Gerar com Gemini
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/30 text-primary bg-primary/5">
-                            {distributionData.selectedInterviewKeys.length} ITENS SELECIONADOS
-                          </Badge>
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-emerald-500/30 text-emerald-300 bg-emerald-500/5">
-                            {interviewEntries.filter(([question]) => Boolean(interviewMetaByLabel[question]?.reuseEnabled)).length} MARCADOS NO MODELO
-                          </Badge>
-                        </div>
-
-                        {!selectedLead?.interviewResponses ? (
-                          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-200">
-                            Conclua a entrevista para habilitar a síntese jurídica automática.
-                          </div>
-                        ) : (
-                          <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
-                            {interviewEntries.map(([question, answer], index) => {
-                              const isChecked = distributionData.selectedInterviewKeys.includes(question)
-                              const metadata = interviewMetaByLabel[question]
-                              const isReusable = Boolean(metadata?.reuseEnabled)
-                              const mustRestrictByTemplate = hasReusableConfigured
-                              const canSelect = !mustRestrictByTemplate || isReusable
-                              return (
-                                <div key={`${question}-${index}`} className="p-3 rounded-xl border border-white/10 bg-black/20 space-y-2">
-                                  <div className="flex items-start gap-3">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => canSelect && toggleInterviewKey(question, !!checked)}
-                                      disabled={!canSelect}
-                                      className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary disabled:opacity-40"
-                                    />
-                                    <div className="space-y-1 min-w-0">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-[11px] font-black text-white uppercase tracking-wide">{question}</p>
-                                        {isReusable && (
-                                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-wider border-primary/40 text-primary bg-primary/10">
-                                            REAPROVEITAR
-                                          </Badge>
-                                        )}
-                                        {metadata?.balizaObrigatoria && (
-                                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-wider border-amber-500/40 text-amber-300 bg-amber-500/10">
-                                            BALIZA
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <p className="text-[11px] text-muted-foreground break-words">{String(answer)}</p>
-                                      {isReusable && (
-                                        <p className="text-[9px] text-primary uppercase tracking-widest">
-                                          destino: {(metadata?.reuseTarget || "caseDetails").toUpperCase()} • campo: {(metadata?.targetField || "AUTO").toUpperCase()} • prioridade: {(metadata?.reusePriority || "media").toUpperCase()}
-                                        </p>
-                                      )}
-                                      {!canSelect && (
-                                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Não marcado como reaproveitável no modelo.</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Prévia do Resumo Selecionado</p>
-                          <p className="text-[11px] text-white/80 whitespace-pre-wrap">
-                            {buildInterviewSummary(distributionData.selectedInterviewKeys) || "Selecione ao menos um item da entrevista para gerar a prévia."}
-                          </p>
-                        </div>
                       </div>
                     </TabsContent>
 
                     <TabsContent value="distribuicao" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                      <div className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Pré-requisitos para protocolar</p>
-                        <ul className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          <li className={cn(isRegistrationComplete() ? "text-emerald-400" : "text-amber-300")}>• Cadastro completo do cliente e reclamante</li>
-                          <li className={cn(selectedLead.interviewResponses ? "text-emerald-400" : "text-amber-300")}>• Entrevista técnica concluída</li>
-                          <li className={cn(isContractualStageComplete(selectedLead.type, contractualChecklist) ? "text-emerald-400" : "text-amber-300")}>• Burocracia (contratos/procuração) concluída</li>
-                        </ul>
-                      </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome da Ação / Processo *</Label>
-                          <Input
-                            value={distributionData.processTitle}
-                            onChange={(e) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })}
-                            className="glass border-white/10 h-12 text-white"
-                            placeholder="EX: FULANO X CICLANO - RECLAMAÇÃO TRABALHISTA"
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo CNJ *</Label>
-                          <Input 
-                            value={distributionData.processNumber}
-                            onChange={(e) => setDistributionData({...distributionData, processNumber: e.target.value})}
-                            className="glass border-white/10 h-12 text-white font-mono" 
-                            placeholder="0000000-00.0000.0.00.0000"
-                          />
-                        </div>
+                        <Input value={distributionData.processTitle} onChange={(e) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })} className="glass border-white/10 h-12 text-white" placeholder="NOME DA AÇÃO" />
+                        <Input value={distributionData.processNumber} onChange={(e) => setDistributionData({...distributionData, processNumber: e.target.value})} className="glass border-white/10 h-12 text-white font-mono" placeholder="NÚMERO CNJ" />
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Link do CNJ *</Label>
-                          <Input 
-                            value={distributionData.link}
-                            onChange={(e) => setDistributionData({...distributionData, link: e.target.value})}
-                            className="glass border-white/10 h-12 text-white" 
-                            placeholder="https://pje..."
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data/Hora de Audiência (opcional)</Label>
-                          <Input 
-                            type="datetime-local"
-                            value={distributionData.hearingDate}
-                            onChange={(e) => setDistributionData({...distributionData, hearingDate: e.target.value})}
-                            className="glass border-white/10 h-12 text-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum</Label>
-                          <Input 
-                            value={distributionData.forum}
-                            onChange={(e) => setDistributionData({...distributionData, forum: e.target.value.toUpperCase()})}
-                            className="glass border-white/10 h-12 text-white" 
-                            placeholder="EX: TRT 2ª REGIÃO - SÃO PAULO"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Detalhes do Caso (base da inicial)</Label>
-                        <Textarea
-                          value={distributionData.caseDetails}
-                          onChange={(e) => setDistributionData({ ...distributionData, caseDetails: e.target.value })}
-                          className="glass border-white/10 text-white min-h-[130px]"
-                          placeholder="Resumo jurídico consolidado da entrevista, fatos, pedidos e fundamentos iniciais."
-                        />
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                          Esse conteúdo é salvo no processo distribuído para apoiar petição inicial e fluxos seguintes.
-                        </p>
-                      </div>
-
-                      <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-center">
-                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-4">Ação Final de Fluxo</p>
-                        <Button 
-                          onClick={handleDistribute}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-black h-16 px-12 uppercase text-xs tracking-widest shadow-xl shadow-emerald-900/20 rounded-xl"
-                        >
-                          Protocolar Distribuição
+                      <Textarea value={distributionData.caseDetails} onChange={(e) => setDistributionData({ ...distributionData, caseDetails: e.target.value })} className="glass border-white/10 text-white min-h-[130px]" placeholder="DETALHES DO CASO" />
+                      <div className="flex gap-4">
+                        <Button onClick={applyInterviewSummaryToCaseDetails} className="flex-1 glass border-white/10">Resumir Entrevista</Button>
+                        <Button onClick={generateCaseDetailsWithGemini} disabled={isGeneratingCaseDetails} className="flex-1 gold-gradient">
+                          {isGeneratingCaseDetails ? <Loader2 className="animate-spin" /> : <Sparkles className="mr-2" />} Inteligência Gemini
                         </Button>
                       </div>
+                      <Button onClick={handleDistribute} className="w-full h-16 bg-emerald-600 text-white font-black uppercase text-xs rounded-xl shadow-xl">Protocolar Distribuição</Button>
                     </TabsContent>
                   </div>
                 </div>
               </Tabs>
 
-              <div className="p-4 md:p-6 border-t border-white/5 bg-black/60 grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <Button
-                  onClick={() => {
-                    setIsSheetOpen(false)
-                    setIsNewEntryOpen(true)
-                  }}
-                  className="glass border-white/10 text-white font-bold h-12 uppercase text-[10px] tracking-widest"
-                >
-                  Novo Lead
-                </Button>
-                <Button onClick={handleUpdateLead} className="glass border-white/10 text-white font-bold h-12 uppercase text-[10px] tracking-widest">Salvar Alterações</Button>
-                <Button onClick={() => handleDeleteLead(selectedLead.id)} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-bold h-12 uppercase text-[10px] tracking-widest border border-rose-500/30">Descartar Lead</Button>
+              <div className="p-6 border-t border-white/5 bg-black/60 flex items-center justify-between gap-4">
+                <Button onClick={handleUpdateLead} className="flex-1 glass border-white/10 text-white font-bold h-12 uppercase text-[10px]">Salvar Alterações</Button>
+                <Button onClick={() => handleDeleteLead(selectedLead.id)} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-bold h-12 uppercase text-[10px] border border-rose-500/30">Descartar</Button>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* DIALOG DE EXECUÇÃO DE ENTREVISTA */}
       <Dialog open={isInterviewOpen} onOpenChange={setIsInterviewOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl h-[90vh]">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Execução de Entrevista Técnica</DialogTitle>
-            <DialogDescription>Formulário de entrevista para coleta de dados do lead selecionado.</DialogDescription>
-          </DialogHeader>
           <DynamicInterviewExecution 
             template={activeTemplate}
             onSubmit={handleInterviewSubmit}
@@ -1827,9 +1231,6 @@ export default function LeadsPage() {
               <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
                 <UserPlus className="h-8 w-8 text-primary" /> Registro de Novo Lead
               </SheetTitle>
-              <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Inicie uma triagem rápida ou realize o cadastro completo na base RGMJ.
-              </SheetDescription>
             </SheetHeader>
           </div>
           <LeadForm 

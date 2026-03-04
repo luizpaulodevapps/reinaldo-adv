@@ -30,7 +30,7 @@ export function DashboardContent() {
   const db = useFirestore()
   const { user, profile } = useUser()
 
-  const canQuery = !!user
+  const canQuery = !!user && !!db
 
   const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
   const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])

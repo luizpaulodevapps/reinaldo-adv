@@ -17,7 +17,7 @@ export function DashboardClientLayout({
   const router = useRouter();
   const { user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
 
-  // REDIRECIONAMENTO GLOBAL - Fora de condicionais para manter ordem dos hooks
+  // REDIRECIONAMENTO GLOBAL - Sempre no topo e incondicional para evitar erros de ordem de Hooks
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
