@@ -993,6 +993,7 @@ export default function LaboratorioChecklistsPage() {
                               </div>
                             </div>
 
+                            {/* SISTEMA DE REUSO DE DADOS */}
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                               <div className="md:col-span-3 flex items-center gap-3 pb-2">
                                 <Switch
@@ -1002,12 +1003,12 @@ export default function LaboratorioChecklistsPage() {
                                   className="data-[state=checked]:bg-primary"
                                 />
                                 <Label htmlFor={`reuse-${idx}`} className="text-[9px] font-black text-white uppercase tracking-widest cursor-pointer">
-                                  REAPROVEITAR
+                                  REAPROVEITAR DADOS
                                 </Label>
                               </div>
 
                               <div className="md:col-span-3 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">DESTINO</Label>
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">DESTINO DO DADO</Label>
                                 <Select
                                   value={item.reuseTarget || "caseDetails"}
                                   onValueChange={(v) => {
@@ -1036,7 +1037,7 @@ export default function LaboratorioChecklistsPage() {
                               </div>
 
                               <div className="md:col-span-4 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CAMPO DE DESTINO</Label>
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CAMPO MAPEADO</Label>
                                 <Select
                                   value={item.targetField || TARGET_FIELDS_BY_REUSE_TARGET[item.reuseTarget || "caseDetails"]?.[0]?.id || ""}
                                   onValueChange={(v) => handleUpdateField(idx, 'targetField', v)}
@@ -1079,7 +1080,7 @@ export default function LaboratorioChecklistsPage() {
                                   className="data-[state=checked]:bg-amber-500"
                                 />
                                 <Label htmlFor={`baliza-${idx}`} className="text-[9px] font-black text-white uppercase tracking-widest cursor-pointer">
-                                  BALIZA OBRIGATÓRIA
+                                  BALIZA OBRIGATÓRIA (IA)
                                 </Label>
                               </div>
                             </div>
@@ -1130,7 +1131,7 @@ export default function LaboratorioChecklistsPage() {
 
                     <Card className="bg-white/[0.02] border-white/10">
                       <CardContent className="p-6 space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Elementos da Entrevista</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">DNA de Captura</p>
                         <p className="text-3xl font-black text-white">{items.length}</p>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">perguntas configuradas</p>
                         <div className="flex flex-wrap gap-2">
@@ -1138,7 +1139,7 @@ export default function LaboratorioChecklistsPage() {
                             {items.filter((item) => item.reuseEnabled).length} REAPROVEITÁVEIS
                           </Badge>
                           <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-amber-500/30 text-amber-300 bg-amber-500/5">
-                            {items.filter((item) => item.balizaObrigatoria).length} BALIZAS
+                            {items.filter((item) => item.balizaObrigatoria).length} BALIZAS (IA)
                           </Badge>
                         </div>
                         <Button
@@ -1146,7 +1147,7 @@ export default function LaboratorioChecklistsPage() {
                           variant="outline"
                           className="mt-2 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
                         >
-                          <PlusCircle className="h-4 w-4 mr-2" /> Ajustar Perguntas
+                          <PlusCircle className="h-4 w-4 mr-2" /> Ajustar Inteligência
                         </Button>
                       </CardContent>
                     </Card>
@@ -1215,7 +1216,7 @@ export default function LaboratorioChecklistsPage() {
           }
         }}
       >
-        <AlertDialogContent className="glass border-white/10 bg-[#0d121f] text-white">
+        <AlertDialogContent className="glass border-white/10 bg-[#0d121f] text-white font-sans">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white text-xl font-black uppercase tracking-tight">
               Aplicar padrao da area
