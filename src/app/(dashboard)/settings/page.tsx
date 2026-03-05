@@ -32,7 +32,10 @@ import {
   MessageSquare,
   Bell,
   Smartphone,
-  Info
+  Info,
+  ChevronDown,
+  Copy,
+  Zap
 } from "lucide-react"
 import { 
   Select, 
@@ -61,8 +64,10 @@ const MESSAGE_PLACEHOLDERS = [
   { tag: "{{LOCAL_ATO}}", desc: "Endereço ou Link da reunião" },
   { tag: "{{LINK_MEET}}", desc: "Link direto do Google Meet" },
   { tag: "{{NUMERO_PROCESSO}}", desc: "CNJ do processo vinculado" },
+  { tag: "{{FORUM_VARA}}", desc: "Tribunal e Vara do feito" },
   { tag: "{{TIPO_ATO}}", desc: "Audiência, Atendimento ou Prazo" },
   { tag: "{{NOME_ADVOGADO}}", desc: "Nome do advogado responsável" },
+  { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
 ]
 
 function SettingsContent() {
@@ -86,6 +91,7 @@ function SettingsContent() {
   // Estados para Mensagens & Alertas
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
   const [editingMessage, setEditingMessage] = useState<any>(null)
+  const [lastFocusedField, setLastFocusedField] = useState<"calendar" | "client">("calendar")
   const [messageFormData, setMessageFormData] = useState({
     profileName: "",
     eventType: "Audiência",
@@ -219,8 +225,8 @@ function SettingsContent() {
     setMessageFormData({
       profileName: "",
       eventType: "Audiência",
-      calendarTemplate: "Título: Audiência RGMJ - {{NOME_CLIENTE}}\nDescrição: Dossiê Processual: {{NUMERO_PROCESSO}}\nLocal: {{LOCAL_ATO}}\nAdvogado Responsável: {{NOME_ADVOGADO}}",
-      clientTemplate: "Olá {{NOME_CLIENTE}}, aqui é da RGMJ Advogados.\nConfirmamos sua {{TIPO_ATO}} para o dia {{DATA_ATO}} às {{HORA_ATO}}.\nLocal/Link: {{LOCAL_ATO}}",
+      calendarTemplate: "Título: AUDIÊNCIA RGMJ - {{NOME_CLIENTE}}\n\nDETALHES DO FEITO:\nProcesso: {{NUMERO_PROCESSO}}\nJuízo: {{FORUM_VARA}}\n\nOBJETO:\n{{DESC_CURTA}}\n\nLINK AUDIÊNCIA VIRTUAL: {{LINK_MEET}}\nResponsável: {{NOME_ADVOGADO}}",
+      clientTemplate: "Olá, {{NOME_CLIENTE}}.\n\nConfirmamos sua {{TIPO_ATO}} para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLOCAL/LINK: {{LOCAL_ATO}}\n\nCaso seja por vídeo, utilize o link: {{LINK_MEET}}\n\nAtenciosamente,\nBanca RGMJ Advogados.",
       isActive: true
     })
     setIsMessageDialogOpen(true)
@@ -236,6 +242,14 @@ function SettingsContent() {
       isActive: template.isActive
     })
     setIsMessageDialogOpen(true)
+  }
+
+  const handleInjectTag = (tag: string) => {
+    const field = lastFocusedField === "calendar" ? "calendarTemplate" : "clientTemplate"
+    setMessageFormData(prev => ({
+      ...prev,
+      [field]: prev[field as keyof typeof prev] + ` ${tag}`
+    }))
   }
 
   const handleSaveMessageTemplate = () => {
@@ -360,58 +374,54 @@ function SettingsContent() {
         </TabsContent>
 
         <TabsContent value="google" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div className="xl:col-span-2 space-y-8">
-              <Card className="glass border-primary/20 overflow-hidden shadow-2xl">
-                <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                      <CloudLightning className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Google Workspace Hub</CardTitle>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">Sincronização central de APIs e Serviços.</p>
-                    </div>
+          <Card className="glass border-primary/20 overflow-hidden shadow-2xl">
+            <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <CloudLightning className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Google Workspace Hub</CardTitle>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">Sincronização central de APIs e Serviços.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Gateway Ativo</span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CONTA MESTRE (ADMIN)</Label>
+                  <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                    <Input 
+                      value={googleConfig.masterEmail} 
+                      onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})}
+                      className="glass border-white/10 h-14 pl-12 text-white font-bold"
+                      placeholder="exemplo@suabanca.com.br"
+                    />
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Gateway Ativo</span>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA RAIZ (DRIVE)</Label>
+                  <div className="relative">
+                    <Database className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                    <Input 
+                      value={googleConfig.rootFolderId} 
+                      onChange={(e) => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})}
+                      className="glass border-white/10 h-14 pl-12 text-white font-mono text-xs"
+                      placeholder="ID da pasta no Google Drive"
+                    />
                   </div>
-                </CardHeader>
-                <CardContent className="p-8 space-y-10">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CONTA MESTRE (ADMIN)</Label>
-                      <div className="relative">
-                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                        <Input 
-                          value={googleConfig.masterEmail} 
-                          onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})}
-                          className="glass border-white/10 h-14 pl-12 text-white font-bold"
-                          placeholder="exemplo@suabanca.com.br"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA RAIZ (DRIVE)</Label>
-                      <div className="relative">
-                        <Database className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                        <Input 
-                          value={googleConfig.rootFolderId} 
-                          onChange={(e) => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})}
-                          className="glass border-white/10 h-14 pl-12 text-white font-mono text-xs"
-                          placeholder="ID da pasta no Google Drive"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-16 w-full md:w-auto rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-xl">
-                    <Save className="h-5 w-5 mr-3" /> SALVAR E SINCRONIZAR GATEWAY
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+              </div>
+              <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-16 w-full md:w-auto rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-xl">
+                <Save className="h-5 w-5 mr-3" /> SALVAR E SINCRONIZAR GATEWAY
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="modelos" className="mt-0 space-y-10">
@@ -453,7 +463,7 @@ function SettingsContent() {
                           <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{model.title}</h3>
                           <div className="flex items-center gap-2 mt-4">
                             <Hash className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{(model.tags || []).length} tags ativas</span>
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{(model.tags || []).length} tags ativas</span>
                           </div>
                         </Card>
                       ))}
@@ -461,13 +471,6 @@ function SettingsContent() {
                   </div>
                 )
               })}
-              
-              {(!models || models.length === 0) && (
-                <div className="py-32 text-center opacity-20 border-2 border-dashed border-white/5 rounded-[2rem]">
-                  <FileText className="h-16 w-16 mx-auto mb-4" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.5em]">Nenhum modelo cadastrado no acervo.</p>
-                </div>
-              )}
             </div>
           )}
         </TabsContent>
@@ -512,13 +515,6 @@ function SettingsContent() {
                   </div>
                 </Card>
               ))}
-
-              {(!messageTemplates || messageTemplates.length === 0) && (
-                <div className="col-span-full py-32 text-center opacity-20 border-2 border-dashed border-white/5 rounded-[2rem]">
-                  <Bell className="h-16 w-16 mx-auto mb-4" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.5em]">Nenhum perfil de mensagem configurado.</p>
-                </div>
-              )}
             </div>
           )}
         </TabsContent>
@@ -642,6 +638,7 @@ function SettingsContent() {
                       <Label className="text-[10px] font-black text-primary uppercase tracking-widest">TEMPLATE: GOOGLE CALENDAR (INTERNO)</Label>
                     </div>
                     <Textarea 
+                      onFocus={() => setLastFocusedField("calendar")}
                       value={messageFormData.calendarTemplate} 
                       onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})}
                       className="glass border-white/10 min-h-[120px] text-white text-xs leading-relaxed font-mono"
@@ -655,6 +652,7 @@ function SettingsContent() {
                       <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">TEMPLATE: CLIENTE (WA / E-MAIL)</Label>
                     </div>
                     <Textarea 
+                      onFocus={() => setLastFocusedField("client")}
                       value={messageFormData.clientTemplate} 
                       onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})}
                       className="glass border-white/10 min-h-[120px] text-white text-xs leading-relaxed"
@@ -671,14 +669,18 @@ function SettingsContent() {
                 <h4 className="text-[10px] font-black text-white uppercase tracking-widest">BIBLIOTECA DE TAGS</h4>
               </div>
               <p className="text-[9px] text-muted-foreground uppercase leading-relaxed mb-6">
-                Clique nas tags abaixo para entender o que cada uma injeta na mensagem.
+                Clique nas tags abaixo para injetar no campo selecionado.
               </p>
               <div className="space-y-3">
                 {MESSAGE_PLACEHOLDERS.map((p) => (
-                  <div key={p.tag} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all group cursor-default">
+                  <button 
+                    key={p.tag}
+                    onClick={() => handleInjectTag(p.tag)}
+                    className="w-full text-left p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all group"
+                  >
                     <code className="text-primary font-black text-[10px]">{p.tag}</code>
                     <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1 group-hover:text-white transition-colors">{p.desc}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="pt-6 border-t border-white/5">
