@@ -51,17 +51,23 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#020617] text-foreground antialiased;
+    @apply bg-[#020617] text-foreground antialiased selection:bg-primary/30 selection:text-white;
     font-family: 'Roboto', sans-serif;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
   }
 }
 
-.font-display {
-  font-family: 'Cormorant Garamond', serif;
+/* Tipografia de Elite RGMJ */
+.font-headline {
+  @apply font-black tracking-tighter uppercase;
 }
 
-.font-body {
-  font-family: 'Roboto', sans-serif;
+.label-mini {
+  @apply text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/60;
+}
+
+.text-premium {
+  @apply font-bold tracking-tight text-white;
 }
 
 /* Premium Decorative Elements */
@@ -82,51 +88,20 @@
   @apply h-px w-16 bg-[#F5D030]/60;
 }
 
+.gold-gradient {
+  @apply bg-gradient-to-br from-[#F5D030] via-[#D4AF37] to-[#B8860B] transition-all duration-300;
+}
+
 .premium-card {
   @apply bg-white/[0.02] backdrop-blur-xl border border-white/5 transition-all duration-500 relative overflow-hidden;
 }
 
-.gold-sweep {
-  @apply relative overflow-hidden;
-}
-
-.gold-sweep:hover {
-  @apply border-primary/40 shadow-[0_0_30px_rgba(245,208,48,0.1)];
-}
-
-.gold-sweep::after {
-  content: '';
-  @apply absolute inset-0 opacity-0 transition-opacity duration-500 pointer-events-none;
-  background: linear-gradient(45deg, transparent 45%, rgba(245, 208, 48, 0.1) 50%, transparent 55%);
-  background-size: 200% 200%;
-}
-
-.gold-sweep:hover::after {
-  @apply opacity-100;
-  animation: sweep 1.5s infinite;
-}
-
-@keyframes sweep {
-  0% { background-position: -100% -100%; }
-  100% { background-position: 100% 100%; }
-}
-
-.gold-frame {
-  @apply relative p-4 bg-[#0a0f1e] border border-primary/20;
-}
-
-.gold-frame::after {
-  content: '';
-  @apply absolute -inset-2 border border-primary/40 pointer-events-none;
-}
-
-.gold-frame::before {
-  content: '';
-  @apply absolute -inset-4 border border-primary/10 pointer-events-none;
-}
-
 .glass {
   @apply bg-white/[0.02] backdrop-blur-xl border border-white/10;
+}
+
+.hover-gold:hover {
+  @apply border-primary/30 shadow-[0_0_20px_rgba(245,208,48,0.05)];
 }
 
 ::-webkit-scrollbar {
