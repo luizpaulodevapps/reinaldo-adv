@@ -38,7 +38,8 @@ import {
   Zap,
   Sparkles,
   Clock,
-  Palette
+  Palette,
+  X
 } from "lucide-react"
 import { 
   Select, 
@@ -646,10 +647,11 @@ function SettingsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Cadastro de Mensagem - Editor Ultra Inteligente */}
+      {/* Dialog de Cadastro de Mensagem - Editor Ultra Inteligente com Scroll-Lock UX */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1100px] p-0 overflow-hidden shadow-2xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1150px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col">
+          {/* HEADER FIXO */}
+          <div className="flex-none p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between z-10">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 {editingMessage ? "Editar Perfil de Mensagem" : "Novo Perfil de Notificação"}
@@ -658,25 +660,30 @@ function SettingsContent() {
                 CONSTRUÇÃO DE NARRATIVAS TÁTICAS PARA GOOGLE CALENDAR E CLIENTES.
               </DialogDescription>
             </DialogHeader>
-            {!editingMessage && (
-              <div className="flex items-center gap-2">
-                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Carregar Base:</p>
-                <Select onValueChange={(v) => loadDefaultTemplate(v)}>
-                  <SelectTrigger className="w-40 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="SELECIONE..." /></SelectTrigger>
-                  <SelectContent className="bg-[#0d121f] text-white">
-                    <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
-                    <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
-                    <SelectItem value="Prazo">⏰ PRAZO</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="flex items-center gap-4">
+              {!editingMessage && (
+                <div className="flex items-center gap-2">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Carregar Base:</p>
+                  <Select onValueChange={(v) => loadDefaultTemplate(v)}>
+                    <SelectTrigger className="w-44 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="SELECIONE..." /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
+                      <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
+                      <SelectItem value="Prazo">⏰ PRAZO</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => setIsMessageDialogOpen(false)} className="text-white/20 hover:text-white"><X className="h-6 w-6" /></Button>
+            </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 h-[75vh]">
+          {/* CORPO COM ROLAGEM INDEPENDENTE */}
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+            {/* COLUNA ESQUERDA: FORMULÁRIO (SCROLLABLE) */}
             <div className="lg:col-span-8 flex flex-col border-r border-white/5 bg-[#0a0f1e]/50">
               <ScrollArea className="flex-1">
-                <div className="p-10 space-y-10">
+                <div className="p-10 space-y-10 pb-20">
                   {/* DADOS DE IDENTIFICAÇÃO E TIPO */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
@@ -702,15 +709,16 @@ function SettingsContent() {
                   </div>
 
                   {/* CONFIGURAÇÕES GOOGLE CALENDAR */}
-                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 shadow-inner">
-                    <div className="flex items-center justify-between">
+                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 shadow-inner relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5"><Calendar className="h-24 w-24 text-primary" /></div>
+                    <div className="flex items-center justify-between relative z-10">
                       <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3">
                         <Calendar className="h-4 w-4" /> Integração Google Calendar
                       </h4>
                       <div className="flex items-center gap-2">
                         <Palette className="h-3.5 w-3.5 text-muted-foreground" />
                         <Select value={messageFormData.calendarColorId} onValueChange={(v) => setMessageFormData({...messageFormData, calendarColorId: v})}>
-                          <SelectTrigger className="w-32 glass h-8 text-[8px] font-black uppercase border-primary/30"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-36 glass h-8 text-[8px] font-black uppercase border-primary/30"><SelectValue /></SelectTrigger>
                           <SelectContent className="bg-[#0d121f] text-white">
                             {CALENDAR_COLORS.map(c => (
                               <SelectItem key={c.id} value={c.id}>
@@ -725,7 +733,7 @@ function SettingsContent() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Lembrete Antes (Minutos)</Label>
@@ -746,7 +754,7 @@ function SettingsContent() {
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 relative z-10">
                       <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
                         <FileText className="h-3 w-3" /> Descrição Técnica (Calendário Interno)
                       </Label>
@@ -754,15 +762,16 @@ function SettingsContent() {
                         onFocus={() => setLastFocusedField("calendar")}
                         value={messageFormData.calendarTemplate} 
                         onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})}
-                        className="glass border-white/10 min-h-[150px] text-white text-xs leading-relaxed font-mono focus:ring-1 focus:ring-primary/50"
+                        className="glass border-white/10 min-h-[180px] text-white text-xs leading-relaxed font-mono focus:ring-1 focus:ring-primary/50"
                         placeholder="Ex: Título: AUDIÊNCIA - {{NOME_CLIENTE}}..."
                       />
                     </div>
                   </div>
 
                   {/* CONFIGURAÇÕES DE CANAIS DE CLIENTE */}
-                  <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-6">
-                    <div className="flex items-center justify-between">
+                  <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5"><Smartphone className="h-24 w-24 text-emerald-500" /></div>
+                    <div className="flex items-center justify-between relative z-10">
                       <h4 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-3">
                         <Smartphone className="h-4 w-4" /> Canal do Cliente (WA / Email)
                       </h4>
@@ -772,7 +781,7 @@ function SettingsContent() {
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 relative z-10">
                       <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                         <MessageSquare className="h-3 w-3" /> Script de Comunicação
                       </Label>
@@ -780,7 +789,7 @@ function SettingsContent() {
                         onFocus={() => setLastFocusedField("client")}
                         value={messageFormData.clientTemplate} 
                         onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})}
-                        className="glass border-white/10 min-h-[150px] text-white text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500/50"
+                        className="glass border-white/10 min-h-[180px] text-white text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500/50"
                         placeholder="Olá, {{NOME_CLIENTE}}..."
                       />
                     </div>
@@ -789,43 +798,46 @@ function SettingsContent() {
               </ScrollArea>
             </div>
 
-            {/* BARRA LATERAL DE TAGS DINÂMICAS */}
-            <div className="lg:col-span-4 bg-black/40 p-8 space-y-8 overflow-y-auto border-l border-white/5">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
+            {/* COLUNA DIREITA: BIBLIOTECA DE TAGS (SCROLLABLE) */}
+            <div className="lg:col-span-4 bg-black/40 flex flex-col border-l border-white/5">
+              <div className="p-8 border-b border-white/5 flex-none">
+                <div className="flex items-center gap-3 mb-2">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <h4 className="text-sm font-black text-white uppercase tracking-tighter">Biblioteca de Tags</h4>
                 </div>
                 <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold tracking-widest">
-                  Clique nas tags para injetar no campo selecionado (Calendário ou Cliente).
+                  Clique nas tags para injetar no campo selecionado.
                 </p>
               </div>
 
-              <div className="space-y-3">
-                {MESSAGE_PLACEHOLDERS.map((p) => (
-                  <button 
-                    key={p.tag}
-                    onClick={() => handleInjectTag(p.tag)}
-                    className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group shadow-sm"
-                  >
-                    <code className="text-primary font-black text-[11px] block mb-1 group-hover:scale-105 transition-transform origin-left">{p.tag}</code>
-                    <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest group-hover:text-white transition-colors">{p.desc}</p>
-                  </button>
-                ))}
-              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-8 space-y-3 pb-20">
+                  {MESSAGE_PLACEHOLDERS.map((p) => (
+                    <button 
+                      key={p.tag}
+                      onClick={() => handleInjectTag(p.tag)}
+                      className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group shadow-sm active:scale-95"
+                    >
+                      <code className="text-primary font-black text-[11px] block mb-1 group-hover:scale-105 transition-transform origin-left">{p.tag}</code>
+                      <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest group-hover:text-white transition-colors">{p.desc}</p>
+                    </button>
+                  ))}
 
-              <div className="pt-8 border-t border-white/5">
-                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex gap-4">
-                  <Info className="h-5 w-5 text-primary shrink-0" />
-                  <p className="text-[9px] text-muted-foreground uppercase leading-normal font-medium italic">
-                    O SISTEMA SUBSTITUIRÁ ESTAS TAGS PELOS DADOS CAPTURADOS EM ENTREVISTAS E FORMULÁRIOS AUTOMATICAMENTE.
-                  </p>
+                  <div className="pt-8 mt-4 border-t border-white/5">
+                    <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex gap-4">
+                      <Info className="h-5 w-5 text-primary shrink-0" />
+                      <p className="text-[9px] text-muted-foreground uppercase leading-normal font-medium italic">
+                        O SISTEMA SUBSTITUIRÁ ESTAS TAGS PELOS DADOS CAPTURADOS AUTOMATICAMENTE.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </ScrollArea>
             </div>
           </div>
 
-          <DialogFooter className="p-8 bg-black/60 border-t border-white/5 flex items-center justify-between">
+          {/* FOOTER FIXO */}
+          <DialogFooter className="flex-none p-8 bg-black/60 border-t border-white/5 flex items-center justify-between z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
             <button 
               onClick={() => setIsMessageDialogOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors"
