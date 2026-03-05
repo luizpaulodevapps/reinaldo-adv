@@ -54,7 +54,7 @@ export function DashboardContent() {
       { label: "PRAZOS EM ABERTO", value: deadlines?.length || 0, icon: Clock, color: "text-destructive", bg: "bg-destructive/5" },
       { label: "REPASSES PENDENTES", value: totalRepasses > 0 ? `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : "R$ 0", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/5" },
     ]
-  }, [leads, transparency, deadlines, financial])
+  }, [leads, cases, deadlines, financial])
 
   if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
     return (
