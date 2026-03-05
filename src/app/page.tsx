@@ -1,7 +1,8 @@
+
 "use client"
 
 import Link from 'next/link'
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -18,7 +19,8 @@ import {
   ChevronRight,
   Briefcase,
   Gavel,
-  ShieldAlert
+  ShieldAlert,
+  X
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { 
@@ -41,6 +43,109 @@ const containerVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 }
+}
+
+function WhatsAppWidget() {
+  const [isVisible, setIsVisible] = useState(false)
+  const [isPopupOpen, setIsPopupOpen] = useState(false)
+  const [hasNotification, setHasNotification] = useState(false)
+
+  useEffect(() => {
+    // Exibe o widget e o popup após 3s
+    const showTimer = setTimeout(() => {
+      setIsVisible(true)
+      setIsPopupOpen(true)
+    }, 3000)
+
+    // Minimiza após 11s (3s iniciais + 8s de exibição)
+    const minimizeTimer = setTimeout(() => {
+      setIsPopupOpen(false)
+      setHasNotification(true)
+    }, 11000)
+
+    return () => {
+      clearTimeout(showTimer)
+      clearTimeout(minimizeTimer)
+    }
+  }, [])
+
+  const handleOpenWhatsApp = () => {
+    setHasNotification(false)
+    setIsPopupOpen(false)
+    window.open("https://wa.me/5511999999999?text=Olá Dr. Reinaldo, gostaria de uma consultoria estratégica.", "_blank")
+  }
+
+  if (!isVisible) return null
+
+  return (
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end pointer-events-none">
+      <AnimatePresence>
+        {isPopupOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20, scale: 0.9, x: 20 }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.8, x: 20 }}
+            className="mb-4 w-[320px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-emerald-500/20 pointer-events-auto"
+          >
+            <div className="bg-emerald-600 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                <Scale className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white text-[11px] font-black uppercase tracking-widest">Dr. Reinaldo Gonçalves</p>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <p className="text-white/70 text-[9px] uppercase font-bold tracking-tighter">Disponível Agora</p>
+                </div>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsPopupOpen(false); setHasNotification(true); }}
+                className="text-white/40 hover:text-white transition-colors p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="p-4 bg-[#e5ddd5] space-y-3 relative min-h-[100px]">
+              {/* WhatsApp Chat Background Pattern Simulation */}
+              <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "url('https://picsum.photos/seed/wa/200/200')" }} />
+              
+              <div className="bg-white p-3.5 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl shadow-md max-w-[85%] relative z-10">
+                <p className="text-[#111b21] text-xs font-medium leading-relaxed">
+                  Olá! Sou o Dr. Reinaldo. Notei seu interesse em nossa banca. Já estou disponível para uma triagem inicial do seu caso. Podemos conversar?
+                </p>
+                <span className="text-[8px] text-gray-400 block text-right mt-1 font-bold uppercase">AGORA</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleOpenWhatsApp}
+              className="w-full py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-2 group"
+            >
+              <MessageCircle className="h-4 w-4 group-hover:scale-110 transition-transform fill-current" />
+              Iniciar Atendimento de Elite
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="relative pointer-events-auto">
+        <button 
+          onClick={handleOpenWhatsApp}
+          className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_10px_30px_rgba(16,185,129,0.4)] hover:scale-110 active:scale-95 transition-all group"
+        >
+          <MessageCircle className="h-8 w-8 text-white fill-current" />
+          
+          {hasNotification && (
+            <span className="absolute -top-1 -right-1 flex h-6 w-6">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-6 w-6 bg-rose-500 items-center justify-center text-[10px] font-black text-white border-2 border-[#020617]">1</span>
+            </span>
+          )}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function HomePage() {
@@ -301,6 +406,9 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Widget */}
+      <WhatsAppWidget />
     </div>
   )
 }
