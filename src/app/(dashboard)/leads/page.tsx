@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -35,7 +35,10 @@ import {
   Database,
   CloudLightning,
   FolderOpen,
-  UserPlus
+  UserPlus,
+  FileText,
+  Save,
+  CheckSquare
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -52,6 +55,7 @@ import {
   DialogHeader, 
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -63,13 +67,14 @@ import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBl
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { BurocraciaView } from "@/components/leads/burocracia-view"
+import { ProcessForm } from "@/components/cases/process-form"
 import Link from "next/link"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
   { id: "atendimento", title: "ATENDIMENTO", color: "text-amber-400" },
   { id: "burocracia", title: "BUROCRACIA", color: "text-emerald-400" },
-  { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
+  { id: "distribuicao", title: "PROTOCOLO", color: "text-purple-400" },
 ]
 
 export default function LeadsPage() {
@@ -95,6 +100,8 @@ export default function LeadsPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
   const [isEditModeOpen, setIsEditModeOpen] = useState(false)
+  const [isConversionOpen, setIsConversionOpen] = useState(false)
+  const [activeDossierTab, setActiveDossierTab] = useState("overview")
   const [searchTerm, setSearchTerm] = useState("")
   const [isSyncingDrive, setIsSyncingDrive] = useState(false)
   const [isPromoting, setIsPromoting] = useState(false)
@@ -117,6 +124,16 @@ export default function LeadsPage() {
     )
   }, [db, user, selectedLead])
   const { data: leadInterviews } = useCollection(leadInterviewsQuery)
+
+  // Auto-switch tabs based on lead status
+  useEffect(() => {
+    if (selectedLead) {
+      if (selectedLead.status === 'atendimento') setActiveDossierTab("entrevistas")
+      else if (selectedLead.status === 'burocracia') setActiveDossierTab("burocracia")
+      else if (selectedLead.status === 'distribuicao') setActiveDossierTab("protocolo")
+      else setActiveDossierTab("overview")
+    }
+  }, [selectedLead?.id, selectedLead?.status])
 
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
@@ -278,6 +295,31 @@ export default function LeadsPage() {
     window.open(`https://wa.me/55${phone}?text=${text}`, "_blank")
   }
 
+  const handleConvertProcess = (data: any) => {
+    if (!db || !selectedLead) return
+    
+    const processPayload = {
+      ...data,
+      leadId: selectedLead.id,
+      status: "Em Andamento",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    addDocumentNonBlocking(collection(db!, "processes"), processPayload)
+    
+    // Arquiva o Lead após converter
+    updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      status: "arquivado",
+      convertedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+
+    setIsConversionOpen(false)
+    setIsSheetOpen(false)
+    toast({ title: "Dossiê Oficializado", description: "O lead foi convertido em um processo ativo RGMJ." })
+  }
+
   const normalizeLeadStatus = (status?: string) => status || "novo"
 
   const isProfileComplete = (lead: any) => {
@@ -384,26 +426,12 @@ export default function LeadsPage() {
                         </span>
                       </div>
 
-                      <div className={cn(
-                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full border",
-                        selectedLead.driveStatus === "pasta_cliente" ? "bg-emerald-500/10 border-emerald-500/20" : 
-                        selectedLead.driveStatus === "pasta_lead" ? "bg-amber-500/10 border-amber-500/20" : "bg-white/5 border-white/10 opacity-50"
-                      )}>
-                        <CloudLightning className={cn("h-2 w-2", selectedLead.driveStatus ? "text-primary" : "text-muted-foreground")} />
-                        <span className={cn("text-[7px] md:text-[8px] font-black uppercase tracking-[0.15em]", selectedLead.driveStatus === "pasta_cliente" ? "text-emerald-500" : selectedLead.driveStatus === "pasta_lead" ? "text-amber-500" : "text-muted-foreground")}>
-                          DRIVE: {selectedLead.driveStatus === "pasta_cliente" ? "ESTRUTURA DE CLIENTE" : selectedLead.driveStatus === "pasta_lead" ? "PASTA DE LEAD" : "PENDENTE"}
-                        </span>
-                      </div>
-
                       {!isProfileComplete(selectedLead) && (
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
                             <AlertCircle className="h-2 w-2 text-amber-500" />
                             <span className="text-[7px] md:text-[8px] font-black text-amber-500 uppercase tracking-[0.15em]">CADASTRO PENDENTE</span>
                           </div>
-                          <Button onClick={() => setIsEditModeOpen(true)} variant="link" className="text-[7px] md:text-[8px] font-black text-primary uppercase tracking-[0.2em] p-0 h-auto hover:text-white transition-colors underline">
-                            COMPLETAR FICHA
-                          </Button>
                         </div>
                       )}
                     </div>
@@ -415,28 +443,7 @@ export default function LeadsPage() {
                         <MessageCircle className="h-3 w-3" /> WHATSAPP
                       </Button>
 
-                      {!isAlreadyClient && (
-                        <Button 
-                          onClick={handlePromoteToClient} 
-                          disabled={isPromoting}
-                          className="h-9 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all"
-                        >
-                          {isPromoting ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
-                          VINCULAR CLIENTE
-                        </Button>
-                      )}
-
-                      <Button 
-                        onClick={handleSyncDrive} 
-                        disabled={isSyncingDrive}
-                        variant="outline" 
-                        className="h-9 border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-background text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all"
-                      >
-                        {isSyncingDrive ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudLightning className="h-3 w-3" />} 
-                        SINCRONIZAR DRIVE
-                      </Button>
-                      
-                      <div className="flex p-0.5 rounded-lg bg-black/40 border border-white/5">
+                      <div className="flex p-0.5 rounded-lg bg-black/40 border border-white/5 ml-auto">
                         {columns.map(c => (
                           <button 
                             key={c.id} 
@@ -461,60 +468,20 @@ export default function LeadsPage() {
                     </Button>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <Building className="h-3 w-3 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">RÉU / EMPRESA</p>
-                      <p className="text-[8px] font-black text-white uppercase truncate tracking-tight">{selectedLead.defendantName || "NÃO DEFINIDO"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <Phone className="h-3 w-3 text-muted-foreground/60" />
-                    </div>
-                    <div>
-                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">WHATSAPP</p>
-                      <p className="text-[8px] font-black text-white tracking-tight">{selectedLead.phone || "NÃO INFORMADO"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <Mail className="h-3 w-3 text-muted-foreground/60" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">EMAIL</p>
-                      <p className="text-[8px] font-black text-white uppercase truncate tracking-tight">{selectedLead.email || "NÃO INFORMADO"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <MapPin className="h-3 w-3 text-muted-foreground/60" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">LOCALIDADE</p>
-                      <p className="text-[8px] font-black text-white uppercase truncate tracking-tight">
-                        {selectedLead.city ? `${selectedLead.city} - ${selectedLead.state}` : "N/A - N/A"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <ScrollArea className="flex-1 min-h-0">
                 <div className="p-4 md:p-6 pb-20">
-                  <Tabs defaultValue="overview" className="space-y-6">
+                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-6">
                     <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-6 overflow-x-auto scrollbar-hide">
-                      <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">VISÃO GERAL</TabsTrigger>
+                      <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">ATENDIMENTO</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
                       <TabsTrigger value="burocracia" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">BUROCRACIA</TabsTrigger>
+                      <TabsTrigger value="protocolo" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">PROTOCOLO</TabsTrigger>
                       <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">GESTÃO</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="overview" className="space-y-8">
+                    <TabsContent value="overview" className="space-y-8 animate-in fade-in duration-500">
                       {(selectedLead.scheduledDate || selectedLead.meetingType) && (
                         <div className="space-y-4">
                           <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2"><Clock className="h-3 w-3" /> SALA DE ATENDIMENTO</h4>
@@ -565,7 +532,7 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="space-y-6">
+                    <TabsContent value="entrevistas" className="space-y-6 animate-in fade-in duration-500">
                       <div className="p-5 md:p-6 rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 mb-4 text-center space-y-4">
                         <p className="text-[7px] md:text-[8px] font-black text-primary uppercase tracking-[0.25em]">ESCOLHA A MATRIZ PARA INICIAR A CAPTURA:</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -578,7 +545,14 @@ export default function LeadsPage() {
                       </div>
                       
                       <div className="space-y-3">
-                        <h4 className="text-[8px] md:text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em]">HISTÓRICO DE ATOS CAPTURADOS</h4>
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-[8px] md:text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em]">HISTÓRICO DE ATOS CAPTURADOS</h4>
+                          {selectedLead.status === 'atendimento' && leadInterviews && leadInterviews.length > 0 && (
+                            <Button onClick={() => handleUpdateStatus("burocracia")} variant="ghost" className="text-[8px] font-black text-emerald-500 uppercase tracking-widest gap-2">
+                              AVANÇAR PARA BUROCRACIA <ArrowRight className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                         {leadInterviews && leadInterviews.length > 0 ? (
                           leadInterviews.map((int) => (
                             <div key={int.id} className="p-4 md:p-5 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/30 transition-all">
@@ -586,7 +560,9 @@ export default function LeadsPage() {
                                 <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-tight">{int.interviewType}</p>
                                 <p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest">POR: {int.interviewerName?.toUpperCase() || 'EQUIPE RGMJ'} • {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
                               </div>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/40 hover:text-primary rounded-full"><ChevronRight className="h-4 w-4" /></Button>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/40 hover:text-primary rounded-full"><ChevronRight className="h-4 w-4" /></Button>
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -598,11 +574,75 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="burocracia" className="space-y-6">
+                    <TabsContent value="burocracia" className="space-y-6 animate-in fade-in duration-500">
+                      <div className="flex items-center justify-end">
+                        {selectedLead.status === 'burocracia' && (
+                          <Button onClick={() => handleUpdateStatus("distribuicao")} variant="ghost" className="text-[8px] font-black text-purple-400 uppercase tracking-widest gap-2">
+                            AVANÇAR PARA PROTOCOLO <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} />
                     </TabsContent>
 
-                    <TabsContent value="gestao" className="space-y-6">
+                    <TabsContent value="protocolo" className="space-y-8 animate-in fade-in duration-500">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-8 space-y-8">
+                          <div className="p-8 rounded-[2rem] border border-purple-500/20 bg-purple-500/5 space-y-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                                <CheckSquare className="h-6 w-6 text-purple-400" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Checklist de Distribuição</h3>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Auditoria final antes do protocolo judiciário.</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              {[
+                                { id: "c1", label: "Petição Inicial Elaborada (Minuta IA Revisada)", checked: true },
+                                { id: "c2", label: "Kit de Procuração e Contrato Assinado", checked: true },
+                                { id: "c3", label: "Provas Documentais Organizadas no Drive", checked: false },
+                                { id: "c4", label: "Cálculos Judiciais Anexados", checked: false },
+                                { id: "c5", label: "Declaração de Hipossuficiência Pronta", checked: true },
+                              ].map((item) => (
+                                <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-black/40 border border-white/5">
+                                  <span className="text-[11px] font-bold text-white uppercase tracking-tight">{item.label}</span>
+                                  {item.checked ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertCircle className="h-4 w-4 text-amber-500/50" />}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <Card className="glass border-white/5 p-8 rounded-[2rem] flex flex-col items-center justify-center text-center space-y-6">
+                            <Scale className="h-12 w-12 text-primary opacity-20" />
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-black text-white uppercase tracking-widest">Pronto para Oficializar?</h4>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] max-w-md">Ao protocolar, este lead será convertido em um Processo Ativo na base RGMJ.</p>
+                            </div>
+                            <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-background font-black h-16 px-16 rounded-xl shadow-2xl uppercase text-[12px] tracking-[0.2em] gap-4">
+                              <ShieldCheck className="h-6 w-6" /> PROTOCOLAR E CONVERTER
+                            </Button>
+                          </Card>
+                        </div>
+
+                        <div className="lg:col-span-4 space-y-6">
+                          <Card className="glass border-white/10 bg-black/40 p-6 space-y-4">
+                            <h4 className="text-[9px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
+                              <Brain className="h-3 w-3" /> Resumo para Petição
+                            </h4>
+                            <ScrollArea className="h-[300px]">
+                              <p className="text-[11px] text-white/70 leading-relaxed font-serif italic">
+                                {selectedLead.aiSummary || "Nenhuma síntese gerada."}
+                              </p>
+                            </ScrollArea>
+                          </Card>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="gestao" className="space-y-6 animate-in fade-in duration-500">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <Card className="glass border-primary/20 p-5 space-y-4 rounded-xl">
                           <div><h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tighter mb-1">EDITAR FICHA</h4><p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Retificar dados cadastrais.</p></div>
@@ -620,7 +660,13 @@ export default function LeadsPage() {
                         )}
                         <Card className="glass border-rose-500/20 p-5 space-y-4 rounded-xl">
                           <div><h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tighter mb-1">ARQUIVAR LEAD</h4><p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Mover para acervo passivo.</p></div>
-                          <Button variant="outline" className="w-full h-10 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[8px] tracking-[0.2em] rounded-lg">ENCERRAR ATENDIMENTO</Button>
+                          <Button 
+                            onClick={() => handleUpdateStatus("arquivado")} 
+                            variant="outline" 
+                            className="w-full h-10 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[8px] tracking-[0.2em] rounded-lg"
+                          >
+                            ENCERRAR ATENDIMENTO
+                          </Button>
                         </Card>
                       </div>
                     </TabsContent>
@@ -634,15 +680,50 @@ export default function LeadsPage() {
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Execução de Entrevista</DialogTitle>
-            <DialogDescription>Processo de captura de DNA jurídico RGMJ.</DialogDescription>
-          </DialogHeader>
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
+                <Brain className="h-6 w-6 text-primary" /> Execução de Entrevista
+              </DialogTitle>
+              <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                Captura estruturada de fatos para a banca RGMJ.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
           {executingTemplate && (
             <DynamicInterviewExecution 
               template={executingTemplate} 
               onSubmit={handleFinishInterview}
               onCancel={() => { setIsInterviewDialogOpen(false); setExecutingTemplate(null); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
+                <Scale className="h-6 w-6 text-primary" /> Oficialização de Dossiê
+              </DialogTitle>
+              <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                Converta este Lead em um Processo Ativo na base oficial.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          {selectedLead && (
+            <ProcessForm 
+              initialData={{
+                clientName: selectedLead.name,
+                clientId: selectedLead.id,
+                defendantName: selectedLead.defendantName,
+                caseType: selectedLead.type,
+                description: selectedLead.demandTitle || selectedLead.notes?.substring(0, 100),
+                responsibleStaffId: user?.uid
+              }}
+              onSubmit={handleConvertProcess}
+              onCancel={() => setIsConversionOpen(false)}
             />
           )}
         </DialogContent>
