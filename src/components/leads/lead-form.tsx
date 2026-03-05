@@ -21,7 +21,6 @@ import {
   Fingerprint,
   FileText,
   Gavel,
-  Briefcase,
   Scale,
   Calendar
 } from "lucide-react"
@@ -257,15 +256,19 @@ export function LeadForm({
                         <Input placeholder="Digitar nome para busca..." autoFocus className="bg-black/40 border-primary/20 h-12 text-white uppercase font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                       </div>
                       <ScrollArea className="max-h-[300px]">
-                        {filteredLeads.map(lead => (
-                          <button key={lead.id} onClick={() => handleSelectLead(lead)} className="w-full p-5 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 transition-colors">
-                            <div className="text-left">
-                              <p className="font-black text-white text-xs uppercase">{lead.name}</p>
-                              <p className="text-[9px] text-muted-foreground font-mono mt-1">{lead.phone} • {lead.cpf || 'SEM CPF'}</p>
-                            </div>
-                            <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
-                          </button>
-                        ))}
+                        {filteredLeads.length > 0 ? (
+                          filteredLeads.map(lead => (
+                            <button key={lead.id} onClick={() => handleSelectLead(lead)} className="w-full p-5 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 transition-colors">
+                              <div className="text-left">
+                                <p className="font-black text-white text-xs uppercase">{lead.name}</p>
+                                <p className="text-[9px] text-muted-foreground font-mono mt-1">{lead.phone} • {lead.cpf || 'SEM CPF'}</p>
+                              </div>
+                              <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-10 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum registro encontrado</p></div>
+                        )}
                       </ScrollArea>
                     </div>
                   )}
@@ -276,7 +279,7 @@ export function LeadForm({
                     <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">WhatsApp *</Label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500/40" />
-                      <Input placeholder="(00) 00000-0000" className="pl-12 bg-black/40 border-white/10 h-14 text-white font-bold rounded-xl" value={formData.phone} onChange={(e) => handleInputChange("phone", formatPhone(e.target.value))} />
+                      <Input placeholder="(00) 00000-0000" className="pl-12 bg-black/40 border border-white/10 h-14 text-white font-bold rounded-xl" value={formData.phone} onChange={(e) => handleInputChange("phone", formatPhone(e.target.value))} />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -309,9 +312,11 @@ export function LeadForm({
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
                       <Select value={formData.rgState} onValueChange={(v) => handleInputChange("rgState", v)}>
-                        <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-center text-xs"><SelectValue placeholder="UF" /></SelectTrigger>
+                        <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-center text-xs">
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
                         <SelectContent className="bg-[#0d121f] text-white">
-                          {BRAZIL_STATES.map(st => <SelectItem key={s} value={st}>{st}</SelectItem>)}
+                          {BRAZIL_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
