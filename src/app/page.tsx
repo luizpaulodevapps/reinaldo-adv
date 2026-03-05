@@ -88,8 +88,8 @@ export default function HomePage() {
               <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#F5D030] transition-all group-hover:w-full" />
             </Link>
             <Link href="/login">
-              <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-none px-8 text-[9px] font-black uppercase tracking-widest transition-all h-10">
-                <Lock className="h-3.5 w-3.5 mr-2" /> PORTAL RGMJ
+              <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-none px-4 text-[9px] font-black uppercase tracking-widest transition-all h-10">
+                <Lock className="h-3.5 w-3.5" />
               </Button>
             </Link>
           </div>
@@ -111,7 +111,7 @@ export default function HomePage() {
         <div className="absolute inset-0 marble-bg opacity-40" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/20 via-[#020617]/80 to-[#020617]" />
         
-        {/* Decorative elements */}
+        {/* Decorative vertical line */}
         <div className="absolute left-[8%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#F5D030]/15 to-transparent hidden lg:block" />
         <div className="absolute right-[12%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#F5D030]/8 to-transparent hidden lg:block" />
 
