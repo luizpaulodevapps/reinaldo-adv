@@ -27,7 +27,11 @@ import {
   Mail,
   MapPin,
   ClipboardList,
-  FileCheck
+  FileCheck,
+  AlertCircle,
+  CheckCircle2,
+  UserCog,
+  Building
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -79,6 +83,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
+  const [isEditModeOpen, setIsEditModeOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
@@ -128,6 +133,17 @@ export default function LeadsPage() {
     await addDocumentNonBlocking(collection(db!, "leads"), newLead)
     setIsNewEntryOpen(false)
     toast({ title: "Triagem Iniciada!" })
+  }
+
+  const handleUpdateLead = async (data: any) => {
+    if (!selectedLead || !db) return
+    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      ...data,
+      updatedAt: serverTimestamp()
+    })
+    setSelectedLead({ ...selectedLead, ...data })
+    setIsEditModeOpen(false)
+    toast({ title: "Cadastro Atualizado" })
   }
 
   const handleUpdateStatus = async (status: string) => {
@@ -182,6 +198,12 @@ export default function LeadsPage() {
   }
 
   const normalizeLeadStatus = (status?: string) => status || "novo"
+
+  const isProfileComplete = (lead: any) => {
+    if (!lead) return false
+    const required = [lead.name, lead.phone, lead.email, lead.cpf, lead.city, lead.state]
+    return required.every(field => field && field.trim() !== "" && field !== "NÃO INFORMADO" && field !== "N/A")
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
@@ -258,18 +280,34 @@ export default function LeadsPage() {
           <SheetHeader className="sr-only"><SheetTitle>{selectedLead?.name}</SheetTitle><SheetDescription>Dossiê Lead</SheetDescription></SheetHeader>
           {selectedLead && (
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-10">
+              <div className="p-8 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-8">
                 <div className="flex items-start justify-between">
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">
                         {normalizeLeadStatus(selectedLead.status).toUpperCase()}
                       </Badge>
+                      {isProfileComplete(selectedLead) ? (
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Cadastro Completo • Perfil Aprovado</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                            <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Cadastro Pendente</span>
+                          </div>
+                          <Button onClick={() => setIsEditModeOpen(true)} variant="link" className="text-[8px] font-black text-primary uppercase tracking-widest p-0 h-auto hover:text-white transition-colors">
+                            COMPLETAR FICHA
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    <h2 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
+                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
                     
                     <div className="flex items-center gap-6">
-                      <Button onClick={handleWhatsApp} variant="outline" className="h-12 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[10px] font-black uppercase gap-3 tracking-widest">
+                      <Button onClick={handleWhatsApp} variant="outline" className="h-12 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[10px] font-black uppercase gap-3 tracking-widest rounded-xl transition-all">
                         <MessageCircle className="h-4 w-4" /> WHATSAPP DIRECT
                       </Button>
                       
@@ -304,32 +342,41 @@ export default function LeadsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-8 pt-6 border-t border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6 border-t border-white/5">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                      <Building className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">RÉU / EMPRESA</p>
+                      <p className="text-xs font-bold text-white uppercase truncate max-w-[150px]">{selectedLead.defendantName || "NÃO DEFINIDO"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">WHATSAPP</p>
-                      <p className="text-sm font-bold text-white">{selectedLead.phone || "NÃO INFORMADO"}</p>
+                      <p className="text-xs font-bold text-white">{selectedLead.phone || "NÃO INFORMADO"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">EMAIL</p>
-                      <p className="text-sm font-bold text-white uppercase">{selectedLead.email || "NÃO INFORMADO"}</p>
+                      <p className="text-xs font-bold text-white uppercase truncate max-w-[150px]">{selectedLead.email || "NÃO INFORMADO"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">LOCALIDADE</p>
-                      <p className="text-sm font-bold text-white uppercase">
+                      <p className="text-xs font-bold text-white uppercase truncate">
                         {selectedLead.city ? `${selectedLead.city} - ${selectedLead.state}` : "N/A - N/A"}
                       </p>
                     </div>
@@ -338,8 +385,8 @@ export default function LeadsPage() {
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="p-10">
-                  <Tabs defaultValue="overview" className="space-y-10">
+                <div className="p-8">
+                  <Tabs defaultValue="overview" className="space-y-8">
                     <TabsList className="bg-transparent border-b border-white/5 h-12 w-full justify-start rounded-none p-0 gap-8">
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
@@ -347,7 +394,7 @@ export default function LeadsPage() {
                       <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">GESTÃO</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="overview" className="space-y-10">
+                    <TabsContent value="overview" className="space-y-8">
                       {(selectedLead.scheduledDate || selectedLead.meetingType) && (
                         <div className="space-y-4">
                           <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-4 w-4" /> Sala de Atendimento</h4>
@@ -465,6 +512,12 @@ export default function LeadsPage() {
 
                     <TabsContent value="gestao" className="space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="glass border-primary/20 p-8 space-y-6">
+                          <div><h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Editar Ficha do Lead</h4><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Retificar dados cadastrais e de agendamento.</p></div>
+                          <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="w-full h-14 border-primary/30 text-primary hover:bg-primary hover:text-background font-black uppercase text-[11px] tracking-widest gap-2">
+                            <UserCog className="h-4 w-4" /> ATUALIZAR CADASTRO
+                          </Button>
+                        </Card>
                         <Card className="glass border-rose-500/20 p-8 space-y-6">
                           <div><h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Arquivar Lead</h4><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Mover para acervo passivo (Desistência/Risco).</p></div>
                           <Button variant="outline" className="w-full h-14 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[11px] tracking-widest">ENCERRAR ATENDIMENTO</Button>
@@ -500,6 +553,22 @@ export default function LeadsPage() {
             onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
             defaultResponsibleLawyer={user?.displayName || ""}
           />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
+        <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
+          <div className="p-8 border-b border-white/5"><SheetHeader><SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Retificar Lead RGMJ</SheetTitle></SheetHeader></div>
+          {selectedLead && (
+            <LeadForm 
+              existingLeads={[]}
+              initialData={selectedLead}
+              initialMode="complete"
+              lockMode={true}
+              onSubmit={handleUpdateLead}
+              onSelectExisting={() => {}}
+            />
+          )}
         </SheetContent>
       </Sheet>
     </div>

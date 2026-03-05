@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Loader2, Plus, Video, Link as LinkIcon } from "lucide-react"
+import { Search, Loader2, Plus, Video, Link as LinkIcon, Building } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -35,11 +36,12 @@ interface LeadFormProps {
     legalArea?: string
   }) => Promise<string | null>
   defaultResponsibleLawyer?: string
+  initialData?: any
   initialMode?: "quick" | "complete"
   lockMode?: boolean
 }
 
-export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCreateClient, defaultResponsibleLawyer, initialMode = "quick", lockMode = false }: LeadFormProps) {
+export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCreateClient, defaultResponsibleLawyer, initialData, initialMode = "quick", lockMode = false }: LeadFormProps) {
   const [mode, setMode] = useState<"quick" | "complete">(initialMode)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -71,6 +73,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
     maritalStatus: "",
     profession: "",
     value: "",
+    defendantName: "",
     scheduledDate: "",
     scheduledTime: "",
     meetingType: "online",
@@ -85,6 +88,17 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
     meetingState: "",
     meetingReference: ""
   })
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData,
+        name: initialData.name || ""
+      }))
+      setSearchTerm(initialData.name || "")
+    }
+  }, [initialData])
 
   const lawyerOptions = useMemo(() => {
     const options = [defaultResponsibleLawyer, "Dr. Reinaldo Gonçalves", "Equipe de Apoio"].filter(Boolean) as string[]
@@ -204,7 +218,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
 
   const handleSaveQuickClient = async () => {
     const fullName = `${quickRegData.firstName} ${quickRegData.lastName}`.trim()
-    const doc = quickRegData.cpfCnpj.replace(/\D/g, "");
     if (!fullName || !quickRegData.whatsapp.trim()) {
       toast({ variant: "destructive", title: "Nome e Telefone são obrigatórios" })
       return
@@ -227,7 +240,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
       toast({ variant: "destructive", title: "Nome e telefone são obrigatórios." })
       return
     }
-    onSubmit({ ...formData, name: finalName, mode })
+    onSubmit({ ...formData, name: finalName })
   }
 
   const isCompleteMode = mode === "complete"
@@ -250,19 +263,22 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
 
           <div className="relative space-y-2" ref={searchRef}>
             <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest flex items-center gap-1">CLIENTE PRINCIPAL <span className="text-destructive">*</span></Label>
-            <div className="relative cursor-pointer" onClick={() => setIsSearchOpen(true)}>
+            <div className="relative cursor-pointer" onClick={() => !lockMode && setIsSearchOpen(true)}>
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4a5568]" />
-              <div className="pl-12 bg-[#1a1f2e] border border-[#2d3748] rounded-md h-12 flex items-center text-white text-sm font-bold uppercase">
+              <div className={cn(
+                "pl-12 bg-[#1a1f2e] border border-[#2d3748] rounded-xl h-12 flex items-center text-white text-sm font-bold uppercase",
+                lockMode && "opacity-50 cursor-not-allowed"
+              )}>
                 {formData.name || searchTerm || "PESQUISAR CLIENTE..."}
               </div>
             </div>
 
-            {isSearchOpen && (
-              <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-[#2d3748] shadow-2xl rounded-lg overflow-hidden animate-in fade-in zoom-in-95">
+            {isSearchOpen && !lockMode && (
+              <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-[#2d3748] shadow-2xl rounded-xl overflow-hidden animate-in fade-in zoom-in-95">
                 <div className="p-4 border-b border-[#2d3748]">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                    <Input placeholder="Nome ou CPF/CNPJ..." autoFocus className="pl-10 bg-[#0a0f1e] border-primary/50 h-11 text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <Input placeholder="Nome ou CPF/CNPJ..." autoFocus className="pl-10 bg-[#0a0f1e] border-primary/50 h-11 text-white rounded-lg" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
                 </div>
                 <div className="min-h-[100px] p-4">
@@ -289,11 +305,25 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">TELEFONE / WHATSAPP <span className="text-destructive">*</span></Label>
-            <Input placeholder="(11) 99999-9999" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold" value={formData.phone} onChange={(e) => handleInputChange("phone", formatPhone(e.target.value))} />
+            <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">EMPRESA / RÉU / PARTE CONTRÁRIA</Label>
+            <div className="relative">
+              <Building className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4a5568]" />
+              <Input placeholder="NOME DA EMPRESA OU RÉU..." className="pl-12 bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold uppercase rounded-xl" value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
+            </div>
           </div>
 
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">TELEFONE / WHATSAPP <span className="text-destructive">*</span></Label>
+              <Input placeholder="(11) 99999-9999" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold rounded-xl" value={formData.phone} onChange={(e) => handleInputChange("phone", formatPhone(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">E-MAIL DO CLIENTE</Label>
+              <Input placeholder="CLIENTE@EMAIL.COM" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold rounded-xl" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value.toLowerCase())} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 space-y-6">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
               <Label className="text-amber-500 font-black uppercase text-[11px] tracking-widest">Agendamento Estratégico</Label>
@@ -302,18 +332,18 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">DATA</Label>
-                <Input type="date" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.scheduledDate} onChange={(e) => handleInputChange("scheduledDate", e.target.value)} />
+                <Input type="date" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white rounded-xl" value={formData.scheduledDate} onChange={(e) => handleInputChange("scheduledDate", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">HORÁRIO</Label>
-                <Input type="time" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.scheduledTime} onChange={(e) => handleInputChange("scheduledTime", e.target.value)} />
+                <Input type="time" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white rounded-xl" value={formData.scheduledTime} onChange={(e) => handleInputChange("scheduledTime", e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">TIPO DE ATENDIMENTO</Label>
               <Select value={formData.meetingType} onValueChange={(v) => handleInputChange("meetingType", v)}>
-                <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold uppercase text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold uppercase text-xs rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
                   <SelectItem value="online">🖥️ ONLINE (VIDEOCHAMADA)</SelectItem>
                   <SelectItem value="presencial">🏢 PRESENCIAL (ESCRITÓRIO)</SelectItem>
@@ -330,53 +360,46 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
                 </Label>
                 <Input 
                   placeholder="https://meet.google.com/..." 
-                  className="bg-[#1a1f2e] border-primary/20 h-12 text-white" 
+                  className="bg-[#1a1f2e] border-primary/20 h-12 text-white rounded-xl" 
                   value={formData.meetingLink} 
                   onChange={(e) => handleInputChange("meetingLink", e.target.value)} 
                 />
               </div>
             )}
+          </div>
 
-            {(formData.meetingType === "domicilio" || formData.meetingType === "externo") && (
-              <div className="space-y-4 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20 animate-in fade-in duration-300">
-                <Label className="text-amber-500 font-black uppercase text-[10px] tracking-widest">Localização do Atendimento</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase">CEP</Label>
-                    <Input placeholder="00000-000" className="bg-[#1a1f2e] border-[#2d3748] h-11" value={formData.meetingCep} onChange={(e) => handleInputChange("meetingCep", formatCep(e.target.value))} onBlur={handleMeetingCepBlur} />
-                  </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase">LOGRADOURO</Label>
-                    <Input className="bg-[#1a1f2e] border-[#2d3748] h-11" value={formData.meetingStreet} onChange={(e) => handleInputChange("meetingStreet", e.target.value)} />
+          {isCompleteMode && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">CPF / CNPJ DO CLIENTE</Label>
+                  <Input placeholder="000.000.000-00" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold rounded-xl" value={formData.cpf} onChange={(e) => handleInputChange("cpf", formatCpfCnpj(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">CIDADE / UF</Label>
+                  <div className="flex gap-2">
+                    <Input placeholder="CIDADE" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold flex-1 rounded-xl" value={formData.city} onChange={(e) => handleInputChange("city", e.target.value.toUpperCase())} />
+                    <Input placeholder="UF" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold w-16 text-center rounded-xl" maxLength={2} value={formData.state} onChange={(e) => handleInputChange("state", e.target.value.toUpperCase())} />
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-
-          {isCompleteMode ? (
-            <div className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">TÍTULO DA DEMANDA <span className="text-destructive">*</span></Label>
-                <Input placeholder="Ex: REVISIONAL DE HORAS EXTRAS..." className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold uppercase" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
+                <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">TÍTULO DA DEMANDA</Label>
+                <Input placeholder="Ex: REVISIONAL DE HORAS EXTRAS..." className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white font-bold uppercase rounded-xl" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
               </div>
               <div className="space-y-2">
                 <Label className="text-[#a0a5b1] font-black uppercase text-[10px] tracking-widest">BRIEFING INICIAL</Label>
-                <Textarea placeholder="RELATO INICIAL DO CASO..." className="bg-[#1a1f2e] border-[#2d3748] min-h-[140px] text-white focus:border-primary/50 uppercase" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+                <Textarea placeholder="RELATO INICIAL DO CASO..." className="bg-[#1a1f2e] border-[#2d3748] min-h-[140px] text-white focus:border-primary/50 uppercase rounded-xl" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
               </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Modo Triagem: Capture o essencial para o primeiro contato.</p>
             </div>
           )}
         </div>
       </ScrollArea>
 
       <div className="p-6 bg-[#0a0f1e] border-t border-[#1a1f2e] flex items-center justify-between">
-        <Button variant="ghost" className="text-muted-foreground hover:text-white font-black uppercase tracking-widest text-[11px]" onClick={() => setFormData({ ...formData, name: "" })}>Cancelar</Button>
+        <Button variant="ghost" className="text-muted-foreground hover:text-white font-black uppercase tracking-widest text-[11px]" onClick={() => !lockMode ? setFormData({ ...formData, name: "" }) : setFormData({...formData})}>Cancelar</Button>
         <Button onClick={handleSubmit} className="w-[260px] bg-primary text-background font-black h-14 text-[12px] uppercase tracking-widest shadow-2xl rounded-xl hover:scale-[1.02] transition-all">
-          {isCompleteMode ? "Salvar Cadastro Completo" : "Iniciar Triagem"}
+          {initialData ? "Atualizar Ficha Técnica" : (isCompleteMode ? "Salvar Cadastro Completo" : "Iniciar Triagem")}
         </Button>
       </div>
 
@@ -391,21 +414,21 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground">Nome</Label>
-                <Input value={quickRegData.firstName} onChange={(e) => setQuickRegData({...quickRegData, firstName: e.target.value.toUpperCase()})} className="bg-[#1a1f2e] border-white/10 h-12 text-white" />
+                <Input value={quickRegData.firstName} onChange={(e) => setQuickRegData({...quickRegData, firstName: e.target.value.toUpperCase()})} className="bg-[#1a1f2e] border-white/10 h-12 text-white rounded-xl" />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground">Sobrenome</Label>
-                <Input value={quickRegData.lastName} onChange={(e) => setQuickRegData({...quickRegData, lastName: e.target.value.toUpperCase()})} className="bg-[#1a1f2e] border-white/10 h-12 text-white" />
+                <Input value={quickRegData.lastName} onChange={(e) => setQuickRegData({...quickRegData, lastName: e.target.value.toUpperCase()})} className="bg-[#1a1f2e] border-white/10 h-12 text-white rounded-xl" />
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase text-muted-foreground">WhatsApp</Label>
-              <Input value={quickRegData.whatsapp} onChange={(e) => setQuickRegData({...quickRegData, whatsapp: formatPhone(e.target.value)})} className="bg-[#1a1f2e] border-white/10 h-12 text-white" />
+              <Input value={quickRegData.whatsapp} onChange={(e) => setQuickRegData({...quickRegData, whatsapp: formatPhone(e.target.value)})} className="bg-[#1a1f2e] border-white/10 h-12 text-white rounded-xl" />
             </div>
           </div>
           <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
             <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[11px]" onClick={() => setIsQuickRegOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveQuickClient} className="bg-primary text-background font-black h-12 px-8 uppercase text-[11px] rounded-lg">Confirmar</Button>
+            <Button onClick={handleSaveQuickClient} className="bg-primary text-background font-black h-12 px-8 uppercase text-[11px] rounded-xl">Confirmar</Button>
           </div>
         </DialogContent>
       </Dialog>
