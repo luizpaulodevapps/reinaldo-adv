@@ -28,7 +28,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Hash,
-  Link as LinkIcon
+  Link as LinkIcon,
+  MessageSquare,
+  Bell,
+  Smartphone,
+  Info
 } from "lucide-react"
 import { 
   Select, 
@@ -46,8 +50,20 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Textarea } from "@/components/ui/textarea"
 
 const LEGAL_AREAS = ["Trabalhista", "Cível", "Criminal", "Família", "Previdenciário", "Tributário", "Geral"]
+
+const MESSAGE_PLACEHOLDERS = [
+  { tag: "{{NOME_CLIENTE}}", desc: "Nome completo do lead ou cliente" },
+  { tag: "{{DATA_ATO}}", desc: "Data formatada do compromisso" },
+  { tag: "{{HORA_ATO}}", desc: "Horário do compromisso" },
+  { tag: "{{LOCAL_ATO}}", desc: "Endereço ou Link da reunião" },
+  { tag: "{{LINK_MEET}}", desc: "Link direto do Google Meet" },
+  { tag: "{{NUMERO_PROCESSO}}", desc: "CNJ do processo vinculado" },
+  { tag: "{{TIPO_ATO}}", desc: "Audiência, Atendimento ou Prazo" },
+  { tag: "{{NOME_ADVOGADO}}", desc: "Nome do advogado responsável" },
+]
 
 function SettingsContent() {
   const { toast } = useToast()
@@ -67,12 +83,30 @@ function SettingsContent() {
     tags: ""
   })
 
+  // Estados para Mensagens & Alertas
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
+  const [editingMessage, setEditingMessage] = useState<any>(null)
+  const [messageFormData, setMessageFormData] = useState({
+    profileName: "",
+    eventType: "Audiência",
+    calendarTemplate: "",
+    clientTemplate: "",
+    isActive: true
+  })
+
   // Busca Modelos do Firestore
   const modelsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "document_templates"), orderBy("createdAt", "desc"))
   }, [db, user])
   const { data: models, isLoading: loadingModels } = useCollection(modelsQuery)
+
+  // Busca Templates de Mensagem
+  const messagesQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "notification_templates"), orderBy("createdAt", "desc"))
+  }, [db, user])
+  const { data: messageTemplates, isLoading: loadingMessages } = useCollection(messagesQuery)
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
@@ -179,6 +213,59 @@ function SettingsContent() {
     toast({ variant: "destructive", title: "Modelo Removido" })
   }
 
+  // Ações de Mensagens
+  const handleOpenCreateMessage = () => {
+    setEditingMessage(null)
+    setMessageFormData({
+      profileName: "",
+      eventType: "Audiência",
+      calendarTemplate: "Título: Audiência RGMJ - {{NOME_CLIENTE}}\nDescrição: Dossiê Processual: {{NUMERO_PROCESSO}}\nLocal: {{LOCAL_ATO}}\nAdvogado Responsável: {{NOME_ADVOGADO}}",
+      clientTemplate: "Olá {{NOME_CLIENTE}}, aqui é da RGMJ Advogados.\nConfirmamos sua {{TIPO_ATO}} para o dia {{DATA_ATO}} às {{HORA_ATO}}.\nLocal/Link: {{LOCAL_ATO}}",
+      isActive: true
+    })
+    setIsMessageDialogOpen(true)
+  }
+
+  const handleOpenEditMessage = (template: any) => {
+    setEditingMessage(template)
+    setMessageFormData({
+      profileName: template.profileName,
+      eventType: template.eventType,
+      calendarTemplate: template.calendarTemplate,
+      clientTemplate: template.clientTemplate,
+      isActive: template.isActive
+    })
+    setIsMessageDialogOpen(true)
+  }
+
+  const handleSaveMessageTemplate = () => {
+    if (!db || !messageFormData.profileName) return
+    
+    const payload = {
+      ...messageFormData,
+      profileName: messageFormData.profileName.toUpperCase(),
+      updatedAt: serverTimestamp()
+    }
+
+    if (editingMessage) {
+      updateDocumentNonBlocking(doc(db!, "notification_templates", editingMessage.id), payload)
+      toast({ title: "Perfil de Mensagem Atualizado" })
+    } else {
+      addDocumentNonBlocking(collection(db!, "notification_templates"), {
+        ...payload,
+        createdAt: serverTimestamp()
+      })
+      toast({ title: "Perfil de Mensagem Criado" })
+    }
+    setIsMessageDialogOpen(false)
+  }
+
+  const handleDeleteMessageTemplate = (id: string) => {
+    if (!db || !confirm("Remover este perfil de mensagem?")) return
+    deleteDocumentNonBlocking(doc(db!, "notification_templates", id))
+    toast({ variant: "destructive", title: "Perfil Removido" })
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50">
@@ -202,6 +289,7 @@ function SettingsContent() {
             { id: "temas", label: "Interface" },
             { id: "google", label: "Integração Google" },
             { id: "modelos", label: "Modelos de Documentos" },
+            { id: "notificacoes", label: "Mensagens & Alertas" },
           ].map((tab) => (
             <TabsTrigger 
               key={tab.id}
@@ -383,6 +471,57 @@ function SettingsContent() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="notificacoes" className="mt-0 space-y-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-1">
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Perfis de Mensagem</h2>
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">NOTIFICAÇÕES PERSONALIZADAS GOOGLE & WHATSAPP.</p>
+            </div>
+            <Button onClick={handleOpenCreateMessage} className="gold-gradient font-black text-[11px] uppercase tracking-widest h-14 px-10 rounded-xl gap-3 shadow-xl">
+              <Plus className="h-5 w-5" /> Novo Perfil
+            </Button>
+          </div>
+
+          {loadingMessages ? (
+            <div className="py-20 text-center"><Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" /></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {messageTemplates?.map((template) => (
+                <Card key={template.id} className="glass border-white/5 p-8 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden shadow-2xl">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                      <MessageSquare className="h-6 w-6" />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleOpenEditMessage(template)} className="text-white/20 hover:text-white transition-colors p-2"><Settings2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDeleteMessageTemplate(template.id)} className="text-white/20 hover:text-rose-500 transition-colors p-2"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/30 text-primary mb-3 bg-primary/5">{template.eventType}</Badge>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight mb-4">{template.profileName}</h3>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Calendar Ativo</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Smartphone className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">SMS/WA Ativo</span>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {(!messageTemplates || messageTemplates.length === 0) && (
+                <div className="col-span-full py-32 text-center opacity-20 border-2 border-dashed border-white/5 rounded-[2rem]">
+                  <Bell className="h-16 w-16 mx-auto mb-4" />
+                  <p className="text-[11px] font-black uppercase tracking-[0.5em]">Nenhum perfil de mensagem configurado.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Dialog de Cadastro de Modelo */}
@@ -451,6 +590,112 @@ function SettingsContent() {
             <Button variant="ghost" onClick={() => setIsModelDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">Cancelar</Button>
             <Button onClick={handleSaveModel} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-xl">
               {editingModel ? "Atualizar Modelo" : "Confirmar Acervo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Cadastro de Mensagem */}
+      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                {editingMessage ? "Editar Perfil de Mensagem" : "Novo Perfil de Notificação"}
+              </DialogTitle>
+              <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                Construção de narrativas táticas para Google Calendar e Clientes.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 h-[65vh]">
+            <div className="lg:col-span-8 flex flex-col border-r border-white/5">
+              <ScrollArea className="flex-1">
+                <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL *</Label>
+                      <Input 
+                        value={messageFormData.profileName} 
+                        onChange={(e) => setMessageFormData({...messageFormData, profileName: e.target.value.toUpperCase()})}
+                        className="glass border-white/10 h-12 text-white font-black uppercase"
+                        placeholder="EX: PADRÃO TRABALHISTA INICIAL"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE EVENTO</Label>
+                      <Select value={messageFormData.eventType} onValueChange={(v) => setMessageFormData({...messageFormData, eventType: v})}>
+                        <SelectTrigger className="glass border-white/10 h-12 text-white font-black uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] text-white">
+                          <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
+                          <SelectItem value="Atendimento">⚡ ATENDIMENTO (LEAD)</SelectItem>
+                          <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <Label className="text-[10px] font-black text-primary uppercase tracking-widest">TEMPLATE: GOOGLE CALENDAR (INTERNO)</Label>
+                    </div>
+                    <Textarea 
+                      value={messageFormData.calendarTemplate} 
+                      onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})}
+                      className="glass border-white/10 min-h-[120px] text-white text-xs leading-relaxed font-mono"
+                      placeholder="Estruture a descrição do evento na agenda..."
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-4 w-4 text-emerald-500" />
+                      <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">TEMPLATE: CLIENTE (WA / E-MAIL)</Label>
+                    </div>
+                    <Textarea 
+                      value={messageFormData.clientTemplate} 
+                      onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})}
+                      className="glass border-white/10 min-h-[120px] text-white text-xs leading-relaxed"
+                      placeholder="Redija a mensagem que o cliente receberá..."
+                    />
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+
+            <div className="lg:col-span-4 bg-black/20 p-8 space-y-6 overflow-y-auto">
+              <div className="flex items-center gap-2 mb-4">
+                <Hash className="h-4 w-4 text-primary" />
+                <h4 className="text-[10px] font-black text-white uppercase tracking-widest">BIBLIOTECA DE TAGS</h4>
+              </div>
+              <p className="text-[9px] text-muted-foreground uppercase leading-relaxed mb-6">
+                Clique nas tags abaixo para entender o que cada uma injeta na mensagem.
+              </p>
+              <div className="space-y-3">
+                {MESSAGE_PLACEHOLDERS.map((p) => (
+                  <div key={p.tag} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all group cursor-default">
+                    <code className="text-primary font-black text-[10px]">{p.tag}</code>
+                    <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1 group-hover:text-white transition-colors">{p.desc}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-6 border-t border-white/5">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex gap-3">
+                  <Info className="h-4 w-4 text-primary shrink-0" />
+                  <p className="text-[8px] text-muted-foreground uppercase leading-normal">
+                    O SISTEMA SUBSTITUIRÁ ESTAS TAGS AUTOMATICAMENTE AO SINCRONIZAR COM O GOOGLE CALENDAR.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">Cancelar</Button>
+            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-xl">
+              {editingMessage ? "Atualizar Perfil" : "Confirmar Perfil"}
             </Button>
           </DialogFooter>
         </DialogContent>
