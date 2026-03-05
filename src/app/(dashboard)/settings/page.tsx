@@ -39,7 +39,9 @@ import {
   Sparkles,
   Clock,
   Palette,
-  X
+  X,
+  MapPin,
+  Lock
 } from "lucide-react"
 import { 
   Select, 
@@ -65,14 +67,15 @@ const LEGAL_AREAS = ["Trabalhista", "Cível", "Criminal", "Família", "Previdenc
 const MESSAGE_PLACEHOLDERS = [
   { tag: "{{NOME_CLIENTE}}", desc: "Nome completo do lead ou cliente" },
   { tag: "{{CLIENTE_CPF}}", desc: "CPF/CNPJ do cliente" },
-  { tag: "{{CLIENTE_ENDERECO}}", desc: "Endereço completo capturado" },
-  { tag: "{{DATA_ATO}}", desc: "Data formatada do compromisso" },
-  { tag: "{{HORA_ATO}}", desc: "Horário do compromisso" },
-  { tag: "{{LOCAL_ATO}}", desc: "Endereço ou Link da reunião" },
-  { tag: "{{LINK_MEET}}", desc: "Link direto do Google Meet" },
   { tag: "{{NUMERO_PROCESSO}}", desc: "CNJ do processo vinculado" },
   { tag: "{{FORUM_VARA}}", desc: "Tribunal e Vara do feito" },
-  { tag: "{{TIPO_ATO}}", desc: "Audiência, Atendimento ou Prazo" },
+  { tag: "{{DATA_ATO}}", desc: "Data formatada do compromisso" },
+  { tag: "{{HORA_ATO}}", desc: "Horário do compromisso" },
+  { tag: "{{LOCAL_ATO}}", desc: "Endereço físico (Somente Audiência Física)" },
+  { tag: "{{LINK_ATO}}", desc: "Link eletrônico (Tribunal/Virtual)" },
+  { tag: "{{SENHA_ATO}}", desc: "Senha/Código de acesso (Virtual)" },
+  { tag: "{{REGRAS_CONDUCAO}}", desc: "Orientações de comportamento/vídeo" },
+  { tag: "{{ALERTA_LEGAL}}", desc: "Avisos sobre revelia ou testemunhas" },
   { tag: "{{NOME_ADVOGADO}}", desc: "Nome do advogado responsável" },
   { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
 ]
@@ -92,27 +95,35 @@ const CALENDAR_COLORS = [
 ]
 
 const DEFAULT_TEMPLATES = {
-  "Audiência": {
-    profileName: "PADRÃO AUDIÊNCIA RGMJ",
-    calendarTemplate: "Título: 🏛️ AUDIÊNCIA: {{NOME_CLIENTE}}\n\nDETALHES DO PROCESSO:\nNúmero: {{NUMERO_PROCESSO}}\nLocal: {{FORUM_VARA}}\n\nOBJETO:\n{{DESC_CURTA}}\n\nLINK VIRTUAL: {{LINK_MEET}}\nResponsável: {{NOME_ADVOGADO}}",
-    clientTemplate: "Prezado(a) {{NOME_CLIENTE}},\n\nConfirmamos sua AUDIÊNCIA agendada para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLOCAL/LINK: {{LOCAL_ATO}}\n\nPor favor, conecte-se com 15 minutos de antecedência. Caso tenha dúvidas, responda a esta mensagem.\n\nAtenciosamente,\nEquipe RGMJ Advogados.",
-    reminderMinutes: 60,
+  "Audiência Física": {
+    profileName: "AUDIÊNCIA PRESENCIAL RGMJ",
+    calendarTemplate: "Título: 🏛️ AUDIÊNCIA FÍSICA: {{NOME_CLIENTE}}\n\nLOCALIZAÇÃO:\nEndereço: {{LOCAL_ATO}}\nFórum/Vara: {{FORUM_VARA}}\n\nPROCESSO: {{NUMERO_PROCESSO}}\n\nALERTA:\n{{ALERTA_LEGAL}}",
+    clientTemplate: "Prezado(a) {{NOME_CLIENTE}},\n\nConfirmamos sua AUDIÊNCIA PRESENCIAL no dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nENDEREÇO: {{LOCAL_ATO}}\nFórum: {{FORUM_VARA}}\n\nIMPORTANTE: Chegar com 30 minutos de antecedência portando RG original.\n\nAtenciosamente,\nRGMJ Advogados.",
+    reminderMinutes: 120,
     calendarColorId: "11",
+    useMeetLink: false
+  },
+  "Audiência Virtual": {
+    profileName: "AUDIÊNCIA VIRTUAL (TELEPRESENCIAL)",
+    calendarTemplate: "Título: 🖥️ AUDIÊNCIA VIRTUAL: {{NOME_CLIENTE}}\n\nACESSO DIGITAL:\nLink: {{LINK_ATO}}\nSenha: {{SENHA_ATO}}\n\nPROCESSO: {{NUMERO_PROCESSO}}\n\nREGRAS:\n{{REGRAS_CONDUCAO}}",
+    clientTemplate: "Olá {{NOME_CLIENTE}},\n\nSua AUDIÊNCIA VIRTUAL está confirmada para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLINK DE ACESSO: {{LINK_ATO}}\nSENHA: {{SENHA_ATO}}\n\nINSTRUÇÕES:\n1. Conecte-se 15 minutos antes.\n2. Utilize fones de ouvido.\n3. Esteja em ambiente silencioso.\n\n{{ALERTA_LEGAL}}",
+    reminderMinutes: 60,
+    calendarColorId: "9",
     useMeetLink: true
   },
   "Atendimento": {
     profileName: "TRIAGEM INICIAL (LEAD)",
-    calendarTemplate: "Título: ⚡ ATENDIMENTO: {{NOME_CLIENTE}}\n\nCONTATOS:\nWhatsApp: {{CLIENTE_WHATSAPP}}\nEmail: {{CLIENTE_EMAIL}}\n\nBREVE RELATO:\n{{DESC_CURTA}}\n\nSALA DE VIDEO: {{LINK_MEET}}",
-    clientTemplate: "Olá {{NOME_CLIENTE}}, tudo bem?\n\nAgendamos seu atendimento com o Dr. Reinaldo Gonçalves para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nVocê poderá acessar a sala virtual pelo link: {{LINK_MEET}}\n\nAté breve!",
+    calendarTemplate: "Título: ⚡ ATENDIMENTO: {{NOME_CLIENTE}}\n\nSALA DE VIDEO: {{LINK_MEET}}\n\nBREVE RELATO:\n{{DESC_CURTA}}",
+    clientTemplate: "Olá {{NOME_CLIENTE}},\n\nAgendamos seu atendimento com o Dr. Reinaldo Gonçalves para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLink da sala virtual: {{LINK_MEET}}\n\nAté breve!",
     reminderMinutes: 30,
-    calendarColorId: "9",
+    calendarColorId: "7",
     useMeetLink: true
   },
   "Prazo": {
     profileName: "ALERTA DE PRAZO JUDICIAL",
-    calendarTemplate: "Título: ⏰ PRAZO: {{NOME_CLIENTE}} - {{TIPO_ATO}}\n\nPROCESSO: {{NUMERO_PROCESSO}}\nPROVIDÊNCIA: {{DESC_CURTA}}\n\nSTATUS: CRÍTICO",
+    calendarTemplate: "Título: ⏰ PRAZO: {{NUMERO_PROCESSO}} - {{DESC_CURTA}}\n\nPROVIDÊNCIA:\n{{ALERTA_LEGAL}}\n\nRESPONSÁVEL: {{NOME_ADVOGADO}}",
     clientTemplate: "",
-    reminderMinutes: 1440, // 24h
+    reminderMinutes: 1440,
     calendarColorId: "4",
     useMeetLink: false
   }
@@ -126,7 +137,6 @@ function SettingsContent() {
   const db = useFirestore()
   const { user, profile } = useUser()
 
-  // Estados para Gestão de Modelos
   const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
   const [editingModel, setEditingModel] = useState<any>(null)
   const [modelFormData, setModelFormData] = useState({
@@ -136,13 +146,12 @@ function SettingsContent() {
     tags: ""
   })
 
-  // Estados para Mensagens & Alertas
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
   const [editingMessage, setEditingMessage] = useState<any>(null)
   const [lastFocusedField, setLastFocusedField] = useState<"calendar" | "client">("calendar")
   const [messageFormData, setMessageFormData] = useState({
     profileName: "",
-    eventType: "Audiência",
+    eventType: "Audiência Virtual",
     calendarTemplate: "",
     clientTemplate: "",
     isActive: true,
@@ -152,14 +161,12 @@ function SettingsContent() {
     sendWhatsApp: true
   })
 
-  // Busca Modelos do Firestore
   const modelsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "document_templates"), orderBy("createdAt", "desc"))
   }, [db, user])
   const { data: models, isLoading: loadingModels } = useCollection(modelsQuery)
 
-  // Busca Templates de Mensagem
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "notification_templates"), orderBy("createdAt", "desc"))
@@ -173,10 +180,10 @@ function SettingsContent() {
   const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
   const [googleConfig, setGoogleConfig] = useState({
     masterEmail: "financeiro@rgmj.com.br",
-    rootFolderId: "1A2B3C4D5E6F7G8H9I0J",
+    rootFolderId: "",
     isDriveActive: true,
     isDocsActive: true,
-    isCalendarActive: false,
+    isCalendarActive: true,
     isTasksActive: true,
     isMeetActive: true
   })
@@ -222,7 +229,6 @@ function SettingsContent() {
     toast({ title: "Preferências Salvas" })
   }
 
-  // Ações de Modelos
   const handleOpenCreateModel = () => {
     setEditingModel(null)
     setModelFormData({ title: "", area: "Trabalhista", googleDocId: "", tags: "" })
@@ -242,7 +248,6 @@ function SettingsContent() {
 
   const handleSaveModel = () => {
     if (!db || !modelFormData.title) return
-    
     const tagsArray = modelFormData.tags.split(",").map(t => t.trim().toUpperCase()).filter(t => t !== "")
     const payload = {
       title: modelFormData.title.toUpperCase(),
@@ -251,30 +256,24 @@ function SettingsContent() {
       tags: tagsArray,
       updatedAt: serverTimestamp()
     }
-
     if (editingModel) {
       updateDocumentNonBlocking(doc(db!, "document_templates", editingModel.id), payload)
-      toast({ title: "Modelo Atualizado" })
     } else {
-      addDocumentNonBlocking(collection(db!, "document_templates"), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      toast({ title: "Modelo Cadastrado" })
+      addDocumentNonBlocking(collection(db!, "document_templates"), { ...payload, createdAt: serverTimestamp() })
     }
     setIsModelDialogOpen(false)
+    toast({ title: "Acervo Atualizado" })
   }
 
   const handleDeleteModel = (id: string) => {
-    if (!db || !confirm("Remover permanentemente este modelo do acervo?")) return
+    if (!db || !confirm("Remover este modelo?")) return
     deleteDocumentNonBlocking(doc(db!, "document_templates", id))
     toast({ variant: "destructive", title: "Modelo Removido" })
   }
 
-  // Ações de Mensagens
   const handleOpenCreateMessage = () => {
     setEditingMessage(null)
-    loadDefaultTemplate("Audiência")
+    loadDefaultTemplate("Audiência Virtual")
     setIsMessageDialogOpen(true)
   }
 
@@ -292,10 +291,7 @@ function SettingsContent() {
 
   const handleOpenEditMessage = (template: any) => {
     setEditingMessage(template)
-    setMessageFormData({
-      ...messageFormData,
-      ...template
-    })
+    setMessageFormData({ ...messageFormData, ...template })
     setIsMessageDialogOpen(true)
   }
 
@@ -310,30 +306,18 @@ function SettingsContent() {
 
   const handleSaveMessageTemplate = () => {
     if (!db || !messageFormData.profileName) return
-    
     const payload = {
       ...messageFormData,
       profileName: messageFormData.profileName.toUpperCase(),
       updatedAt: serverTimestamp()
     }
-
     if (editingMessage) {
       updateDocumentNonBlocking(doc(db!, "notification_templates", editingMessage.id), payload)
-      toast({ title: "Perfil de Mensagem Atualizado" })
     } else {
-      addDocumentNonBlocking(collection(db!, "notification_templates"), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      toast({ title: "Perfil de Mensagem Criado" })
+      addDocumentNonBlocking(collection(db!, "notification_templates"), { ...payload, createdAt: serverTimestamp() })
     }
     setIsMessageDialogOpen(false)
-  }
-
-  const handleDeleteMessageTemplate = (id: string) => {
-    if (!db || !confirm("Remover este perfil de mensagem?")) return
-    deleteDocumentNonBlocking(doc(db!, "notification_templates", id))
-    toast({ variant: "destructive", title: "Perfil Removido" })
+    toast({ title: "Perfil de Notificação Salvo" })
   }
 
   return (
@@ -429,7 +413,7 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="google" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <TabsContent value="google" className="mt-0 space-y-8">
           <Card className="glass border-primary/20 overflow-hidden shadow-2xl">
             <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
               <div className="flex items-center gap-4">
@@ -456,7 +440,6 @@ function SettingsContent() {
                       value={googleConfig.masterEmail} 
                       onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})}
                       className="glass border-white/10 h-14 pl-12 text-white font-bold"
-                      placeholder="exemplo@suabanca.com.br"
                     />
                   </div>
                 </div>
@@ -468,7 +451,6 @@ function SettingsContent() {
                       value={googleConfig.rootFolderId} 
                       onChange={(e) => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})}
                       className="glass border-white/10 h-14 pl-12 text-white font-mono text-xs"
-                      placeholder="ID da pasta no Google Drive"
                     />
                   </div>
                 </div>
@@ -498,7 +480,6 @@ function SettingsContent() {
               {LEGAL_AREAS.map((area) => {
                 const areaModels = models?.filter(m => m.area === area) || []
                 if (areaModels.length === 0) return null
-
                 return (
                   <div key={area} className="space-y-6">
                     <h4 className="text-primary font-black uppercase text-[11px] tracking-[0.3em] flex items-center gap-3">
@@ -508,18 +489,17 @@ function SettingsContent() {
                       {areaModels.map((model) => (
                         <Card key={model.id} className="glass border-white/5 p-8 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden shadow-2xl">
                           <div className="flex items-start justify-between mb-6">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
                               <FileText className="h-6 w-6" />
                             </div>
                             <div className="flex gap-2">
-                              <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white transition-colors p-2"><Settings2 className="h-4 w-4" /></button>
-                              <button onClick={() => handleDeleteModel(model.id)} className="text-white/20 hover:text-rose-500 transition-colors p-2"><Trash2 className="h-4 w-4" /></button>
+                              <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white p-2"><Settings2 className="h-4 w-4" /></button>
+                              <button onClick={() => handleDeleteModel(model.id)} className="text-white/20 hover:text-rose-500 p-2"><Trash2 className="h-4 w-4" /></button>
                             </div>
                           </div>
                           <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{model.title}</h3>
-                          <div className="flex items-center gap-2 mt-4">
-                            <Hash className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{(model.tags || []).length} tags ativas</span>
+                          <div className="flex items-center gap-2 mt-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                            <Hash className="h-3 w-3" /> {(model.tags || []).length} tags ativas
                           </div>
                         </Card>
                       ))}
@@ -550,24 +530,26 @@ function SettingsContent() {
                 <Card key={template.id} className="glass border-white/5 p-8 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden shadow-2xl">
                   <div className="flex items-start justify-between mb-6">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
-                      <MessageSquare className="h-6 w-6" />
+                      {template.eventType?.includes("Virtual") ? <Video className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => handleOpenEditMessage(template)} className="text-white/20 hover:text-white transition-colors p-2"><Settings2 className="h-4 w-4" /></button>
-                      <button onClick={() => handleDeleteMessageTemplate(template.id)} className="text-white/20 hover:text-rose-500 transition-colors p-2"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleOpenEditMessage(template)} className="text-white/20 hover:text-white p-2"><Settings2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDeleteMessageTemplate(template.id)} className="text-white/20 hover:text-rose-500 p-2"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
                   <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/30 text-primary mb-3 bg-primary/5">{template.eventType}</Badge>
                   <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight mb-4">{template.profileName}</h3>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Lembrete: {template.reminderMinutes}m</span>
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{template.reminderMinutes}m</span>
                     </div>
-                    <div className={cn("flex items-center gap-1.5", template.sendWhatsApp ? "text-emerald-500" : "text-muted-foreground opacity-30")}>
-                      <Smartphone className="h-3 w-3" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
-                    </div>
+                    {template.sendWhatsApp && (
+                      <div className="flex items-center gap-1.5 text-emerald-500">
+                        <Smartphone className="h-3 w-3" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -576,100 +558,73 @@ function SettingsContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog de Cadastro de Modelo */}
+      {/* Dialog Modelo */}
       <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                {editingModel ? "Editar Modelo de Documento" : "Novo Modelo Estratégico"}
+                {editingModel ? "Editar Modelo" : "Novo Modelo Estratégico"}
               </DialogTitle>
-              <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                Vinculação de inteligência documental ao ecossistema RGMJ.
-              </DialogDescription>
             </DialogHeader>
           </div>
           <ScrollArea className="max-h-[60vh]">
             <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO DO DOCUMENTO *</Label>
-                  <Input 
-                    value={modelFormData.title} 
-                    onChange={(e) => setModelFormData({...modelFormData, title: e.target.value.toUpperCase()})}
-                    className="glass border-white/10 h-14 text-white font-black uppercase"
-                    placeholder="EX: PROCURAÇÃO AD JUDICIA"
-                  />
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO *</Label>
+                  <Input value={modelFormData.title} onChange={(e) => setModelFormData({...modelFormData, title: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ÁREA JURÍDICA</Label>
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ÁREA</Label>
                   <Select value={modelFormData.area} onValueChange={(v) => setModelFormData({...modelFormData, area: v})}>
-                    <SelectTrigger className="glass border-white/10 h-14 text-white font-black uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="glass border-white/10 h-14 text-white uppercase text-[10px] font-black"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] text-white">
                       {LEGAL_AREAS.map(area => <SelectItem key={area} value={area}>{area.toUpperCase()}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <LinkIcon className="h-3 w-3" /> ID DO GOOGLE DOC (TEMPLATE)
-                </Label>
-                <Input 
-                  value={modelFormData.googleDocId} 
-                  onChange={(e) => setModelFormData({...modelFormData, googleDocId: e.target.value})}
-                  className="glass border-white/10 h-14 text-white font-mono text-xs"
-                  placeholder="ID que aparece na URL do Documento Google"
-                />
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID GOOGLE DOC</Label>
+                <Input value={modelFormData.googleDocId} onChange={(e) => setModelFormData({...modelFormData, googleDocId: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-xs" />
               </div>
-
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                  <Hash className="h-3 w-3" /> MAPEAMENTO DE TAGS (SEPARADAS POR VÍRGULA)
-                </Label>
-                <Input 
-                  value={modelFormData.tags} 
-                  onChange={(e) => setModelFormData({...modelFormData, tags: e.target.value})}
-                  className="glass border-primary/20 h-14 text-white font-bold placeholder:text-white/10"
-                  placeholder="EX: {{CLIENTE_NOME}}, {{CPF}}, {{ENDERECO}}"
-                />
-                <p className="text-[9px] text-muted-foreground italic uppercase">Estas tags serão substituídas pelos dados reais na geração do .DOC.</p>
+                <Label className="text-[10px] font-black text-primary uppercase tracking-widest">TAGS (VÍRGULA)</Label>
+                <Input value={modelFormData.tags} onChange={(e) => setModelFormData({...modelFormData, tags: e.target.value})} className="glass border-primary/20 h-14 text-white font-bold" placeholder="{{NOME}}, {{CPF}}..." />
               </div>
             </div>
           </ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsModelDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">Cancelar</Button>
-            <Button onClick={handleSaveModel} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-xl">
-              {editingModel ? "Atualizar Modelo" : "Confirmar Acervo"}
-            </Button>
+            <Button variant="ghost" onClick={() => setIsModelDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
+            <Button onClick={handleSaveModel} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl">Salvar Modelo</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Cadastro de Mensagem - Editor Ultra Inteligente com Scroll-Lock UX */}
+      {/* Dialog Notificação (Scroll-Lock UX) */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1150px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col">
-          {/* HEADER FIXO */}
           <div className="flex-none p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between z-10">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                {editingMessage ? "Editar Perfil de Mensagem" : "Novo Perfil de Notificação"}
+                {editingMessage ? "Editar Perfil" : "Novo Perfil de Notificação"}
               </DialogTitle>
               <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                CONSTRUÇÃO DE NARRATIVAS TÁTICAS PARA GOOGLE CALENDAR E CLIENTES.
+                Construção de narrativas estratégicas para atos físicos e virtuais.
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center gap-4">
               {!editingMessage && (
                 <div className="flex items-center gap-2">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Carregar Base:</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Base RGMJ:</p>
                   <Select onValueChange={(v) => loadDefaultTemplate(v)}>
-                    <SelectTrigger className="w-44 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="SELECIONE..." /></SelectTrigger>
+                    <SelectTrigger className="w-48 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="CARREGAR PRE-SET..." /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
+                      <SelectItem value="Audiência Física">🏛️ AUDIÊNCIA FÍSICA</SelectItem>
+                      <SelectItem value="Audiência Virtual">🖥️ AUDIÊNCIA VIRTUAL</SelectItem>
                       <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
-                      <SelectItem value="Prazo">⏰ PRAZO</SelectItem>
+                      <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -678,29 +633,22 @@ function SettingsContent() {
             </div>
           </div>
           
-          {/* CORPO COM ROLAGEM INDEPENDENTE */}
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-            {/* COLUNA ESQUERDA: FORMULÁRIO (SCROLLABLE) */}
             <div className="lg:col-span-8 flex flex-col border-r border-white/5 bg-[#0a0f1e]/50">
               <ScrollArea className="flex-1">
                 <div className="p-10 space-y-10 pb-20">
-                  {/* DADOS DE IDENTIFICAÇÃO E TIPO */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL *</Label>
-                      <Input 
-                        value={messageFormData.profileName} 
-                        onChange={(e) => setMessageFormData({...messageFormData, profileName: e.target.value.toUpperCase()})}
-                        className="glass border-white/10 h-12 text-white font-black uppercase"
-                        placeholder="EX: PADRÃO TRABALHISTA INICIAL"
-                      />
+                      <Input value={messageFormData.profileName} onChange={(e) => setMessageFormData({...messageFormData, profileName: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white font-black" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE EVENTO</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE ATO</Label>
                       <Select value={messageFormData.eventType} onValueChange={(v) => loadDefaultTemplate(v)}>
                         <SelectTrigger className="glass border-white/10 h-12 text-white font-black uppercase text-[10px]"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-[#0d121f] text-white">
-                          <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
+                          <SelectItem value="Audiência Física">🏛️ AUDIÊNCIA FÍSICA</SelectItem>
+                          <SelectItem value="Audiência Virtual">🖥️ AUDIÊNCIA VIRTUAL</SelectItem>
                           <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
                           <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
                         </SelectContent>
@@ -708,43 +656,26 @@ function SettingsContent() {
                     </div>
                   </div>
 
-                  {/* CONFIGURAÇÕES GOOGLE CALENDAR */}
-                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 shadow-inner relative overflow-hidden">
+                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5"><Calendar className="h-24 w-24 text-primary" /></div>
                     <div className="flex items-center justify-between relative z-10">
-                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Calendar className="h-4 w-4" /> Integração Google Calendar
-                      </h4>
+                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3"><Calendar className="h-4 w-4" /> Configurações Google Calendar</h4>
                       <div className="flex items-center gap-2">
                         <Palette className="h-3.5 w-3.5 text-muted-foreground" />
                         <Select value={messageFormData.calendarColorId} onValueChange={(v) => setMessageFormData({...messageFormData, calendarColorId: v})}>
                           <SelectTrigger className="w-36 glass h-8 text-[8px] font-black uppercase border-primary/30"><SelectValue /></SelectTrigger>
                           <SelectContent className="bg-[#0d121f] text-white">
                             {CALENDAR_COLORS.map(c => (
-                              <SelectItem key={c.id} value={c.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.hex }} />
-                                  {c.name.toUpperCase()}
-                                </div>
-                              </SelectItem>
+                              <SelectItem key={c.id} value={c.id}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.hex }} />{c.name.toUpperCase()}</div></SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Lembrete Antes (Minutos)</Label>
-                          <span className="text-[10px] font-black text-primary uppercase">{messageFormData.reminderMinutes}m</span>
-                        </div>
-                        <Input 
-                          type="number" 
-                          value={messageFormData.reminderMinutes} 
-                          onChange={(e) => setMessageFormData({...messageFormData, reminderMinutes: parseInt(e.target.value) || 0})}
-                          className="glass h-10 text-white font-bold"
-                        />
+                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Lembrete Antecipado (m)</Label>
+                        <Input type="number" value={messageFormData.reminderMinutes} onChange={(e) => setMessageFormData({...messageFormData, reminderMinutes: parseInt(e.target.value) || 0})} className="glass h-10 text-white font-bold" />
                       </div>
                       <div className="flex items-center justify-around bg-black/30 rounded-xl p-4 border border-white/5">
                         <div className="flex items-center gap-3">
@@ -753,102 +684,53 @@ function SettingsContent() {
                         </div>
                       </div>
                     </div>
-
                     <div className="space-y-3 relative z-10">
-                      <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                        <FileText className="h-3 w-3" /> Descrição Técnica (Calendário Interno)
-                      </Label>
-                      <Textarea 
-                        onFocus={() => setLastFocusedField("calendar")}
-                        value={messageFormData.calendarTemplate} 
-                        onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})}
-                        className="glass border-white/10 min-h-[180px] text-white text-xs leading-relaxed font-mono focus:ring-1 focus:ring-primary/50"
-                        placeholder="Ex: Título: AUDIÊNCIA - {{NOME_CLIENTE}}..."
-                      />
+                      <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Descrição Técnica (Agenda Interna)</Label>
+                      <Textarea onFocus={() => setLastFocusedField("calendar")} value={messageFormData.calendarTemplate} onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs font-mono" />
                     </div>
                   </div>
 
-                  {/* CONFIGURAÇÕES DE CANAIS DE CLIENTE */}
                   <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5"><Smartphone className="h-24 w-24 text-emerald-500" /></div>
                     <div className="flex items-center justify-between relative z-10">
-                      <h4 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Smartphone className="h-4 w-4" /> Canal do Cliente (WA / Email)
-                      </h4>
+                      <h4 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-3"><Smartphone className="h-4 w-4" /> Experiência do Cliente</h4>
                       <div className="flex items-center gap-2">
                         <Switch checked={messageFormData.sendWhatsApp} onCheckedChange={(v) => setMessageFormData({...messageFormData, sendWhatsApp: v})} className="data-[state=checked]:bg-emerald-500" />
-                        <Label className="text-[9px] font-black text-emerald-500 uppercase">Ativar WhatsApp</Label>
+                        <Label className="text-[9px] font-black text-emerald-500 uppercase">WhatsApp Ativo</Label>
                       </div>
                     </div>
-
                     <div className="space-y-3 relative z-10">
-                      <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                        <MessageSquare className="h-3 w-3" /> Script de Comunicação
-                      </Label>
-                      <Textarea 
-                        onFocus={() => setLastFocusedField("client")}
-                        value={messageFormData.clientTemplate} 
-                        onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})}
-                        className="glass border-white/10 min-h-[180px] text-white text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500/50"
-                        placeholder="Olá, {{NOME_CLIENTE}}..."
-                      />
+                      <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Script Estratégico (WhatsApp/Email)</Label>
+                      <Textarea onFocus={() => setLastFocusedField("client")} value={messageFormData.clientTemplate} onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs leading-relaxed" />
                     </div>
                   </div>
                 </div>
               </ScrollArea>
             </div>
 
-            {/* COLUNA DIREITA: BIBLIOTECA DE TAGS (SCROLLABLE) */}
             <div className="lg:col-span-4 bg-black/40 flex flex-col border-l border-white/5">
               <div className="p-8 border-b border-white/5 flex-none">
-                <div className="flex items-center gap-3 mb-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h4 className="text-sm font-black text-white uppercase tracking-tighter">Biblioteca de Tags</h4>
-                </div>
-                <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold tracking-widest">
-                  Clique nas tags para injetar no campo selecionado.
-                </p>
+                <div className="flex items-center gap-3 mb-2"><Sparkles className="h-5 w-5 text-primary" /><h4 className="text-sm font-black text-white uppercase tracking-tighter">Biblioteca de Tags</h4></div>
+                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Injeção instantânea de dados táticos.</p>
               </div>
-
               <ScrollArea className="flex-1">
                 <div className="p-8 space-y-3 pb-20">
                   {MESSAGE_PLACEHOLDERS.map((p) => (
-                    <button 
-                      key={p.tag}
-                      onClick={() => handleInjectTag(p.tag)}
-                      className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group shadow-sm active:scale-95"
-                    >
-                      <code className="text-primary font-black text-[11px] block mb-1 group-hover:scale-105 transition-transform origin-left">{p.tag}</code>
+                    <button key={p.tag} onClick={() => handleInjectTag(p.tag)} className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group active:scale-95">
+                      <code className="text-primary font-black text-[11px] block mb-1">{p.tag}</code>
                       <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest group-hover:text-white transition-colors">{p.desc}</p>
                     </button>
                   ))}
-
-                  <div className="pt-8 mt-4 border-t border-white/5">
-                    <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex gap-4">
-                      <Info className="h-5 w-5 text-primary shrink-0" />
-                      <p className="text-[9px] text-muted-foreground uppercase leading-normal font-medium italic">
-                        O SISTEMA SUBSTITUIRÁ ESTAS TAGS PELOS DADOS CAPTURADOS AUTOMATICAMENTE.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </ScrollArea>
             </div>
           </div>
 
-          {/* FOOTER FIXO */}
-          <DialogFooter className="flex-none p-8 bg-black/60 border-t border-white/5 flex items-center justify-between z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-            <button 
-              onClick={() => setIsMessageDialogOpen(false)} 
-              className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors"
-            >
-              DESCARTAR ALTERAÇÕES
-            </button>
-            <div className="flex gap-4">
-              <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3">
-                <ShieldCheck className="h-6 w-6" /> CONFIRMAR PERFIL TÁTICO
-              </Button>
-            </div>
+          <DialogFooter className="flex-none p-8 bg-black/60 border-t border-white/5 flex items-center justify-between z-10 shadow-2xl">
+            <button onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors">DESCARTAR</button>
+            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-xl flex items-center gap-3 shadow-xl">
+              <ShieldCheck className="h-6 w-6" /> CONFIRMAR PERFIL TÁTICO
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
