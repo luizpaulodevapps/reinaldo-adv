@@ -20,7 +20,11 @@ import {
   ShieldCheck,
   Play,
   ArrowRight,
-  Gavel
+  Gavel,
+  Scale,
+  Phone,
+  Mail,
+  MapPin
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -246,24 +250,79 @@ export default function LeadsPage() {
           <SheetHeader className="sr-only"><SheetTitle>{selectedLead?.name}</SheetTitle><SheetDescription>Dossiê Lead</SheetDescription></SheetHeader>
           {selectedLead && (
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-6">
+              <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-10">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">{normalizeLeadStatus(selectedLead.status).toUpperCase()}</Badge>
-                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
-                    <div className="flex items-center gap-4 mt-4">
-                      <Button onClick={handleWhatsApp} variant="outline" className="h-10 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[9px] font-black uppercase gap-2 tracking-widest">
-                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp Direct
+                  <div className="space-y-4">
+                    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">
+                      {normalizeLeadStatus(selectedLead.status).toUpperCase()}
+                    </Badge>
+                    <h2 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
+                    
+                    <div className="flex items-center gap-6">
+                      <Button onClick={handleWhatsApp} variant="outline" className="h-12 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[10px] font-black uppercase gap-3 tracking-widest">
+                        <MessageCircle className="h-4 w-4" /> WHATSAPP DIRECT
                       </Button>
-                      <div className="flex gap-1">
+                      
+                      <div className="flex p-1 rounded-xl bg-black/40 border border-white/5">
                         {columns.map(c => (
-                          <Button key={c.id} onClick={() => handleUpdateStatus(c.id)} variant="ghost" className={cn("h-10 text-[8px] font-black uppercase tracking-tighter px-3 border border-white/5", selectedLead.status === c.id ? "bg-white/10 text-white" : "text-muted-foreground")}>{c.title}</Button>
+                          <button 
+                            key={c.id} 
+                            onClick={() => handleUpdateStatus(c.id)} 
+                            className={cn(
+                              "h-10 px-4 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all",
+                              selectedLead.status === c.id 
+                                ? "bg-white/10 text-white ring-1 ring-white/20" 
+                                : "text-muted-foreground hover:text-white"
+                            )}
+                          >
+                            {c.title}
+                          </button>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)} className="h-12 w-12 text-white/20 hover:text-white"><X className="h-6 w-6" /></Button>
+
+                  <div className="flex items-center gap-4">
+                    {selectedLead.status === 'distribuicao' && (
+                      <Button className="gold-gradient text-background font-black h-16 px-10 rounded-xl shadow-2xl uppercase text-[12px] tracking-widest gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <Scale className="h-6 w-6" /> CONVERTER EM PROCESSO
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)} className="h-12 w-12 text-white/20 hover:text-white transition-colors">
+                      <X className="h-8 w-8" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-8 pt-6 border-t border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">WHATSAPP</p>
+                      <p className="text-sm font-bold text-white">{selectedLead.phone || "NÃO INFORMADO"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">EMAIL</p>
+                      <p className="text-sm font-bold text-white uppercase">{selectedLead.email || "NÃO INFORMADO"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">LOCALIDADE</p>
+                      <p className="text-sm font-bold text-white uppercase">
+                        {selectedLead.city ? `${selectedLead.city} - ${selectedLead.state}` : "N/A - N/A"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -297,7 +356,6 @@ export default function LeadsPage() {
                                 <Button 
                                   onClick={() => {
                                     handleUpdateStatus("atendimento")
-                                    // Adiciona um pequeno atraso para o usuário ver a transição
                                     setTimeout(() => {
                                       const interviewsTab = document.querySelector('[value="entrevistas"]') as HTMLButtonElement
                                       if (interviewsTab) interviewsTab.click()
@@ -333,7 +391,7 @@ export default function LeadsPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {templates?.map((t) => (
                               <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] h-14 gap-3 hover:bg-primary hover:text-background transition-all">
-                                <FileSignature className="h-4 w-4" /> {t.title}
+                                <Zap className="h-4 w-4" /> {t.title}
                               </Button>
                             ))}
                           </div>
@@ -365,10 +423,6 @@ export default function LeadsPage() {
 
                     <TabsContent value="gestao" className="space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="glass border-primary/20 p-8 space-y-6">
-                          <div><h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Converter em Processo</h4><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Transformar lead em dossiê ativo na banca.</p></div>
-                          <Button className="w-full gold-gradient text-background font-black h-14 uppercase text-[11px] tracking-widest">PROSSEGUIR PARA PROTOCOLO</Button>
-                        </Card>
                         <Card className="glass border-rose-500/20 p-8 space-y-6">
                           <div><h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Arquivar Lead</h4><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Mover para acervo passivo (Desistência/Risco).</p></div>
                           <Button variant="outline" className="w-full h-14 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[11px] tracking-widest">ENCERRAR ATENDIMENTO</Button>
@@ -407,27 +461,5 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
     </div>
-  )
-}
-
-function FileSignature({ className }: { className?: string }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M20 19.5c0 .829-.672 1.5-1.5 1.5s-1.5-.671-1.5-1.5.672-1.5 1.5-1.5 1.5.671 1.5 1.5z" />
-      <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" />
-      <path d="M16 5 6.7 14.3a1 1 0 0 0 0 1.4l.6.6a1 1 0 0 0 1.4 0L18 7l-2-2Z" />
-      <path d="m19 3-1 1 2 2 1-1-2-2Z" />
-    </svg>
   )
 }
