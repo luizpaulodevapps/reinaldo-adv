@@ -57,6 +57,8 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
     priority: "media",
     prescriptionDate: "",
     source: "indicação",
+    sourceDetails: "",
+    referredBy: "",
     notes: "",
     phone: "",
     email: "",
@@ -69,7 +71,21 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
     zipCode: "",
     maritalStatus: "",
     profession: "",
-    value: ""
+    value: "",
+    // Campos de Agendamento
+    scheduledDate: "",
+    scheduledTime: "",
+    meetingType: "online",
+    meetingLocation: "",
+    // Endereço do Atendimento
+    meetingCep: "",
+    meetingStreet: "",
+    meetingNumber: "",
+    meetingComplement: "",
+    meetingNeighborhood: "",
+    meetingCity: "",
+    meetingState: "",
+    meetingReference: ""
   })
 
   const lawyerOptions = useMemo(() => {
@@ -163,6 +179,33 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
           city: data.localidade,
           state: data.uf
         }))
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na busca do CEP" })
+    } finally {
+      setLoadingCep(false)
+    }
+  }
+
+  const handleMeetingCepBlur = async () => {
+    const cep = formData.meetingCep.replace(/\D/g, "")
+    if (cep.length !== 8) return
+
+    setLoadingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          meetingStreet: data.logradouro,
+          meetingNeighborhood: data.bairro,
+          meetingCity: data.localidade,
+          meetingState: data.uf
+        }))
+        toast({ title: "CEP encontrado!", description: `${data.logradouro}, ${data.bairro}` })
+      } else {
+        toast({ variant: "destructive", title: "CEP não encontrado" })
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Erro na busca do CEP" })
@@ -350,6 +393,176 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
           <div className="space-y-2">
             <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">TELEFONE / WHATSAPP <span className="text-destructive">*</span></Label>
             <Input placeholder="(11) 99999-9999" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.phone} onChange={(e) => handleInputChange("phone", formatPhone(e.target.value))} />
+          </div>
+
+          {/* SEÇÃO DE AGENDAMENTO */}
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-2 w-2 rounded-full bg-amber-500" />
+              <Label className="text-amber-500 font-black uppercase text-[11px] tracking-widest">AGENDAMENTO DO ATENDIMENTO</Label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">DATA DO ATENDIMENTO</Label>
+                <Input type="date" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.scheduledDate} onChange={(e) => handleInputChange("scheduledDate", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">HORÁRIO</Label>
+                <Input type="time" className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" value={formData.scheduledTime} onChange={(e) => handleInputChange("scheduledTime", e.target.value)} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">TIPO DE ATENDIMENTO</Label>
+              <Select value={formData.meetingType} onValueChange={(v) => handleInputChange("meetingType", v)}>
+                <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
+                  <SelectItem value="online">🖥️ Online (Videochamada)</SelectItem>
+                  <SelectItem value="presencial">🏢 Presencial (no Escritório)</SelectItem>
+                  <SelectItem value="domicilio">🏡 Na Casa do Cliente</SelectItem>
+                  <SelectItem value="externo">📍 Outro Local</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(formData.meetingType === "domicilio" || formData.meetingType === "externo") && (
+              <div className="space-y-4 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <Label className="text-amber-500 font-bold uppercase text-[10px] tracking-widest">📍 ENDEREÇO DO ATENDIMENTO</Label>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CEP</Label>
+                    <div className="relative">
+                      <Input 
+                        placeholder="00000-000" 
+                        className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                        value={formData.meetingCep} 
+                        onChange={(e) => handleInputChange("meetingCep", formatCep(e.target.value))} 
+                        onBlur={handleMeetingCepBlur}
+                      />
+                      {loadingCep && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-amber-500" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">LOGRADOURO</Label>
+                    <Input 
+                      placeholder="Rua, Avenida..." 
+                      className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                      value={formData.meetingStreet} 
+                      onChange={(e) => handleInputChange("meetingStreet", e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">NÚMERO</Label>
+                    <Input 
+                      placeholder="123" 
+                      className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                      value={formData.meetingNumber} 
+                      onChange={(e) => handleInputChange("meetingNumber", e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">COMPLEMENTO</Label>
+                    <Input 
+                      placeholder="Apto 45, Bloco B..." 
+                      className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                      value={formData.meetingComplement} 
+                      onChange={(e) => handleInputChange("meetingComplement", e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">BAIRRO</Label>
+                    <Input 
+                      placeholder="Centro" 
+                      className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                      value={formData.meetingNeighborhood} 
+                      onChange={(e) => handleInputChange("meetingNeighborhood", e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">CIDADE</Label>
+                    <Input 
+                      placeholder="São Paulo" 
+                      className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white" 
+                      value={formData.meetingCity} 
+                      onChange={(e) => handleInputChange("meetingCity", e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">UF</Label>
+                    <Input 
+                      placeholder="SP" 
+                      maxLength={2}
+                      className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white uppercase" 
+                      value={formData.meetingState} 
+                      onChange={(e) => handleInputChange("meetingState", e.target.value.toUpperCase())} 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">🎯 PONTO DE REFERÊNCIA</Label>
+                  <Textarea 
+                    placeholder="Ex: Próximo ao mercado XYZ, em frente à igreja, ao lado da farmácia..." 
+                    className="bg-[#1a1f2e] border-[#2d3748] min-h-[80px] text-white focus:border-amber-500/50 resize-none" 
+                    value={formData.meetingReference} 
+                    onChange={(e) => handleInputChange("meetingReference", e.target.value)} 
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* SEÇÃO DE ORIGEM DO LEAD */}
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              <Label className="text-emerald-500 font-black uppercase text-[11px] tracking-widest">ORIGEM DO LEAD</Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">COMO CONHECEU O ESCRITÓRIO?</Label>
+              <Select value={formData.source} onValueChange={(v) => handleInputChange("source", v)}>
+                <SelectTrigger className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#1a1f2e] border-[#2d3748] text-white">
+                  <SelectItem value="indicação">👥 Indicação de Cliente</SelectItem>
+                  <SelectItem value="youtube">📺 YouTube</SelectItem>
+                  <SelectItem value="facebook">👍 Facebook</SelectItem>
+                  <SelectItem value="instagram">📸 Instagram</SelectItem>
+                  <SelectItem value="linkedin">💼 LinkedIn</SelectItem>
+                  <SelectItem value="google">🔍 Pesquisa Google</SelectItem>
+                  <SelectItem value="parceiro">🤝 Cliente de Parceiro</SelectItem>
+                  <SelectItem value="site">🌐 Site do Escritório</SelectItem>
+                  <SelectItem value="whatsapp">💬 WhatsApp</SelectItem>
+                  <SelectItem value="outros">✏️ Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.source === "indicação" && (
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">INDICADO POR (NOME)</Label>
+                <Input placeholder="Nome de quem indicou..." className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white focus:border-emerald-500/50" value={formData.referredBy} onChange={(e) => handleInputChange("referredBy", e.target.value)} />
+              </div>
+            )}
+
+            {(formData.source === "parceiro" || formData.source === "outros") && (
+              <div className="space-y-2">
+                <Label className="text-[#a0a5b1] font-bold uppercase text-[10px] tracking-widest">
+                  {formData.source === "parceiro" ? "NOME DO PARCEIRO" : "ESPECIFIQUE A ORIGEM"}
+                </Label>
+                <Input placeholder={formData.source === "parceiro" ? "Nome do parceiro..." : "Descreva como conheceu..."} className="bg-[#1a1f2e] border-[#2d3748] h-12 text-white focus:border-emerald-500/50" value={formData.sourceDetails} onChange={(e) => handleInputChange("sourceDetails", e.target.value)} />
+              </div>
+            )}
           </div>
 
           {isCompleteMode ? (

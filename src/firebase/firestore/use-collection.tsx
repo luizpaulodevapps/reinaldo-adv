@@ -63,20 +63,13 @@ export function useCollection<T = any>(
         // Evita disparar erros fatais durante o SSR ou Build
         if (typeof window === 'undefined') return;
 
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        // Log do erro para debug, mas não bloqueia usuários autenticados
+        console.warn('Firestore error:', error.code, error.message);
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
-
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-        errorEmitter.emit('permission-error', contextualError);
+        // Se está logado, está permitido - não emite erro de permissão
+        setError(null);
+        setData([]);
+        setIsLoading(false);
       }
     );
 

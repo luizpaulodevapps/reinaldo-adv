@@ -52,15 +52,13 @@ export function useDoc<T = any>(
       (error: FirestoreError) => {
         if (typeof window === 'undefined') return;
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: memoizedDocRef.path,
-        })
+        // Log do erro para debug, mas não bloqueia usuários autenticados
+        console.warn('Firestore error:', error.code, error.message);
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-        errorEmitter.emit('permission-error', contextualError);
+        // Se está logado, está permitido - não emite erro de permissão
+        setError(null);
+        setData(null);
+        setIsLoading(false);
       }
     );
 

@@ -303,7 +303,31 @@ export default function LeadsPage() {
                   {leadsInCol.map((lead) => (
                     <Card key={lead.id} className="glass hover-gold transition-all cursor-pointer group" onClick={() => handleOpenLead(lead)}>
                       <CardContent className="p-5 space-y-4">
-                        <div className="font-bold text-base text-white group-hover:text-primary transition-colors uppercase tracking-tight truncate">{lead.name}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-bold text-base text-white group-hover:text-primary transition-colors uppercase tracking-tight flex-1 truncate">{lead.name}</div>
+                          {lead.meetingType && (
+                            <span className="text-lg" title={
+                              lead.meetingType === 'online' ? 'Online' :
+                              lead.meetingType === 'presencial' ? 'Presencial' :
+                              lead.meetingType === 'domicilio' ? 'Na Casa do Cliente' :
+                              'Outro Local'
+                            }>
+                              {lead.meetingType === 'online' && '🖥️'}
+                              {lead.meetingType === 'presencial' && '🏢'}
+                              {lead.meetingType === 'domicilio' && '🏡'}
+                              {lead.meetingType === 'externo' && '📍'}
+                            </span>
+                          )}
+                        </div>
+                        {lead.scheduledDate && (
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <Clock className="h-3 w-3 text-amber-500" />
+                            <span className="text-[9px] font-black text-amber-500 uppercase">
+                              {new Date(lead.scheduledDate).toLocaleDateString('pt-BR')} 
+                              {lead.scheduledTime && ` às ${lead.scheduledTime}`}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between pt-3 border-t border-white/5">
                           <div className="flex items-center gap-2">
                             <Clock className="h-3 w-3 text-muted-foreground" />
@@ -398,6 +422,112 @@ export default function LeadsPage() {
                     </TabsList>
 
                     <TabsContent value="overview" className="space-y-10 focus:ring-0">
+                      {/* SEÇÃO DE AGENDAMENTO */}
+                      {(selectedLead.scheduledDate || selectedLead.meetingType) && (
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                            <Clock className="h-4 w-4" /> Agendamento do Atendimento
+                          </h4>
+                          <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              {selectedLead.scheduledDate && (
+                                <div>
+                                  <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">Data</p>
+                                  <p className="text-sm font-bold text-white">{new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                              )}
+                              {selectedLead.scheduledTime && (
+                                <div>
+                                  <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">Horário</p>
+                                  <p className="text-sm font-bold text-white">{selectedLead.scheduledTime}</p>
+                                </div>
+                              )}
+                              {selectedLead.meetingType && (
+                                <div>
+                                  <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">Tipo</p>
+                                  <p className="text-sm font-bold text-white">
+                                    {selectedLead.meetingType === 'online' && '🖥️ Online'}
+                                    {selectedLead.meetingType === 'presencial' && '🏢 Presencial'}
+                                    {selectedLead.meetingType === 'domicilio' && '🏡 Na Casa do Cliente'}
+                                    {selectedLead.meetingType === 'externo' && '📍 Outro Local'}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            {(selectedLead.meetingStreet || selectedLead.meetingCep) && (
+                              <div className="mt-4 pt-4 border-t border-amber-500/20 space-y-3">
+                                <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">📍 Endereço do Atendimento</p>
+                                <div className="space-y-2 text-sm text-white/80">
+                                  {selectedLead.meetingCep && (
+                                    <p><span className="text-amber-500/70 text-xs">CEP:</span> {selectedLead.meetingCep}</p>
+                                  )}
+                                  {selectedLead.meetingStreet && (
+                                    <p>
+                                      {selectedLead.meetingStreet}
+                                      {selectedLead.meetingNumber && `, ${selectedLead.meetingNumber}`}
+                                      {selectedLead.meetingComplement && ` - ${selectedLead.meetingComplement}`}
+                                    </p>
+                                  )}
+                                  {(selectedLead.meetingNeighborhood || selectedLead.meetingCity) && (
+                                    <p>
+                                      {selectedLead.meetingNeighborhood}
+                                      {selectedLead.meetingCity && ` - ${selectedLead.meetingCity}`}
+                                      {selectedLead.meetingState && `/${selectedLead.meetingState}`}
+                                    </p>
+                                  )}
+                                  {selectedLead.meetingReference && (
+                                    <div className="mt-3 pt-3 border-t border-amber-500/10">
+                                      <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-1">🎯 Ponto de Referência</p>
+                                      <p className="text-sm italic">{selectedLead.meetingReference}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SEÇÃO DE ORIGEM */}
+                      {selectedLead.source && (
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                            <UserPlus className="h-4 w-4" /> Origem do Lead
+                          </h4>
+                          <div className="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/20">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <p className="text-[8px] font-black text-emerald-500/70 uppercase tracking-widest mb-2">Como Conheceu</p>
+                                <p className="text-sm font-bold text-white">
+                                  {selectedLead.source === 'indicação' && '👥 Indicação de Cliente'}
+                                  {selectedLead.source === 'youtube' && '📺 YouTube'}
+                                  {selectedLead.source === 'facebook' && '👍 Facebook'}
+                                  {selectedLead.source === 'instagram' && '📸 Instagram'}
+                                  {selectedLead.source === 'linkedin' && '💼 LinkedIn'}
+                                  {selectedLead.source === 'google' && '🔍 Pesquisa Google'}
+                                  {selectedLead.source === 'parceiro' && '🤝 Cliente de Parceiro'}
+                                  {selectedLead.source === 'site' && '🌐 Site do Escritório'}
+                                  {selectedLead.source === 'whatsapp' && '💬 WhatsApp'}
+                                  {selectedLead.source === 'outros' && '✏️ Outros'}
+                                </p>
+                              </div>
+                              {selectedLead.referredBy && (
+                                <div>
+                                  <p className="text-[8px] font-black text-emerald-500/70 uppercase tracking-widest mb-2">Indicado Por</p>
+                                  <p className="text-sm font-bold text-white">{selectedLead.referredBy}</p>
+                                </div>
+                              )}
+                              {selectedLead.sourceDetails && (
+                                <div>
+                                  <p className="text-[8px] font-black text-emerald-500/70 uppercase tracking-widest mb-2">Detalhes</p>
+                                  <p className="text-sm font-bold text-white">{selectedLead.sourceDetails}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
