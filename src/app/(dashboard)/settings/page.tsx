@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
@@ -111,7 +112,7 @@ function SettingsContent() {
       <div className="space-y-1">
         <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter">Configurações</h1>
         <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-60">
-          GESTÃO DE PARÂMETROS ESTRATÉGICOS RGMJ.
+          GESTÃO DE PARÂMETROS ESTRATÉGICOS RGMJ ELITE.
         </p>
       </div>
 
@@ -167,7 +168,7 @@ function SettingsContent() {
                 </Avatar>
                 <div>
                   <CardTitle className="text-3xl font-black text-white uppercase tracking-tighter">Meu Perfil</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">GESTÃO DE IDENTIDADE RGMJ.</p>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">GESTÃO DE IDENTIDADE RGMJ ELITE.</p>
                 </div>
               </div>
             </CardHeader>

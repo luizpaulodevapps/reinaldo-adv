@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from 'next/link'
@@ -5,7 +6,6 @@ import { motion } from "framer-motion"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  ArrowRight, 
   Scale, 
   ShieldCheck, 
   MessageSquare, 
@@ -14,24 +14,11 @@ import {
   Briefcase,
   Phone,
   Mail,
-  MapPin,
   Lock,
-  Zap
+  Zap,
+  ChevronRight,
+  Target
 } from 'lucide-react'
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6 }
-}
-
-const stagger = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-}
 
 export default function HomePage() {
   return (
@@ -53,7 +40,7 @@ export default function HomePage() {
             <Link href="#contato" className="hover:text-[#D4AF37] transition-colors">Contato</Link>
             <Link href="/login">
               <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-xl px-8 text-[9px] font-black uppercase tracking-widest transition-all h-10">
-                <Lock className="h-3.5 w-3.5 mr-2" />
+                <Lock className="h-3.5 w-3.5 mr-2" /> PORTAL
               </Button>
             </Link>
           </div>
@@ -65,7 +52,6 @@ export default function HomePage() {
               className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-xl px-4 h-9 text-[9px] font-black uppercase tracking-widest"
             >
               <Lock className="h-3.5 w-3.5 mr-2" />
-              Portal
             </Button>
           </Link>
         </div>
@@ -78,12 +64,18 @@ export default function HomePage() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40"
           style={{ backgroundImage: "url('/image/hero-bg.jpg')" }}
         />
-        {/* Overlay */}
+        {/* Overlay Marble Effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#050a19]/20 via-[#050a19]/80 to-[#050a19]" />
         
         {/* Decorative elements */}
         <div className="absolute left-[10%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/15 to-transparent hidden lg:block" />
         <div className="absolute right-[15%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/8 to-transparent hidden lg:block" />
+
+        {/* Decorative corner elements */}
+        <div className="absolute top-32 left-[10%] hidden lg:block">
+          <div className="w-20 h-px bg-[#D4AF37]/20" />
+          <div className="w-px h-20 bg-[#D4AF37]/20" />
+        </div>
 
         <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 pt-20 w-full">
           <div className="max-w-4xl">
@@ -127,7 +119,7 @@ export default function HomePage() {
                 transition={{ duration: 0.8, delay: 1 }}
                 className="text-white/50 font-body text-lg md:text-xl leading-relaxed mb-14 max-w-xl font-light"
               >
-                Soluções estratégicas personalizadas para casos de alta complexidade. Proteção patrimonial e defesa intransigente de direitos.
+                Soluções estratégicas personalizadas para casos de alta complexidade. Proteção patrimonial e defesa intransigente de direitos sob o comando da banca RGMJ Elite.
               </motion.p>
 
               {/* Buttons */}
@@ -175,8 +167,18 @@ export default function HomePage() {
             <Badge className="bg-primary/10 text-primary border-primary/20 px-8 py-2 text-[10px] font-black uppercase tracking-[0.4em] rounded-none">A BANCA</Badge>
             <h2 className="text-6xl md:text-8xl font-display font-bold leading-[1.1] tracking-tighter">Tradição que se une à <span className="italic font-light text-[#D4AF37]">Modernidade Jurídica</span></h2>
             <p className="text-white/50 leading-relaxed text-xl font-light font-body">
-              Comandada pelo Dr. Reinaldo Gonçalves Miguel de Jesus, nossa banca é reconhecida pela combatividade e precisão técnica. Focamos em entregar resultados que transcendem o processo judicial.
+              Comandada pelo Dr. Reinaldo Gonçalves Miguel de Jesus, nossa banca é reconhecida pela combatividade e precisão técnica. Focamos em entregar resultados que transcendem o processo judicial, utilizando inteligência de dados e estratégias personalizadas para a elite do Direito.
             </p>
+            <div className="grid grid-cols-2 gap-8 pt-8">
+              <div>
+                <h4 className="text-primary font-black text-2xl mb-2 font-display">15+ Anos</h4>
+                <p className="text-white/40 text-[10px] uppercase font-black tracking-widest font-body">De Experiência</p>
+              </div>
+              <div>
+                <h4 className="text-primary font-black text-2xl mb-2 font-display">Elite</h4>
+                <p className="text-white/40 text-[10px] uppercase font-black tracking-widest font-body">Atendimento Premium</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -191,17 +193,20 @@ export default function HomePage() {
               </div>
               <span className="text-2xl font-display font-bold tracking-[0.2em] uppercase">RGMJ Elite</span>
             </div>
+            <p className="text-white/30 text-xs font-light max-w-sm leading-relaxed">
+              Escritório de advocacia boutique focado em resultados de alta complexidade. Proteção jurídica e estratégica em âmbito nacional.
+            </p>
           </div>
 
           <div className="space-y-8">
             <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary">CONTATOS</h4>
             <ul className="space-y-6 text-sm text-white/60 font-medium tracking-wide font-body">
               <li className="flex items-center gap-4 group cursor-pointer hover:text-primary transition-colors">
-                <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-primary/40"><Phone className="h-3.5 w-3.5" /></div>
+                <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-primary/40 transition-all"><Phone className="h-3.5 w-3.5" /></div>
                 (11) 99999-9999
               </li>
               <li className="flex items-center gap-4 group cursor-pointer hover:text-primary transition-colors">
-                <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-primary/40"><Mail className="h-3.5 w-3.5" /></div>
+                <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-primary/40 transition-all"><Mail className="h-3.5 w-3.5" /></div>
                 reinaldo@rgmj.adv.br
               </li>
             </ul>

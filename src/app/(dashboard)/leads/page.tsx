@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -19,7 +20,12 @@ import {
   Sparkles,
   X,
   PlusCircle,
-  LayoutGrid
+  LayoutGrid,
+  FileText,
+  Phone,
+  Mail,
+  MapPin,
+  History
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -39,17 +45,15 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { collection, query, serverTimestamp, doc, where, limit } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
+import { aiSummarizeInterviewCaseDetails } from "@/ai/flows/ai-summarize-interview-case-details"
 import Link from "next/link"
 
 const columns = [
@@ -72,11 +76,34 @@ export default function LeadsPage() {
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
 
+  // Estados
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
-  
   const [searchTerm, setSearchTerm] = useState("")
+  
+  // Entrevistas
+  const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
+  const [executingTemplate, setExecutingTemplate] = useState<any>(null)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+
+  // Busca Templates
+  const templatesQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "checklists"), orderBy("title", "asc"))
+  }, [db, user])
+  const { data: templates } = useCollection(templatesQuery)
+
+  // Busca Entrevistas do Lead Selecionado
+  const leadInterviewsQuery = useMemoFirebase(() => {
+    if (!user || !db || !selectedLead) return null
+    return query(
+      collection(db!, "interviews"), 
+      where("clientId", "==", selectedLead.id),
+      orderBy("createdAt", "desc")
+    )
+  }, [db, user, selectedLead])
+  const { data: leadInterviews } = useCollection(leadInterviewsQuery)
 
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
@@ -108,6 +135,106 @@ export default function LeadsPage() {
     toast({ title: "Triagem Iniciada!" })
   }
 
+  const handleStartInterview = (template: any) => {
+    setExecutingTemplate(template)
+    setIsInterviewDialogOpen(true)
+  }
+
+  const handleFinishInterview = async (payload: any) => {
+    if (!db || !selectedLead || !user) return
+
+    const interviewData = {
+      clientId: selectedLead.id,
+      clientName: selectedLead.name,
+      templateId: executingTemplate.id,
+      interviewType: executingTemplate.title,
+      responses: payload.responses,
+      templateSnapshot: payload.templateSnapshot,
+      interviewerId: user.uid,
+      interviewerName: user.displayName || "Advogado RGMJ",
+      status: "Concluída",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
+    
+    // Atualiza status do Lead para "Atendimento"
+    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      status: "atendimento",
+      updatedAt: serverTimestamp()
+    })
+
+    setIsInterviewDialogOpen(false)
+    setExecutingTemplate(null)
+    toast({ title: "Entrevista Concluída", description: "Dados injetados no dossiê." })
+  }
+
+  const handleGenerateAiSummary = async () => {
+    if (!selectedLead || !leadInterviews || leadInterviews.length === 0) return
+    
+    setIsAiLoading(true)
+    try {
+      const lastInterview = leadInterviews[0]
+      const selectedAnswers = Object.entries(lastInterview.responses).map(([question, answer]) => {
+        const field = lastInterview.templateSnapshot?.find((f: any) => f.label === question)
+        return {
+          question,
+          answer: String(answer),
+          priority: field?.reusePriority || "media",
+          target: field?.reuseTarget || "caseDetails"
+        }
+      })
+
+      const summary = await aiSummarizeInterviewCaseDetails({
+        legalArea: selectedLead.type || "Trabalhista",
+        leadName: selectedLead.name,
+        selectedAnswers
+      })
+
+      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+        aiSummary: summary.caseDetails,
+        updatedAt: serverTimestamp()
+      })
+
+      setSelectedLead((prev: any) => ({ ...prev, aiSummary: summary.caseDetails }))
+      toast({ title: "Síntese IA Concluída", description: "O resumo estratégico foi atualizado." })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Falha na IA", description: "Não foi possível consolidar os fatos." })
+    } finally {
+      setIsAiLoading(false)
+    }
+  }
+
+  const handleConvertToProcess = async () => {
+    if (!selectedLead || !db || !user) return
+
+    const confirm = window.confirm("Deseja converter este atendimento em um processo judicial ativo?")
+    if (!confirm) return
+
+    const processData = {
+      clientId: selectedLead.id,
+      clientName: selectedLead.name,
+      description: `RECLAMAÇÃO TRABALHISTA - ${selectedLead.name}`,
+      caseType: selectedLead.type || "Trabalhista",
+      status: "Em Andamento",
+      responsibleStaffId: user.uid,
+      strategyNotes: selectedLead.aiSummary || "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+
+    await addDocumentNonBlocking(collection(db!, "processes"), processData)
+    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      status: "distribuicao",
+      convertedToProcess: true,
+      updatedAt: serverTimestamp()
+    })
+
+    setIsSheetOpen(false)
+    toast({ title: "Atendimento Convertido", description: "Dossiê migrado para a pauta de processos." })
+  }
+
   const normalizeLeadStatus = (status?: string) => status || "novo"
 
   return (
@@ -121,7 +248,7 @@ export default function LeadsPage() {
             <span className="text-white uppercase tracking-tighter">Triagem & Funil</span>
           </div>
           <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">Leads</h1>
-          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Triagem Estratégica RGMJ.</p>
+          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Triagem Estratégica RGMJ Elite.</p>
         </div>
         <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-background font-black gap-3 px-8 h-12 rounded-xl shadow-xl">
           <PlusCircle className="h-5 w-5" /> NOVO ATENDIMENTO
@@ -168,28 +295,180 @@ export default function LeadsPage() {
         </div>
       )}
 
+      {/* Dossiê de Detalhes do Lead */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <SheetHeader className="sr-only">
-            <SheetTitle>
-              {selectedLead?.name ? `Lead ${selectedLead.name}` : "Detalhes do lead"}
-            </SheetTitle>
-            <SheetDescription>
-              Visualize e gerencie os dados do lead selecionado.
-            </SheetDescription>
+            <SheetTitle>{selectedLead?.name || "Dossiê do Lead"}</SheetTitle>
+            <SheetDescription>Visão estratégica do atendimento.</SheetDescription>
           </SheetHeader>
+          
           {selectedLead && (
-            <div className="p-10 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-4xl font-black text-white uppercase tracking-tighter">{selectedLead.name}</h2>
-                <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)}><X className="h-6 w-6" /></Button>
+            <div className="flex flex-col h-full overflow-hidden">
+              {/* Header do Dossiê */}
+              <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">
+                      {normalizeLeadStatus(selectedLead.status).toUpperCase()}
+                    </Badge>
+                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
+                    <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest flex items-center gap-2">
+                      <Zap className="h-3 w-3 text-primary" /> Dossiê de atendimento em progresso.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleConvertToProcess} 
+                      className="gold-gradient text-background font-black gap-2 h-12 px-6 rounded-xl uppercase text-[10px] tracking-widest shadow-xl"
+                    >
+                      <Scale className="h-4 w-4" /> Converter em Processo
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)} className="h-12 w-12 text-white/20 hover:text-white">
+                      <X className="h-6 w-6" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Phone className="h-4 w-4 text-muted-foreground" /></div>
+                    <div><p className="text-[8px] font-black text-muted-foreground uppercase">WhatsApp</p><p className="text-xs font-bold text-white">{selectedLead.phone}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Mail className="h-4 w-4 text-muted-foreground" /></div>
+                    <div><p className="text-[8px] font-black text-muted-foreground uppercase">Email</p><p className="text-xs font-bold text-white">{selectedLead.email || "NÃO INFORMADO"}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
+                    <div><p className="text-[8px] font-black text-muted-foreground uppercase">Localidade</p><p className="text-xs font-bold text-white">{selectedLead.city || "N/A"} - {selectedLead.state || "N/A"}</p></div>
+                  </div>
+                </div>
               </div>
-              <p className="text-muted-foreground uppercase text-xs font-bold tracking-widest">Dossiê de atendimento em progresso.</p>
+
+              <ScrollArea className="flex-1">
+                <div className="p-10">
+                  <Tabs defaultValue="overview" className="space-y-10">
+                    <TabsList className="bg-transparent border-b border-white/5 h-12 w-full justify-start rounded-none p-0 gap-8">
+                      <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
+                      <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
+                      <TabsTrigger value="dados" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">DADOS CAPTURADOS</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="space-y-10 focus:ring-0">
+                      {/* Seção de Resumo IA */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-primary" /> Consolidação Gemini RGMJ
+                          </h4>
+                          <Button 
+                            onClick={handleGenerateAiSummary} 
+                            disabled={isAiLoading || !leadInterviews?.length}
+                            variant="outline" 
+                            className="h-10 text-[9px] font-black uppercase border-primary/20 text-primary gap-2"
+                          >
+                            {isAiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            GERAR RESUMO ESTRATÉGICO
+                          </Button>
+                        </div>
+                        
+                        {selectedLead.aiSummary ? (
+                          <div className="p-8 rounded-2xl bg-primary/5 border border-primary/10 font-serif text-white/80 leading-relaxed whitespace-pre-wrap text-justify shadow-2xl">
+                            {selectedLead.aiSummary}
+                          </div>
+                        ) : (
+                          <div className="py-20 text-center glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
+                            <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Aguardando conclusão de entrevista para síntese.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Briefing Original */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" /> Briefing do Comercial
+                        </h4>
+                        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-sm text-muted-foreground leading-relaxed">
+                          {selectedLead.notes || "Nenhuma nota inserida na triagem inicial."}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="entrevistas" className="space-y-8">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-black text-white uppercase tracking-widest">Linha do Tempo Técnica</h4>
+                        <div className="flex gap-2">
+                          {templates?.map(t => (
+                            <Button key={t.id} onClick={() => handleStartInterview(t)} size="sm" variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary h-9">
+                              EXECUTAR: {t.legalArea || "GERAL"}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {leadInterviews && leadInterviews.length > 0 ? (
+                          leadInterviews.map((int) => (
+                            <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:bg-white/[0.04] transition-all">
+                              <div className="flex items-center gap-6">
+                                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><History className="h-5 w-5 text-primary" /></div>
+                                <div>
+                                  <p className="text-xs font-black text-white uppercase tracking-tight">{int.interviewType}</p>
+                                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
+                                    Por: {int.interviewerName} • {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleString() : "Recente"}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="py-20 text-center opacity-30">
+                            <MessageSquare className="h-12 w-12 mx-auto mb-4" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Nenhuma entrevista técnica realizada.</p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="dados">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {leadInterviews?.[0]?.responses ? (
+                          Object.entries(leadInterviews[0].responses).map(([k, v]: any) => (
+                            <div key={k} className="p-5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                              <p className="text-[9px] font-black text-primary uppercase tracking-widest">{k}</p>
+                              <p className="text-xs font-bold text-white leading-relaxed">{String(v)}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-full py-20 text-center opacity-30">
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Capture dados através de uma entrevista para visualizá-los aqui.</p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </ScrollArea>
             </div>
           )}
         </SheetContent>
       </Sheet>
 
+      {/* Dialog de Execução de Entrevista */}
+      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh]">
+          <DynamicInterviewExecution 
+            template={executingTemplate} 
+            onSubmit={handleFinishInterview}
+            onCancel={() => { setIsInterviewDialogOpen(false); setExecutingTemplate(null); }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Sheet de Novo Lead */}
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <div className="p-8 border-b border-white/5 bg-[#0a0f1e]">
