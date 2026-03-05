@@ -12,7 +12,7 @@ import {
   Plus, 
   Play, 
   Clock, 
-  Loader2,
+  Loader2, 
   User,
   ChevronRight,
   ArrowRight,

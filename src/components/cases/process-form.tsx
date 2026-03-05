@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Textarea } from "@/components/ui/textarea"
 
 interface ProcessFormProps {
   onSubmit: (data: any) => void
@@ -388,7 +389,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsQuickClientOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button variant="ghost" onClick={() => setIsQuickClientOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
             <Button onClick={handleSaveQuickClient} disabled={isSavingClient} className="bg-primary text-background font-black uppercase text-[11px] px-10 h-14 rounded-xl">
               {isSavingClient ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar Cadastro"}
             </Button>

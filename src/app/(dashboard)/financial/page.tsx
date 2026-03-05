@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
@@ -55,23 +55,23 @@ export default function FinancialPage() {
 
   // Busca Equipe
   const staffQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, canQuery])
+    if (!user || !db) return null
+    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
   const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
 
   // Busca Créditos
   const creditsQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "staff_credits"), orderBy("createdAt", "desc"))
-  }, [db, canQuery])
+    if (!user || !db) return null
+    return query(collection(db, "staff_credits"), orderBy("createdAt", "desc"))
+  }, [db, user])
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery)
 
   // Busca Títulos Financeiros
   const titlesQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "financial_titles"), where("status", "==", "Recebido"))
-  }, [db, canQuery])
+    if (!user || !db) return null
+    return query(collection(db, "financial_titles"), where("status", "==", "Recebido"))
+  }, [db, user])
   const { data: receivedTitles } = useCollection(titlesQuery)
 
   const stats = useMemo(() => {

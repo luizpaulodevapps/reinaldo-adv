@@ -75,7 +75,6 @@ export default function LeadsPage() {
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
 
-  // Busca Matrizes de Entrevista do Laboratório
   const checklistsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db, "checklists"), where("category", "==", "Entrevista de Triagem"))
@@ -87,7 +86,6 @@ export default function LeadsPage() {
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
   const [isInterviewOpen, setIsInterviewOpen] = useState(false)
   
-  // Estados de formulário para os estágios
   const [atendimentoData, setAtendimentoData] = useState({ defendant: "", viability: "Alta", details: "" })
   const [contractualChecklist, setContractualChecklist] = useState<Record<string, boolean>>({})
   const [distributionData, setDistributionData] = useState({

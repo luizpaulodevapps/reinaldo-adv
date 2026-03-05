@@ -47,7 +47,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -221,14 +221,6 @@ export default function LaboratorioChecklistsPage() {
   }
 
   const handleRemoveField = (index: number) => {
-    const targetItem = items[index]
-    const hasContent = Boolean(targetItem?.label?.trim())
-
-    if (hasContent) {
-      const confirmed = window.confirm("Esta pergunta possui conteúdo preenchido. Deseja remover mesmo assim?")
-      if (!confirmed) return
-    }
-
     setItems(items.filter((_, i) => i !== index))
   }
 

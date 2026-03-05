@@ -46,9 +46,9 @@ export default function TeamPage() {
   const canQuery = !!user && !!db
 
   const staffQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, canQuery])
+    if (!user || !db) return null
+    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
 
   const { data: team, isLoading } = useCollection(staffQuery)
 
@@ -155,7 +155,7 @@ export default function TeamPage() {
             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Nível de Acesso</Label><Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}><SelectTrigger className="glass border-white/10 h-14 text-white"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="admin">Administrador</SelectItem><SelectItem value="lawyer">Advogado</SelectItem><SelectItem value="financial">Financeiro</SelectItem><SelectItem value="assistant">Assistente</SelectItem></SelectContent></Select></div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
             <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-10 h-14 rounded-xl shadow-xl">Confirmar Acesso</Button>
           </DialogFooter>
         </DialogContent>

@@ -62,7 +62,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -129,9 +129,9 @@ function SettingsContent() {
   const canQuery = !!user && !!db
 
   const staffQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, canQuery])
+    if (!user || !db) return null
+    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
 
   const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
   

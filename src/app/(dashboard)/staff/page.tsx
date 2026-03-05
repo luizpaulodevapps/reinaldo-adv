@@ -83,9 +83,9 @@ export default function StaffPage() {
   const canQuery = !!user && !!db
 
   const staffQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "employees"), orderBy("name", "asc"))
-  }, [db, canQuery])
+    if (!user || !db) return null
+    return query(collection(db, "employees"), orderBy("name", "asc"))
+  }, [db, user])
 
   const { data: employees, isLoading } = useCollection(staffQuery)
 
