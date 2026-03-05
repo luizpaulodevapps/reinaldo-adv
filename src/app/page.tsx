@@ -49,19 +49,25 @@ function WhatsAppWidget() {
   const [isVisible, setIsVisible] = useState(false)
   const [isPopupOpen, setIsPopupOpen] = useState(false)
   const [hasNotification, setHasNotification] = useState(false)
+  const [isTyping, setIsTyping] = useState(true)
 
   useEffect(() => {
     // Exibe o widget e o popup após 3s
     const showTimer = setTimeout(() => {
       setIsVisible(true)
       setIsPopupOpen(true)
+      
+      // Simula digitação por 1.5s
+      setTimeout(() => {
+        setIsTyping(false)
+      }, 1500)
     }, 3000)
 
-    // Minimiza após 11s (3s iniciais + 8s de exibição)
+    // Minimiza após 12s (3s iniciais + 9s de exibição)
     const minimizeTimer = setTimeout(() => {
       setIsPopupOpen(false)
       setHasNotification(true)
-    }, 11000)
+    }, 12000)
 
     return () => {
       clearTimeout(showTimer)
@@ -82,20 +88,24 @@ function WhatsAppWidget() {
       <AnimatePresence>
         {isPopupOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: 20, scale: 0.9, x: 20 }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8, x: 20 }}
+            initial={{ opacity: 0, y: 50, scale: 0.5, originX: 1, originY: 1 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="mb-4 w-[320px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-emerald-500/20 pointer-events-auto"
           >
+            {/* Header do Chat */}
             <div className="bg-emerald-600 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/10 relative">
                 <Scale className="h-5 w-5 text-white" />
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-emerald-600" />
               </div>
               <div className="flex-1">
                 <p className="text-white text-[11px] font-black uppercase tracking-widest">Dr. Reinaldo Gonçalves</p>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <p className="text-white/70 text-[9px] uppercase font-bold tracking-tighter">Disponível Agora</p>
+                  <p className="text-white/70 text-[9px] uppercase font-bold tracking-tighter">
+                    {isTyping ? 'Digitando...' : 'Online'}
+                  </p>
                 </div>
               </div>
               <button 
@@ -106,21 +116,51 @@ function WhatsAppWidget() {
               </button>
             </div>
             
-            <div className="p-4 bg-[#e5ddd5] space-y-3 relative min-h-[100px]">
-              {/* WhatsApp Chat Background Pattern Simulation */}
-              <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "url('https://picsum.photos/seed/wa/200/200')" }} />
+            {/* Área da Mensagem */}
+            <div className="p-4 bg-[#e5ddd5] space-y-3 relative min-h-[120px] flex flex-col justify-end">
+              <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }} />
               
-              <div className="bg-white p-3.5 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl shadow-md max-w-[85%] relative z-10">
-                <p className="text-[#111b21] text-xs font-medium leading-relaxed">
-                  Olá! Sou o Dr. Reinaldo. Notei seu interesse em nossa banca. Já estou disponível para uma triagem inicial do seu caso. Podemos conversar?
-                </p>
-                <span className="text-[8px] text-gray-400 block text-right mt-1 font-bold uppercase">AGORA</span>
-              </div>
+              <AnimatePresence mode="wait">
+                {isTyping ? (
+                  <motion.div 
+                    key="typing"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-white p-3 rounded-xl shadow-sm max-w-[60px] flex justify-center items-center gap-1 relative z-10"
+                  >
+                    <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="message"
+                    initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    className="bg-white p-3.5 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl shadow-md max-w-[90%] relative z-10"
+                  >
+                    {/* Rabinho do Balão */}
+                    <div className="absolute -left-2 top-0 w-0 h-0 border-t-[10px] border-t-white border-l-[10px] border-l-transparent" />
+                    
+                    <p className="text-[#111b21] text-[13px] font-medium leading-relaxed">
+                      Olá! Sou o Dr. Reinaldo. Vi que você está navegando em nosso portal. Já estou disponível para uma triagem inicial do seu caso. Podemos conversar?
+                    </p>
+                    <div className="flex items-center justify-end gap-1 mt-1">
+                      <span className="text-[9px] text-gray-400 font-bold uppercase">10:42</span>
+                      <div className="flex">
+                        <CheckCircle2 className="w-3 h-3 text-sky-400 -mr-1.5" />
+                        <CheckCircle2 className="w-3 h-3 text-sky-400" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <button 
               onClick={handleOpenWhatsApp}
-              className="w-full py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-2 group"
+              className="w-full py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-2 group pointer-events-auto"
             >
               <MessageCircle className="h-4 w-4 group-hover:scale-110 transition-transform fill-current" />
               Iniciar Atendimento de Elite
@@ -130,19 +170,27 @@ function WhatsAppWidget() {
       </AnimatePresence>
 
       <div className="relative pointer-events-auto">
-        <button 
+        <motion.button 
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={handleOpenWhatsApp}
-          className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_10px_30px_rgba(16,185,129,0.4)] hover:scale-110 active:scale-95 transition-all group"
+          className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_10px_30px_rgba(16,185,129,0.4)] transition-all group"
         >
           <MessageCircle className="h-8 w-8 text-white fill-current" />
           
-          {hasNotification && (
-            <span className="absolute -top-1 -right-1 flex h-6 w-6">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-6 w-6 bg-rose-500 items-center justify-center text-[10px] font-black text-white border-2 border-[#020617]">1</span>
-            </span>
-          )}
-        </button>
+          <AnimatePresence>
+            {hasNotification && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 flex h-6 w-6"
+              >
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-6 w-6 bg-rose-500 items-center justify-center text-[10px] font-black text-white border-2 border-[#020617]">1</span>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
     </div>
   )
