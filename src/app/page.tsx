@@ -20,7 +20,8 @@ import {
   Briefcase,
   Gavel,
   ShieldAlert,
-  X
+  X,
+  CheckCircle2
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { 
