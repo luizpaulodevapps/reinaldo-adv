@@ -4,23 +4,17 @@
 import Link from 'next/link'
 import { motion } from "framer-motion"
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { 
   Scale, 
   ShieldCheck, 
   MessageSquare, 
   Calendar,
-  Gavel,
-  Briefcase,
-  Lock,
   Zap,
-  Target,
+  Lock,
+  Award,
   Users,
   TrendingUp,
-  Award,
-  Globe,
-  Clock,
-  ArrowRight
+  Clock
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -67,18 +61,9 @@ export default function HomePage() {
           </div>
           
           <div className="hidden md:flex items-center gap-10 text-[9px] font-black tracking-[0.3em] uppercase text-muted-foreground">
-            <Link href="#sobre" className="hover:text-[#F5D030] transition-colors relative group">
-              A BANCA
-              <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#F5D030] transition-all group-hover:w-full" />
-            </Link>
-            <Link href="#areas" className="hover:text-[#F5D030] transition-colors relative group">
-              ESPECIALIDADES
-              <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#F5D030] transition-all group-hover:w-full" />
-            </Link>
-            <Link href="#metodo" className="hover:text-[#F5D030] transition-colors relative group">
-              MÉTODO
-              <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#F5D030] transition-all group-hover:w-full" />
-            </Link>
+            <Link href="#sobre" className="hover:text-[#F5D030] transition-colors relative group">A BANCA</Link>
+            <Link href="#areas" className="hover:text-[#F5D030] transition-colors relative group">ESPECIALIDADES</Link>
+            <Link href="#metodo" className="hover:text-[#F5D030] transition-colors relative group">MÉTODO</Link>
             <Link href="/login">
               <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-none px-4 text-[9px] font-black uppercase tracking-widest transition-all h-10">
                 <Lock className="h-3.5 w-3.5" />
@@ -87,11 +72,7 @@ export default function HomePage() {
           </div>
 
           <Link href="/login" className="md:hidden">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-none px-4 h-9 text-[9px] font-black uppercase tracking-widest"
-            >
+            <Button variant="outline" size="sm" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-none px-4 h-9 text-[9px] font-black uppercase tracking-widest">
               <Lock className="h-3.5 w-3.5" />
             </Button>
           </Link>
@@ -103,73 +84,30 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/image/hero-bg.jpg')" }} />
         <div className="absolute inset-0 bg-[#020617]/80 backdrop-blur-[2px]" />
         
-        {/* Decorative elements */}
-        <div className="absolute left-[8%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#F5D030]/15 to-transparent hidden lg:block" />
-        <div className="absolute right-[12%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#F5D030]/8 to-transparent hidden lg:block" />
-
         <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 w-full">
           <div className="max-w-5xl">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-            >
+            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
               <motion.div variants={itemVariants} className="flex items-center gap-4 mb-10">
                 <div className="h-px w-16 bg-[#F5D030]/60" />
-                <span className="text-[#F5D030]/80 font-body text-[10px] tracking-[0.5em] uppercase font-bold">
-                  Excelência Jurídica & Estratégia de Elite
-                </span>
+                <span className="text-[#F5D030]/80 font-body text-[10px] tracking-[0.5em] uppercase font-bold">Excelência Jurídica & Estratégia de Elite</span>
               </motion.div>
 
-              <motion.h1
-                variants={itemVariants}
-                className="font-display text-6xl md:text-8xl lg:text-9xl text-white leading-[0.9] mb-10 font-medium tracking-tight"
-              >
+              <motion.h1 variants={itemVariants} className="font-display text-6xl md:text-8xl lg:text-9xl text-white leading-[0.9] mb-10 font-medium tracking-tight">
                 Engenharia de <br />
-                <span className="text-gradient-gold italic">Resultados </span> 
-                Jurídicos
+                <span className="text-gradient-gold italic">Resultados </span> Jurídicos
               </motion.h1>
 
-              <motion.p
-                variants={itemVariants}
-                className="text-white/60 font-body text-lg md:text-xl leading-relaxed mb-14 max-w-2xl font-light italic"
-              >
-                Proteção patrimonial e defesa estratégica personalizada sob o comando da banca RGMJ.
-              </motion.p>
-
-              <motion.div
-                variants={itemVariants}
-                className="flex flex-col sm:flex-row gap-6"
-              >
+              <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-6">
                 <Button className="bg-[#F5D030] text-[#020617] hover:scale-105 font-black rounded-none px-12 h-20 text-xs uppercase tracking-[0.3em] shadow-2xl transition-all border-0 group">
-                  <Calendar className="w-4 h-4 mr-3 group-hover:rotate-12 transition-transform" />
-                  AGENDAR CONSULTA
+                  <Calendar className="w-4 h-4 mr-3 group-hover:rotate-12 transition-transform" /> AGENDAR CONSULTA
                 </Button>
                 <Button variant="outline" className="border-white/10 hover:border-primary hover:text-primary text-white font-black rounded-none px-12 h-20 text-xs uppercase tracking-[0.3em] bg-white/5 backdrop-blur-sm transition-all group">
-                  <MessageSquare className="w-4 h-4 mr-3 group-hover:scale-110 transition-transform" />
-                  WHATSAPP DIRECT
+                  <MessageSquare className="w-4 h-4 mr-3 group-hover:scale-110 transition-transform" /> WHATSAPP DIRECT
                 </Button>
               </motion.div>
             </motion.div>
           </div>
         </div>
-
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2, duration: 1 }}
-          className="absolute bottom-12 left-6 lg:left-16 hidden md:flex items-center gap-12"
-        >
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-black text-[#F5D030] uppercase tracking-widest leading-none">OAB/SP</span>
-            <span className="text-[14px] font-display font-bold text-white/40 tracking-widest">497650</span>
-          </div>
-          <div className="w-px h-8 bg-white/10" />
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-black text-[#F5D030] uppercase tracking-widest leading-none">STATUS</span>
-            <span className="text-[14px] font-display font-bold text-white/40 tracking-widest uppercase">Operação Ativa</span>
-          </div>
-        </motion.div>
       </section>
 
       {/* Stats Section */}
@@ -181,14 +119,7 @@ export default function HomePage() {
             { label: "Valor Recuperado", value: "R$ 45M", icon: TrendingUp },
             { label: "Clientes Atendidos", value: "3.2k", icon: Users },
           ].map((stat, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              viewport={{ once: true }}
-              className="flex flex-col items-center text-center space-y-4"
-            >
+            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="flex flex-col items-center text-center space-y-4">
               <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10">
                 <stat.icon className="h-5 w-5 text-primary" />
               </div>
@@ -201,8 +132,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-20 bg-[#01040a] border-t border-white/5 px-6" id="contato">
+      <footer className="py-20 bg-[#01040a] border-t border-white/5 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F5D030] to-[#B8860B] flex items-center justify-center">

@@ -139,7 +139,7 @@ export default function LeadsPage() {
     setIsInterviewDialogOpen(true)
   }
 
-  const handleFinishInterview = async (payload: any) => {
+  const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !selectedLead || !user) return
 
     const interviewData = {
@@ -208,8 +208,8 @@ export default function LeadsPage() {
   const handleConvertToProcess = async () => {
     if (!selectedLead || !db || !user) return
 
-    const confirm = window.confirm("Deseja converter este atendimento em um processo judicial ativo?")
-    if (!confirm) return
+    const confirmConvert = window.confirm("Deseja converter este atendimento em um processo judicial ativo?")
+    if (!confirmConvert) return
 
     const processData = {
       clientId: selectedLead.id,
