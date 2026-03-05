@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -166,9 +167,9 @@ export default function LeadsPage() {
     switch (pref) {
       case "padrão": return "sm:max-w-lg"
       case "largo": return "sm:max-w-2xl"
-      case "extra-largo": return "sm:max-w-4xl"
+      case "extra-largo": return "sm:max-w-5xl" // Aumentado para mais espaço tático
       case "full": return "sm:max-w-full"
-      default: return "sm:max-w-4xl"
+      default: return "sm:max-w-5xl"
     }
   }
 
