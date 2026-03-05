@@ -535,50 +535,107 @@ function SettingsContent() {
           )}
         </TabsContent>
 
-        <TabsContent value="notificacoes" className="mt-0 space-y-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="space-y-1">
-              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Perfis de Notificação</h2>
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">BALIZADORES PARA ATOS FÍSICOS E VIRTUAIS.</p>
+        <TabsContent value="notificacoes" className="mt-0 space-y-16">
+          {/* SEÇÃO I: MODELOS BASE RGMJ */}
+          <div className="space-y-8">
+            <div className="flex items-center justify-between border-b border-white/5 pb-6">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
+                  <ShieldCheck className="h-8 w-8 text-primary" /> Modelos Base RGMJ
+                </h2>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">TEMPLATES OTIMIZADOS PARA O RITO JURÍDICO DA BANCA.</p>
+              </div>
             </div>
-            <Button onClick={handleOpenCreateMessage} className="gold-gradient font-black text-[11px] uppercase tracking-widest h-14 px-10 rounded-xl gap-3 shadow-xl">
-              <Plus className="h-5 w-5" /> Novo Perfil Tático
-            </Button>
-          </div>
-
-          {loadingMessages ? (
-            <div className="py-20 text-center"><Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" /></div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {messageTemplates?.map((template) => (
-                <Card key={template.id} className="glass border-white/5 p-8 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden shadow-2xl">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Object.entries(DEFAULT_TEMPLATES).map(([type, template]) => (
+                <Card key={type} className="glass border-white/5 p-8 hover:border-primary/30 transition-all group relative overflow-hidden shadow-2xl flex flex-col h-full">
                   <div className="flex items-start justify-between mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
-                      {template.eventType?.includes("Virtual") ? <Video className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                      {type.includes("Virtual") ? <Video className="h-6 w-6" /> : type === "Prazo" ? <Clock className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleOpenEditMessage(template)} className="text-white/20 hover:text-white p-2"><Settings2 className="h-4 w-4" /></button>
-                      <button onClick={() => handleDeleteMessageTemplate(template.id)} className="text-white/20 hover:text-rose-500 p-2"><Trash2 className="h-4 w-4" /></button>
-                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/30 text-primary bg-primary/5">SISTEMA</Badge>
                   </div>
-                  <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/30 text-primary mb-3 bg-primary/5">{template.eventType}</Badge>
-                  <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight mb-4">{template.profileName}</h3>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{template.reminderMinutes}m</span>
-                    </div>
-                    {template.sendWhatsApp && (
-                      <div className="flex items-center gap-1.5 text-emerald-500">
-                        <Smartphone className="h-3 w-3" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
-                      </div>
-                    )}
-                  </div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight mb-6 flex-1">{type}</h3>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setEditingMessage(null);
+                      setMessageFormData({
+                        ...messageFormData,
+                        ...template,
+                        eventType: type,
+                        isActive: true
+                      });
+                      setIsMessageDialogOpen(true);
+                    }}
+                    className="w-full h-12 text-[9px] font-black uppercase text-primary border-primary/20 hover:bg-primary hover:text-background transition-all tracking-[0.2em] shadow-lg"
+                  >
+                    Customizar este Modelo
+                  </Button>
                 </Card>
               ))}
             </div>
-          )}
+          </div>
+
+          {/* SEÇÃO II: PERFIS PERSONALIZADOS */}
+          <div className="space-y-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-6">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
+                  <Sparkles className="h-8 w-8 text-primary" /> Meus Perfis Táticos
+                </h2>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">NARRATIVAS TÁTICAS SALVAS E PERSONALIZADAS PELA EQUIPE.</p>
+              </div>
+              <Button 
+                onClick={handleOpenCreateMessage} 
+                className="gold-gradient text-background font-black text-[11px] uppercase tracking-widest h-14 px-10 rounded-xl gap-3 shadow-2xl hover:scale-105 active:scale-95 transition-all"
+              >
+                <Plus className="h-5 w-5" /> CRIAR PERFIL DO ZERO
+              </Button>
+            </div>
+
+            {loadingMessages ? (
+              <div className="py-20 text-center"><Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" /></div>
+            ) : messageTemplates && messageTemplates.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {messageTemplates.map((template) => (
+                  <Card key={template.id} className="glass border-white/5 p-8 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden shadow-2xl">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                        {template.eventType?.includes("Virtual") ? <Video className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleOpenEditMessage(template)} className="text-white/20 hover:text-white p-2"><Settings2 className="h-4 w-4" /></button>
+                        <button onClick={() => handleDeleteMessageTemplate(template.id)} className="text-white/20 hover:text-rose-500 p-2"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/30 text-primary mb-3 bg-primary/5">{template.eventType}</Badge>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight mb-4">{template.profileName}</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{template.reminderMinutes}m</span>
+                      </div>
+                      {template.sendWhatsApp && (
+                        <div className="flex items-center gap-1.5 text-emerald-500">
+                          <Smartphone className="h-3 w-3" />
+                          <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp Ativo</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="py-32 border-2 border-dashed border-white/5 rounded-[3rem] text-center space-y-6 opacity-20">
+                <div className="w-20 h-20 rounded-full border border-white/10 mx-auto flex items-center justify-center">
+                  <MessageSquare className="h-10 w-10 text-primary" />
+                </div>
+                <p className="text-xs font-black uppercase tracking-[0.5em]">Nenhum perfil tático customizado.</p>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
