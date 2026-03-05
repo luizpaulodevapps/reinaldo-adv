@@ -277,8 +277,6 @@ function SettingsContent() {
 
   const handleOpenCreateMessage = () => {
     setEditingMessage(null)
-    // Inicializa com campos vazios para criação personalizada, 
-    // mas o usuário pode usar o seletor de pre-set depois.
     setMessageFormData({
       profileName: "",
       eventType: "Audiência Virtual",
@@ -381,7 +379,6 @@ function SettingsContent() {
           ))}
         </TabsList>
 
-        {/* ... (Tabs de Perfil, Temas e Google mantidas conforme implementação anterior) */}
         <TabsContent value="perfil" className="mt-0 space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
@@ -585,7 +582,6 @@ function SettingsContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog Modelo */}
       <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
@@ -629,10 +625,8 @@ function SettingsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Notificação (SCROLL-LOCK UX) */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1150px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col">
-          {/* HEADER FIXO */}
           <div className="flex-none p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between z-10">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
@@ -663,9 +657,7 @@ function SettingsContent() {
             </div>
           </div>
           
-          {/* CORPO CENTRAL COM GRID E SCROLL INDEPENDENTE */}
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
-            {/* COLUNA DE FORMULÁRIO (SCROLL INDEPENDENTE) */}
             <div className="lg:col-span-8 h-full flex flex-col border-r border-white/5 bg-[#0a0f1e]/50 overflow-hidden">
               <ScrollArea className="flex-1 h-full">
                 <div className="p-10 space-y-10 pb-32">
@@ -740,7 +732,6 @@ function SettingsContent() {
               </ScrollArea>
             </div>
 
-            {/* COLUNA DE TAGS (SCROLL INDEPENDENTE) */}
             <div className="lg:col-span-4 h-full bg-black/40 flex flex-col border-l border-white/5 overflow-hidden">
               <div className="p-8 border-b border-white/5 flex-none bg-black/20">
                 <div className="flex items-center gap-3 mb-2">
@@ -766,7 +757,6 @@ function SettingsContent() {
             </div>
           </div>
 
-          {/* FOOTER FIXO */}
           <DialogFooter className="flex-none p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <button 
               onClick={() => setIsMessageDialogOpen(false)} 
