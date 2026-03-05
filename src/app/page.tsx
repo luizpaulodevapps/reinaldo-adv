@@ -87,16 +87,6 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/image/hero-bg.jpg')" }} />
         <div className="absolute inset-0 bg-[#020617]/80 backdrop-blur-[2px]" />
         
-        {/* Decorative corner elements */}
-        <div className="absolute top-32 left-[10%] hidden lg:block z-10">
-          <div className="w-20 h-px bg-primary/20" />
-          <div className="w-px h-20 bg-primary/20" />
-        </div>
-        <div className="absolute bottom-20 right-[10%] hidden lg:block z-10">
-          <div className="w-20 h-px bg-primary/20 ml-auto" />
-          <div className="w-px h-20 bg-primary/20 ml-auto" />
-        </div>
-
         <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 w-full">
           <div className="max-w-5xl">
             <motion.div initial="hidden" animate="visible" variants={containerVariants}>
@@ -142,42 +132,6 @@ export default function HomePage() {
               </div>
             </motion.div>
           ))}
-        </div>
-      </section>
-
-      {/* Areas Section */}
-      <section id="areas" className="py-32 relative">
-        <div className="max-w-7xl mx-auto px-6 lg:px-16">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-            <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black px-4 py-1 text-[10px] tracking-widest">Especialidades</Badge>
-            <h2 className="text-5xl md:text-6xl font-display font-bold tracking-tight">Expertise de <span className="text-gradient-gold italic">Elite</span></h2>
-            <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium leading-relaxed">Soluções jurídicas complexas executadas com precisão cirúrgica.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { title: "DIREITO TRABALHISTA", desc: "Defesa estratégica para altos executivos e empresas.", icon: Zap },
-              { title: "CÍVEL ESTRATÉGICO", desc: "Litígios complexos e proteção patrimonial de alto nível.", icon: Scale },
-              { title: "EMPRESARIAL", desc: "Engenharia de contratos e consultoria tática preventiva.", icon: ShieldCheck },
-            ].map((area, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, scale: 0.95 }} 
-                whileInView={{ opacity: 1, scale: 1 }} 
-                viewport={{ once: true }}
-                className="premium-card p-10 group hover:border-primary/30 transition-all"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-8 border border-primary/20 group-hover:scale-110 transition-transform">
-                  <area.icon className="h-7 w-7" />
-                </div>
-                <h3 className="text-xl font-display font-bold mb-4 tracking-wider">{area.title}</h3>
-                <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest leading-loose">{area.desc}</p>
-                <div className="mt-8 pt-8 border-t border-white/5">
-                  <button className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2 hover:translate-x-2 transition-transform">Saber Mais <ChevronRight className="h-3 w-3" /></button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 

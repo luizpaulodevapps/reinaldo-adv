@@ -58,13 +58,6 @@ function SettingsContent() {
     }
   }, [profile])
 
-  const staffQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, user])
-
-  const { isLoading: loadingTeam } = useCollection(staffQuery)
-  
   const handleUpdateMyProfile = () => {
     if (!user || !db || !profileFormData.name) return
     const docRef = doc(db!, "staff_profiles", user.uid)

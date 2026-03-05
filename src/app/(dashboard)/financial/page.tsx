@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
@@ -15,7 +15,8 @@ import {
   Printer,
   TrendingUp,
   Building2,
-  Users
+  Users,
+  Wallet
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +30,7 @@ import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
 import { addMonths, format, parseISO } from "date-fns"
 
-export default function BillingPage() {
+export default function FinancialPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isNewTitleOpen, setIsNewTitleOpen] = useState(false)
   const db = useFirestore()
@@ -46,7 +47,7 @@ export default function BillingPage() {
   const isLoading = isUserLoading || isLoadingTransactions
 
   const stats = useMemo(() => {
-    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, admin: 0 }
+    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, repasses: 0 }
     
     const entradas = transactions
       .filter(t => t.type?.includes('Entrada'))
@@ -56,13 +57,13 @@ export default function BillingPage() {
       .filter(t => t.type?.includes('Saída'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const admin = transactions
-      .filter(t => t.type?.includes('Saída') && (t.category?.includes('Aluguel') || t.category?.includes('Software') || t.category?.includes('Marketing')))
+    const repasses = transactions
+      .filter(t => t.type === 'Repasse')
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
     const saldo = entradas - saídas
 
-    return { entradas, saídas, saldo, admin }
+    return { entradas, saídas, saldo, repasses }
   }, [transactions])
 
   const filteredTransactions = useMemo(() => {
@@ -166,11 +167,11 @@ export default function BillingPage() {
             <ChevronRight className="h-2 w-2" />
             <span className="uppercase">Dashboard</span>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Central Financeira</span>
+            <span className="text-white uppercase tracking-tighter">Carteira & Repasses</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão Financeira Central</h1>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão de Repasses</h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-70">
-            CONTROLE 360º: HONORÁRIOS, DESPESAS E FOLHA RGMJ.
+            CONTROLE DE CRÉDITOS E HONORÁRIOS RGMJ.
           </p>
         </div>
         
@@ -178,7 +179,7 @@ export default function BillingPage() {
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar transação..." 
+              placeholder="Pesquisar..." 
               className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -188,7 +189,7 @@ export default function BillingPage() {
             onClick={() => setIsNewTitleOpen(true)}
             className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
           >
-            <Plus className="h-4 w-4" /> Novo Lançamento
+            <Plus className="h-4 w-4" /> Novo Crédito
           </Button>
         </div>
       </div>
@@ -198,7 +199,7 @@ export default function BillingPage() {
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <TrendingUp className="h-3 w-3" /> Saldo Operacional
+              <Wallet className="h-3 w-3" /> Saldo em Carteira
             </p>
             <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>
               R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -209,7 +210,7 @@ export default function BillingPage() {
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <ArrowUpRight className="h-3 w-3" /> Receita Bruta
+              <ArrowUpRight className="h-3 w-3" /> Total Créditos
             </p>
             <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
               R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -220,7 +221,7 @@ export default function BillingPage() {
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-rose-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <ArrowDownRight className="h-3 w-3" /> Total Despesas
+              <ArrowDownRight className="h-3 w-3" /> Repasses Efetuados
             </p>
             <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
               R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -231,75 +232,40 @@ export default function BillingPage() {
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
           <CardContent className="p-6">
             <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-              <Building2 className="h-3 w-3" /> Custo Estrutura
+              <Users className="h-3 w-3" /> Volume de Equipe
             </p>
             <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
-              R$ {stats.admin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {items?.length || 0} Atos
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="todos" className="space-y-0 shadow-2xl">
-        <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-t-xl rounded-b-none border-b-0 overflow-x-auto scrollbar-hide">
-          <TabsTrigger value="todos" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
-            <Calculator className="h-3.5 w-3.5" /> Todos
-          </TabsTrigger>
-          <TabsTrigger value="receitas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
-            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Receitas
-          </TabsTrigger>
-          <TabsTrigger value="administrativo" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
-            <Building2 className="h-3.5 w-3.5 text-primary" /> Administrativo
-          </TabsTrigger>
-          <TabsTrigger value="folha" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
-            <Users className="h-3.5 w-3.5 text-blue-400" /> Folha
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="glass rounded-b-xl border-t-0 p-0 min-h-[500px] flex flex-col relative overflow-hidden">
-          {isLoading ? (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Auditando Fluxo RGMJ...</span>
-            </div>
-          ) : (
-            <>
-              <TabsContent value="todos" className="w-full m-0 p-0">
-                {filteredTransactions.length > 0 ? (
-                  <TransactionList items={filteredTransactions} />
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
-                    <Calculator className="h-16 w-16 text-muted-foreground" />
-                    <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum registro financeiro no radar</p>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="receitas" className="w-full m-0 p-0">
-                <TransactionList items={filteredTransactions.filter(t => t.type?.includes('Entrada'))} />
-              </TabsContent>
-
-              <TabsContent value="administrativo" className="w-full m-0 p-0">
-                <TransactionList items={filteredTransactions.filter(t => t.type?.includes('Saída') && !t.category?.includes('Folha'))} />
-              </TabsContent>
-
-              <TabsContent value="folha" className="w-full m-0 p-0">
-                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Folha'))} />
-              </TabsContent>
-            </>
-          )}
-        </div>
-      </Tabs>
+      <div className="glass rounded-xl border-white/5 overflow-hidden">
+        {isLoading ? (
+          <div className="py-20 flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Auditando Carteira RGMJ...</span>
+          </div>
+        ) : filteredTransactions.length > 0 ? (
+          <TransactionList items={filteredTransactions} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
+            <Calculator className="h-16 w-16 text-muted-foreground" />
+            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum repasse no radar</p>
+          </div>
+        )}
+      </div>
 
       <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                Novo Lançamento Financeiro
+                Novo Registro Financeiro
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Gestão de caixa e despesas RGMJ.
+                Lançamento em carteira técnica RGMJ.
               </DialogDescription>
             </DialogHeader>
           </div>
