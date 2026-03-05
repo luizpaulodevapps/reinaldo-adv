@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -15,14 +14,23 @@ import {
   Printer,
   TrendingUp,
   Building2,
-  Users
+  Users,
+  MoreVertical,
+  Edit3,
+  Trash2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
@@ -31,7 +39,9 @@ import { addMonths, format, parseISO } from "date-fns"
 
 export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [isNewTitleOpen, setIsNewTitleOpen] = useState(false)
+  const [isTitleDialogOpen, setIsTitleDialogOpen] = useState(false)
+  const [editingTitle, setEditingTitle] = useState<any>(null)
+  
   const db = useFirestore()
   const { user, isUserLoading } = useUser()
   const { toast } = useToast()
@@ -74,37 +84,62 @@ export default function BillingPage() {
     )
   }, [transactions, searchTerm])
 
-  const handleCreateTitle = (data: any) => {
+  const handleOpenCreate = () => {
+    setEditingTitle(null)
+    setIsTitleDialogOpen(true)
+  }
+
+  const handleOpenEdit = (title: any) => {
+    setEditingTitle(title)
+    setIsTitleDialogOpen(true)
+  }
+
+  const handleSaveTitle = (data: any) => {
     if (!user || !db) return
 
-    const iterations = data.isRecurring ? (data.recurrenceMonths || 1) : 1
-    const baseDueDate = parseISO(data.dueDate)
-
-    for (let i = 0; i < iterations; i++) {
-      const currentDueDate = addMonths(baseDueDate, i)
-      const formattedDueDate = format(currentDueDate, 'yyyy-MM-dd')
-      
-      const newTitle = {
+    if (editingTitle) {
+      updateDocumentNonBlocking(doc(db!, "financial_titles", editingTitle.id), {
         ...data,
-        dueDate: formattedDueDate,
         value: data.numericValue,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }
-      
-      delete newTitle.numericValue
-      delete newTitle.recurrenceMonths
+      })
+      toast({ title: "Lançamento Atualizado", description: "O registro financeiro foi retificado." })
+    } else {
+      const iterations = data.isRecurring ? (data.recurrenceMonths || 1) : 1
+      const baseDueDate = parseISO(data.dueDate)
 
-      addDocumentNonBlocking(collection(db!, "financial_titles"), newTitle)
+      for (let i = 0; i < iterations; i++) {
+        const currentDueDate = addMonths(baseDueDate, i)
+        const formattedDueDate = format(currentDueDate, 'yyyy-MM-dd')
+        
+        const newTitle = {
+          ...data,
+          dueDate: formattedDueDate,
+          value: data.numericValue,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+        
+        delete newTitle.numericValue
+        delete newTitle.recurrenceMonths
+
+        addDocumentNonBlocking(collection(db!, "financial_titles"), newTitle)
+      }
+      toast({
+        title: iterations > 1 ? "Recorrência Programada" : "Operação Registrada",
+        description: iterations > 1 
+          ? `${iterations} lançamentos de R$ ${data.value} foram injetados no fluxo.`
+          : `O lançamento de R$ ${data.value} foi injetado no fluxo.`
+      })
     }
 
-    setIsNewTitleOpen(false)
-    toast({
-      title: iterations > 1 ? "Recorrência Programada" : "Operação Registrada",
-      description: iterations > 1 
-        ? `${iterations} lançamentos de R$ ${data.value} foram injetados no fluxo.`
-        : `O lançamento de R$ ${data.value} foi injetado no fluxo.`
-    })
+    setIsTitleDialogOpen(false)
+  }
+
+  const handleDeleteTitle = (id: string) => {
+    if (!db || !confirm("Deseja excluir este lançamento?")) return
+    deleteDocumentNonBlocking(doc(db!, "financial_titles", id))
+    toast({ variant: "destructive", title: "Lançamento Excluído" })
   }
 
   const TransactionList = ({ items }: { items: any[] }) => (
@@ -144,11 +179,23 @@ export default function BillingPage() {
               </Badge>
             </div>
             <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-white">
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
+                  <DropdownMenuItem onClick={() => handleOpenEdit(t)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                    <Edit3 className="h-4 w-4" /> Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDeleteTitle(t.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
+                    <Trash2 className="h-4 w-4" /> Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => window.print()}>
                 <Printer className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
-                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -185,7 +232,7 @@ export default function BillingPage() {
             />
           </div>
           <Button 
-            onClick={() => setIsNewTitleOpen(true)}
+            onClick={handleOpenCreate}
             className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
           >
             <Plus className="h-4 w-4" /> Novo Lançamento
@@ -291,20 +338,24 @@ export default function BillingPage() {
         </div>
       </Tabs>
 
-      <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
+      <Dialog open={isTitleDialogOpen} onOpenChange={setIsTitleDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                Novo Lançamento Financeiro
+                {editingTitle ? "Editar Lançamento" : "Novo Lançamento Financeiro"}
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Gestão de caixa e despesas RGMJ.
+                {editingTitle ? "Retificação de dados no fluxo de caixa." : "Gestão de caixa e despesas RGMJ."}
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="px-10 py-8 bg-[#0a0f1e]/50">
-            <FinancialTitleForm onSubmit={handleCreateTitle} onCancel={() => setIsNewTitleOpen(false)} />
+            <FinancialTitleForm 
+              initialData={editingTitle}
+              onSubmit={handleSaveTitle} 
+              onCancel={() => setIsTitleDialogOpen(false)} 
+            />
           </div>
         </DialogContent>
       </Dialog>

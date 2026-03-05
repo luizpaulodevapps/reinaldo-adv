@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { 
   Search, 
   AlertTriangle, 
@@ -17,7 +17,9 @@ import {
   Brain, 
   Loader2, 
   History,
-  ChevronRight
+  ChevronRight,
+  Edit3,
+  Trash2
 } from "lucide-react"
 import { 
   useFirestore, 
@@ -25,9 +27,10 @@ import {
   useUser, 
   useMemoFirebase, 
   updateDocumentNonBlocking, 
-  addDocumentNonBlocking 
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking
 } from "@/firebase"
-import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
+import { collection, query, orderBy, doc, serverTimestamp, limit } from "firebase/firestore"
 import { format, isBefore, startOfDay, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -36,8 +39,15 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogFooter
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
@@ -46,24 +56,26 @@ export default function DeadlinesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState<"pendentes" | "cumpridos" | "historico">("pendentes")
   const [isAiParserOpen, setIsAiParserOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [publicationText, setPublicationText] = useState("")
   const [parsing, setParsing] = useState(false)
   const [aiResult, setAiResult] = useState<any>(null)
+  const [editingDeadline, setEditingTitle] = useState<any>(null)
 
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
 
-  // Busca Prazos
+  // Busca Prazos com limite de segurança para performance
   const deadlinesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "deadlines"), orderBy("dueDate", "asc"))
+    return query(collection(db!, "deadlines"), orderBy("dueDate", "asc"), limit(200))
   }, [db, user])
 
   const { data: deadlinesData, isLoading } = useCollection(deadlinesQuery)
   const deadlines = deadlinesData || []
 
-  // Filtros
+  // Filtros Otimizados
   const filteredDeadlines = useMemo(() => {
     return deadlines.filter(d => {
       const matchesSearch = 
@@ -92,6 +104,27 @@ export default function DeadlinesPage() {
       title: "Prazo Cumprido",
       description: "O ato foi registrado como concluído com sucesso."
     })
+  }
+
+  const handleOpenEdit = (deadline: any) => {
+    setEditingTitle(deadline)
+    setIsEditModalOpen(true)
+  }
+
+  const handleUpdateDeadline = () => {
+    if (!db || !editingDeadline) return
+    updateDocumentNonBlocking(doc(db!, "deadlines", editingDeadline.id), {
+      ...editingDeadline,
+      updatedAt: serverTimestamp()
+    })
+    setIsEditModalOpen(false)
+    toast({ title: "Prazo Atualizado" })
+  }
+
+  const handleDeleteDeadline = (id: string) => {
+    if (!db || !confirm("Deseja excluir permanentemente este prazo?")) return
+    deleteDocumentNonBlocking(doc(db!, "deadlines", id))
+    toast({ variant: "destructive", title: "Prazo Excluído" })
   }
 
   const handleAiParse = async () => {
@@ -319,9 +352,22 @@ export default function DeadlinesPage() {
                           <span className="text-[9px] text-emerald-500 font-black uppercase tracking-widest">Concluído</span>
                         </div>
                       )}
-                      <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground hover:text-white border border-white/5 rounded-xl">
-                        <MoreVertical className="h-5 w-5" />
-                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground hover:text-white border border-white/5 rounded-xl">
+                            <MoreVertical className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
+                          <DropdownMenuItem onClick={() => handleOpenEdit(deadline)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                            <Edit3 className="h-4 w-4" /> Editar Prazo
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteDeadline(deadline.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
+                            <Trash2 className="h-4 w-4" /> Excluir Ato
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardContent>
@@ -338,6 +384,47 @@ export default function DeadlinesPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Editar Prazo Judicial</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground">Título do Ato</Label>
+              <Input 
+                value={editingDeadline?.title || ""} 
+                onChange={(e) => setEditingTitle({...editingDeadline, title: e.target.value})}
+                className="glass border-white/10 h-12 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground">Data de Vencimento</Label>
+              <Input 
+                type="date"
+                value={editingDeadline?.dueDate || ""} 
+                onChange={(e) => setEditingTitle({...editingDeadline, dueDate: e.target.value})}
+                className="glass border-white/10 h-12 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground">Descrição / Providência</Label>
+              <Textarea 
+                value={editingDeadline?.description || ""} 
+                onChange={(e) => setEditingTitle({...editingDeadline, description: e.target.value})}
+                className="glass border-white/10 min-h-[100px] text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsEditModalOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
+            <Button onClick={handleUpdateDeadline} className="gold-gradient text-background font-black uppercase text-[11px] px-10 h-14 rounded-xl">Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -10,12 +9,16 @@ import {
   Plus, 
   Loader2,
   Zap,
-  ChevronRight
+  ChevronRight,
+  MoreVertical,
+  Edit3,
+  Trash2,
+  Archive
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, limit } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp, limit, doc } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { 
   Sheet, 
@@ -24,6 +27,12 @@ import {
   SheetTitle, 
   SheetDescription 
 } from "@/components/ui/sheet"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
@@ -31,7 +40,9 @@ import Link from "next/link"
 export default function CasesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeArea, setActiveArea] = useState("todos")
-  const [isNewProcessOpen, setIsNewProcessOpen] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [editingProcess, setEditingProcess] = useState<any>(null)
+  
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
@@ -59,32 +70,57 @@ export default function CasesPage() {
   const metrics = useMemo(() => {
     const total = processes.length
     const valorEmRisco = processes.reduce((acc, p) => {
-      const numericString = p.value
-        ?.replace(/\./g, '')
-        ?.replace(',', '.')
-        ?.replace(/[^\d.]/g, '') || "0"
-      return acc + parseFloat(numericString)
+      const val = typeof p.value === 'number' ? p.value : parseFloat(String(p.value || "0").replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, ''))
+      return acc + (isNaN(val) ? 0 : val)
     }, 0)
     const ticketMedio = total > 0 ? valorEmRisco / total : 0
     return { total, valorEmRisco, ticketMedio }
   }, [processes])
 
-  const handleCreateProcess = (data: any) => {
+  const handleOpenCreate = () => {
+    setEditingProcess(null)
+    setIsSheetOpen(true)
+  }
+
+  const handleOpenEdit = (proc: any) => {
+    setEditingProcess(proc)
+    setIsSheetOpen(true)
+  }
+
+  const handleSaveProcess = (data: any) => {
     if (!user || !db) return
-    const newProcess = {
-      ...data,
-      status: "Em Andamento",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }
-    addDocumentNonBlocking(collection(db!, "processes"), newProcess)
-      .then(() => {
-        setIsNewProcessOpen(false)
-        toast({
-          title: "Processo Protocolado",
-          description: `O dossiê ${data.processNumber} foi registrado com sucesso.`
-        })
+    
+    if (editingProcess) {
+      updateDocumentNonBlocking(doc(db!, "processes", editingProcess.id), {
+        ...data,
+        updatedAt: serverTimestamp(),
       })
+      toast({ title: "Processo Atualizado", description: "O dossiê foi devidamente retificado." })
+    } else {
+      addDocumentNonBlocking(collection(db!, "processes"), {
+        ...data,
+        status: "Em Andamento",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      toast({ title: "Processo Protocolado", description: "Novo dossiê registrado com sucesso." })
+    }
+    setIsSheetOpen(false)
+  }
+
+  const handleDeleteProcess = (id: string) => {
+    if (!db || !confirm("Deseja remover permanentemente este processo?")) return
+    deleteDocumentNonBlocking(doc(db!, "processes", id))
+    toast({ variant: "destructive", title: "Dossiê Removido", description: "O processo foi excluído da base tática." })
+  }
+
+  const handleArchiveProcess = (id: string) => {
+    if (!db) return
+    updateDocumentNonBlocking(doc(db!, "processes", id), {
+      status: "Arquivado",
+      updatedAt: serverTimestamp()
+    })
+    toast({ title: "Processo Arquivado", description: "O dossiê foi movido para o acervo passivo." })
   }
 
   const getDrawerWidthClass = () => {
@@ -126,7 +162,7 @@ export default function CasesPage() {
             />
           </div>
           <Button 
-            onClick={() => setIsNewProcessOpen(true)}
+            onClick={handleOpenCreate}
             className="gold-gradient text-background font-black gap-2 px-8 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
           >
             <Plus className="h-4 w-4" /> Novo Processo
@@ -188,9 +224,30 @@ export default function CasesPage() {
                     <h3 className="text-lg font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">{proc.description}</h3>
                     <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em]">{proc.court} • {proc.vara}</p>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground hover:text-primary">
-                    <ChevronRight className="h-6 w-6" />
-                  </Button>
+                  
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-white">
+                          <MoreVertical className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-[#0d121f] border-white/10 text-white">
+                        <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                          <Edit3 className="h-4 w-4" /> Editar Dossiê
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                          <Archive className="h-4 w-4" /> Arquivar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
+                          <Trash2 className="h-4 w-4" /> Excluir Permanentemente
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground hover:text-primary">
+                      <ChevronRight className="h-6 w-6" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -203,21 +260,22 @@ export default function CasesPage() {
         )}
       </div>
 
-      <Sheet open={isNewProcessOpen} onOpenChange={setIsNewProcessOpen}>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
-                Novo Processo
+                {editingProcess ? "Editar Processo" : "Novo Processo"}
               </SheetTitle>
               <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Cadastro estruturado no ecossistema RGMJ.
+                {editingProcess ? "Atualização de dados técnicos no ecossistema." : "Cadastro estruturado no ecossistema RGMJ."}
               </SheetDescription>
             </SheetHeader>
           </div>
           <ProcessForm 
-            onSubmit={handleCreateProcess}
-            onCancel={() => setIsNewProcessOpen(false)}
+            initialData={editingProcess}
+            onSubmit={handleSaveProcess}
+            onCancel={() => setIsSheetOpen(false)}
           />
         </SheetContent>
       </Sheet>

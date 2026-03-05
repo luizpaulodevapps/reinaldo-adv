@@ -1,11 +1,10 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, limit } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp, limit, doc } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { 
   Search, 
@@ -14,7 +13,10 @@ import {
   Loader2,
   Users,
   ChevronRight,
-  LayoutGrid
+  LayoutGrid,
+  MoreVertical,
+  Edit3,
+  Trash2
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -25,13 +27,21 @@ import {
   SheetTitle, 
   SheetDescription 
 } from "@/components/ui/sheet"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ClientForm } from "@/components/clients/client-form"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [isNewClientOpen, setIsNewClientOpen] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<any>(null)
+  
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
@@ -52,11 +62,21 @@ export default function ClientsPage() {
     )
   }, [clientsData, searchTerm])
 
-  const handleCreateClient = (data: any) => {
+  const handleOpenCreate = () => {
+    setEditingClient(null)
+    setIsSheetOpen(true)
+  }
+
+  const handleOpenEdit = (client: any) => {
+    setEditingClient(client)
+    setIsSheetOpen(true)
+  }
+
+  const handleSaveClient = (data: any) => {
     if (!user || !db) return
-    const fullName = `${data.firstName} ${data.lastName}`.trim()
-    const newClient = {
-      id: crypto.randomUUID(),
+    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.firstName
+    
+    const clientPayload = {
       name: fullName,
       documentNumber: data.cpf,
       email: data.email || "",
@@ -64,18 +84,28 @@ export default function ClientsPage() {
       type: data.personType === 'Pessoa Jurídica' ? 'corporate' : 'individual',
       status: data.registrationStatus,
       registrationData: data,
-      responsibleStaffIds: [user.uid],
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db!, "clients"), newClient)
-      .then(() => {
-        setIsNewClientOpen(false)
-        toast({
-          title: "Cliente Cadastrado",
-          description: `${fullName} agora faz parte da base RGMJ.`
-        })
+
+    if (editingClient) {
+      updateDocumentNonBlocking(doc(db!, "clients", editingClient.id), clientPayload)
+      toast({ title: "Cadastro Atualizado", description: `${fullName} teve seus dados retificados.` })
+    } else {
+      addDocumentNonBlocking(collection(db!, "clients"), {
+        ...clientPayload,
+        id: crypto.randomUUID(),
+        responsibleStaffIds: [user.uid],
+        createdAt: serverTimestamp(),
       })
+      toast({ title: "Cliente Cadastrado", description: `${fullName} agora faz parte da base RGMJ.` })
+    }
+    setIsSheetOpen(false)
+  }
+
+  const handleDeleteClient = (id: string) => {
+    if (!db || !confirm("Deseja remover este cliente permanentemente?")) return
+    deleteDocumentNonBlocking(doc(db!, "clients", id))
+    toast({ variant: "destructive", title: "Cliente Removido" })
   }
 
   const getDrawerWidthClass = () => {
@@ -114,7 +144,7 @@ export default function ClientsPage() {
             />
           </div>
           <Button 
-            onClick={() => setIsNewClientOpen(true)}
+            onClick={handleOpenCreate}
             className="gold-gradient text-background font-black gap-2 px-8 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
           >
             <UserPlus className="h-4 w-4" /> Novo Cliente
@@ -132,9 +162,26 @@ export default function ClientsPage() {
           filteredClients.map((client) => (
             <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl">
               <CardContent className="p-8 space-y-6">
-                <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{client.name}</h3>
-                  <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{client.name}</h3>
+                    <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
+                      <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                        <Edit3 className="h-4 w-4" /> Editar Cadastro
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
+                        <Trash2 className="h-4 w-4" /> Excluir Registro
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="flex items-center justify-between pt-6 border-t border-white/5">
                   <button className="flex items-center gap-2 text-[9px] font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.2em]">
@@ -153,21 +200,22 @@ export default function ClientsPage() {
         )}
       </div>
 
-      <Sheet open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
-                Novo Cliente
+                {editingClient ? "Editar Cliente" : "Novo Cliente"}
               </SheetTitle>
               <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Ficha de cadastro oficial da banca RGMJ.
+                {editingClient ? "Retificação de ficha de cadastro oficial." : "Ficha de cadastro oficial da banca RGMJ."}
               </SheetDescription>
             </SheetHeader>
           </div>
           <ClientForm 
-            onSubmit={handleCreateClient}
-            onCancel={() => setIsNewClientOpen(false)}
+            initialData={editingClient?.registrationData || editingClient}
+            onSubmit={handleSaveClient}
+            onCancel={() => setIsSheetOpen(false)}
           />
         </SheetContent>
       </Sheet>

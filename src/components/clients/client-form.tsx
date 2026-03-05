@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,11 +13,12 @@ import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebas
 import { collection, query } from "firebase/firestore"
 
 interface ClientFormProps {
+  initialData?: any
   onSubmit: (data: any) => void
   onCancel: () => void
 }
 
-export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
+export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps) {
   const { toast } = useToast()
   const db = useFirestore()
   const { user } = useUser()
@@ -66,6 +66,17 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
     pixKey: ""
   })
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData,
+        // Garante que o firstName seja o nome completo se for o caso de dados legados
+        firstName: initialData.firstName || initialData.name || "",
+      }))
+    }
+  }, [initialData])
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -106,6 +117,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
   }
 
   const checkDuplicate = () => {
+    if (initialData) return false; // Ignora check de duplicidade em edição
     const newDoc = formData.cpf.replace(/\D/g, "");
     if (!newDoc) return false;
     return (existingClients || []).some(c => (c.documentNumber || "").replace(/\D/g, "") === newDoc);
@@ -202,7 +214,9 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
       <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between">
         <Button variant="ghost" onClick={onCancel} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14">Cancelar</Button>
-        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-14 px-14 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest transition-all">Salvar Cadastro Estratégico</Button>
+        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-14 px-14 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest transition-all">
+          {initialData ? "Atualizar Ficha Estratégica" : "Salvar Cadastro Estratégico"}
+        </Button>
       </div>
     </div>
   )

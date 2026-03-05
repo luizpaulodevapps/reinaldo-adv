@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,11 +21,12 @@ import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebas
 import { collection, query, orderBy } from "firebase/firestore"
 
 interface FinancialTitleFormProps {
+  initialData?: any
   onSubmit: (data: any) => void
   onCancel: () => void
 }
 
-export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormProps) {
+export function FinancialTitleForm({ initialData, onSubmit, onCancel }: FinancialTitleFormProps) {
   const db = useFirestore()
   const { user } = useUser()
   const [loading, setLoading] = useState(false)
@@ -40,8 +40,19 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
     value: "0,00",
     dueDate: new Date().toISOString().split('T')[0],
     isRecurring: false,
-    recurrenceMonths: 1
+    recurrenceMonths: 1,
+    status: "Pendente"
   })
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        ...formData,
+        ...initialData,
+        value: (initialData.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+      })
+    }
+  }, [initialData])
 
   const canQuery = !!user && !!db
 
@@ -63,7 +74,7 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
     onSubmit({
       ...formData,
       numericValue: parseFloat(formData.value.replace(/\./g, '').replace(',', '.')),
-      status: formData.type.includes("Entrada") ? "Recebido" : "Pendente"
+      status: formData.status || (formData.type.includes("Entrada") ? "Recebido" : "Pendente")
     })
   }
 
@@ -168,7 +179,7 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
           className="w-full md:w-[320px] h-16 gold-gradient text-background font-black uppercase text-[12px] tracking-widest shadow-2xl rounded-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-          REGISTRAR NO FLUXO
+          {initialData ? "ATUALIZAR REGISTRO" : "REGISTRAR NO FLUXO"}
         </Button>
       </div>
     </div>

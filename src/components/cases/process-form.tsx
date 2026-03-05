@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,6 +30,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 
 interface ProcessFormProps {
+  initialData?: any
   onSubmit: (data: any) => void
   onCancel: () => void
 }
@@ -44,7 +44,7 @@ const steps = [
   { id: 6, label: "ESTRATÉGIA", icon: Target },
 ]
 
-export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
+export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
   const [showResults, setShowResults] = useState(false)
@@ -73,6 +73,15 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
     description: "",
     strategyNotes: ""
   })
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        ...formData,
+        ...initialData
+      })
+    }
+  }, [initialData])
 
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -117,7 +126,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
       const newClient = {
         name: quickClientData.name.toUpperCase(),
         documentNumber: quickClientData.cpf,
-        type: quickClientData.cpf.replace(/\D/g, "").length > 11 ? 'corporate' : 'individual',
+        type: (quickClientData.cpf || "").replace(/\D/g, "").length > 11 ? 'corporate' : 'individual',
         status: 'Ativo',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -232,7 +241,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                       <div className="max-h-[300px] overflow-y-auto">
                         {filteredClients.length > 0 ? (
                           filteredClients.map(c => (
-                            <button key={c.id} onClick={() => { handleInputChange("clientId", c.id); handleInputChange("clientName", c.name); setShowResults(false); }} className="w-full p-5 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group">
+                            <button type="button" key={c.id} onClick={() => { handleInputChange("clientId", c.id); handleInputChange("clientName", c.name); setShowResults(false); }} className="w-full p-5 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group">
                               <div>
                                 <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{c.name}</p>
                                 <p className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{c.documentNumber}</p>
@@ -367,7 +376,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
           </Button>
         ) : (
           <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background h-14 px-14 gap-3 uppercase font-black text-[11px] tracking-widest rounded-xl shadow-2xl">
-            Protocolar Processo <CheckCircle2 className="h-5 w-5" />
+            {initialData ? "Atualizar Dossiê" : "Protocolar Processo"} <CheckCircle2 className="h-5 w-5" />
           </Button>
         )}
       </div>
