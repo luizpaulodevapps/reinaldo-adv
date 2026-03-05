@@ -424,6 +424,10 @@ export default function LeadsPage() {
                         {isSyncingDrive ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudLightning className="h-3 w-3" />} SINCRONIZAR DRIVE
                       </Button>
 
+                      <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-9 border-white/10 bg-white/5 text-white hover:bg-white/10 text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg">
+                        <UserPlus className="h-3 w-3" /> EDITAR CADASTRO
+                      </Button>
+
                       <div className="flex p-0.5 rounded-lg bg-black/40 border border-white/5 ml-auto overflow-hidden">
                         {columns.map(c => (
                           <button 
