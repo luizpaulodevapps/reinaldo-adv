@@ -13,7 +13,7 @@ import { Search, Loader2, Plus, Video, Link as LinkIcon, Building } from "lucide
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { validateCPF, validateCNPJ } from "@/lib/utils"
+import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
 
 interface Lead {
   id: string
