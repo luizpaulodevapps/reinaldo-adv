@@ -277,7 +277,19 @@ function SettingsContent() {
 
   const handleOpenCreateMessage = () => {
     setEditingMessage(null)
-    loadDefaultTemplate("Audiência Virtual")
+    // Inicializa com campos vazios para criação personalizada, 
+    // mas o usuário pode usar o seletor de pre-set depois.
+    setMessageFormData({
+      profileName: "",
+      eventType: "Audiência Virtual",
+      calendarTemplate: "",
+      clientTemplate: "",
+      isActive: true,
+      reminderMinutes: 60,
+      calendarColorId: "1",
+      useMeetLink: true,
+      sendWhatsApp: true
+    })
     setIsMessageDialogOpen(true)
   }
 
@@ -290,6 +302,7 @@ function SettingsContent() {
         eventType: type,
         isActive: true
       })
+      toast({ title: `Modelo de ${type} Carregado` })
     }
   }
 
@@ -301,7 +314,7 @@ function SettingsContent() {
 
   const handleInjectTag = (tag: string) => {
     const field = lastFocusedField === "calendar" ? "calendarTemplate" : "clientTemplate"
-    const currentValue = messageFormData[field as keyof typeof messageFormData] as string
+    const currentValue = (messageFormData[field as keyof typeof messageFormData] || "") as string
     setMessageFormData(prev => ({
       ...prev,
       [field]: currentValue + ` ${tag}`
@@ -309,7 +322,10 @@ function SettingsContent() {
   }
 
   const handleSaveMessageTemplate = () => {
-    if (!db || !messageFormData.profileName) return
+    if (!db || !messageFormData.profileName) {
+      toast({ variant: "destructive", title: "Nome do perfil é obrigatório" })
+      return
+    }
     const payload = {
       ...messageFormData,
       profileName: messageFormData.profileName.toUpperCase(),
@@ -365,6 +381,7 @@ function SettingsContent() {
           ))}
         </TabsList>
 
+        {/* ... (Tabs de Perfil, Temas e Google mantidas conforme implementação anterior) */}
         <TabsContent value="perfil" className="mt-0 space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]">
@@ -524,11 +541,11 @@ function SettingsContent() {
         <TabsContent value="notificacoes" className="mt-0 space-y-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1">
-              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Perfis de Mensagem</h2>
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">NOTIFICAÇÕES PERSONALIZADAS GOOGLE & WHATSAPP.</p>
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Perfis de Notificação</h2>
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">BALIZADORES PARA ATOS FÍSICOS E VIRTUAIS.</p>
             </div>
             <Button onClick={handleOpenCreateMessage} className="gold-gradient font-black text-[11px] uppercase tracking-widest h-14 px-10 rounded-xl gap-3 shadow-xl">
-              <Plus className="h-5 w-5" /> Novo Perfil
+              <Plus className="h-5 w-5" /> Novo Perfil Tático
             </Button>
           </div>
 
@@ -612,7 +629,7 @@ function SettingsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Notificação (Scroll-Lock UX) */}
+      {/* Dialog Notificação (SCROLL-LOCK UX) */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1150px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col">
           {/* HEADER FIXO */}
@@ -622,7 +639,7 @@ function SettingsContent() {
                 {editingMessage ? "Editar Perfil" : "Novo Perfil de Notificação"}
               </DialogTitle>
               <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                Construção de narrativas estratégicas para atos físicos e virtuais.
+                Balizador de narrativas estratégicas para automação Google & WhatsApp.
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center gap-4">
@@ -648,18 +665,18 @@ function SettingsContent() {
           
           {/* CORPO CENTRAL COM GRID E SCROLL INDEPENDENTE */}
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
-            {/* COLUNA DE FORMULÁRIO */}
+            {/* COLUNA DE FORMULÁRIO (SCROLL INDEPENDENTE) */}
             <div className="lg:col-span-8 h-full flex flex-col border-r border-white/5 bg-[#0a0f1e]/50 overflow-hidden">
               <ScrollArea className="flex-1 h-full">
                 <div className="p-10 space-y-10 pb-32">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL *</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL (EX: INICIAL TRABALHISTA) *</Label>
                       <Input value={messageFormData.profileName} onChange={(e) => setMessageFormData({...messageFormData, profileName: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white font-black" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE ATO</Label>
-                      <Select value={messageFormData.eventType} onValueChange={(v) => loadDefaultTemplate(v)}>
+                      <Select value={messageFormData.eventType} onValueChange={(v) => setMessageFormData({...messageFormData, eventType: v})}>
                         <SelectTrigger className="glass border-white/10 h-12 text-white font-black uppercase text-[10px]"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-[#0d121f] text-white">
                           <SelectItem value="Audiência Física">🏛️ AUDIÊNCIA FÍSICA</SelectItem>
@@ -701,7 +718,7 @@ function SettingsContent() {
                     </div>
                     <div className="space-y-3 relative z-10">
                       <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Descrição Técnica (Agenda Interna)</Label>
-                      <Textarea onFocus={() => setLastFocusedField("calendar")} value={messageFormData.calendarTemplate} onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs font-mono leading-relaxed" />
+                      <Textarea onFocus={() => setLastFocusedField("calendar")} value={messageFormData.calendarTemplate} onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs font-mono leading-relaxed resize-none" />
                     </div>
                   </div>
 
@@ -716,14 +733,14 @@ function SettingsContent() {
                     </div>
                     <div className="space-y-3 relative z-10">
                       <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Script Estratégico (WhatsApp/Email)</Label>
-                      <Textarea onFocus={() => setLastFocusedField("client")} value={messageFormData.clientTemplate} onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs leading-relaxed" />
+                      <Textarea onFocus={() => setLastFocusedField("client")} value={messageFormData.clientTemplate} onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs leading-relaxed resize-none" />
                     </div>
                   </div>
                 </div>
               </ScrollArea>
             </div>
 
-            {/* COLUNA DE TAGS */}
+            {/* COLUNA DE TAGS (SCROLL INDEPENDENTE) */}
             <div className="lg:col-span-4 h-full bg-black/40 flex flex-col border-l border-white/5 overflow-hidden">
               <div className="p-8 border-b border-white/5 flex-none bg-black/20">
                 <div className="flex items-center gap-3 mb-2">
