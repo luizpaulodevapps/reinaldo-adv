@@ -7,23 +7,14 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { 
   Settings as SettingsIcon,
   ChevronRight,
   LayoutGrid,
   Save,
   Loader2,
-  Trash2,
   User
 } from "lucide-react"
-import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
-
 import { 
   Select, 
   SelectContent, 
@@ -31,6 +22,12 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
+import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
+import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
 function SettingsContent() {
   const { toast } = useToast()

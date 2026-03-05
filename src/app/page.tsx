@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from 'next/link'
@@ -12,14 +11,10 @@ import {
   MessageSquare, 
   Calendar,
   Gavel,
-  CheckCircle,
-  FileText,
   Briefcase,
   Phone,
   Mail,
   MapPin,
-  Brain,
-  Target,
   Zap
 } from 'lucide-react'
 
@@ -54,7 +49,7 @@ export default function HomePage() {
           <div className="hidden md:flex items-center gap-12 text-[10px] font-black tracking-[0.4em] uppercase text-muted-foreground">
             <Link href="#sobre" className="hover:text-[#D4AF37] transition-colors">A Banca</Link>
             <Link href="#areas" className="hover:text-[#D4AF37] transition-colors">Especialidades</Link>
-            <Link href="#workflow" className="hover:text-[#D4AF37] transition-colors">Metodologia</Link>
+            <Link href="#contato" className="hover:text-[#D4AF37] transition-colors">Contato</Link>
             <Link href="/login">
               <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-xl px-8 text-[9px] font-black uppercase tracking-widest transition-all h-10">
                 Portal de Comando
@@ -68,24 +63,15 @@ export default function HomePage() {
       <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Background image */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40"
           style={{ backgroundImage: "url('/image/hero-bg.jpg')" }}
         />
         {/* Overlay */}
-        <div className="absolute inset-0 bg-[#050a19]/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050a19]/20 via-[#050a19]/80 to-[#050a19]" />
         
         {/* Decorative elements */}
         <div className="absolute left-[10%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/15 to-transparent hidden lg:block" />
         <div className="absolute right-[15%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/8 to-transparent hidden lg:block" />
-
-        <div className="absolute top-32 left-[10%] hidden lg:block">
-          <div className="w-20 h-px bg-[#D4AF37]/20" />
-          <div className="w-px h-20 bg-[#D4AF37]/20" />
-        </div>
-        <div className="absolute bottom-20 right-[10%] hidden lg:block">
-          <div className="w-20 h-px bg-[#D4AF37]/20 ml-auto" />
-          <div className="w-px h-20 bg-[#D4AF37]/20 ml-auto" />
-        </div>
 
         <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 pt-20 w-full">
           <div className="max-w-4xl">
@@ -150,17 +136,6 @@ export default function HomePage() {
               </motion.div>
             </motion.div>
           </div>
-
-          {/* Bottom decorative */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.5 }}
-            className="absolute bottom-10 left-6 lg:left-16 flex items-center gap-4"
-          >
-            <span className="text-white/25 font-body text-[10px] tracking-[0.3em] uppercase">OAB/SP 497650</span>
-            <div className="w-24 h-px bg-[#D4AF37]/15" />
-          </motion.div>
         </div>
       </section>
 
@@ -182,81 +157,15 @@ export default function HomePage() {
               <div className="absolute -inset-2 border border-primary/40 pointer-events-none" />
               <div className="absolute -inset-4 border border-primary/10 pointer-events-none" />
             </div>
-            <div className="absolute -bottom-10 -right-10 bg-gradient-to-r from-[#F5D030] to-[#B8860B] p-10 hidden md:block shadow-2xl">
-              <p className="text-[#050a19] text-6xl font-display font-black italic">08</p>
-              <p className="text-[#050a19] text-[10px] font-black uppercase tracking-[0.2em] mt-2">Anos de Prática de Elite</p>
-            </div>
           </motion.div>
 
           <div className="space-y-12">
             <Badge className="bg-primary/10 text-primary border-primary/20 px-8 py-2 text-[10px] font-black uppercase tracking-[0.4em] rounded-none">A BANCA</Badge>
             <h2 className="text-6xl md:text-8xl font-display font-bold leading-[1.1] tracking-tighter">Tradição que se une à <span className="italic font-light text-[#D4AF37]">Modernidade Jurídica</span></h2>
             <p className="text-white/50 leading-relaxed text-xl font-light font-body">
-              Comandada pelo Dr. Reinaldo Gonçalves Miguel de Jesus, nossa banca é reconhecida pela combatividade e precisão técnica. Focamos em entregar resultados que transcendem o processo judicial, protegendo o patrimônio e a dignidade de nossos constituintes.
+              Comandada pelo Dr. Reinaldo Gonçalves Miguel de Jesus, nossa banca é reconhecida pela combatividade e precisão técnica. Focamos em entregar resultados que transcendem o processo judicial.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-8">
-              <div className="space-y-4 border-l border-primary/30 pl-8">
-                <h4 className="text-primary font-display text-2xl font-bold italic">Visão Analítica</h4>
-                <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em] leading-loose">Decisões baseadas em dados e jurisprudência de última instância.</p>
-              </div>
-              <div className="space-y-4 border-l border-primary/30 pl-8">
-                <h4 className="text-primary font-display text-2xl font-bold italic">Defesa Intransigente</h4>
-                <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em] leading-loose">Proteção máxima dos ativos e direitos fundamentais.</p>
-              </div>
-            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Areas Section */}
-      <section id="areas" className="py-40 px-6 bg-[#080d1f] relative">
-        <div className="max-w-7xl mx-auto space-y-24">
-          <div className="text-center space-y-6 max-w-3xl mx-auto">
-            <h2 className="text-6xl md:text-9xl font-display font-bold tracking-tighter">Áreas de <span className="italic font-light text-[#D4AF37]">Domínio</span></h2>
-            <p className="text-primary tracking-[0.6em] text-[10px] uppercase font-black">Especialistas em casos de alta complexidade</p>
-          </div>
-
-          <motion.div 
-            variants={stagger}
-            initial="initial"
-            whileInView="animate"
-            className="grid md:grid-cols-3 gap-8"
-          >
-            {[
-              { 
-                title: "Direito Trabalhista", 
-                desc: "Atuação estratégica em rescisões indiretas, horas extras complexas e assédio moral corporativo.",
-                icon: Gavel
-              },
-              { 
-                title: "Direito Civil", 
-                desc: "Gestão de contratos, responsabilidade civil e litígios de alta expressão econômica.",
-                icon: ShieldCheck
-              },
-              { 
-                title: "Empresarial", 
-                desc: "Consultoria preventiva e defesa institucional para corporações e holdings de elite.",
-                icon: Briefcase
-              }
-            ].map((area, i) => (
-              <motion.div 
-                key={i} 
-                variants={fadeInUp}
-                className="bg-white/[0.02] backdrop-blur-xl border border-white/5 p-16 space-y-10 group relative overflow-hidden transition-all duration-500 hover:border-primary/40 shadow-[0_0_30px_rgba(212,175,55,0.05)]"
-              >
-                <div className="w-16 h-16 bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:border-primary/40 transition-all rounded-xl">
-                  <area.icon className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-4xl font-display font-bold uppercase tracking-tight">{area.title}</h3>
-                <p className="text-white/40 text-sm leading-relaxed font-light font-body">{area.desc}</p>
-                <div className="pt-6">
-                  <Link href="#" className="text-[10px] font-black text-primary uppercase tracking-[0.4em] flex items-center gap-3 group/link transition-all">
-                    EXPLORAR TESE <ArrowRight className="h-3.5 w-3.5 group-hover/link:translate-x-3 transition-transform" />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
         </div>
       </section>
 
@@ -270,9 +179,6 @@ export default function HomePage() {
               </div>
               <span className="text-2xl font-display font-bold tracking-[0.2em] uppercase">RGMJ Elite</span>
             </div>
-            <p className="text-white/40 max-w-md text-base leading-loose font-light font-body">
-              Escritório boutique focado em alta performance e soluções jurídicas customizadas. Atendimento exclusivo para clientes que buscam a excelência em todo o território nacional.
-            </p>
           </div>
 
           <div className="space-y-8">
@@ -286,26 +192,7 @@ export default function HomePage() {
                 <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-primary/40"><Mail className="h-3.5 w-3.5" /></div>
                 reinaldo@rgmj.adv.br
               </li>
-              <li className="flex items-center gap-4 group cursor-pointer hover:text-primary transition-colors">
-                <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-primary/40"><MapPin className="h-3.5 w-3.5" /></div>
-                Vila Olímpia, São Paulo - SP
-              </li>
             </ul>
-          </div>
-
-          <div className="space-y-8 text-right">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary">SISTEMAS</h4>
-            <ul className="space-y-6 text-xs font-black uppercase tracking-[0.3em] text-white/20">
-              <li><Link href="/login" className="hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Acesso Corporativo</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors border-b border-transparent hover:border-primary pb-1">Compliance & LGPD</Link></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-32 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
-          <p>© 2025 RGMJ ADVOCACIA DE ELITE. TODOS OS DIREITOS RESERVADOS.</p>
-          <div className="flex gap-8">
-            <span>OAB/SP 497650</span>
-            <span>CNPJ: 00.000.000/0001-00</span>
           </div>
         </div>
       </footer>

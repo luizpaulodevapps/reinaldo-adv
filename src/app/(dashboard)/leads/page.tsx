@@ -27,14 +27,14 @@ import {
   Sheet, 
   SheetContent, 
   SheetHeader, 
-  SheetTitle,
+  SheetTitle, 
   SheetDescription,
 } from "@/components/ui/sheet"
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle,
+  DialogTitle, 
   DialogDescription,
   DialogFooter 
 } from "@/components/ui/dialog"
@@ -58,13 +58,6 @@ const columns = [
   { id: "burocracia", title: "BUROCRACIA", color: "text-emerald-400" },
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
-
-const DOCUMENT_KITS: Record<string, string[]> = {
-  "Trabalhista": ["Contrato de Honorários", "Procuração Ad Judicia", "Declaração de Hipossuficiência", "Cálculos Prévios"],
-  "Civil": ["Contrato de Honorários", "Procuração Ad Judicia", "Kit de Documentos Pessoais"],
-  "Previdenciário": ["Contrato de Honorários", "Procuração", "CNIS Atualizado", "Laudo Médico"],
-  "Empresarial": ["Contrato de Prestação de Serviços", "Estatuto Social", "Certidões Negativas"],
-}
 
 export default function LeadsPage() {
   const db = useFirestore()
