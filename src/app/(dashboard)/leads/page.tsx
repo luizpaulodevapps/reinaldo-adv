@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -30,7 +29,9 @@ import {
   Trash2,
   ExternalLink,
   Edit3,
-  Save
+  Save,
+  Video,
+  Link as LinkIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -46,7 +47,6 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -82,30 +82,25 @@ export default function LeadsPage() {
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
 
-  // Estados
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   
-  // Entrevistas
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
   const [isAiLoading, setIsAiLoading] = useState(false)
 
-  // Edição de Entrevista
   const [isEditInterviewOpen, setIsEditInterviewOpen] = useState(false)
   const [interviewToEdit, setInterviewToEdit] = useState<any>(null)
   const [editResponses, setEditResponses] = useState<Record<string, any>>({})
 
-  // Busca Templates
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "checklists"), orderBy("title", "asc"))
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
-  // Busca Entrevistas do Lead Selecionado
   const leadInterviewsQuery = useMemoFirebase(() => {
     if (!user || !db || !selectedLead) return null
     return query(
@@ -153,7 +148,7 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp()
     })
     setSelectedLead({ ...selectedLead, status })
-    toast({ title: "Fluxo Atualizado", description: `O lead foi movido para ${status.toUpperCase()}.` })
+    toast({ title: "Fluxo Atualizado", description: `Mover para ${status.toUpperCase()}.` })
   }
 
   const handleDeleteLead = async () => {
@@ -172,7 +167,6 @@ export default function LeadsPage() {
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !selectedLead || !user) return
-
     const interviewData = {
       clientId: selectedLead.id,
       clientName: selectedLead.name,
@@ -186,112 +180,20 @@ export default function LeadsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
-    
     await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
       status: "atendimento",
       updatedAt: serverTimestamp()
     })
-
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
-    toast({ title: "Entrevista Concluída", description: "Dados injetados no dossiê." })
-  }
-
-  // Funções de Edição e Exclusão de Entrevista
-  const handleDeleteInterview = async (id: string) => {
-    if (!db || !confirm("Deseja remover permanentemente esta entrevista?")) return
-    await deleteDocumentNonBlocking(doc(db!, "interviews", id))
-    toast({ variant: "destructive", title: "Entrevista Removida", description: "O registro foi excluído da base." })
-  }
-
-  const handleOpenEditInterview = (interview: any) => {
-    setInterviewToEdit(interview)
-    setEditResponses({ ...interview.responses })
-    setIsEditInterviewOpen(true)
-  }
-
-  const handleSaveInterviewEdit = async () => {
-    if (!db || !interviewToEdit) return
-    await updateDocumentNonBlocking(doc(db!, "interviews", interviewToEdit.id), {
-      responses: editResponses,
-      updatedAt: serverTimestamp()
-    })
-    setIsEditInterviewOpen(false)
-    setInterviewToEdit(null)
-    toast({ title: "Entrevista Atualizada", description: "As respostas foram salvas com sucesso." })
-  }
-
-  const handleGenerateAiSummary = async () => {
-    if (!selectedLead || !leadInterviews || leadInterviews.length === 0) return
-    
-    setIsAiLoading(true)
-    try {
-      const lastInterview = leadInterviews[0]
-      const selectedAnswers = Object.entries(lastInterview.responses).map(([question, answer]) => {
-        const field = lastInterview.templateSnapshot?.find((f: any) => f.label === question)
-        return {
-          question,
-          answer: String(answer),
-          priority: field?.reusePriority || "media",
-          target: field?.reuseTarget || "caseDetails"
-        }
-      })
-
-      const summary = await aiSummarizeInterviewCaseDetails({
-        legalArea: selectedLead.type || "Trabalhista",
-        leadName: selectedLead.name,
-        selectedAnswers
-      })
-
-      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
-        aiSummary: summary.caseDetails,
-        updatedAt: serverTimestamp()
-      })
-
-      setSelectedLead((prev: any) => ({ ...prev, aiSummary: summary.caseDetails }))
-      toast({ title: "Síntese IA Concluída", description: "O resumo estratégico foi atualizado." })
-    } catch (error) {
-      toast({ variant: "destructive", title: "Falha na IA", description: "Não foi possível consolidar os fatos." })
-    } finally {
-      setIsAiLoading(false)
-    }
-  }
-
-  const handleConvertToProcess = async () => {
-    if (!selectedLead || !db || !user) return
-
-    const confirmConvert = confirm("Deseja converter este atendimento em um processo judicial ativo?")
-    if (!confirmConvert) return
-
-    const processData = {
-      clientId: selectedLead.id,
-      clientName: selectedLead.name,
-      description: `RECLAMAÇÃO TRABALHISTA - ${selectedLead.name}`,
-      caseType: selectedLead.type || "Trabalhista",
-      status: "Em Andamento",
-      responsibleStaffId: user.uid,
-      strategyNotes: selectedLead.aiSummary || "",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }
-
-    await addDocumentNonBlocking(collection(db!, "processes"), processData)
-    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
-      status: "distribuicao",
-      convertedToProcess: true,
-      updatedAt: serverTimestamp()
-    })
-
-    setIsSheetOpen(false)
-    toast({ title: "Atendimento Convertido", description: "Dossiê migrado para a pauta de processos." })
+    toast({ title: "Entrevista Registrada" })
   }
 
   const handleWhatsApp = () => {
     if (!selectedLead?.phone) return
     const phone = selectedLead.phone.replace(/\D/g, "")
-    const text = encodeURIComponent(`Olá ${selectedLead.name}, aqui é da RGMJ Advogados. Gostaria de dar continuidade ao seu atendimento.`)
+    const text = encodeURIComponent(`Olá ${selectedLead.name}, aqui é da RGMJ Advogados. Gostaria de agendar seu atendimento.`)
     window.open(`https://wa.me/55${phone}?text=${text}`, "_blank")
   }
 
@@ -305,10 +207,10 @@ export default function LeadsPage() {
             <LayoutGrid className="h-3 w-3" />
             <Link href="/" className="hover:text-primary transition-colors">Início</Link>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Triagem & Funil</span>
+            <span className="text-white uppercase tracking-tighter">Funil de Leads</span>
           </div>
           <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">Leads</h1>
-          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Triagem Estratégica RGMJ Elite.</p>
+          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Triagem Estratégica RGMJ.</p>
         </div>
         <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-background font-black gap-3 px-8 h-12 rounded-xl shadow-xl">
           <PlusCircle className="h-5 w-5" /> NOVO ATENDIMENTO
@@ -339,19 +241,7 @@ export default function LeadsPage() {
                       <CardContent className="p-5 space-y-4">
                         <div className="flex items-start justify-between gap-2">
                           <div className="font-bold text-base text-white group-hover:text-primary transition-colors uppercase tracking-tight flex-1 truncate">{lead.name}</div>
-                          {lead.meetingType && (
-                            <span className="text-lg" title={
-                              lead.meetingType === 'online' ? 'Online' :
-                              lead.meetingType === 'presencial' ? 'Presencial' :
-                              lead.meetingType === 'domicilio' ? 'Na Casa do Cliente' :
-                              'Outro Local'
-                            }>
-                              {lead.meetingType === 'online' && '🖥️'}
-                              {lead.meetingType === 'presencial' && '🏢'}
-                              {lead.meetingType === 'domicilio' && '🏡'}
-                              {lead.meetingType === 'externo' && '📍'}
-                            </span>
-                          )}
+                          {lead.meetingType === 'online' && <Video className="h-4 w-4 text-primary animate-pulse" />}
                         </div>
                         {lead.scheduledDate && (
                           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
@@ -381,19 +271,13 @@ export default function LeadsPage() {
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>{selectedLead?.name || "Dossiê do Lead"}</SheetTitle>
-            <SheetDescription>Visão estratégica do atendimento.</SheetDescription>
-          </SheetHeader>
-          
+          <SheetHeader className="sr-only"><SheetTitle>{selectedLead?.name}</SheetTitle><SheetDescription>Dossiê Lead</SheetDescription></SheetHeader>
           {selectedLead && (
             <div className="flex flex-col h-full overflow-hidden">
               <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">
-                      {normalizeLeadStatus(selectedLead.status).toUpperCase()}
-                    </Badge>
+                    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">{normalizeLeadStatus(selectedLead.status).toUpperCase()}</Badge>
                     <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
                     <div className="flex items-center gap-4 mt-4">
                       <Button onClick={handleWhatsApp} variant="outline" className="h-10 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[9px] font-black uppercase gap-2 tracking-widest">
@@ -401,46 +285,13 @@ export default function LeadsPage() {
                       </Button>
                       <div className="flex gap-1">
                         {columns.map(c => (
-                          <Button 
-                            key={c.id} 
-                            onClick={() => handleUpdateStatus(c.id)}
-                            variant="ghost" 
-                            className={cn(
-                              "h-10 text-[8px] font-black uppercase tracking-tighter px-3 border border-white/5",
-                              selectedLead.status === c.id ? "bg-white/10 text-white" : "text-muted-foreground"
-                            )}
-                          >
-                            {c.title}
-                          </Button>
+                          <Button key={c.id} onClick={() => handleUpdateStatus(c.id)} variant="ghost" className={cn("h-10 text-[8px] font-black uppercase tracking-tighter px-3 border border-white/5", selectedLead.status === c.id ? "bg-white/10 text-white" : "text-muted-foreground")}>{c.title}</Button>
                         ))}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleConvertToProcess} 
-                      className="gold-gradient text-background font-black gap-2 h-12 px-6 rounded-xl uppercase text-[10px] tracking-widest shadow-xl"
-                    >
-                      <Scale className="h-4 w-4" /> Converter em Processo
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)} className="h-12 w-12 text-white/20 hover:text-white">
-                      <X className="h-6 w-6" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Phone className="h-4 w-4 text-muted-foreground" /></div>
-                    <div><p className="text-[8px] font-black text-muted-foreground uppercase">WhatsApp</p><p className="text-xs font-bold text-white">{selectedLead.phone}</p></div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Mail className="h-4 w-4 text-muted-foreground" /></div>
-                    <div><p className="text-[8px] font-black text-muted-foreground uppercase">Email</p><p className="text-xs font-bold text-white">{selectedLead.email || "NÃO INFORMADO"}</p></div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
-                    <div><p className="text-[8px] font-black text-muted-foreground uppercase">Localidade</p><p className="text-xs font-bold text-white">{selectedLead.city || "N/A"} - {selectedLead.state || "N/A"}</p></div>
+                    <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)} className="h-12 w-12 text-white/20 hover:text-white"><X className="h-6 w-6" /></Button>
                   </div>
                 </div>
               </div>
@@ -451,172 +302,52 @@ export default function LeadsPage() {
                     <TabsList className="bg-transparent border-b border-white/5 h-12 w-full justify-start rounded-none p-0 gap-8">
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
-                      <TabsTrigger value="dados" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">DADOS CAPTURADOS</TabsTrigger>
-                      <TabsTrigger value="ferramentas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all text-rose-400">GESTÃO</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="overview" className="space-y-10 focus:ring-0">
-                      {/* SEÇÃO DE AGENDAMENTO */}
+                    <TabsContent value="overview" className="space-y-10">
                       {(selectedLead.scheduledDate || selectedLead.meetingType) && (
                         <div className="space-y-4">
-                          <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                            <Clock className="h-4 w-4" /> Agendamento do Atendimento
-                          </h4>
+                          <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-4 w-4" /> Dados do Agendamento</h4>
                           <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              {selectedLead.scheduledDate && (
-                                <div>
-                                  <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">Data</p>
-                                  <p className="text-sm font-bold text-white">{new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')}</p>
-                                </div>
-                              )}
-                              {selectedLead.scheduledTime && (
-                                <div>
-                                  <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">Horário</p>
-                                  <p className="text-sm font-bold text-white">{selectedLead.scheduledTime}</p>
-                                </div>
-                              )}
-                              {selectedLead.meetingType && (
-                                <div>
-                                  <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">Tipo</p>
-                                  <p className="text-sm font-bold text-white">
-                                    {selectedLead.meetingType === 'online' && '🖥️ Online'}
-                                    {selectedLead.meetingType === 'presencial' && '🏢 Presencial'}
-                                    {selectedLead.meetingType === 'domicilio' && '🏡 Na Casa do Cliente'}
-                                    {selectedLead.meetingType === 'externo' && '📍 Outro Local'}
-                                  </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="space-y-4">
+                                <div><p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-1">DATA E HORA</p><p className="text-sm font-bold text-white uppercase">{new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} ÀS {selectedLead.scheduledTime || "--:--"}</p></div>
+                                <div><p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-1">TIPO</p><p className="text-sm font-bold text-white uppercase">{selectedLead.meetingType === 'online' ? '🖥️ VIDEOCHAMADA' : '🏢 PRESENCIAL'}</p></div>
+                              </div>
+                              {selectedLead.meetingType === 'online' && selectedLead.meetingLink && (
+                                <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 space-y-3">
+                                  <p className="text-[8px] font-black text-primary uppercase tracking-widest flex items-center gap-2"><Video className="h-3 w-3" /> CANAL DE ATENDIMENTO</p>
+                                  <a href={selectedLead.meetingLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[10px] font-black text-white hover:text-primary transition-colors truncate">
+                                    <LinkIcon className="h-3 w-3" /> {selectedLead.meetingLink}
+                                  </a>
+                                  <Button asChild variant="outline" className="w-full h-10 border-primary/30 text-primary text-[10px] font-black uppercase hover:bg-primary hover:text-background">
+                                    <a href={selectedLead.meetingLink} target="_blank" rel="noreferrer">INICIAR CHAMADA AGORA</a>
+                                  </Button>
                                 </div>
                               )}
                             </div>
                           </div>
                         </div>
                       )}
-
+                      
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                            <Brain className="h-4 w-4 text-primary" /> Consolidação Gemini RGMJ
-                          </h4>
-                          <Button 
-                            onClick={handleGenerateAiSummary} 
-                            disabled={isAiLoading || !leadInterviews?.length}
-                            variant="outline" 
-                            className="h-10 text-[9px] font-black uppercase border-primary/20 text-primary gap-2"
-                          >
-                            {isAiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            GERAR RESUMO ESTRATÉGICO
-                          </Button>
-                        </div>
-                        
-                        {selectedLead.aiSummary ? (
-                          <div className="p-8 rounded-2xl bg-primary/5 border border-primary/10 font-serif text-white/80 leading-relaxed whitespace-pre-wrap text-justify shadow-2xl">
-                            {selectedLead.aiSummary}
-                          </div>
-                        ) : (
-                          <div className="py-20 text-center glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
-                            <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Aguardando conclusão de entrevista para síntese.</p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" /> Briefing do Comercial
-                        </h4>
-                        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-sm text-muted-foreground leading-relaxed">
-                          {selectedLead.notes || "Nenhuma nota inserida na triagem inicial."}
+                        <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><Brain className="h-4 w-4 text-primary" /> Síntese RGMJ IA</h4>
+                        <div className="p-8 rounded-2xl bg-primary/5 border border-primary/10 font-serif text-white/80 leading-relaxed whitespace-pre-wrap text-justify">
+                          {selectedLead.aiSummary || "Aguardando conclusão de entrevista para consolidação de fatos."}
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="space-y-8">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-black text-white uppercase tracking-widest">Linha do Tempo Técnica</h4>
-                        <div className="flex gap-2 flex-wrap">
-                          {templates?.map(t => (
-                            <Button key={t.id} onClick={() => handleStartInterview(t)} size="sm" variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary h-9">
-                              EXECUTAR: {t.legalArea || "GERAL"}
-                            </Button>
-                          ))}
+                    <TabsContent value="entrevistas" className="space-y-6">
+                      {leadInterviews?.map((int) => (
+                        <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group">
+                          <div>
+                            <p className="text-xs font-black text-white uppercase">{int.interviewType}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">POR: {int.interviewerName} • {new Date(int.createdAt.toDate()).toLocaleDateString()}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
                         </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        {leadInterviews && leadInterviews.length > 0 ? (
-                          leadInterviews.map((int) => (
-                            <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:bg-white/[0.04] transition-all">
-                              <div className="flex items-center gap-6">
-                                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><History className="h-5 w-5 text-primary" /></div>
-                                <div>
-                                  <p className="text-xs font-black text-white uppercase tracking-tight">{int.interviewType}</p>
-                                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
-                                    Por: {int.interviewerName} • {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleString() : "Recente"}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditInterview(int)} className="text-muted-foreground hover:text-primary">
-                                  <Edit3 className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteInterview(int.id)} className="text-muted-foreground hover:text-rose-500">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="py-20 text-center opacity-30">
-                            <MessageSquare className="h-12 w-12 mx-auto mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Nenhuma entrevista técnica realizada.</p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="dados">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {leadInterviews?.[0]?.responses ? (
-                          Object.entries(leadInterviews[0].responses).map(([k, v]: any) => (
-                            <div key={k} className="p-5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
-                              <p className="text-[9px] font-black text-primary uppercase tracking-widest">{k}</p>
-                              <p className="text-xs font-bold text-white leading-relaxed">{String(v)}</p>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="col-span-full py-20 text-center opacity-30">
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Capture dados através de uma entrevista para visualizá-los aqui.</p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="ferramentas" className="space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="glass border-rose-500/20 p-8 space-y-4">
-                          <h4 className="text-sm font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                            <Trash2 className="h-4 w-4" /> Zona de Perigo
-                          </h4>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                            Ações irreversíveis para limpeza da base tática.
-                          </p>
-                          <Button onClick={handleDeleteLead} variant="destructive" className="w-full uppercase font-black text-[10px] tracking-widest h-12">
-                            Remover Lead Permanentemente
-                          </Button>
-                        </Card>
-
-                        <Card className="glass border-primary/20 p-8 space-y-4">
-                          <h4 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                            <ExternalLink className="h-4 w-4" /> Atalhos Rápidos
-                          </h4>
-                          <Button asChild variant="outline" className="w-full border-white/10 uppercase font-black text-[10px] tracking-widest h-12">
-                            <Link href="/drafting">Ir para Minuta Inteligente</Link>
-                          </Button>
-                          <Button asChild variant="outline" className="w-full border-white/10 uppercase font-black text-[10px] tracking-widest h-12">
-                            <Link href="/clients">Ver Ficha no Cadastro</Link>
-                          </Button>
-                        </Card>
-                      </div>
+                      ))}
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -627,7 +358,7 @@ export default function LeadsPage() {
       </Sheet>
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh]">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl">
           {executingTemplate && (
             <DynamicInterviewExecution 
               template={executingTemplate} 
@@ -638,58 +369,14 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de Edição de Entrevista */}
-      <Dialog open={isEditInterviewOpen} onOpenChange={setIsEditInterviewOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh] flex flex-col">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
-                <Edit3 className="h-6 w-6 text-primary" /> Retificar Entrevista
-              </DialogTitle>
-              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
-                Ajuste os fatos e dados capturados no atendimento.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <ScrollArea className="flex-1 p-8">
-            <div className="space-y-6">
-              {interviewToEdit && Object.entries(editResponses).map(([label, value]) => (
-                <div key={label} className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</Label>
-                  <Textarea 
-                    className="bg-black/20 border-white/10 min-h-[80px] text-white focus:ring-1 focus:ring-primary/50 text-sm"
-                    value={String(value)}
-                    onChange={(e) => setEditResponses(prev => ({ ...prev, [label]: e.target.value }))}
-                  />
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsEditInterviewOpen(false)} className="text-muted-foreground font-black uppercase text-[11px]">Cancelar</Button>
-            <Button onClick={handleSaveInterviewEdit} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[11px] tracking-widest flex items-center gap-2">
-              <Save className="h-4 w-4" /> Salvar Alterações
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
-          <div className="p-8 border-b border-white/5 bg-[#0a0f1e]">
-            <SheetHeader>
-              <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
-                <UserPlus className="h-8 w-8 text-primary" /> Novo Lead RGMJ
-              </SheetTitle>
-            </SheetHeader>
-          </div>
+          <div className="p-8 border-b border-white/5"><SheetHeader><SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Novo Lead RGMJ</SheetTitle></SheetHeader></div>
           <LeadForm 
             existingLeads={leads} 
             onSubmit={handleCreateEntry} 
             onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
             defaultResponsibleLawyer={user?.displayName || ""}
-            initialMode="quick" 
-            lockMode={false} 
           />
         </SheetContent>
       </Sheet>

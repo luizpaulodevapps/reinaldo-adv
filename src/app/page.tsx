@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from 'next/link'
@@ -8,7 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { 
   Scale, 
   ShieldCheck, 
-  MessageSquare, 
   Calendar,
   Zap,
   Lock,
@@ -20,10 +18,7 @@ import {
   ChevronRight,
   Briefcase,
   Gavel,
-  ShieldAlert,
-  CheckCircle2,
-  MapPin,
-  ArrowRight
+  ShieldAlert
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { 
