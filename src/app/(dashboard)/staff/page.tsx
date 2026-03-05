@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -89,7 +88,7 @@ export default function StaffPage() {
             <span className="text-white uppercase tracking-tighter">Departamento Pessoal</span>
           </div>
           <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão de Equipe</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Capital Humano RGMJ Elite.</p>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Capital Humano RGMJ.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">

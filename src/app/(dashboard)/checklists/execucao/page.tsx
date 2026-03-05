@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -113,7 +112,7 @@ export default function ChecklistExecutionPage() {
             <span className="text-white uppercase tracking-tighter">Rotinas Estratégicas</span>
           </div>
           <h1 className="text-5xl font-black text-white tracking-tighter uppercase">Rotinas Operacionais</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Execução padronizada RGMJ Elite.</p>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Execução padronizada RGMJ.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
@@ -213,7 +212,7 @@ export default function ChecklistExecutionPage() {
             <ClipboardList className="h-16 w-16 text-muted-foreground" />
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center">Nenhuma rotina técnica em execução</p>
             <Button onClick={() => setIsStartDialogOpen(true)} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12">
-              Nova Rotina de Elite
+              Nova Rotina
             </Button>
           </div>
         )}

@@ -92,7 +92,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
           </div>
           <div>
             <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{template.title}</h3>
-            <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.25em] mt-2 opacity-60">Triagem Técnica RGMJ Elite</p>
+            <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.25em] mt-2 opacity-60">Triagem Técnica RGMJ</p>
           </div>
         </div>
         

@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Dr. Reinaldo Gonçalves Miguel de Jesus | Advocacia Trabalhista de Elite',
+  title: 'Dr. Reinaldo Gonçalves Miguel de Jesus | Advocacia Trabalhista Estratégica',
   description: 'Excelência jurídica, ética e soluções estratégicas personalizadas em Direito do Trabalho.',
 };
 

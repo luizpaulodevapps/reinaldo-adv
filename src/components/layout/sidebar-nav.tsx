@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -118,7 +117,7 @@ export function SidebarNav() {
             <Scale className="h-5 w-5 text-primary" />
           </div>
           <div className="flex flex-col overflow-hidden transition-all group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
-            <span className="text-sm font-black text-white uppercase tracking-tighter leading-none whitespace-nowrap">RGMJ Elite</span>
+            <span className="text-sm font-black text-white uppercase tracking-tighter leading-none whitespace-nowrap">RGMJ</span>
             <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1 whitespace-nowrap">Portal de Comando</span>
           </div>
         </div>

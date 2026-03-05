@@ -1,4 +1,3 @@
-
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,7 +54,7 @@ export function DashboardContent() {
       { label: "PRAZOS EM ABERTO", value: deadlines?.length || 0, icon: Clock, color: "text-destructive", bg: "bg-destructive/5" },
       { label: "REPASSES PENDENTES", value: totalRepasses > 0 ? `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : "R$ 0", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/5" },
     ]
-  }, [leads, cases, deadlines, financial])
+  }, [leads, transparency, deadlines, financial])
 
   if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
     return (
@@ -81,7 +80,7 @@ export function DashboardContent() {
           <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-tight">
             DR. <span className="text-primary">{displayName.split(' ')[0]}</span>
           </h1>
-          <p className="text-muted-foreground text-[10px] md:text-[11px] font-bold uppercase tracking-[0.3em]">Monitoramento Estratégico da Banca RGMJ Elite.</p>
+          <p className="text-muted-foreground text-[10px] md:text-[11px] font-bold uppercase tracking-[0.3em]">Monitoramento Estratégico da Banca RGMJ.</p>
         </div>
         <div className="flex gap-2 md:gap-3 w-full md:w-auto">
           <Button variant="outline" className="flex-1 md:flex-none glass border-white/10 text-[9px] md:text-[10px] font-black uppercase tracking-widest h-11 md:h-12 px-4 md:px-6" asChild>
@@ -205,7 +204,7 @@ export function DashboardContent() {
           </Card>
 
           <Card className="glass border-white/5 p-6 md:p-8 space-y-6">
-            <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">Atalhos de Elite</h4>
+            <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">Atalhos Estratégicos</h4>
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               <Button asChild variant="outline" className="glass border-white/5 h-16 md:h-20 rounded-2xl flex flex-col gap-1.5 md:gap-2 hover:border-primary/30 group transition-all text-white p-0">
                 <Link href="/leads" className="flex flex-col items-center justify-center w-full h-full">

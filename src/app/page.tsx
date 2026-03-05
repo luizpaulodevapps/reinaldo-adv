@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from 'next/link'
@@ -164,7 +163,7 @@ function WhatsAppWidget() {
               className="w-full py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-2 group pointer-events-auto"
             >
               <MessageCircle className="h-4 w-4 group-hover:scale-110 transition-transform fill-current" />
-              Iniciar Atendimento de Elite
+              Iniciar Atendimento Personalizado
             </button>
           </motion.div>
         )}
@@ -220,7 +219,7 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-display font-bold tracking-widest uppercase leading-none">RGMJ</span>
-              <span className="text-[8px] font-black tracking-[0.3em] text-[#F5D030] uppercase">Advocacia de Elite</span>
+              <span className="text-[8px] font-black tracking-[0.3em] text-[#F5D030] uppercase">Advocacia Estratégica</span>
             </div>
           </div>
           
@@ -254,7 +253,7 @@ export default function HomePage() {
             <motion.div initial="hidden" animate="visible" variants={containerVariants}>
               <motion.div variants={itemVariants} className="flex items-center gap-4 mb-10">
                 <div className="gold-line" />
-                <span className="text-[#F5D030]/80 font-body text-[10px] tracking-[0.5em] uppercase font-bold">Excelência Jurídica & Estratégia de Elite</span>
+                <span className="text-[#F5D030]/80 font-body text-[10px] tracking-[0.5em] uppercase font-bold">Excelência Jurídica & Estratégia de Resultados</span>
               </motion.div>
 
               <motion.h1 variants={itemVariants} className="font-display text-6xl md:text-8xl lg:text-9xl text-white leading-[0.9] mb-10 font-medium tracking-tight">
@@ -266,7 +265,7 @@ export default function HomePage() {
                 Defesa tática incisiva e consultoria de alta performance para clientes que exigem o padrão máximo de rigor técnico.
               </motion.p>
 
-              <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-6">
+              <motion.div variants={itemVariants} className="flex flex-col sm:row gap-6">
                 <Button className="bg-[#F5D030] text-[#020617] hover:scale-105 font-black rounded-none px-12 h-20 text-xs uppercase tracking-[0.3em] shadow-2xl transition-all border-0 group">
                   <Calendar className="w-4 h-4 mr-3 group-hover:rotate-12 transition-transform" /> AGENDAR CONSULTA
                 </Button>
@@ -305,7 +304,7 @@ export default function HomePage() {
       <section id="areas" className="py-32 bg-[#020617]">
         <div className="max-w-7xl mx-auto px-6 lg:px-16">
           <div className="text-center mb-24 space-y-4">
-            <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black text-[9px] tracking-[0.3em] px-4 py-1">Especialidades de Elite</Badge>
+            <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black text-[9px] tracking-[0.3em] px-4 py-1">Especialidades Estratégicas</Badge>
             <h2 className="text-5xl md:text-7xl font-display font-medium uppercase tracking-tighter">Frentes de Atuação <span className="text-gradient-gold italic">Estratégica</span></h2>
           </div>
 
@@ -315,7 +314,7 @@ export default function HomePage() {
               { title: "Defesa Civil", icon: ShieldCheck, desc: "Ações indenizatórias, responsabilidade civil e contratos de alta sofisticação." },
               { title: "Previdenciário", icon: Users, desc: "Planejamento de aposentadorias e revisões de benefícios com rigor matemático." },
               { title: "Assessoria Comercial", icon: Zap, desc: "Suporte jurídico para parcerias táticas e blindagem de negócios." },
-              { title: "Recursos de Elite", icon: Scale, desc: "Atuação técnica em tribunais superiores para reverter decisões críticas." },
+              { title: "Recursos de Alta Performance", icon: Scale, desc: "Atuação técnica em tribunais superiores para reverter decisões críticas." },
               { title: "Compliance Ético", icon: Gavel, desc: "Gestão de risco e consultoria preventiva para prevenção de litígios." },
             ].map((area, i) => (
               <motion.div 
@@ -341,7 +340,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Methodology - The Elite Path */}
+      {/* Methodology - The Strategic Path */}
       <section id="metodo" className="py-32 bg-white/[0.01] border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6 lg:px-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -422,7 +421,7 @@ export default function HomePage() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-16 text-center lg:text-left">
               <div className="max-w-2xl space-y-6">
-                <h2 className="text-5xl md:text-7xl font-display font-medium uppercase tracking-tighter leading-none">Inicie sua Defesa de <span className="text-gradient-gold italic">Elite</span> Agora</h2>
+                <h2 className="text-5xl md:text-7xl font-display font-medium uppercase tracking-tighter leading-none">Inicie sua Defesa <span className="text-gradient-gold italic">Especializada</span> Agora</h2>
                 <p className="text-muted-foreground text-sm md:text-base uppercase tracking-widest font-light leading-relaxed">
                   Não deixe seus direitos expostos. Coloque seu caso nas mãos de quem entende a engenharia jurídica de resultados.
                 </p>
@@ -444,10 +443,10 @@ export default function HomePage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F5D030] to-[#B8860B] flex items-center justify-center">
               <Scale className="h-5 w-5 text-[#020617]" />
             </div>
-            <span className="text-xl font-display font-bold tracking-[0.2em] uppercase">RGMJ ELITE</span>
+            <span className="text-xl font-display font-bold tracking-[0.2em] uppercase">RGMJ</span>
           </div>
           <div className="flex flex-col items-center md:items-end gap-2">
-            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">© 2024 RGMJ ADVOGADOS ELITE • TODOS OS DIREITOS RESERVADOS</p>
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">© 2024 RGMJ ADVOGADOS • TODOS OS DIREITOS RESERVADOS</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <Link href="#" className="text-[8px] font-black text-white/20 uppercase tracking-widest hover:text-primary transition-colors">Termos de Uso</Link>
               <Link href="#" className="text-[8px] font-black text-white/20 uppercase tracking-widest hover:text-primary transition-colors">Privacidade</Link>

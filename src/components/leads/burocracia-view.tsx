@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -208,7 +207,7 @@ export function BurocraciaView({ lead, interviews }: BurocraciaViewProps) {
               <h3 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
                 <Gavel className="h-8 w-8 text-primary" /> Kit Inicial {lead?.type || "Geral"}
               </h3>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] opacity-60">Processamento tático de minutas títuladas RGMJ Elite.</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] opacity-60">Processamento tático de minutas títuladas RGMJ.</p>
             </div>
           </div>
 

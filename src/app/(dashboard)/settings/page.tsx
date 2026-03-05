@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
@@ -356,7 +355,7 @@ function SettingsContent() {
       <div className="space-y-1">
         <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter">Configurações</h1>
         <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-60">
-          GESTÃO DE PARÂMETROS ESTRATÉGICOS RGMJ ELITE.
+          GESTÃO DE PARÂMETROS ESTRATÉGICOS RGMJ.
         </p>
       </div>
 
@@ -388,7 +387,7 @@ function SettingsContent() {
                 </Avatar>
                 <div>
                   <CardTitle className="text-3xl font-black text-white uppercase tracking-tighter">Meu Perfil</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">GESTÃO DE IDENTIDADE RGMJ ELITE.</p>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">GESTÃO DE IDENTIDADE RGMJ.</p>
                 </div>
               </div>
             </CardHeader>
@@ -489,7 +488,7 @@ function SettingsContent() {
         <TabsContent value="modelos" className="mt-0 space-y-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1">
-              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Gestão de Modelos (.DOC)</h2>
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Gestão de Modelos</h2>
               <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">KITS DOCUMENTAIS POR ÁREA JURÍDICA.</p>
             </div>
             <Button onClick={handleOpenCreateModel} className="gold-gradient font-black text-[11px] uppercase tracking-widest h-14 px-10 rounded-xl gap-3 shadow-xl">

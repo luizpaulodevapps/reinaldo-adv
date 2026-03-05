@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -603,7 +602,7 @@ export default function LaboratorioChecklistsPage() {
         ...listData,
         createdAt: serverTimestamp()
       })
-      toast({ title: "Nova Matriz de Elite Criada" })
+      toast({ title: "Nova Matriz Criada" })
     }
     setIsDialogOpen(false)
   }
