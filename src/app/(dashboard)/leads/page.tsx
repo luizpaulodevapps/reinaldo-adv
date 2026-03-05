@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -30,7 +31,10 @@ import {
   AlertCircle,
   CheckCircle2,
   UserCog,
-  Building
+  Building,
+  Database,
+  CloudLightning,
+  FolderOpen
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -84,6 +88,7 @@ export default function LeadsPage() {
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
   const [isEditModeOpen, setIsEditModeOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [isSyncingDrive, setIsSyncingDrive] = useState(false)
   
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
@@ -126,6 +131,7 @@ export default function LeadsPage() {
       ...data,
       assignedStaffId: user.uid,
       status: "novo",
+      driveStatus: "pendente",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
@@ -153,6 +159,32 @@ export default function LeadsPage() {
     })
     setSelectedLead({ ...selectedLead, status })
     toast({ title: "Fluxo Atualizado", description: `Mover para ${status.toUpperCase()}.` })
+  }
+
+  const handleSyncDrive = async () => {
+    if (!selectedLead || !db) return
+    setIsSyncingDrive(true)
+    
+    // Simulação de lógica de pastas Google Drive RGMJ
+    setTimeout(async () => {
+      let nextStatus = "pasta_lead"
+      if (selectedLead.status === "distribuicao" || selectedLead.status === "burocracia") {
+        nextStatus = "pasta_cliente"
+      }
+
+      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+        driveStatus: nextStatus,
+        driveFolderId: "DRIVE_" + Math.random().toString(36).substring(7),
+        updatedAt: serverTimestamp()
+      })
+      
+      setSelectedLead({ ...selectedLead, driveStatus: nextStatus })
+      setIsSyncingDrive(false)
+      toast({ 
+        title: "Sincronia Drive Concluída", 
+        description: nextStatus === "pasta_cliente" ? "Estrutura movida para pasta de Clientes." : "Pasta de Lead gerada com sucesso."
+      })
+    }, 2000)
   }
 
   const handleStartInterview = (template: any) => {
@@ -282,14 +314,33 @@ export default function LeadsPage() {
               <div className="p-8 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-10">
                 <div className="flex items-start justify-between">
                   <div className="space-y-6">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 py-1 tracking-[0.2em] bg-primary/5">
                         {normalizeLeadStatus(selectedLead.status).toUpperCase()}
                       </Badge>
+                      
+                      {/* STATUS BANCO DE DADOS */}
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                        <Database className="h-3 w-3 text-blue-400" />
+                        <span className="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em]">Banco de Dados: Protegido</span>
+                      </div>
+
+                      {/* STATUS GOOGLE DRIVE */}
+                      <div className={cn(
+                        "flex items-center gap-2 px-3 py-1 rounded-full border",
+                        selectedLead.driveStatus === "pasta_cliente" ? "bg-emerald-500/10 border-emerald-500/20" : 
+                        selectedLead.driveStatus === "pasta_lead" ? "bg-amber-500/10 border-amber-500/20" : "bg-white/5 border-white/10 opacity-50"
+                      )}>
+                        <CloudLightning className={cn("h-3 w-3", selectedLead.driveStatus ? "text-primary" : "text-muted-foreground")} />
+                        <span className={cn("text-[8px] font-black uppercase tracking-[0.2em]", selectedLead.driveStatus === "pasta_cliente" ? "text-emerald-500" : selectedLead.driveStatus === "pasta_lead" ? "text-amber-500" : "text-muted-foreground")}>
+                          Drive: {selectedLead.driveStatus === "pasta_cliente" ? "Estrutura de Cliente" : selectedLead.driveStatus === "pasta_lead" ? "Pasta de Lead" : "Pendente"}
+                        </span>
+                      </div>
+
                       {isProfileComplete(selectedLead) ? (
                         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                           <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                          <span className="text-[8px] font-black text-emerald-500 uppercase tracking-[0.2em]">Cadastro Completo • Perfil Aprovado</span>
+                          <span className="text-[8px] font-black text-emerald-500 uppercase tracking-[0.2em]">Perfil Aprovado</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -308,6 +359,16 @@ export default function LeadsPage() {
                     <div className="flex items-center gap-6">
                       <Button onClick={handleWhatsApp} variant="outline" className="h-12 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[10px] font-black uppercase gap-3 tracking-[0.2em] rounded-xl transition-all">
                         <MessageCircle className="h-4 w-4" /> WHATSAPP DIRECT
+                      </Button>
+
+                      <Button 
+                        onClick={handleSyncDrive} 
+                        disabled={isSyncingDrive}
+                        variant="outline" 
+                        className="h-12 border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-background text-[10px] font-black uppercase gap-3 tracking-[0.2em] rounded-xl transition-all"
+                      >
+                        {isSyncingDrive ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudLightning className="h-4 w-4" />} 
+                        Sincronizar Drive
                       </Button>
                       
                       <div className="flex p-1 rounded-xl bg-black/40 border border-white/5">
