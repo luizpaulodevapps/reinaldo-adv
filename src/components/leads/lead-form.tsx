@@ -22,7 +22,8 @@ import {
   FileText,
   Gavel,
   Briefcase,
-  Scale
+  Scale,
+  Calendar
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -48,6 +49,10 @@ interface LeadFormProps {
   initialMode?: "quick" | "complete"
   lockMode?: boolean
 }
+
+const BRAZIL_STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+]
 
 export function LeadForm({ 
   existingLeads, 
@@ -77,6 +82,9 @@ export function LeadForm({
     email: "",
     cpf: "",
     rg: "",
+    rgIssuer: "",
+    rgState: "",
+    rgIssueDate: "",
     maritalStatus: "Solteiro(a)",
     profession: "",
     // Endereço Autor
@@ -288,10 +296,35 @@ export function LeadForm({
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ</Label>
                     <Input placeholder="000.000.000-00" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.cpf} onChange={(e) => handleInputChange("cpf", formatCpfCnpj(e.target.value))} />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">RG / Órgão Emissor</Label>
-                    <Input placeholder="00.000.000-0" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value.toUpperCase())} />
+                  
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">RG / Número</Label>
+                      <Input placeholder="00.000.000-0" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Emissor</Label>
+                      <Input placeholder="SSP" className="bg-black/40 border-white/10 h-14 text-white font-black text-center" value={formData.rgIssuer} onChange={(e) => handleInputChange("rgIssuer", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                      <Select value={formData.rgState} onValueChange={(v) => handleInputChange("rgState", v)}>
+                        <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-center text-xs"><SelectValue placeholder="UF" /></SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] text-white">
+                          {BRAZIL_STATES.map(st => <SelectItem key={s} value={st}>{st}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Data de Emissão (RG)</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                      <Input type="date" className="pl-12 bg-black/40 border-white/10 h-14 text-white" value={formData.rgIssueDate} onChange={(e) => handleInputChange("rgIssueDate", e.target.value)} />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Estado Civil</Label>
                     <Select value={formData.maritalStatus} onValueChange={(v) => handleInputChange("maritalStatus", v)}>
@@ -301,7 +334,7 @@ export function LeadForm({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-3 space-y-2">
+                  <div className="md:col-span-1 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Profissão Atual</Label>
                     <Input placeholder="EX: ENGENHEIRO MECÂNICO" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
                   </div>
