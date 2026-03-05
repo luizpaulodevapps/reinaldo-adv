@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from 'next/link'
@@ -84,7 +83,7 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center overflow-hidden pt-20">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/image/hero-bg.jpg')" }} />
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070')" }} />
         <div className="absolute inset-0 bg-[#020617]/80 backdrop-blur-[2px]" />
         
         <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 w-full">

@@ -1,12 +1,7 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    /**
-     * LexFlow ERP - Controle Soberano RGMJ
-     * A autenticação é a chave única e absoluta para acesso aos dados da banca.
-     * Permitimos leitura e escrita para qualquer usuário autenticado.
-     */
+    // Permite leitura e escrita em qualquer coleção para usuários autenticados
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
