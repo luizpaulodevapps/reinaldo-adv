@@ -1,26 +1,25 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 2%; 
+    --background: 222 47% 4%;
     --foreground: 0 0% 98%;
     
-    --card: 0 0% 4%;
+    --card: 222 47% 6%;
     --card-foreground: 0 0% 98%;
     
-    --popover: 0 0% 2%;
+    --popover: 222 47% 4%;
     --popover-foreground: 0 0% 98%;
     
     --primary: 43 65% 53%; /* #D4AF37 - Classic Gold */
-    --primary-foreground: 0 0% 2%;
+    --primary-foreground: 222 47% 4%;
     
-    --secondary: 0 0% 10%;
+    --secondary: 222 47% 10%;
     --secondary-foreground: 0 0% 98%;
     
-    --muted: 0 0% 10%;
+    --muted: 222 47% 10%;
     --muted-foreground: 0 0% 65%;
     
     --accent: 43 65% 53%;
@@ -30,19 +29,19 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
+    --border: 222 47% 15%;
+    --input: 222 47% 15%;
     --ring: 43 65% 53%;
     
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 4%;
+    --sidebar-background: 222 47% 4%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 43 65% 53%;
-    --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 0 0% 10%;
+    --sidebar-primary-foreground: 222 47% 4%;
+    --sidebar-accent: 222 47% 10%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 15%;
+    --sidebar-border: 222 47% 15%;
     --sidebar-ring: 43 65% 53%;
   }
 }
@@ -57,113 +56,81 @@
   }
 }
 
-.font-serif {
+.font-display {
   font-family: 'Cormorant Garamond', serif;
+}
+
+.font-body {
+  font-family: 'Outfit', sans-serif;
 }
 
 /* Premium Decorative Elements */
 .marble-bg {
-  background-image: linear-gradient(to bottom, rgba(5, 5, 5, 0.8), rgba(5, 5, 5, 0.9)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000');
+  background-image: linear-gradient(to bottom, rgba(5, 10, 25, 0.85), rgba(5, 10, 25, 0.95)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
-.gold-gradient-text {
+.text-gradient-gold {
   background: linear-gradient(135deg, #F5D030 0%, #D4AF37 50%, #B8860B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.gold-gradient {
-  background: linear-gradient(135deg, #F5D030 0%, #D4AF37 50%, #B8860B 100%);
-}
-
-.gold-border-animation {
-  position: relative;
-  overflow: hidden;
-}
-
-.gold-border-animation::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: conic-gradient(transparent, transparent, transparent, #D4AF37);
-  animation: rotate 4s linear infinite;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.gold-border-animation:hover::before {
-  opacity: 1;
-}
-
-@keyframes rotate {
-  100% {
-    transform: rotate(1turn);
-  }
+.gold-line {
+  @apply h-px w-16 bg-primary/60;
 }
 
 .premium-card {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(212, 175, 55, 0.1);
-  transition: all 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+  @apply bg-white/[0.02] backdrop-blur-xl border border-white/5 transition-all duration-500 relative overflow-hidden;
 }
 
-.premium-card:hover {
-  border-color: rgba(212, 175, 55, 0.5);
-  transform: translateY(-10px);
-  background: rgba(255, 255, 255, 0.04);
+.gold-sweep:hover {
+  @apply border-primary/40 shadow-[0_0_30px_rgba(212,175,55,0.1)];
+}
+
+.gold-sweep::after {
+  content: '';
+  @apply absolute inset-0 opacity-0 transition-opacity duration-500 pointer-events-none;
+  background: linear-gradient(45deg, transparent 45%, rgba(212, 175, 55, 0.1) 50%, transparent 55%);
+  background-size: 200% 200%;
+}
+
+.gold-sweep:hover::after {
+  @apply opacity-100;
+  animation: sweep 1.5s infinite;
+}
+
+@keyframes sweep {
+  0% { background-position: -100% -100%; }
+  100% { background-position: 100% 100%; }
 }
 
 .gold-frame {
-  position: relative;
-  padding: 15px;
-  background: #050505;
+  @apply relative p-4 bg-[#0a0f1e] border border-primary/20;
 }
 
 .gold-frame::after {
   content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 1px solid #D4AF37;
-  pointer-events: none;
-  margin: -10px;
+  @apply absolute -inset-2 border border-primary/40 pointer-events-none;
 }
 
 .gold-frame::before {
   content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  pointer-events: none;
-  margin: -20px;
-}
-
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  @apply bg-black;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-primary/30 rounded-full;
+  @apply absolute -inset-4 border border-primary/10 pointer-events-none;
 }
 
 .glass {
   @apply bg-white/[0.02] backdrop-blur-xl border border-white/10;
 }
 
-.hover-gold:hover {
-  @apply border-primary/40 shadow-[0_0_25px_rgba(245,208,48,0.1)];
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-[#050505];
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full;
 }

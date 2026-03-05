@@ -10,9 +10,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        body: ['Outfit', 'sans-serif'],
+        display: ['Cormorant Garamond', 'serif'],
         sans: ['Outfit', 'sans-serif'],
         serif: ['Cormorant Garamond', 'serif'],
-        headline: ['Cormorant Garamond', 'serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
