@@ -235,7 +235,7 @@ export default function FinancialPage() {
               <Users className="h-3 w-3" /> Volume de Equipe
             </p>
             <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
-              {items?.length || 0} Atos
+              {transactions?.length || 0} Atos
             </div>
           </CardContent>
         </Card>

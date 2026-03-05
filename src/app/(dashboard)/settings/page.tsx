@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/select"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
+import { useFirestore, useUser, updateDocumentNonBlocking } from "@/firebase"
+import { doc, serverTimestamp } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 function SettingsContent() {
