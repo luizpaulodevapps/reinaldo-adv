@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -24,7 +25,8 @@ import {
   Scale,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  ClipboardList
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -157,10 +159,15 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp(),
     }
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
-    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
-      status: "atendimento",
-      updatedAt: serverTimestamp()
-    })
+    
+    // Se estiver no início, avança para atendimento se ainda não estiver
+    if (selectedLead.status === 'novo') {
+      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+        status: "atendimento",
+        updatedAt: serverTimestamp()
+      })
+    }
+    
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
     toast({ title: "Entrevista Registrada" })
@@ -253,9 +260,11 @@ export default function LeadsPage() {
               <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-10">
                 <div className="flex items-start justify-between">
                   <div className="space-y-4">
-                    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">
-                      {normalizeLeadStatus(selectedLead.status).toUpperCase()}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-3 tracking-[0.2em] bg-primary/5">
+                        {normalizeLeadStatus(selectedLead.status).toUpperCase()}
+                      </Badge>
+                    </div>
                     <h2 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
                     
                     <div className="flex items-center gap-6">
@@ -353,18 +362,26 @@ export default function LeadsPage() {
                                 )}
                               </div>
                               <div className="md:col-span-5 flex flex-col justify-center gap-3">
-                                <Button 
-                                  onClick={() => {
-                                    handleUpdateStatus("atendimento")
-                                    setTimeout(() => {
-                                      const interviewsTab = document.querySelector('[value="entrevistas"]') as HTMLButtonElement
-                                      if (interviewsTab) interviewsTab.click()
-                                    }, 500)
-                                  }}
-                                  className="w-full h-16 gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-3 shadow-2xl hover:scale-[1.02] transition-all"
-                                >
-                                  <Play className="h-5 w-5 fill-current" /> INICIAR PROTOCOLO TÉCNICO
-                                </Button>
+                                {selectedLead.status === 'novo' ? (
+                                  <Button 
+                                    onClick={() => handleUpdateStatus("atendimento")}
+                                    className="w-full h-16 gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-3 shadow-2xl hover:scale-[1.02] transition-all"
+                                  >
+                                    <Play className="h-5 w-5 fill-current" /> INICIAR PROTOCOLO TÉCNICO
+                                  </Button>
+                                ) : (
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                      <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Protocolo em Andamento</span>
+                                    </div>
+                                    {templates?.slice(0, 2).map((t) => (
+                                      <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[9px] h-12 gap-2 hover:bg-primary hover:text-background transition-all">
+                                        <ClipboardList className="h-3.5 w-3.5" /> {t.title}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                )}
                                 {selectedLead.meetingType === 'online' && selectedLead.meetingLink && (
                                   <Button asChild variant="outline" className="w-full h-12 border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-background">
                                     <a href={selectedLead.meetingLink} target="_blank" rel="noreferrer"><Video className="h-4 w-4 mr-2" /> ENTRAR NA CHAMADA</a>
@@ -372,6 +389,26 @@ export default function LeadsPage() {
                                 )}
                               </div>
                             </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Exibe atalhos de entrevistas se já estiver em atendimento */}
+                      {selectedLead.status !== 'novo' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+                          <h4 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Ações Rápidas de Atendimento</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {templates?.map((t) => (
+                              <Button 
+                                key={t.id} 
+                                onClick={() => handleStartInterview(t)} 
+                                variant="outline" 
+                                className="glass border-white/10 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 hover:border-primary/40 group transition-all"
+                              >
+                                <Zap className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                                <span className="text-[8px] font-black text-white uppercase text-center px-4 line-clamp-2">{t.title}</span>
+                              </Button>
+                            ))}
                           </div>
                         </div>
                       )}
