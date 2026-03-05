@@ -340,83 +340,84 @@ export function LeadForm({
                       <Input maxLength={2} className="bg-black/40 border-white/10 h-14 text-white font-black text-center" value={formData.state} onChange={(e) => handleInputChange("state", e.target.value.toUpperCase())} />
                     </div>
                   </div>
-                </TabsContent>
+                </div>
+              </TabsContent>
 
-                <TabsContent value="reu" className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-                  <div className="space-y-8">
-                    <SectionTitle icon={Building}>Dados da Parte Contrária (Réu)</SectionTitle>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Razão Social / Nome Oficial *</Label>
-                        <Input placeholder="NOME DO RÉU OU EMPRESA..." className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CNPJ / CPF do Réu</Label>
-                        <Input placeholder="00.000.000/0000-00" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", formatCpfCnpj(e.target.value))} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-8">
-                    <SectionTitle icon={MapPin}>Endereço para Citação</SectionTitle>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                      <div className="md:col-span-1 space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Réu)</Label>
-                        <div className="relative">
-                          <Input placeholder="00000-000" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.defendantZipCode} onChange={(e) => handleInputChange("defendantZipCode", formatCep(e.target.value))} onBlur={() => handleCepBlur("defendant")} />
-                          {loadingCep === "defendant" && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-rose-500" />}
-                        </div>
-                      </div>
-                      <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Logradouro</Label>
-                        <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Número</Label>
-                        <Input className="bg-black/40 border-white/10 h-14 text-white font-bold" value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
-                        <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
-                        <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantCity} onChange={(e) => handleInputChange("defendantCity", e.target.value.toUpperCase())} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
-                        <Input maxLength={2} className="bg-black/40 border-white/10 h-14 text-white font-black text-center" value={formData.defendantState} onChange={(e) => handleInputChange("defendantState", e.target.value.toUpperCase())} />
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="demanda" className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="space-y-8">
-                    <SectionTitle icon={Gavel}>Objeto & Estratégia</SectionTitle>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Título da Demanda (Objeto)</Label>
-                        <Input placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Área Jurídica</Label>
-                        <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
-                          <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#0d121f] text-white">
-                            {["Trabalhista", "Cível", "Criminal", "Previdenciário", "Tributário"].map(a => <SelectItem key={a} value={a}>{a.toUpperCase()}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
+              <TabsContent value="reu" className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-8">
+                  <SectionTitle icon={Building}>Dados da Parte Contrária (Réu)</SectionTitle>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Razão Social / Nome Oficial *</Label>
+                      <Input placeholder="NOME DO RÉU OU EMPRESA..." className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[9px] font-black text-primary uppercase tracking-widest">Relato dos Fatos (Boletim de Ocorrências / Resumo)</Label>
-                      <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO COMPLETO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[250px] text-white text-sm leading-relaxed uppercase resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CNPJ / CPF do Réu</Label>
+                      <Input placeholder="00.000.000/0000-00" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", formatCpfCnpj(e.target.value))} />
                     </div>
                   </div>
-                </TabsContent>
+                </div>
+
+                <div className="space-y-8">
+                  <SectionTitle icon={MapPin}>Endereço para Citação</SectionTitle>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-1 space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Réu)</Label>
+                      <div className="relative">
+                        <Input placeholder="00000-000" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.defendantZipCode} onChange={(e) => handleInputChange("defendantZipCode", formatCep(e.target.value))} onBlur={() => handleCepBlur("defendant")} />
+                        {loadingCep === "defendant" && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-rose-500" />}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Logradouro</Label>
+                      <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Número</Label>
+                      <Input className="bg-black/40 border-white/10 h-14 text-white font-bold" value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
+                      <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
+                      <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantCity} onChange={(e) => handleInputChange("defendantCity", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                      <Input maxLength={2} className="bg-black/40 border-white/10 h-14 text-white font-black text-center" value={formData.defendantState} onChange={(e) => handleInputChange("defendantState", e.target.value.toUpperCase())} />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="demanda" className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-8">
+                  <SectionTitle icon={Gavel}>Objeto & Estratégia</SectionTitle>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Título da Demanda (Objeto)</Label>
+                      <Input placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Área Jurídica</Label>
+                      <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
+                        <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] text-white">
+                          {["Trabalhista", "Cível", "Criminal", "Previdenciário", "Tributário"].map(a => <SelectItem key={a} value={a}>{a.toUpperCase()}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-primary uppercase tracking-widest">Relato dos Fatos (Boletim de Ocorrências / Resumo)</Label>
+                    <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO COMPLETO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[250px] text-white text-sm leading-relaxed uppercase resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+                  </div>
+                </div>
+              </TabsContent>
 
             </div>
           </ScrollArea>
