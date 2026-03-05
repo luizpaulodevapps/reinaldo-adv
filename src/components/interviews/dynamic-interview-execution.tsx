@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -21,7 +22,6 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
   const [loading, setLoading] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
 
-  // Carregar cache local ao montar o componente para evitar perda de dados
   useEffect(() => {
     if (typeof window !== 'undefined' && template?.id) {
       const cacheKey = `rgmj_interview_v1_${template.id}`
@@ -36,7 +36,6 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
     }
   }, [template?.id])
 
-  // Salvar automaticamente no cache a cada mudança
   useEffect(() => {
     if (typeof window !== 'undefined' && template?.id && Object.keys(responses).length > 0) {
       const cacheKey = `rgmj_interview_v1_${template.id}`
@@ -73,7 +72,6 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
     setLoading(true)
     setTimeout(() => {
       onSubmit({ responses, templateSnapshot })
-      // Limpa cache após envio bem sucedido
       if (typeof window !== 'undefined') {
         localStorage.removeItem(`rgmj_interview_v1_${template.id}`)
       }

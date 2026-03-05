@@ -50,7 +50,8 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle, 
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -360,10 +361,9 @@ export default function LeadsPage() {
           <SheetHeader className="sr-only"><SheetTitle>{selectedLead?.name}</SheetTitle><SheetDescription>Dossiê Lead</SheetDescription></SheetHeader>
           {selectedLead && (
             <div className="flex flex-col h-full overflow-hidden">
-              {/* HEADER COMPACTO */}
-              <div className="p-4 md:p-6 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-4 md:space-y-6">
+              <div className="p-4 md:p-5 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-4">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-3 md:space-y-4 w-full">
+                  <div className="space-y-3 w-full">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className="text-[7px] md:text-[8px] border-primary/30 text-primary uppercase font-black px-2 py-0.5 tracking-[0.15em] bg-primary/5">
                         {normalizeLeadStatus(selectedLead.status).toUpperCase()}
@@ -408,18 +408,18 @@ export default function LeadsPage() {
                       )}
                     </div>
                     
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tighter leading-tight">{selectedLead.name}</h2>
+                    <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter leading-tight">{selectedLead.name}</h2>
                     
-                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                      <Button onClick={handleWhatsApp} variant="outline" className="h-9 md:h-10 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[8px] md:text-[9px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all">
-                        <MessageCircle className="h-3 w-3 md:h-3.5 md:h-3.5" /> WHATSAPP
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button onClick={handleWhatsApp} variant="outline" className="h-9 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all">
+                        <MessageCircle className="h-3 w-3" /> WHATSAPP
                       </Button>
 
                       {!isAlreadyClient && (
                         <Button 
                           onClick={handlePromoteToClient} 
                           disabled={isPromoting}
-                          className="h-9 md:h-10 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background text-[8px] md:text-[9px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all"
+                          className="h-9 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all"
                         >
                           {isPromoting ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
                           VINCULAR CLIENTE
@@ -430,7 +430,7 @@ export default function LeadsPage() {
                         onClick={handleSyncDrive} 
                         disabled={isSyncingDrive}
                         variant="outline" 
-                        className="h-9 md:h-10 border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-background text-[8px] md:text-[9px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all"
+                        className="h-9 border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-background text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg transition-all"
                       >
                         {isSyncingDrive ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudLightning className="h-3 w-3" />} 
                         SINCRONIZAR DRIVE
@@ -442,7 +442,7 @@ export default function LeadsPage() {
                             key={c.id} 
                             onClick={() => handleUpdateStatus(c.id)} 
                             className={cn(
-                              "h-7 md:h-8 px-2 md:px-3 text-[7px] md:text-[8px] font-black uppercase tracking-widest rounded transition-all whitespace-nowrap",
+                              "h-7 px-2 text-[7px] font-black uppercase tracking-widest rounded transition-all whitespace-nowrap",
                               selectedLead.status === c.id 
                                 ? "bg-white/10 text-white" 
                                 : "text-muted-foreground hover:text-white"
@@ -462,42 +462,41 @@ export default function LeadsPage() {
                   </div>
                 </div>
 
-                {/* INFO GRID COMPACTO */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-white/5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-white/5">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <Building className="h-3.5 w-3.5 text-primary" />
+                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+                      <Building className="h-3 w-3 text-primary" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[7px] font-black text-muted-foreground uppercase tracking-[0.2em]">RÉU / EMPRESA</p>
-                      <p className="text-[9px] font-black text-white uppercase truncate tracking-tight">{selectedLead.defendantName || "NÃO DEFINIDO"}</p>
+                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">RÉU / EMPRESA</p>
+                      <p className="text-[8px] font-black text-white uppercase truncate tracking-tight">{selectedLead.defendantName || "NÃO DEFINIDO"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+                      <Phone className="h-3 w-3 text-muted-foreground/60" />
                     </div>
                     <div>
-                      <p className="text-[7px] font-black text-muted-foreground uppercase tracking-[0.2em]">WHATSAPP</p>
-                      <p className="text-[9px] font-black text-white tracking-tight">{selectedLead.phone || "NÃO INFORMADO"}</p>
+                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">WHATSAPP</p>
+                      <p className="text-[8px] font-black text-white tracking-tight">{selectedLead.phone || "NÃO INFORMADO"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+                      <Mail className="h-3 w-3 text-muted-foreground/60" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[7px] font-black text-muted-foreground uppercase tracking-[0.2em]">EMAIL</p>
-                      <p className="text-[9px] font-black text-white uppercase truncate tracking-tight">{selectedLead.email || "NÃO INFORMADO"}</p>
+                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">EMAIL</p>
+                      <p className="text-[8px] font-black text-white uppercase truncate tracking-tight">{selectedLead.email || "NÃO INFORMADO"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+                      <MapPin className="h-3 w-3 text-muted-foreground/60" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[7px] font-black text-muted-foreground uppercase tracking-[0.2em]">LOCALIDADE</p>
-                      <p className="text-[9px] font-black text-white uppercase truncate tracking-tight">
+                      <p className="text-[6px] font-black text-muted-foreground uppercase tracking-[0.2em]">LOCALIDADE</p>
+                      <p className="text-[8px] font-black text-white uppercase truncate tracking-tight">
                         {selectedLead.city ? `${selectedLead.city} - ${selectedLead.state}` : "N/A - N/A"}
                       </p>
                     </div>
@@ -505,38 +504,37 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              {/* CONTEÚDO COM SCROLL PROTEGIDO */}
               <ScrollArea className="flex-1 min-h-0">
                 <div className="p-4 md:p-6 pb-20">
-                  <Tabs defaultValue="overview" className="space-y-6 md:space-y-8">
+                  <Tabs defaultValue="overview" className="space-y-6">
                     <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-6 overflow-x-auto scrollbar-hide">
-                      <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] md:text-[9px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">VISÃO GERAL</TabsTrigger>
-                      <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] md:text-[9px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
-                      <TabsTrigger value="burocracia" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] md:text-[9px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">BUROCRACIA</TabsTrigger>
-                      <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] md:text-[9px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">GESTÃO</TabsTrigger>
+                      <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">VISÃO GERAL</TabsTrigger>
+                      <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
+                      <TabsTrigger value="burocracia" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">BUROCRACIA</TabsTrigger>
+                      <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">GESTÃO</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="space-y-8">
                       {(selectedLead.scheduledDate || selectedLead.meetingType) && (
                         <div className="space-y-4">
-                          <h4 className="text-[9px] md:text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2"><Clock className="h-3 w-3" /> SALA DE ATENDIMENTO</h4>
-                          <div className="p-5 md:p-8 rounded-xl bg-amber-500/5 border border-amber-500/20 relative overflow-hidden group">
+                          <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2"><Clock className="h-3 w-3" /> SALA DE ATENDIMENTO</h4>
+                          <div className="p-5 md:p-6 rounded-xl bg-amber-500/5 border border-amber-500/20 relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                              <Gavel className="h-16 w-16 md:h-24 md:w-24 text-amber-500" />
+                              <Gavel className="h-16 w-16 md:h-24 text-amber-500" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10">
                               <div className="md:col-span-7 grid grid-cols-2 gap-4 border-b md:border-b-0 md:border-r border-white/5 pb-4 md:pb-0">
-                                <div><p className="text-[7px] md:text-[8px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-1.5">DATA E HORA</p><p className="text-sm md:text-base font-black text-white uppercase tracking-tight">{new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} ÀS {selectedLead.scheduledTime || "--:--"}</p></div>
-                                <div><p className="text-[7px] md:text-[8px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-1.5">TIPO</p><p className="text-sm md:text-base font-black text-white uppercase tracking-tight">{selectedLead.meetingType === 'online' ? '🖥️ VIDEOCHAMADA' : '🏢 PRESENCIAL'}</p></div>
+                                <div><p className="text-[7px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-1.5">DATA E HORA</p><p className="text-sm font-black text-white uppercase tracking-tight">{new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} ÀS {selectedLead.scheduledTime || "--:--"}</p></div>
+                                <div><p className="text-[7px] font-black text-amber-500/70 uppercase tracking-[0.2em] mb-1.5">TIPO</p><p className="text-sm font-black text-white uppercase tracking-tight">{selectedLead.meetingType === 'online' ? '🖥️ VIDEOCHAMADA' : '🏢 PRESENCIAL'}</p></div>
                                 {selectedLead.meetingType === 'online' && selectedLead.meetingLink && (
-                                  <div className="col-span-2 pt-2"><p className="text-[7px] md:text-[8px] font-black text-primary uppercase tracking-[0.2em] mb-1.5">LINK DA SALA</p><a href={selectedLead.meetingLink} target="_blank" rel="noreferrer" className="text-[9px] md:text-[10px] font-black text-white hover:text-primary transition-colors underline truncate block">{selectedLead.meetingLink}</a></div>
+                                  <div className="col-span-2 pt-2"><p className="text-[7px] font-black text-primary uppercase tracking-[0.2em] mb-1.5">LINK DA SALA</p><a href={selectedLead.meetingLink} target="_blank" rel="noreferrer" className="text-[9px] font-black text-white hover:text-primary transition-colors underline truncate block">{selectedLead.meetingLink}</a></div>
                                 )}
                               </div>
                               <div className="md:col-span-5 flex flex-col justify-center gap-3">
                                 {selectedLead.status === 'novo' ? (
                                   <Button 
                                     onClick={() => handleUpdateStatus("atendimento")}
-                                    className="w-full h-10 md:h-12 gold-gradient text-background font-black uppercase text-[9px] md:text-[10px] tracking-[0.2em] gap-2 shadow-xl hover:scale-[1.02] transition-all"
+                                    className="w-full h-10 gold-gradient text-background font-black uppercase text-[9px] tracking-[0.2em] gap-2 shadow-xl hover:scale-[1.02] transition-all"
                                   >
                                     <Play className="h-3.5 w-3.5 fill-current" /> INICIAR PROTOCOLO
                                   </Button>
@@ -544,10 +542,10 @@ export default function LeadsPage() {
                                   <div className="flex flex-col gap-2">
                                     <div className="flex items-center gap-2 mb-1">
                                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                      <span className="text-[8px] md:text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em]">PROTOCOLO EM ANDAMENTO</span>
+                                      <span className="text-[8px] font-black text-emerald-500 uppercase tracking-[0.2em]">PROTOCOLO EM ANDAMENTO</span>
                                     </div>
                                     {templates?.slice(0, 2).map((t) => (
-                                      <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[8px] md:text-[9px] h-10 md:h-11 gap-2 hover:bg-primary hover:text-background transition-all tracking-widest truncate">
+                                      <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[8px] h-10 gap-2 hover:bg-primary hover:text-background transition-all tracking-widest truncate">
                                         <ClipboardList className="h-3.5 w-3.5" /> {t.title}
                                       </Button>
                                     ))}
@@ -560,19 +558,19 @@ export default function LeadsPage() {
                       )}
 
                       <div className="space-y-4">
-                        <h4 className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-[0.25em] flex items-center gap-2"><Brain className="h-3 w-3 text-primary" /> SÍNTESE RGMJ IA</h4>
-                        <div className="p-5 md:p-8 rounded-xl bg-primary/5 border border-primary/10 font-serif text-white/80 leading-relaxed text-xs md:text-base italic shadow-inner">
+                        <h4 className="text-[9px] font-black text-white uppercase tracking-[0.25em] flex items-center gap-2"><Brain className="h-3 w-3 text-primary" /> SÍNTESE RGMJ IA</h4>
+                        <div className="p-5 md:p-6 rounded-xl bg-primary/5 border border-primary/10 font-serif text-white/80 leading-relaxed text-xs md:text-sm italic shadow-inner">
                           {selectedLead.aiSummary || "Aguardando conclusão de entrevista para consolidação de fatos."}
                         </div>
                       </div>
                     </TabsContent>
 
                     <TabsContent value="entrevistas" className="space-y-6">
-                      <div className="p-5 md:p-8 rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 mb-4 text-center space-y-4">
+                      <div className="p-5 md:p-6 rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 mb-4 text-center space-y-4">
                         <p className="text-[7px] md:text-[8px] font-black text-primary uppercase tracking-[0.25em]">ESCOLHA A MATRIZ PARA INICIAR A CAPTURA:</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {templates?.map((t) => (
-                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[8px] md:text-[9px] h-11 md:h-12 gap-2 hover:bg-primary hover:text-background transition-all tracking-[0.15em] truncate">
+                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[8px] h-11 gap-2 hover:bg-primary hover:text-background transition-all tracking-[0.15em] truncate">
                               <Zap className="h-3.5 w-3.5" /> {t.title}
                             </Button>
                           ))}
@@ -586,7 +584,7 @@ export default function LeadsPage() {
                             <div key={int.id} className="p-4 md:p-5 rounded-lg bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/30 transition-all">
                               <div className="space-y-1">
                                 <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-tight">{int.interviewType}</p>
-                                <p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest">POR: {int.interviewerName?.toUpperCase()} • {new Date(int.createdAt.toDate()).toLocaleDateString()}</p>
+                                <p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest">POR: {int.interviewerName?.toUpperCase() || 'EQUIPE RGMJ'} • {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
                               </div>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/40 hover:text-primary rounded-full"><ChevronRight className="h-4 w-4" /></Button>
                             </div>
@@ -608,21 +606,21 @@ export default function LeadsPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <Card className="glass border-primary/20 p-5 space-y-4 rounded-xl">
                           <div><h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tighter mb-1">EDITAR FICHA</h4><p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Retificar dados cadastrais.</p></div>
-                          <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="w-full h-10 md:h-11 border-primary/30 text-primary hover:bg-primary hover:text-background font-black uppercase text-[8px] md:text-[9px] tracking-[0.2em] gap-2 rounded-lg">
+                          <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="w-full h-10 border-primary/30 text-primary hover:bg-primary hover:text-background font-black uppercase text-[8px] tracking-[0.2em] gap-2 rounded-lg">
                             <UserCog className="h-3.5 w-3.5" /> ATUALIZAR CADASTRO
                           </Button>
                         </Card>
                         {!isAlreadyClient && (
                           <Card className="glass border-emerald-500/20 p-5 space-y-4 rounded-xl">
                             <div><h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tighter mb-1">OFICIALIZAR CLIENTE</h4><p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Injetar na base estratégica.</p></div>
-                            <Button onClick={handlePromoteToClient} disabled={isPromoting} variant="outline" className="w-full h-10 md:h-11 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black uppercase text-[8px] md:text-[9px] tracking-[0.2em] gap-2 rounded-lg">
+                            <Button onClick={handlePromoteToClient} disabled={isPromoting} variant="outline" className="w-full h-10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black uppercase text-[8px] tracking-[0.2em] gap-2 rounded-lg">
                               {isPromoting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />} OFICIALIZAR AGORA
                             </Button>
                           </Card>
                         )}
                         <Card className="glass border-rose-500/20 p-5 space-y-4 rounded-xl">
                           <div><h4 className="text-xs md:text-sm font-black text-white uppercase tracking-tighter mb-1">ARQUIVAR LEAD</h4><p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Mover para acervo passivo.</p></div>
-                          <Button variant="outline" className="w-full h-10 md:h-11 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[8px] md:text-[9px] tracking-[0.2em] rounded-lg">ENCERRAR ATENDIMENTO</Button>
+                          <Button variant="outline" className="w-full h-10 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[8px] tracking-[0.2em] rounded-lg">ENCERRAR ATENDIMENTO</Button>
                         </Card>
                       </div>
                     </TabsContent>
@@ -636,6 +634,10 @@ export default function LeadsPage() {
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Execução de Entrevista</DialogTitle>
+            <DialogDescription>Processo de captura de DNA jurídico RGMJ.</DialogDescription>
+          </DialogHeader>
           {executingTemplate && (
             <DynamicInterviewExecution 
               template={executingTemplate} 
