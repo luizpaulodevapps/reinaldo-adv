@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -25,7 +24,9 @@ import {
   Phone,
   Mail,
   MapPin,
-  History
+  History,
+  Trash2,
+  ExternalLink
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -49,7 +50,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { aiSummarizeInterviewCaseDetails } from "@/ai/flows/ai-summarize-interview-case-details"
@@ -134,6 +135,25 @@ export default function LeadsPage() {
     toast({ title: "Triagem Iniciada!" })
   }
 
+  const handleUpdateStatus = async (status: string) => {
+    if (!selectedLead || !db) return
+    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      status,
+      updatedAt: serverTimestamp()
+    })
+    setSelectedLead({ ...selectedLead, status })
+    toast({ title: "Fluxo Atualizado", description: `O lead foi movido para ${status.toUpperCase()}.` })
+  }
+
+  const handleDeleteLead = async () => {
+    if (!selectedLead || !db) return
+    if (confirm("Deseja remover permanentemente este lead?")) {
+      await deleteDocumentNonBlocking(doc(db!, "leads", selectedLead.id))
+      setIsSheetOpen(false)
+      toast({ variant: "destructive", title: "Lead Removido" })
+    }
+  }
+
   const handleStartInterview = (template: any) => {
     setExecutingTemplate(template)
     setIsInterviewDialogOpen(true)
@@ -158,7 +178,6 @@ export default function LeadsPage() {
 
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
     
-    // Atualiza status do Lead para "Atendimento"
     await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
       status: "atendimento",
       updatedAt: serverTimestamp()
@@ -208,7 +227,7 @@ export default function LeadsPage() {
   const handleConvertToProcess = async () => {
     if (!selectedLead || !db || !user) return
 
-    const confirmConvert = window.confirm("Deseja converter este atendimento em um processo judicial ativo?")
+    const confirmConvert = confirm("Deseja converter este atendimento em um processo judicial ativo?")
     if (!confirmConvert) return
 
     const processData = {
@@ -232,6 +251,13 @@ export default function LeadsPage() {
 
     setIsSheetOpen(false)
     toast({ title: "Atendimento Convertido", description: "Dossiê migrado para a pauta de processos." })
+  }
+
+  const handleWhatsApp = () => {
+    if (!selectedLead?.phone) return
+    const phone = selectedLead.phone.replace(/\D/g, "")
+    const text = encodeURIComponent(`Olá ${selectedLead.name}, aqui é da RGMJ Advogados. Gostaria de dar continuidade ao seu atendimento.`)
+    window.open(`https://wa.me/55${phone}?text=${text}`, "_blank")
   }
 
   const normalizeLeadStatus = (status?: string) => status || "novo"
@@ -312,9 +338,26 @@ export default function LeadsPage() {
                       {normalizeLeadStatus(selectedLead.status).toUpperCase()}
                     </Badge>
                     <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{selectedLead.name}</h2>
-                    <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest flex items-center gap-2">
-                      <Zap className="h-3 w-3 text-primary" /> Dossiê de atendimento em progresso.
-                    </p>
+                    <div className="flex items-center gap-4 mt-4">
+                      <Button onClick={handleWhatsApp} variant="outline" className="h-10 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[9px] font-black uppercase gap-2 tracking-widest">
+                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp Direct
+                      </Button>
+                      <div className="flex gap-1">
+                        {columns.map(c => (
+                          <Button 
+                            key={c.id} 
+                            onClick={() => handleUpdateStatus(c.id)}
+                            variant="ghost" 
+                            className={cn(
+                              "h-10 text-[8px] font-black uppercase tracking-tighter px-3 border border-white/5",
+                              selectedLead.status === c.id ? "bg-white/10 text-white" : "text-muted-foreground"
+                            )}
+                          >
+                            {c.title}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button 
@@ -352,6 +395,7 @@ export default function LeadsPage() {
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
                       <TabsTrigger value="dados" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">DADOS CAPTURADOS</TabsTrigger>
+                      <TabsTrigger value="ferramentas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all text-rose-400">GESTÃO</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="space-y-10 focus:ring-0">
@@ -398,7 +442,7 @@ export default function LeadsPage() {
                     <TabsContent value="entrevistas" className="space-y-8">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-black text-white uppercase tracking-widest">Linha do Tempo Técnica</h4>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           {templates?.map(t => (
                             <Button key={t.id} onClick={() => handleStartInterview(t)} size="sm" variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary h-9">
                               EXECUTAR: {t.legalArea || "GERAL"}
@@ -448,6 +492,34 @@ export default function LeadsPage() {
                         )}
                       </div>
                     </TabsContent>
+
+                    <TabsContent value="ferramentas" className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="glass border-rose-500/20 p-8 space-y-4">
+                          <h4 className="text-sm font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                            <Trash2 className="h-4 w-4" /> Zona de Perigo
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
+                            Ações irreversíveis para limpeza da base tática.
+                          </p>
+                          <Button onClick={handleDeleteLead} variant="destructive" className="w-full uppercase font-black text-[10px] tracking-widest h-12">
+                            Remover Lead Permanentemente
+                          </Button>
+                        </Card>
+
+                        <Card className="glass border-primary/20 p-8 space-y-4">
+                          <h4 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                            <ExternalLink className="h-4 w-4" /> Atalhos Rápidos
+                          </h4>
+                          <Button asChild variant="outline" className="w-full border-white/10 uppercase font-black text-[10px] tracking-widest h-12">
+                            <Link href="/drafting">Ir para Minuta Inteligente</Link>
+                          </Button>
+                          <Button asChild variant="outline" className="w-full border-white/10 uppercase font-black text-[10px] tracking-widest h-12">
+                            <Link href="/clients">Ver Ficha no Cadastro</Link>
+                          </Button>
+                        </Card>
+                      </div>
+                    </TabsContent>
                   </Tabs>
                 </div>
               </ScrollArea>
@@ -459,11 +531,13 @@ export default function LeadsPage() {
       {/* Dialog de Execução de Entrevista */}
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh]">
-          <DynamicInterviewExecution 
-            template={executingTemplate} 
-            onSubmit={handleFinishInterview}
-            onCancel={() => { setIsInterviewDialogOpen(false); setExecutingTemplate(null); }}
-          />
+          {executingTemplate && (
+            <DynamicInterviewExecution 
+              template={executingTemplate} 
+              onSubmit={handleFinishInterview}
+              onCancel={() => { setIsInterviewDialogOpen(false); setExecutingTemplate(null); }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

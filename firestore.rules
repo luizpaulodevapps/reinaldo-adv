@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     /**
      * LexFlow ERP - Blindagem de Acesso RGMJ
-     * Conforme diretriz: Se o usuário logou, ele tem permissão total (CRUD).
+     * Conforme diretriz soberana: Se o usuário logou, ele tem permissão total (CRUD).
      * Esta regra garante acesso absoluto para a conta do Dr. Reinaldo e sua equipe autorizada.
      */
     match /{document=**} {
