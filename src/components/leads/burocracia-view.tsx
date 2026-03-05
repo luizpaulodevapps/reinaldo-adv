@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -22,7 +23,9 @@ import {
   Gavel,
   Phone,
   MapPin,
-  Building
+  Building,
+  Edit3,
+  Scale
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -34,6 +37,7 @@ import { useFirestore } from "@/firebase"
 interface BurocraciaViewProps {
   lead: any
   interviews: any[]
+  onEdit?: () => void
 }
 
 const DOCUMENT_KITS = {
@@ -52,7 +56,7 @@ const DOCUMENT_KITS = {
   ]
 }
 
-export function BurocraciaView({ lead, interviews }: BurocraciaViewProps) {
+export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps) {
   const [generating, setGenerating] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const { toast } = useToast()
@@ -263,30 +267,46 @@ export function BurocraciaView({ lead, interviews }: BurocraciaViewProps) {
           </div>
 
           {/* PAINEL DE JURISDIÇÃO (FÓRUM/VARA) */}
-          <Card className="glass border-white/10 bg-black/20 p-8 space-y-6 rounded-[2rem]">
-            <div className="flex items-center justify-between">
+          <Card className="glass border-white/10 bg-black/20 p-8 space-y-6 rounded-[2rem] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+              <Scale className="h-24 text-primary" />
+            </div>
+            
+            <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                   <MapPin className="h-5 w-5" />
                 </div>
                 <h4 className="text-sm font-black text-white uppercase tracking-widest">Unidade Judiciária (Fórum)</h4>
               </div>
-              <Button variant="ghost" className="text-[10px] font-black text-primary uppercase tracking-widest hover:bg-primary/10">Pesquisar Endereço via API</Button>
+              <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
+                <Edit3 className="h-3 w-3" /> Editar Jurisdição
+              </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum</Label>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-xs font-bold text-white uppercase">{lead.court || "NÃO INFORMADO"}</div>
+                <div className={cn(
+                  "p-5 rounded-xl bg-white/[0.03] border text-xs font-bold uppercase transition-all",
+                  lead.court ? "text-white border-white/5" : "text-amber-500/50 border-amber-500/20 italic"
+                )}>
+                  {lead.court || "NÃO INFORMADO NO DOSSIÊ"}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-xs font-bold text-white uppercase">{lead.vara || "NÃO INFORMADA"}</div>
+                <div className={cn(
+                  "p-5 rounded-xl bg-white/[0.03] border text-xs font-bold uppercase transition-all",
+                  lead.vara ? "text-white border-white/5" : "text-amber-500/50 border-amber-500/20 italic"
+                )}>
+                  {lead.vara || "NÃO INFORMADA NO DOSSIÊ"}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Telefone da Unidade</Label>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-xs font-bold text-white uppercase flex items-center gap-2">
-                  <Phone className="h-3 w-3 text-primary/50" /> (--) ----- ----
+                <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5 text-xs font-bold text-white/40 uppercase flex items-center gap-3">
+                  <Phone className="h-3.5 w-3.5 text-primary/30" /> (--) ----- ----
                 </div>
               </div>
             </div>

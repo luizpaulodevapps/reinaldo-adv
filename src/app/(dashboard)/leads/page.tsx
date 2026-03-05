@@ -167,7 +167,7 @@ export default function LeadsPage() {
     switch (pref) {
       case "padrão": return "sm:max-w-lg"
       case "largo": return "sm:max-w-2xl"
-      case "extra-largo": return "sm:max-w-5xl" // Aumentado para mais espaço tático
+      case "extra-largo": return "sm:max-w-5xl" 
       case "full": return "sm:max-w-full"
       default: return "sm:max-w-5xl"
     }
@@ -583,7 +583,7 @@ export default function LeadsPage() {
                           <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Pendente: Preencha os dados do Réu e Sincronize o Drive para liberar o Protocolo.</p>
                         </div>
                       )}
-                      <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} />
+                      <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
                     <TabsContent value="protocolo" className="space-y-8 animate-in fade-in duration-500">
@@ -729,6 +729,8 @@ export default function LeadsPage() {
                 clientId: selectedLead.id,
                 defendantName: selectedLead.defendantName,
                 caseType: selectedLead.type,
+                court: selectedLead.court,
+                vara: selectedLead.vara,
                 description: selectedLead.demandTitle || selectedLead.notes?.substring(0, 100),
                 responsibleStaffId: user?.uid
               }}

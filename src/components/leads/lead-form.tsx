@@ -104,6 +104,9 @@ export function LeadForm({
     defendantNeighborhood: "",
     defendantCity: "",
     defendantState: "",
+    // Jurisdição
+    court: "",
+    vara: "",
     // Dados Financeiros
     value: ""
   })
@@ -286,7 +289,7 @@ export function LeadForm({
                     <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">E-mail Corporativo/Pessoal</Label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                      <Input placeholder="CLIENTE@EMAIL.COM" className="pl-12 bg-black/40 border-white/10 h-14 text-white font-bold rounded-xl lowercase" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} />
+                      <Input placeholder="CLIENTE@EMAIL.COM" className="pl-12 bg-black/40 border border-white/10 h-14 text-white font-bold rounded-xl lowercase" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} />
                     </div>
                   </div>
                 </div>
@@ -439,7 +442,7 @@ export function LeadForm({
           {activeTab === "demanda" && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="space-y-8">
-                <SectionTitle icon={Gavel}>Objeto & Estratégia</SectionTitle>
+                <SectionTitle icon={Gavel}>Objeto da Ação</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Título da Demanda (Objeto)</Label>
@@ -458,6 +461,20 @@ export function LeadForm({
                 <div className="space-y-2">
                   <Label className="text-[9px] font-black text-primary uppercase tracking-widest">Relato dos Fatos (Boletim de Ocorrências / Resumo)</Label>
                   <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO COMPLETO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[300px] text-white text-sm leading-relaxed uppercase resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                <SectionTitle icon={Scale}>Jurisdição Sugerida</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum Alvo</Label>
+                    <Input placeholder="EX: TRT 2ª REGIÃO" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.court} onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
+                    <Input placeholder="EX: 45ª VARA DO TRABALHO" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
+                  </div>
                 </div>
               </div>
             </div>
