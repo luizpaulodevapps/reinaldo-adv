@@ -77,7 +77,7 @@ export default function LeadsPage() {
 
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "leads"), limit(100))
+    return query(collection(db!, "leads"), limit(100))
   }, [db, user])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
@@ -85,7 +85,7 @@ export default function LeadsPage() {
 
   const checklistsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "checklists"), where("category", "==", "Entrevista de Triagem"))
+    return query(collection(db!, "checklists"), where("category", "==", "Entrevista de Triagem"))
   }, [db, user])
   const { data: interviewTemplates } = useCollection(checklistsQuery)
 
@@ -286,14 +286,14 @@ export default function LeadsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    await addDocumentNonBlocking(collection(db, "leads"), newLead)
+    await addDocumentNonBlocking(collection(db!, "leads"), newLead)
     setIsNewEntryOpen(false)
     toast({ title: "Triagem Iniciada!" })
   }
 
   const handleUpdateLead = () => {
     if (!selectedLead || !db) return
-    const leadRef = doc(db, "leads", selectedLead.id)
+    const leadRef = doc(db!, "leads", selectedLead.id)
     const scheduleDateTime = scheduleData.date && scheduleData.time
       ? `${scheduleData.date}T${scheduleData.time}`
       : selectedLead.nextAppointmentAt || ""
@@ -351,8 +351,8 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp(),
     }
 
-    await addDocumentNonBlocking(collection(db, "processes"), newProcess)
-    deleteDocumentNonBlocking(doc(db, "leads", selectedLead.id))
+    await addDocumentNonBlocking(collection(db!, "processes"), newProcess)
+    deleteDocumentNonBlocking(doc(db!, "leads", selectedLead.id))
     setIsSheetOpen(false)
     toast({ title: "PROCESSO PROTOCOLADO!" })
   }
@@ -362,7 +362,7 @@ export default function LeadsPage() {
     const responses = payload.responses || {}
     const templateSnapshot = payload.templateSnapshot || []
     
-    const leadRef = doc(db, "leads", selectedLead.id)
+    const leadRef = doc(db!, "leads", selectedLead.id)
     updateDocumentNonBlocking(leadRef, {
       interviewResponses: responses,
       interviewTemplateSnapshot: templateSnapshot,

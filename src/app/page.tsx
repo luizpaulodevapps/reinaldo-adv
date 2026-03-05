@@ -71,7 +71,7 @@ export default function HomePage() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/image/hero-bg.jpg')" }}
         />
-        {/* Overlay para profundidade */}
+        {/* Overlay */}
         <div className="absolute inset-0 bg-[#050a19]/70" />
         
         {/* Decorative elements */}
@@ -116,10 +116,10 @@ export default function HomePage() {
               >
                 Excelência Jurídica
                 <br />
-                com <span className="text-gradient-gold font-medium italic">Estratégia</span>,
+                com <span className="text-[#D4AF37] font-medium italic">Estratégia</span>,
                 <br />
-                <span className="text-gradient-gold font-medium italic">Ética</span> e{" "}
-                <span className="text-gradient-gold font-medium italic">Compromisso</span>
+                <span className="text-[#D4AF37] font-medium italic">Ética</span> e{" "}
+                <span className="text-[#D4AF37] font-medium italic">Compromisso</span>
               </motion.h1>
 
               {/* Subtitle */}
@@ -139,7 +139,7 @@ export default function HomePage() {
                 transition={{ duration: 0.8, delay: 1.3 }}
                 className="flex flex-col sm:flex-row gap-6"
               >
-                <Button className="gold-gradient hover:scale-105 text-background font-black rounded-none px-12 h-20 text-xs uppercase tracking-[0.3em] shadow-2xl transition-all border-0">
+                <Button className="bg-[#D4AF37] text-[#050a19] hover:scale-105 font-black rounded-none px-12 h-20 text-xs uppercase tracking-[0.3em] shadow-2xl transition-all border-0">
                   <Calendar className="w-4 h-4 mr-3" />
                   Agendar Consulta
                 </Button>
@@ -173,23 +173,24 @@ export default function HomePage() {
             transition={{ duration: 1 }}
             className="relative"
           >
-            <div className="gold-frame max-w-md mx-auto lg:mx-0 shadow-[0_0_50px_rgba(212,175,55,0.1)]">
+            <div className="p-4 bg-[#0a0f1e] border border-primary/20 relative shadow-[0_0_50px_rgba(212,175,55,0.1)]">
               <img 
                 src="https://picsum.photos/seed/reinaldo-law/800/1000" 
                 alt="Dr. Reinaldo Gonçalves" 
                 className="w-full grayscale hover:grayscale-0 transition-all duration-1000 object-cover aspect-[4/5]"
-                data-ai-hint="elegant lawyer"
               />
+              <div className="absolute -inset-2 border border-primary/40 pointer-events-none" />
+              <div className="absolute -inset-4 border border-primary/10 pointer-events-none" />
             </div>
-            <div className="absolute -bottom-10 -right-10 gold-gradient p-10 hidden md:block shadow-2xl">
-              <p className="text-background text-6xl font-display font-black italic">08</p>
-              <p className="text-background text-[10px] font-black uppercase tracking-[0.2em] mt-2">Anos de Prática de Elite</p>
+            <div className="absolute -bottom-10 -right-10 bg-gradient-to-r from-[#F5D030] to-[#B8860B] p-10 hidden md:block shadow-2xl">
+              <p className="text-[#050a19] text-6xl font-display font-black italic">08</p>
+              <p className="text-[#050a19] text-[10px] font-black uppercase tracking-[0.2em] mt-2">Anos de Prática de Elite</p>
             </div>
           </motion.div>
 
           <div className="space-y-12">
             <Badge className="bg-primary/10 text-primary border-primary/20 px-8 py-2 text-[10px] font-black uppercase tracking-[0.4em] rounded-none">A BANCA</Badge>
-            <h2 className="text-6xl md:text-8xl font-display font-bold leading-[1.1] tracking-tighter">Tradição que se une à <span className="italic font-light text-gradient-gold">Modernidade Jurídica</span></h2>
+            <h2 className="text-6xl md:text-8xl font-display font-bold leading-[1.1] tracking-tighter">Tradição que se une à <span className="italic font-light text-[#D4AF37]">Modernidade Jurídica</span></h2>
             <p className="text-white/50 leading-relaxed text-xl font-light font-body">
               Comandada pelo Dr. Reinaldo Gonçalves Miguel de Jesus, nossa banca é reconhecida pela combatividade e precisão técnica. Focamos em entregar resultados que transcendem o processo judicial, protegendo o patrimônio e a dignidade de nossos constituintes.
             </p>
@@ -211,7 +212,7 @@ export default function HomePage() {
       <section id="areas" className="py-40 px-6 bg-[#080d1f] relative">
         <div className="max-w-7xl mx-auto space-y-24">
           <div className="text-center space-y-6 max-w-3xl mx-auto">
-            <h2 className="text-6xl md:text-9xl font-display font-bold tracking-tighter">Áreas de <span className="italic font-light text-gradient-gold">Domínio</span></h2>
+            <h2 className="text-6xl md:text-9xl font-display font-bold tracking-tighter">Áreas de <span className="italic font-light text-[#D4AF37]">Domínio</span></h2>
             <p className="text-primary tracking-[0.6em] text-[10px] uppercase font-black">Especialistas em casos de alta complexidade</p>
           </div>
 
@@ -241,7 +242,7 @@ export default function HomePage() {
               <motion.div 
                 key={i} 
                 variants={fadeInUp}
-                className="premium-card gold-sweep p-16 space-y-10 group"
+                className="bg-white/[0.02] backdrop-blur-xl border border-white/5 p-16 space-y-10 group relative overflow-hidden transition-all duration-500 hover:border-primary/40 shadow-[0_0_30px_rgba(212,175,55,0.05)]"
               >
                 <div className="w-16 h-16 bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:border-primary/40 transition-all rounded-xl">
                   <area.icon className="h-8 w-8 text-primary" />
@@ -259,54 +260,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Process Section */}
-      <section id="workflow" className="py-40 px-6 bg-[#050a19] relative overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-32 gap-8">
-            <div className="space-y-6">
-              <Badge className="bg-primary/10 text-primary border-primary/20 px-8 py-2 text-[10px] font-black uppercase rounded-none tracking-widest">WORKFLOW</Badge>
-              <h2 className="text-6xl md:text-8xl font-display font-bold leading-none tracking-tighter">Nossa <span className="italic font-light text-gradient-gold">Metodologia</span></h2>
-            </div>
-            <p className="text-white/30 max-w-sm text-sm italic border-l border-primary/30 pl-8 font-body">Do protocolo inicial ao trânsito em julgado, cada passo é taticamente planejado pela nossa inteligência jurídica.</p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-16 relative">
-            <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent hidden lg:block" />
-            
-            {[
-              { step: "01", title: "Análise", icon: Zap, desc: "Auditoria de Fatos" },
-              { step: "02", title: "Estratégia", icon: Brain, desc: "Engenharia de Tese" },
-              { step: "03", title: "Protocolo", icon: FileText, desc: "Ação Imediata" },
-              { step: "04", title: "Êxito", icon: CheckCircle, desc: "Resultado Final" }
-            ].map((p, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.2 }}
-                className="relative z-10 flex flex-col items-center text-center space-y-8 group"
-              >
-                <div className="w-24 h-24 bg-[#0a0f1e] border border-primary/20 flex items-center justify-center rounded-full group-hover:border-primary transition-all group-hover:scale-110 shadow-[0_0_30px_rgba(212,175,55,0.05)] relative">
-                  <div className="absolute inset-0 rounded-full bg-primary/5 animate-pulse group-hover:animate-none" />
-                  <p className="text-primary font-display text-3xl font-black italic relative z-10">{p.step}</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xl font-bold uppercase tracking-[0.2em] font-display">{p.title}</h4>
-                  <p className="text-[10px] text-white/30 uppercase font-black tracking-widest font-body">{p.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="py-32 bg-[#02040d] border-t border-white/5 px-6" id="contato">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-4 gap-20">
           <div className="lg:col-span-2 space-y-10">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/10">
-                <Scale className="h-6 w-6 text-background" />
+                <Scale className="h-6 w-6 text-[#02040d]" />
               </div>
               <span className="text-2xl font-display font-bold tracking-[0.2em] uppercase">RGMJ Elite</span>
             </div>
@@ -344,7 +304,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto mt-32 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
           <p>© 2025 RGMJ ADVOCACIA DE ELITE. TODOS OS DIREITOS RESERVADOS.</p>
           <div className="flex gap-8">
-            <span>OAB/SP 000.000</span>
+            <span>OAB/SP 497650</span>
             <span>CNPJ: 00.000.000/0001-00</span>
           </div>
         </div>
