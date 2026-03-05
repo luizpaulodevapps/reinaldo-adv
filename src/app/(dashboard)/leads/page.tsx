@@ -41,7 +41,8 @@ import {
   FileText,
   Save,
   CheckSquare,
-  Lock
+  Lock,
+  ShieldAlert
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -126,6 +127,19 @@ export default function LeadsPage() {
     )
   }, [db, user, selectedLead])
   const { data: leadInterviews } = useCollection(leadInterviewsQuery)
+
+  const missingFields = useMemo(() => {
+    if (!selectedLead) return []
+    const missing = []
+    if (!selectedLead.cpf && !selectedLead.documentNumber) missing.push("CPF/CNPJ")
+    if (!selectedLead.email) missing.push("E-MAIL")
+    if (!selectedLead.phone) missing.push("WHATSAPP")
+    if (!selectedLead.city) missing.push("LOCALIDADE")
+    if (!selectedLead.defendantName) missing.push("NOME DO RÉU")
+    return missing
+  }, [selectedLead])
+
+  const isProfileIncomplete = missingFields.length > 0
 
   const isBureaucracyComplete = useMemo(() => {
     if (!selectedLead) return false
@@ -452,7 +466,32 @@ export default function LeadsPage() {
               </div>
 
               <ScrollArea className="flex-1 min-h-0">
-                <div className="p-6 pb-24">
+                <div className="p-6 pb-24 space-y-8">
+                  {/* ALERTA DE PERFIL INCOMPLETO */}
+                  {isProfileIncomplete && (
+                    <Card className="glass border-amber-500/30 bg-amber-500/5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-500">
+                      <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center border border-amber-500/30 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                            <ShieldAlert className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-white uppercase tracking-widest">Atenção: Dossiê de Lead Incompleto</h4>
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
+                              Faltam dados táticos: <span className="text-amber-400">{missingFields.join(", ")}</span>.
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={() => setIsEditModeOpen(true)}
+                          className="w-full md:w-auto h-12 px-8 gold-gradient text-background font-black uppercase text-[10px] tracking-widest rounded-lg shadow-xl hover:scale-105 active:scale-95 transition-all"
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" /> Saneamento Imediato
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-6">
                     <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-6 overflow-x-auto scrollbar-hide">
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">VISÃO GERAL</TabsTrigger>
