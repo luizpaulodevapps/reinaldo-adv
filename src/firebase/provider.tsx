@@ -137,7 +137,6 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   if (context === undefined) {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
-  // Removida a exceção de erro durante o build para evitar Prerender Errors na Vercel
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,

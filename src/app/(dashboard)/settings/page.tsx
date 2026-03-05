@@ -9,12 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { 
-  Settings as SettingsIcon,
   ChevronRight,
   LayoutGrid,
   Save,
-  Loader2,
-  User
+  Loader2
 } from "lucide-react"
 import { 
   Select, 
@@ -28,7 +26,6 @@ import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
 
 function SettingsContent() {
   const { toast } = useToast()

@@ -6,310 +6,305 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
-  RefreshCw, 
-  Zap, 
+  Plus, 
+  Calculator, 
   ChevronRight, 
-  Users, 
-  Building2, 
-  History, 
-  Scale,
+  ArrowUpRight, 
+  ArrowDownRight,
   Loader2,
-  Wallet,
-  CheckCircle2,
   Printer,
-  TrendingUp
+  TrendingUp,
+  Building2,
+  Users
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, doc, where, serverTimestamp } from "firebase/firestore"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
-import { format } from "date-fns"
+import { addMonths, format, parseISO } from "date-fns"
 
-export default function FinancialPage() {
+export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [activeTab, setActiveTab] = useState("advogados")
-  const [selectedStaff, setSelectedStaff] = useState<any>(null)
-  const [isWalletOpen, setIsWalletOpen] = useState(false)
-  const [isPayConfirmOpen, setIsPayConfirmOpen] = useState(false)
-  const [folhaLoading, setFolhaLoading] = useState(false)
-  
+  const [isNewTitleOpen, setIsNewTitleOpen] = useState(false)
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
   const { toast } = useToast()
 
-  const canQuery = !!user && !!db
+  const financialQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "financial_titles"), orderBy("dueDate", "desc"))
+  }, [db, user])
 
-  const staffQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, canQuery])
-  const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
 
-  const creditsQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "staff_credits"), orderBy("createdAt", "desc"))
-  }, [db, canQuery])
-  const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery)
-
-  const titlesQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "financial_titles"), where("status", "==", "Recebido"))
-  }, [db, canQuery])
-  const { data: receivedTitles } = useCollection(titlesQuery)
+  const isLoading = isUserLoading || isLoadingTransactions
 
   const stats = useMemo(() => {
-    if (!credits) return { liquidado: 0, liberado: 0, retido: 0, ativos: 0 }
+    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, admin: 0 }
     
-    const liquidado = credits.filter(c => c.status === 'Pago').reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
-    const liberado = credits.filter(c => c.status === 'Disponível').reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
-    const retido = credits.filter(c => c.status === 'Retido').reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
-    const ativos = new Set(credits.filter(c => c.status === 'Disponível').map(c => c.staffId)).size
+    const entradas = transactions
+      .filter(t => t.type?.includes('Entrada'))
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    return { liquidado, liberado, retido, ativos }
-  }, [credits])
+    const saídas = transactions
+      .filter(t => t.type?.includes('Saída'))
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-  const filteredTeam = useMemo(() => {
-    if (!team) return []
-    let list = team.filter(member => 
-      member.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const admin = transactions
+      .filter(t => t.type?.includes('Saída') && (t.category?.includes('Aluguel') || t.category?.includes('Software') || t.category?.includes('Marketing')))
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+
+    const saldo = entradas - saídas
+
+    return { entradas, saídas, saldo, admin }
+  }, [transactions])
+
+  const filteredTransactions = useMemo(() => {
+    if (!transactions) return []
+    return transactions.filter(t => 
+      t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.processNumber?.toLowerCase().includes(searchTerm.toLowerCase())
     )
+  }, [transactions, searchTerm])
 
-    if (activeTab === "advogados") return list.filter(m => m.role === "lawyer" || m.role === "admin")
-    if (activeTab === "colaboradores") return list.filter(m => m.role === "assistant" || m.role === "financial")
-    
-    return list
-  }, [team, searchTerm, activeTab])
+  const handleCreateTitle = (data: any) => {
+    if (!user || !db) return
 
-  const getStaffBalance = (staffId: string) => {
-    if (!credits) return 0
-    return credits
-      .filter(c => c.staffId === staffId && c.status === 'Disponível')
-      .reduce((acc, c) => acc + (Number(c.amount) || 0), 0)
-  }
+    const iterations = data.isRecurring ? (data.recurrenceMonths || 1) : 1
+    const baseDueDate = parseISO(data.dueDate)
 
-  const handleRodarFolha = async () => {
-    if (!receivedTitles || !team || !db) return
-    setFolhaLoading(true)
-
-    let createdCount = 0
-    for (const title of receivedTitles) {
-      const existing = credits?.find(c => c.financialTitleId === title.id)
-      if (!existing && title.processResponsibleStaffId) {
-        const amount = (Number(title.value) || 0) * 0.3
-        
-        await addDocumentNonBlocking(collection(db!, "staff_credits"), {
-          staffId: title.processResponsibleStaffId,
-          financialTitleId: title.id,
-          description: `Repasse: ${title.description}`,
-          amount: amount,
-          status: "Disponível",
-          honorariumPercentage: 30,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        })
-        createdCount++
+    for (let i = 0; i < iterations; i++) {
+      const currentDueDate = addMonths(baseDueDate, i)
+      const formattedDueDate = format(currentDueDate, 'yyyy-MM-dd')
+      
+      const newTitle = {
+        ...data,
+        dueDate: formattedDueDate,
+        value: data.numericValue,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       }
+      
+      delete newTitle.numericValue
+      delete newTitle.recurrenceMonths
+
+      addDocumentNonBlocking(collection(db!, "financial_titles"), newTitle)
     }
 
-    setFolhaLoading(false)
+    setIsNewTitleOpen(false)
     toast({
-      title: "Folha Processada",
-      description: `${createdCount} novos créditos liberados.`
+      title: iterations > 1 ? "Recorrência Programada" : "Operação Registrada",
+      description: iterations > 1 
+        ? `${iterations} lançamentos de R$ ${data.value} foram injetados no fluxo.`
+        : `O lançamento de R$ ${data.value} foi injetado no fluxo.`
     })
   }
 
-  const handleConfirmQuitar = () => {
-    if (!selectedStaff || !credits || !db) return
-
-    const pendingCredits = credits.filter(c => c.staffId === selectedStaff.id && c.status === 'Disponível')
-    
-    pendingCredits.forEach(c => {
-      const cRef = doc(db!, "staff_credits", c.id)
-      updateDocumentNonBlocking(cRef, {
-        status: "Pago",
-        paymentDate: new Date().toISOString().split('T')[0],
-        updatedAt: serverTimestamp()
-      })
-    })
-
-    toast({ title: "Saldo Quitado", description: `Pagamento para ${selectedStaff.name} processado.` })
-    setIsPayConfirmOpen(false)
-  }
-
-  const isLoading = loadingTeam || loadingCredits
+  const TransactionList = ({ items }: { items: any[] }) => (
+    <div className="divide-y divide-white/5 w-full">
+      {items.map((t) => (
+        <div key={t.id} className="p-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors group">
+          <div className="flex items-center gap-6">
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center border",
+              t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+            )}>
+              {t.type?.includes("Saída") ? <ArrowDownRight className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h4 className="font-bold text-white uppercase text-sm tracking-tight">{t.description}</h4>
+                <Badge variant="outline" className="text-[8px] font-black border-white/10 text-muted-foreground">{t.category?.toUpperCase()}</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1 flex items-center gap-2">
+                Vencimento: {t.dueDate} {t.processNumber ? `• Proc: ${t.processNumber}` : "• Despesa Admin"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="text-right">
+              <div className={cn(
+                "text-lg font-black",
+                t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400"
+              )}>
+                {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <Badge 
+                variant={t.status === 'Recebido' || t.status === 'Pago' ? 'default' : 'outline'}
+                className={cn("text-[9px] font-black uppercase h-5", (t.status === 'Recebido' || t.status === 'Pago') ? "bg-emerald-500 text-white" : "border-white/10")}
+              >
+                {t.status}
+              </Badge>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => window.print()}>
+                <Printer className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
-            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+            <Link href="/" className="hover:text-primary transition-colors uppercase">Início</Link>
             <ChevronRight className="h-2 w-2" />
-            <span>Dashboard</span>
+            <span className="uppercase">Dashboard</span>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Carteiras & Repasses</span>
+            <span className="text-white uppercase tracking-tighter">Central Financeira</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão de Carteiras</h1>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão Financeira Central</h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-70">
-            AUDITORIA DE SALDOS E CONTROLE DE HONORÁRIOS RGMJ.
+            CONTROLE 360º: HONORÁRIOS, DESPESAS E FOLHA RGMJ.
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRodarFolha} disabled={folhaLoading} className="glass border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase h-11 gap-2 px-6">
-            {folhaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />} Rodar Folha
-          </Button>
-          <Button variant="outline" className="glass border-primary/20 text-primary text-[10px] font-black uppercase h-11 gap-2 px-6" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-3.5 w-3.5" /> Sincronizar
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Pesquisar transação..." 
+              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button 
+            onClick={() => setIsNewTitleOpen(true)}
+            className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
+          >
+            <Plus className="h-4 w-4" /> Novo Lançamento
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Liquidado", value: stats.liquidado, color: "text-emerald-500" },
-          { label: "Saldos em Aberto", value: stats.liberado, color: "text-primary" },
-          { label: "Provisionado", value: stats.retido, color: "text-blue-500" },
-          { label: "Membros Ativos", value: stats.ativos, color: "text-muted-foreground", isCurrency: false },
-        ].map((s, i) => (
-          <Card key={i} className="glass border-white/5 h-32 flex flex-col justify-center">
-            <CardContent className="p-6">
-              <p className={cn("text-[9px] font-black uppercase tracking-widest mb-2", s.color)}>{s.label}</p>
-              <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
-                {s.isCurrency === false ? s.value : `R$ ${s.value.toLocaleString('pt-BR')}`}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="glass border-primary/20 relative overflow-hidden h-32 flex flex-col justify-center shadow-2xl">
+          <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
+          <CardContent className="p-6">
+            <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <TrendingUp className="h-3 w-3" /> Saldo Operacional
+            </p>
+            <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>
+              R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
+          <CardContent className="p-6">
+            <p className="text-[9px] font-black text-emerald-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <ArrowUpRight className="h-3 w-3" /> Receita Bruta
+            </p>
+            <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
+              R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
+          <CardContent className="p-6">
+            <p className="text-[9px] font-black text-rose-500/70 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <ArrowDownRight className="h-3 w-3" /> Total Despesas
+            </p>
+            <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
+              R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
+          <CardContent className="p-6">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <Building2 className="h-3 w-3" /> Custo Estrutura
+            </p>
+            <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
+              R$ {stats.admin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs defaultValue="advogados" onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-[#0a1420]/50 border border-white/5 h-12 p-1 gap-1 w-full justify-start rounded-xl">
-          <TabsTrigger value="advogados" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8">Advogados</TabsTrigger>
-          <TabsTrigger value="colaboradores" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8">Equipe Apoio</TabsTrigger>
-          <TabsTrigger value="banca" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8">Banca</TabsTrigger>
-          <TabsTrigger value="historico" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8">Logs</TabsTrigger>
+      <Tabs defaultValue="todos" className="space-y-0 shadow-2xl">
+        <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-t-xl rounded-b-none border-b-0 overflow-x-auto scrollbar-hide">
+          <TabsTrigger value="todos" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <Calculator className="h-3.5 w-3.5" /> Todos
+          </TabsTrigger>
+          <TabsTrigger value="receitas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Receitas
+          </TabsTrigger>
+          <TabsTrigger value="administrativo" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <Building2 className="h-3.5 w-3.5 text-primary" /> Administrativo
+          </TabsTrigger>
+          <TabsTrigger value="folha" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full px-8 gap-2">
+            <Users className="h-3.5 w-3.5 text-blue-400" /> Folha
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-0">
-          <Card className="glass border-white/5 overflow-hidden shadow-2xl">
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando Carteiras RGMJ...</span>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader className="bg-secondary/20">
-                    <TableRow className="border-white/5">
-                      <TableHead className="text-[9px] font-black uppercase py-6 pl-10">Membro da Banca</TableHead>
-                      <TableHead className="text-[9px] font-black uppercase py-6 text-center">Perfil</TableHead>
-                      <TableHead className="text-[9px] font-black uppercase py-6 text-right">Saldo Disponível</TableHead>
-                      <TableHead className="text-[9px] font-black uppercase py-6 text-right pr-10">Ação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTeam.map((member) => {
-                      const balance = getStaffBalance(member.id)
-                      return (
-                        <TableRow key={member.id} className="border-white/5 hover-gold transition-colors">
-                          <TableCell className="py-6 pl-10">
-                            <div className="flex items-center gap-4">
-                              <Avatar className="h-10 w-10 border border-primary/20"><AvatarFallback className="text-[10px] font-black bg-secondary text-primary uppercase">{member.name.substring(0, 2)}</AvatarFallback></Avatar>
-                              <span className="text-sm font-black text-white uppercase tracking-tight">{member.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="text-[8px] font-black border-white/10 uppercase">{member.role}</Badge>
-                          </TableCell>
-                          <TableCell className={cn("text-right font-black text-sm", balance > 0 ? "text-emerald-400" : "text-white/20")}>
-                            R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="text-right pr-10">
-                            <div className="flex justify-end gap-6">
-                              <button onClick={() => { setSelectedStaff(member); setIsWalletOpen(true); }} className="text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300">VER CARTEIRA</button>
-                              <button onClick={() => { setSelectedStaff(member); setIsPayConfirmOpen(true); }} disabled={balance <= 0} className={cn("text-[10px] font-black uppercase tracking-widest", balance > 0 ? "text-emerald-500 hover:text-emerald-400" : "text-white/10 opacity-50")}>QUITAR</button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <div className="glass rounded-b-xl border-t-0 p-0 min-h-[500px] flex flex-col relative overflow-hidden">
+          {isLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Auditando Fluxo RGMJ...</span>
+            </div>
+          ) : (
+            <>
+              <TabsContent value="todos" className="w-full m-0 p-0">
+                {filteredTransactions.length > 0 ? (
+                  <TransactionList items={filteredTransactions} />
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center py-32 space-y-6 opacity-30">
+                    <Calculator className="h-16 w-16 text-muted-foreground" />
+                    <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum registro financeiro no radar</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="receitas" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.type?.includes('Entrada'))} />
+              </TabsContent>
+
+              <TabsContent value="administrativo" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.type?.includes('Saída') && !t.category?.includes('Folha'))} />
+              </TabsContent>
+
+              <TabsContent value="folha" className="w-full m-0 p-0">
+                <TransactionList items={filteredTransactions.filter(t => t.category?.includes('Folha'))} />
+              </TabsContent>
+            </>
+          )}
+        </div>
       </Tabs>
 
-      <Dialog open={isWalletOpen} onOpenChange={setIsWalletOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-2xl"><AvatarFallback className="font-black text-primary bg-secondary uppercase">{selectedStaff?.name?.substring(0, 2)}</AvatarFallback></Avatar>
-              <div>
-                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Dossiê: {selectedStaff?.name}</DialogTitle>
-                <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">Extrato de lançamentos e repasses.</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Saldo Disponível</p>
-              <p className="text-2xl font-black text-emerald-400">R$ {getStaffBalance(selectedStaff?.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </div>
+      <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                Novo Lançamento Financeiro
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Gestão de caixa e despesas RGMJ.
+              </DialogDescription>
+            </DialogHeader>
           </div>
-          <ScrollArea className="max-h-[400px]">
-            <Table>
-              <TableBody>
-                {credits?.filter(c => c.staffId === selectedStaff?.id).map((credit) => (
-                  <TableRow key={credit.id} className="border-white/5">
-                    <TableCell className="pl-8 py-4">
-                      <p className="text-xs font-bold text-white uppercase">{credit.description}</p>
-                      <p className="text-[9px] text-muted-foreground font-bold">{credit.createdAt?.toDate ? format(credit.createdAt.toDate(), "dd/MM/yyyy") : '--/--/----'}</p>
-                    </TableCell>
-                    <TableCell className="text-right pr-8">
-                      <p className="text-sm font-black text-white">R$ {(credit.amount || 0).toLocaleString('pt-BR')}</p>
-                      <Badge className={cn("text-[8px] font-black uppercase mt-1", credit.status === 'Pago' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500")}>{credit.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-          <DialogFooter className="p-8 bg-black/20 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsWalletOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Fechar</Button>
-            <Button className="glass border-primary/20 text-primary font-black uppercase text-[10px] px-8 gap-2" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /> Imprimir</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isPayConfirmOpen} onOpenChange={setIsPayConfirmOpen}>
-        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[450px] p-10 text-center font-sans">
-          <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-          </div>
-          <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter mb-4">Confirmar Quitação?</DialogTitle>
-          <p className="text-muted-foreground text-sm uppercase font-bold tracking-widest leading-loose">
-            Autorizando liquidação de <span className="text-emerald-400 font-black">R$ {getStaffBalance(selectedStaff?.id).toLocaleString('pt-BR')}</span> para <span className="text-white">{selectedStaff?.name}</span>.
-          </p>
-          <div className="mt-10 flex flex-col gap-3">
-            <Button onClick={handleConfirmQuitar} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black h-14 uppercase text-[11px] rounded-xl shadow-xl">Confirmar Pagamento</Button>
-            <Button variant="ghost" onClick={() => setIsPayConfirmOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+          <div className="px-10 py-8 bg-[#0a0f1e]/50">
+            <FinancialTitleForm onSubmit={handleCreateTitle} onCancel={() => setIsNewTitleOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>
