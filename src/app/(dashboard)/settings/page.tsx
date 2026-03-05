@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
@@ -535,7 +536,6 @@ function SettingsContent() {
         </TabsContent>
 
         <TabsContent value="notificacoes" className="mt-0 space-y-16">
-          {/* SEÇÃO I: MODELOS BASE RGMJ */}
           <div className="space-y-8">
             <div className="flex items-center justify-between border-b border-white/5 pb-6">
               <div className="space-y-1">
@@ -577,7 +577,6 @@ function SettingsContent() {
             </div>
           </div>
 
-          {/* SEÇÃO II: PERFIS PERSONALIZADOS */}
           <div className="space-y-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-6">
               <div className="space-y-1">
@@ -692,25 +691,20 @@ function SettingsContent() {
                 Balizador de narrativas estratégicas para automação Google & WhatsApp.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex items-center gap-4">
-              {!editingMessage && (
-                <div className="flex items-center gap-2">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Base RGMJ:</p>
-                  <Select onValueChange={(v) => loadDefaultTemplate(v)}>
-                    <SelectTrigger className="w-48 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="CARREGAR PRE-SET..." /></SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="Audiência Física">🏛️ AUDIÊNCIA FÍSICA</SelectItem>
-                      <SelectItem value="Audiência Virtual">🖥️ AUDIÊNCIA VIRTUAL</SelectItem>
-                      <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
-                      <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <Button variant="ghost" size="icon" onClick={() => setIsMessageDialogOpen(false)} className="text-white/20 hover:text-white transition-colors">
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
+            {!editingMessage && (
+              <div className="flex items-center gap-2">
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Base RGMJ:</p>
+                <Select onValueChange={(v) => loadDefaultTemplate(v)}>
+                  <SelectTrigger className="w-48 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="CARREGAR PRE-SET..." /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="Audiência Física">🏛️ AUDIÊNCIA FÍSICA</SelectItem>
+                    <SelectItem value="Audiência Virtual">🖥️ AUDIÊNCIA VIRTUAL</SelectItem>
+                    <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
+                    <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">

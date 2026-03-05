@@ -107,7 +107,6 @@ export default function LeadsPage() {
   const [activeDossierTab, setActiveDossierTab] = useState("overview")
   const [searchTerm, setSearchTerm] = useState("")
   const [isSyncingDrive, setIsSyncingDrive] = useState(false)
-  const [isPromoting, setIsPromoting] = useState(false)
   
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
@@ -128,10 +127,8 @@ export default function LeadsPage() {
   }, [db, user, selectedLead])
   const { data: leadInterviews } = useCollection(leadInterviewsQuery)
 
-  // Detecta se a Burocracia está completa para liberar o Protocolo
   const isBureaucracyComplete = useMemo(() => {
     if (!selectedLead) return false
-    // Requisitos mínimos: Nome, CPF, Réu preenchidos + Pasta do Drive Criada
     const hasEssentialData = 
       selectedLead.name && 
       (selectedLead.cpf || selectedLead.documentNumber) && 
@@ -166,7 +163,7 @@ export default function LeadsPage() {
     if (!selectedLead || !clients) return false
     const leadDoc = (selectedLead.cpf || selectedLead.documentNumber || "").replace(/\D/g, "")
     if (!leadDoc) return false
-    return clients.some(c => (c.documentNumber || "").replace(/\D/g, "") === new RegExp(leadDoc).test(c.documentNumber))
+    return clients.some(c => (c.documentNumber || "").replace(/\D/g, "") === leadDoc)
   }, [selectedLead, clients])
 
   const handleOpenLead = (lead: any) => {
@@ -177,12 +174,11 @@ export default function LeadsPage() {
   const handleUpdateStatus = async (status: string) => {
     if (!selectedLead || !db) return
 
-    // Bloqueio específico: Burocracia -> Distribuição
     if (selectedLead.status === 'burocracia' && status === 'distribuicao' && !isBureaucracyComplete) {
       toast({ 
         variant: "destructive", 
         title: "Acesso Bloqueado", 
-        description: "Conclua os requisitos mínimos da Burocracia (Dados + Drive) para avançar." 
+        description: "Conclua os requisitos mínimos da Burocracia para avançar." 
       })
       return
     }
@@ -229,11 +225,13 @@ export default function LeadsPage() {
       
       setSelectedLead({ ...selectedLead, driveStatus: nextStatus })
       setIsSyncingDrive(false)
-      toast({ 
-        title: "Sincronia Drive Concluída", 
-        description: nextStatus === "pasta_cliente" ? "Estrutura movida para pasta de Clientes." : "Pasta de Lead gerada com sucesso."
-      })
+      toast({ title: "Drive Sincronizado" })
     }, 2000)
+  }
+
+  const handleStartInterview = (t: any) => {
+    setExecutingTemplate(t)
+    setIsInterviewDialogOpen(true)
   }
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
@@ -274,7 +272,6 @@ export default function LeadsPage() {
 
   const handleConvertProcess = (data: any) => {
     if (!db || !selectedLead) return
-    
     const processPayload = {
       ...data,
       leadId: selectedLead.id,
@@ -282,17 +279,15 @@ export default function LeadsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-
     addDocumentNonBlocking(collection(db!, "processes"), processPayload)
     updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
       status: "arquivado",
       convertedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     })
-
     setIsConversionOpen(false)
     setIsSheetOpen(false)
-    toast({ title: "Dossiê Oficializado", description: "O lead foi convertido em um processo ativo RGMJ." })
+    toast({ title: "Processo Protocolado" })
   }
 
   return (
@@ -435,12 +430,6 @@ export default function LeadsPage() {
                         ))}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)} className="h-8 w-8 text-white/20 hover:text-white transition-colors">
-                      <X className="h-5 w-5" />
-                    </Button>
                   </div>
                 </div>
 
