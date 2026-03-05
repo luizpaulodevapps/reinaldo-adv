@@ -3,9 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     /**
-     * LexFlow ERP - Controle Soberano via Login
-     * Todo usuário autenticado tem permissão total de leitura e escrita.
-     * Atualização: Índices compostos aplicados para consultas de entrevistas e leads.
+     * LexFlow ERP - Controle Soberano RGMJ
+     * A autenticação é a chave única e absoluta para acesso aos dados da banca.
+     * Permitimos leitura e escrita para qualquer usuário autenticado.
      */
     match /{document=**} {
       allow read, write: if request.auth != null;

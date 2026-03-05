@@ -69,7 +69,7 @@ export default function LeadsPage() {
 
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "leads"), limit(100))
+    return query(collection(db!, "leads"), orderBy("updatedAt", "desc"), limit(100))
   }, [db, user])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
