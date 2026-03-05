@@ -4,46 +4,45 @@
 
 @layer base {
   :root {
-    /* LexFlow ERP - Paleta Oficial RGMJ */
-    --background: 222 84% 5%; /* #020617 - Deep Navy */
-    --foreground: 210 40% 98%;
+    --background: 0 0% 2%; 
+    --foreground: 0 0% 98%;
     
-    --card: 222 84% 7%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 98%;
     
-    --popover: 222 84% 5%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 2%;
+    --popover-foreground: 0 0% 98%;
     
-    --primary: 48 91% 58%; /* #F5D030 - Vibrant Gold */
-    --primary-foreground: 222 84% 5%;
+    --primary: 43 65% 53%; /* #D4AF37 - Classic Gold */
+    --primary-foreground: 0 0% 2%;
     
-    --secondary: 222 84% 12%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
     
-    --muted: 222 84% 12%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 65%;
     
-    --accent: 202 40% 50%; /* #4D8BB1 - Corporate Blue */
-    --accent-foreground: 210 40% 98%;
+    --accent: 43 65% 53%;
+    --accent-foreground: 0 0% 98%;
     
-    --success: 135 36% 41%; /* #438F56 - Muted Emerald */
-    --destructive: 335 49% 50%; /* #BD4073 - Muted Rose */
-    --destructive-foreground: 210 40% 98%;
+    --success: 135 36% 41%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
     
-    --border: 222 84% 15%;
-    --input: 222 84% 15%;
-    --ring: 48 91% 58%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 43 65% 53%;
     
-    --radius: 1rem;
+    --radius: 0.5rem;
 
-    --sidebar-background: 222 84% 7%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 48 91% 58%;
-    --sidebar-primary-foreground: 222 84% 5%;
-    --sidebar-accent: 222 84% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 84% 15%;
-    --sidebar-ring: 48 91% 58%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 43 65% 53%;
+    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 43 65% 53%;
   }
 }
 
@@ -53,60 +52,105 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Roboto', sans-serif;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Roboto', sans-serif;
-    @apply font-bold tracking-tight;
+    font-family: 'Outfit', sans-serif;
   }
 }
 
-.font-body {
-  font-family: 'Roboto', sans-serif;
+.font-serif {
+  font-family: 'Cormorant Garamond', serif;
 }
 
-/* Glassmorphism Effect */
-.glass {
-  background: rgba(2, 6, 23, 0.7);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(245, 208, 48, 0.1);
+/* Premium Decorative Elements */
+.marble-bg {
+  background-image: linear-gradient(to bottom, rgba(5, 5, 5, 0.8), rgba(5, 5, 5, 0.9)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
-.gold-gradient {
-  background: linear-gradient(135deg, #F5D030 0%, #D4AF37 100%);
-  color: #020617;
-}
-
-.blue-gradient {
-  background: linear-gradient(135deg, #4D8BB1 0%, #213b37 100%);
-  color: #ffffff;
-}
-
-.hover-gold:hover {
-  border-color: rgba(245, 208, 48, 0.4);
-  box-shadow: 0 0 30px rgba(245, 208, 48, 0.1);
-}
-
-/* Animations */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, #F5D030 0%, #FFFFFF 50%, #F5D030 100%);
-  background-size: 200% auto;
+.gold-gradient-text {
+  background: linear-gradient(135deg, #F5D030 0%, #D4AF37 50%, #B8860B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 4s linear infinite;
+}
+
+.gold-border-animation {
+  position: relative;
+  overflow: hidden;
+}
+
+.gold-border-animation::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(transparent, transparent, transparent, #D4AF37);
+  animation: rotate 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.gold-border-animation:hover::before {
+  opacity: 1;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(1turn);
+  }
+}
+
+.premium-card {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  transition: all 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.premium-card:hover {
+  border-color: rgba(212, 175, 55, 0.5);
+  transform: translateY(-10px);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.gold-frame {
+  position: relative;
+  padding: 15px;
+  background: #050505;
+}
+
+.gold-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 1px solid #D4AF37;
+  pointer-events: none;
+  margin: -10px;
+}
+
+.gold-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  pointer-events: none;
+  margin: -20px;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  @apply bg-black;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+  @apply bg-primary/30 rounded-full;
 }
