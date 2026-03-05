@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -27,7 +28,9 @@ import {
   MapPin,
   History,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Edit3,
+  Save
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -44,11 +47,13 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
@@ -87,6 +92,11 @@ export default function LeadsPage() {
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
   const [isAiLoading, setIsAiLoading] = useState(false)
+
+  // Edição de Entrevista
+  const [isEditInterviewOpen, setIsEditInterviewOpen] = useState(false)
+  const [interviewToEdit, setInterviewToEdit] = useState<any>(null)
+  const [editResponses, setEditResponses] = useState<Record<string, any>>({})
 
   // Busca Templates
   const templatesQuery = useMemoFirebase(() => {
@@ -187,6 +197,30 @@ export default function LeadsPage() {
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
     toast({ title: "Entrevista Concluída", description: "Dados injetados no dossiê." })
+  }
+
+  // Funções de Edição e Exclusão de Entrevista
+  const handleDeleteInterview = async (id: string) => {
+    if (!db || !confirm("Deseja remover permanentemente esta entrevista?")) return
+    await deleteDocumentNonBlocking(doc(db!, "interviews", id))
+    toast({ variant: "destructive", title: "Entrevista Removida", description: "O registro foi excluído da base." })
+  }
+
+  const handleOpenEditInterview = (interview: any) => {
+    setInterviewToEdit(interview)
+    setEditResponses({ ...interview.responses })
+    setIsEditInterviewOpen(true)
+  }
+
+  const handleSaveInterviewEdit = async () => {
+    if (!db || !interviewToEdit) return
+    await updateDocumentNonBlocking(doc(db!, "interviews", interviewToEdit.id), {
+      responses: editResponses,
+      updatedAt: serverTimestamp()
+    })
+    setIsEditInterviewOpen(false)
+    setInterviewToEdit(null)
+    toast({ title: "Entrevista Atualizada", description: "As respostas foram salvas com sucesso." })
   }
 
   const handleGenerateAiSummary = async () => {
@@ -454,76 +488,6 @@ export default function LeadsPage() {
                                 </div>
                               )}
                             </div>
-                            {(selectedLead.meetingStreet || selectedLead.meetingCep) && (
-                              <div className="mt-4 pt-4 border-t border-amber-500/20 space-y-3">
-                                <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-2">📍 Endereço do Atendimento</p>
-                                <div className="space-y-2 text-sm text-white/80">
-                                  {selectedLead.meetingCep && (
-                                    <p><span className="text-amber-500/70 text-xs">CEP:</span> {selectedLead.meetingCep}</p>
-                                  )}
-                                  {selectedLead.meetingStreet && (
-                                    <p>
-                                      {selectedLead.meetingStreet}
-                                      {selectedLead.meetingNumber && `, ${selectedLead.meetingNumber}`}
-                                      {selectedLead.meetingComplement && ` - ${selectedLead.meetingComplement}`}
-                                    </p>
-                                  )}
-                                  {(selectedLead.meetingNeighborhood || selectedLead.meetingCity) && (
-                                    <p>
-                                      {selectedLead.meetingNeighborhood}
-                                      {selectedLead.meetingCity && ` - ${selectedLead.meetingCity}`}
-                                      {selectedLead.meetingState && `/${selectedLead.meetingState}`}
-                                    </p>
-                                  )}
-                                  {selectedLead.meetingReference && (
-                                    <div className="mt-3 pt-3 border-t border-amber-500/10">
-                                      <p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-1">🎯 Ponto de Referência</p>
-                                      <p className="text-sm italic">{selectedLead.meetingReference}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* SEÇÃO DE ORIGEM */}
-                      {selectedLead.source && (
-                        <div className="space-y-4">
-                          <h4 className="text-sm font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                            <UserPlus className="h-4 w-4" /> Origem do Lead
-                          </h4>
-                          <div className="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/20">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div>
-                                <p className="text-[8px] font-black text-emerald-500/70 uppercase tracking-widest mb-2">Como Conheceu</p>
-                                <p className="text-sm font-bold text-white">
-                                  {selectedLead.source === 'indicação' && '👥 Indicação de Cliente'}
-                                  {selectedLead.source === 'youtube' && '📺 YouTube'}
-                                  {selectedLead.source === 'facebook' && '👍 Facebook'}
-                                  {selectedLead.source === 'instagram' && '📸 Instagram'}
-                                  {selectedLead.source === 'linkedin' && '💼 LinkedIn'}
-                                  {selectedLead.source === 'google' && '🔍 Pesquisa Google'}
-                                  {selectedLead.source === 'parceiro' && '🤝 Cliente de Parceiro'}
-                                  {selectedLead.source === 'site' && '🌐 Site do Escritório'}
-                                  {selectedLead.source === 'whatsapp' && '💬 WhatsApp'}
-                                  {selectedLead.source === 'outros' && '✏️ Outros'}
-                                </p>
-                              </div>
-                              {selectedLead.referredBy && (
-                                <div>
-                                  <p className="text-[8px] font-black text-emerald-500/70 uppercase tracking-widest mb-2">Indicado Por</p>
-                                  <p className="text-sm font-bold text-white">{selectedLead.referredBy}</p>
-                                </div>
-                              )}
-                              {selectedLead.sourceDetails && (
-                                <div>
-                                  <p className="text-[8px] font-black text-emerald-500/70 uppercase tracking-widest mb-2">Detalhes</p>
-                                  <p className="text-sm font-bold text-white">{selectedLead.sourceDetails}</p>
-                                </div>
-                              )}
-                            </div>
                           </div>
                         </div>
                       )}
@@ -591,7 +555,14 @@ export default function LeadsPage() {
                                   </p>
                                 </div>
                               </div>
-                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
+                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditInterview(int)} className="text-muted-foreground hover:text-primary">
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteInterview(int.id)} className="text-muted-foreground hover:text-rose-500">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -664,6 +635,42 @@ export default function LeadsPage() {
               onCancel={() => { setIsInterviewDialogOpen(false); setExecutingTemplate(null); }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Edição de Entrevista */}
+      <Dialog open={isEditInterviewOpen} onOpenChange={setIsEditInterviewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh] flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
+                <Edit3 className="h-6 w-6 text-primary" /> Retificar Entrevista
+              </DialogTitle>
+              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
+                Ajuste os fatos e dados capturados no atendimento.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="flex-1 p-8">
+            <div className="space-y-6">
+              {interviewToEdit && Object.entries(editResponses).map(([label, value]) => (
+                <div key={label} className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</Label>
+                  <Textarea 
+                    className="bg-black/20 border-white/10 min-h-[80px] text-white focus:ring-1 focus:ring-primary/50 text-sm"
+                    value={String(value)}
+                    onChange={(e) => setEditResponses(prev => ({ ...prev, [label]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsEditInterviewOpen(false)} className="text-muted-foreground font-black uppercase text-[11px]">Cancelar</Button>
+            <Button onClick={handleSaveInterviewEdit} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[11px] tracking-widest flex items-center gap-2">
+              <Save className="h-4 w-4" /> Salvar Alterações
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -14,13 +14,20 @@ import {
   ChevronRight,
   Brain,
   ClipboardList,
-  Building2
+  Building2,
+  Trash2,
+  Edit3,
+  Save
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { InterviewForm } from "@/components/interviews/interview-form"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -29,6 +36,10 @@ import Link from "next/link"
 export default function InterviewsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isFormOpen, setIsNewFormOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [interviewToEdit, setInterviewToEdit] = useState<any>(null)
+  const [editResponses, setEditResponses] = useState<Record<string, any>>({})
+
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
@@ -55,6 +66,29 @@ export default function InterviewsPage() {
         setIsNewFormOpen(false)
         toast({ title: "Entrevista Registrada", description: `Dados de ${data.clientName} salvos no sistema.` })
       })
+  }
+
+  const handleDeleteInterview = async (id: string) => {
+    if (!db || !confirm("Deseja apagar esta entrevista permanentemente?")) return
+    await deleteDocumentNonBlocking(doc(db!, "interviews", id))
+    toast({ variant: "destructive", title: "Entrevista Excluída" })
+  }
+
+  const handleOpenEdit = (interview: any) => {
+    setInterviewToEdit(interview)
+    setEditResponses({ ...interview.responses })
+    setIsEditOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!db || !interviewToEdit) return
+    await updateDocumentNonBlocking(doc(db!, "interviews", interviewToEdit.id), {
+      responses: editResponses,
+      updatedAt: serverTimestamp()
+    })
+    setIsEditOpen(false)
+    setInterviewToEdit(null)
+    toast({ title: "Entrevista Atualizada" })
   }
 
   const filteredInterviews = (interviews || []).filter(i => 
@@ -124,8 +158,13 @@ export default function InterviewsPage() {
                       {item.clientName}
                     </h3>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background transition-all border border-primary/20">
-                    <ClipboardList className="h-5 w-5" />
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(item)} className="h-8 w-8 text-muted-foreground hover:text-primary">
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteInterview(item.id)} className="h-8 w-8 text-muted-foreground hover:text-rose-500">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
@@ -134,12 +173,12 @@ export default function InterviewsPage() {
                     <Building2 className="h-3.5 w-3.5 opacity-50" /> {item.companyName || "NÃO INFORMADO"}
                   </div>
                   <div className="flex items-center gap-3 text-[11px] text-muted-foreground uppercase font-bold tracking-widest">
-                    <Clock className="h-3.5 w-3.5 opacity-50" /> Realizada em: {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'Agosto/24'}
+                    <Clock className="h-3.5 w-3.5 opacity-50" /> {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-auto">
-                  <button className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest">
+                  <button onClick={() => handleOpenEdit(item)} className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest">
                     <FileText className="h-4 w-4" /> Ver Relatório
                   </button>
                   <button className="flex items-center gap-2 text-[10px] font-black text-muted-foreground hover:text-white transition-colors uppercase tracking-widest">
@@ -178,6 +217,42 @@ export default function InterviewsPage() {
           />
         </SheetContent>
       </Sheet>
+
+      {/* Diálogo de Visualização/Edição */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh] flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
+                <FileText className="h-6 w-6 text-primary" /> Dossiê de Atendimento
+              </DialogTitle>
+              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
+                Visualização e retificação técnica de dados capturados.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="flex-1 p-8">
+            <div className="space-y-6">
+              {interviewToEdit && Object.entries(editResponses).map(([label, value]) => (
+                <div key={label} className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</Label>
+                  <Textarea 
+                    className="bg-black/20 border-white/10 min-h-[80px] text-white focus:ring-1 focus:ring-primary/50 text-sm"
+                    value={String(value)}
+                    onChange={(e) => setEditResponses(prev => ({ ...prev, [label]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsEditOpen(false)} className="text-muted-foreground font-black uppercase text-[11px]">Fechar</Button>
+            <Button onClick={handleSaveEdit} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[11px] tracking-widest flex items-center gap-2 shadow-xl">
+              <Save className="h-4 w-4" /> Atualizar Registro
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
