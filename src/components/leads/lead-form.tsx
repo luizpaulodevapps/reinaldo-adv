@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -12,7 +11,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Loader2, Plus, Video, Link as LinkIcon, Building, User, MapPin, ShieldCheck, Mail, Phone, Fingerprint } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
 
 interface Lead {
@@ -29,6 +27,7 @@ interface LeadFormProps {
   existingLeads: Lead[]
   onSubmit: (leadData: any) => void
   onSelectExisting: (lead: Lead) => void
+  onCancel: () => void
   onQuickCreateClient?: (clientData: {
     name: string
     phone: string
@@ -41,11 +40,20 @@ interface LeadFormProps {
   lockMode?: boolean
 }
 
-export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCreateClient, defaultResponsibleLawyer, initialData, initialMode = "quick", lockMode = false }: LeadFormProps) {
+export function LeadForm({ 
+  existingLeads, 
+  onSubmit, 
+  onSelectExisting, 
+  onCancel,
+  onQuickCreateClient, 
+  defaultResponsibleLawyer, 
+  initialData, 
+  initialMode = "quick", 
+  lockMode = false 
+}: LeadFormProps) {
   const [mode, setMode] = useState<"quick" | "complete">(initialMode)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isQuickRegOpen, setIsQuickRegOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -165,7 +173,7 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
 
   const filteredLeads = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return []
-    return existingLeads.filter(l => 
+    return (existingLeads || []).filter(l => 
       l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (l.phone && l.phone.includes(searchTerm)) ||
       (l.cpf && l.cpf.includes(searchTerm))
@@ -174,6 +182,11 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSelectLead = (lead: Lead) => {
+    onSelectExisting(lead)
+    setIsSearchOpen(false)
   }
 
   const handleSubmit = () => {
@@ -461,36 +474,6 @@ export function LeadForm({ existingLeads, onSubmit, onSelectExisting, onQuickCre
           {initialData ? "ATUALIZAR FICHA TÉCNICA" : "PROTOCOLAR ATENDIMENTO"}
         </Button>
       </div>
-
-      <Dialog open={isQuickRegOpen} onOpenChange={setIsQuickRegOpen}>
-        <DialogContent className="bg-[#0a0f1e] border-white/10 sm:max-w-[550px] p-0 overflow-hidden shadow-2xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Injetar Novo Lead</DialogTitle>
-            </DialogHeader>
-          </div>
-          <div className="p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground">Nome</Label>
-                <Input value={quickRegData.firstName} onChange={(e) => setQuickRegData({...quickRegData, firstName: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground">Sobrenome</Label>
-                <Input value={quickRegData.lastName} onChange={(e) => setQuickRegData({...quickRegData, lastName: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-muted-foreground">WhatsApp Principal</Label>
-              <Input value={quickRegData.whatsapp} onChange={(e) => setQuickRegData({...quickRegData, whatsapp: formatPhone(e.target.value)})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-            </div>
-          </div>
-          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[11px]" onClick={() => setIsQuickRegOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveQuickClient} className="bg-primary text-background font-black h-12 px-10 uppercase text-[11px] rounded-xl shadow-lg">Confirmar Entrada</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

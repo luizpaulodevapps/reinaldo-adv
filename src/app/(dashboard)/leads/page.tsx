@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -425,7 +424,7 @@ export default function LeadsPage() {
                       </Button>
 
                       <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-9 border-white/10 bg-white/5 text-white hover:bg-white/10 text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg">
-                        <UserPlus className="h-3 w-3" /> EDITAR CADASTRO
+                        <UserCog className="h-3.5 w-3.5" /> EDITAR CADASTRO
                       </Button>
 
                       <div className="flex p-0.5 rounded-lg bg-black/40 border border-white/5 ml-auto overflow-hidden">
@@ -758,6 +757,7 @@ export default function LeadsPage() {
               toast({ title: "Triagem Iniciada!" })
             }} 
             onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
+            onCancel={() => setIsNewEntryOpen(false)}
             defaultResponsibleLawyer={user?.displayName || ""}
           />
         </SheetContent>
@@ -782,6 +782,7 @@ export default function LeadsPage() {
                 toast({ title: "Cadastro Atualizado" })
               }}
               onSelectExisting={() => {}}
+              onCancel={() => setIsEditModeOpen(false)}
             />
           )}
         </SheetContent>
