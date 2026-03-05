@@ -16,7 +16,17 @@ import {
   FileText,
   Plus,
   Trash2,
-  Settings2
+  Settings2,
+  CloudLightning,
+  ShieldCheck,
+  Globe,
+  Database,
+  Calendar,
+  Video,
+  ListTodo,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react"
 import { 
   Select, 
@@ -30,6 +40,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, updateDocumentNonBlocking } from "@/firebase"
 import { doc, serverTimestamp } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
 function SettingsContent() {
   const { toast } = useToast()
@@ -44,6 +55,15 @@ function SettingsContent() {
   }, [initialTab])
 
   const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
+  const [googleConfig, setGoogleConfig] = useState({
+    masterEmail: "financeiro@rgmj.com.br",
+    rootFolderId: "1A2B3C4D5E6F7G8H9I0J",
+    isDriveActive: true,
+    isDocsActive: true,
+    isCalendarActive: false,
+    isTasksActive: true,
+    isMeetActive: true
+  })
 
   const [profileFormData, setProfileFormData] = useState({
     name: profile?.name || "",
@@ -72,6 +92,13 @@ function SettingsContent() {
     toast({
       title: "Perfil Atualizado",
       description: "Suas informações foram salvas com sucesso."
+    })
+  }
+
+  const handleSaveGoogleConfig = () => {
+    toast({
+      title: "Configuração Google Salva",
+      description: "Os serviços serão reiniciados para sincronização.",
     })
   }
 
@@ -115,6 +142,7 @@ function SettingsContent() {
           {[
             { id: "perfil", label: "Meu Perfil" },
             { id: "temas", label: "Interface" },
+            { id: "google", label: "Integração Google" },
             { id: "modelos", label: "Modelos de Documentos" },
           ].map((tab) => (
             <TabsTrigger 
@@ -126,6 +154,178 @@ function SettingsContent() {
             </TabsTrigger>
           ))}
         </TabsList>
+
+        <TabsContent value="google" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="xl:col-span-2 space-y-8">
+              <Card className="glass border-primary/20 overflow-hidden shadow-2xl">
+                <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <CloudLightning className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Google Workspace Hub</CardTitle>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">Sincronização central de APIs e Serviços.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Gateway Ativo</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CONTA MESTRE (ADMIN)</Label>
+                      <div className="relative">
+                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                        <Input 
+                          value={googleConfig.masterEmail} 
+                          onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})}
+                          className="glass border-white/10 h-14 pl-12 text-white font-bold"
+                          placeholder="exemplo@suabanca.com.br"
+                        />
+                      </div>
+                      <p className="text-[9px] text-muted-foreground italic">Esta conta será a proprietária das pastas e documentos criados.</p>
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ID DA PASTA RAIZ (DRIVE)</Label>
+                      <div className="relative">
+                        <Database className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                        <Input 
+                          value={googleConfig.rootFolderId} 
+                          onChange={(e) => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})}
+                          className="glass border-white/10 h-14 pl-12 text-white font-mono text-xs"
+                          placeholder="ID da pasta no Google Drive"
+                        />
+                      </div>
+                      <p className="text-[9px] text-muted-foreground italic">O ID que aparece após "/folders/" na URL do seu Google Drive.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-6 border-t border-white/5">
+                    <h4 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary" /> Status de Serviços Individuais
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      {[
+                        { id: "drive", name: "Drive", icon: Database, status: googleConfig.isDriveActive },
+                        { id: "docs", name: "Docs", icon: FileText, status: googleConfig.isDocsActive },
+                        { id: "calendar", name: "Agenda", icon: Calendar, status: googleConfig.isCalendarActive },
+                        { id: "tasks", name: "Tasks", icon: ListTodo, status: googleConfig.isTasksActive },
+                        { id: "meet", name: "Meet", icon: Video, status: googleConfig.isMeetActive },
+                      ].map((svc) => (
+                        <div key={svc.id} className={cn(
+                          "p-4 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all",
+                          svc.status ? "bg-emerald-500/5 border-emerald-500/20" : "bg-rose-500/5 border-rose-500/20 opacity-60"
+                        )}>
+                          <svc.icon className={cn("h-5 w-5", svc.status ? "text-emerald-500" : "text-rose-500")} />
+                          <span className="text-[9px] font-black text-white uppercase tracking-widest">{svc.name}</span>
+                          <span className={cn("text-[7px] font-black uppercase", svc.status ? "text-emerald-500" : "text-rose-500")}>
+                            {svc.status ? "Sincronizado" : "Desconectado"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-16 w-full md:w-auto rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-xl">
+                    <Save className="h-5 w-5 mr-3" /> SALVAR E SINCRONIZAR GATEWAY
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="glass border-white/5 bg-black/20 overflow-hidden">
+                <CardHeader className="p-8 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-500" />
+                    <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Guia de Configuração (Google Cloud Console)</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="w-6 h-6 rounded-full bg-primary text-background flex items-center justify-center text-[10px] font-black shrink-0">01</div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-white uppercase">Crie um Projeto no Google Cloud</p>
+                        <p className="text-[10px] text-muted-foreground uppercase leading-relaxed font-bold">Acesse console.cloud.google.com e crie um novo projeto chamado "RGMJ-ERP".</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="w-6 h-6 rounded-full bg-primary text-background flex items-center justify-center text-[10px] font-black shrink-0">02</div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-white uppercase">Ative as APIs Necessárias</p>
+                        <p className="text-[10px] text-muted-foreground uppercase leading-relaxed font-bold">Na biblioteca de APIs, ative: Google Drive API, Google Docs API, Google Calendar API e Tasks API.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="w-6 h-6 rounded-full bg-primary text-background flex items-center justify-center text-[10px] font-black shrink-0">03</div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-white uppercase">Configure a Conta de Serviço</p>
+                        <p className="text-[10px] text-muted-foreground uppercase leading-relaxed font-bold">Crie uma 'Service Account', gere uma chave JSON e compartilhe a pasta raiz do Drive com o e-mail da conta de serviço.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-4">
+                    <Button variant="outline" className="glass border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest gap-2">
+                      <ExternalLink className="h-3.5 w-3.5" /> Abrir Console Google
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-8">
+              <Card className="glass border-white/5 overflow-hidden">
+                <CardHeader className="p-6 border-b border-white/5 bg-primary/5">
+                  <CardTitle className="text-xs font-black text-white uppercase tracking-[0.2em]">Resumo de Volume Cloud</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] font-black uppercase text-muted-foreground">
+                      <span>Uso do Drive</span>
+                      <span className="text-white">12.4 GB / 100 GB</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary w-[12.4%] shadow-[0_0_10px_rgba(245,208,48,0.5)]" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Pastas Criadas</p>
+                      <p className="text-xl font-black text-white tracking-tighter">1.242</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Docs Gerados</p>
+                      <p className="text-xl font-black text-white tracking-tighter">4.890</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass border-white/5 p-6 space-y-4">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Log de Sincronia
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500 mt-0.5" />
+                    <p className="text-[9px] text-white/70 font-bold uppercase leading-tight">Docs sincronizados com o acervo às 14:30</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500 mt-0.5" />
+                    <p className="text-[9px] text-white/70 font-bold uppercase leading-tight">Estrutura de pastas verificada com sucesso</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-3 w-3 text-amber-500 mt-0.5" />
+                    <p className="text-[9px] text-white/70 font-bold uppercase leading-tight">Agenda requer revalidação de token OAuth2</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="temas" className="mt-0 space-y-8">
           <Card className="glass border-white/5 overflow-hidden">
