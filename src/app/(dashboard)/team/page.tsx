@@ -21,7 +21,7 @@ import {
   ShieldAlert
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
@@ -43,11 +43,10 @@ export default function TeamPage() {
   const { toast } = useToast()
 
   const canManage = role === 'admin'
-  const canQuery = !!user && !!db
 
   const staffQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
   }, [db, user])
 
   const { data: team, isLoading } = useCollection(staffQuery)
@@ -63,10 +62,10 @@ export default function TeamPage() {
   const handleSave = () => {
     if (!db || !formData.name || !formData.email) return
     if (editingMember) {
-      updateDocumentNonBlocking(doc(db, "staff_profiles", editingMember.id), { ...formData, updatedAt: serverTimestamp() })
+      updateDocumentNonBlocking(doc(db!, "staff_profiles", editingMember.id), { ...formData, updatedAt: serverTimestamp() })
       toast({ title: "Acesso Atualizado" })
     } else {
-      addDocumentNonBlocking(collection(db, "staff_profiles"), { ...formData, id: crypto.randomUUID(), isActive: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      addDocumentNonBlocking(collection(db!, "staff_profiles"), { ...formData, id: crypto.randomUUID(), isActive: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
       toast({ title: "Acesso Liberado" })
     }
     setIsDialogOpen(false)
@@ -75,7 +74,7 @@ export default function TeamPage() {
   const handleDelete = (id: string) => {
     if (!db || !canManage) return
     if (confirm("Revogar este acesso?")) {
-      deleteDocumentNonBlocking(doc(db, "staff_profiles", id))
+      deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
       toast({ variant: "destructive", title: "Acesso Revogado" })
     }
   }

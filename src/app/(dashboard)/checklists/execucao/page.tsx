@@ -16,8 +16,7 @@ import {
   User,
   ChevronRight,
   ArrowRight,
-  ShieldCheck,
-  AlertCircle
+  ShieldCheck
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { 
@@ -40,7 +39,6 @@ import Link from "next/link"
 export default function ChecklistExecutionPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -49,14 +47,14 @@ export default function ChecklistExecutionPage() {
   // Busca Templates (Matrizes)
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "checklists"), orderBy("title", "asc"))
+    return query(collection(db!, "checklists"), orderBy("title", "asc"))
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
   // Busca Execuções Ativas (Instâncias)
   const executionsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "checklist_executions"), orderBy("updatedAt", "desc"))
+    return query(collection(db!, "checklist_executions"), orderBy("updatedAt", "desc"))
   }, [db, user])
   const { data: executions, isLoading } = useCollection(executionsQuery)
 
@@ -85,7 +83,7 @@ export default function ChecklistExecutionPage() {
       updatedAt: serverTimestamp(),
     }
 
-    addDocumentNonBlocking(collection(db, "checklist_executions"), newExecution)
+    addDocumentNonBlocking(collection(db!, "checklist_executions"), newExecution)
       .then(() => {
         setIsStartDialogOpen(false)
         toast({
@@ -97,7 +95,7 @@ export default function ChecklistExecutionPage() {
 
   const handleMarkComplete = (executionId: string) => {
     if (!db) return
-    updateDocumentNonBlocking(doc(db, "checklist_executions", executionId), {
+    updateDocumentNonBlocking(doc(db!, "checklist_executions", executionId), {
       status: "Finalizado",
       progress: 100,
       updatedAt: serverTimestamp()

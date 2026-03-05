@@ -38,7 +38,7 @@ export default function CasesPage() {
 
   const processesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "processes"), orderBy("createdAt", "desc"), limit(100))
+    return query(collection(db!, "processes"), orderBy("createdAt", "desc"), limit(100))
   }, [db, user])
 
   const { data: processesData, isLoading } = useCollection(processesQuery)
@@ -77,7 +77,7 @@ export default function CasesPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db, "processes"), newProcess)
+    addDocumentNonBlocking(collection(db!, "processes"), newProcess)
       .then(() => {
         setIsNewProcessOpen(false)
         toast({

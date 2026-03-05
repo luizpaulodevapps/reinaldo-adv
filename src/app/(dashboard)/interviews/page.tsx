@@ -35,7 +35,7 @@ export default function InterviewsPage() {
 
   const interviewsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "interviews"), orderBy("createdAt", "desc"))
+    return query(collection(db!, "interviews"), orderBy("createdAt", "desc"))
   }, [db, user])
 
   const { data: interviews, isLoading } = useCollection(interviewsQuery)
@@ -50,7 +50,7 @@ export default function InterviewsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db, "interviews"), newInterview)
+    addDocumentNonBlocking(collection(db!, "interviews"), newInterview)
       .then(() => {
         setIsNewFormOpen(false)
         toast({ title: "Entrevista Registrada", description: `Dados de ${data.clientName} salvos no sistema.` })

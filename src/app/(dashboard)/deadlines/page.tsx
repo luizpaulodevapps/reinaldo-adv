@@ -57,7 +57,7 @@ export default function DeadlinesPage() {
   // Busca Prazos
   const deadlinesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "deadlines"), orderBy("dueDate", "asc"))
+    return query(collection(db!, "deadlines"), orderBy("dueDate", "asc"))
   }, [db, user])
 
   const { data: deadlinesData, isLoading } = useCollection(deadlinesQuery)
@@ -83,7 +83,7 @@ export default function DeadlinesPage() {
 
   const handleMarkAsDone = (deadlineId: string) => {
     if (!db) return
-    const dRef = doc(db, "deadlines", deadlineId)
+    const dRef = doc(db!, "deadlines", deadlineId)
     updateDocumentNonBlocking(dRef, {
       status: "Concluído",
       updatedAt: serverTimestamp()
@@ -123,7 +123,7 @@ export default function DeadlinesPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db, "deadlines"), newDeadline)
+    addDocumentNonBlocking(collection(db!, "deadlines"), newDeadline)
     setIsAiParserOpen(false)
     setAiResult(null)
     setPublicationText("")

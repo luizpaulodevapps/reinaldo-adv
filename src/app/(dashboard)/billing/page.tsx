@@ -12,7 +12,6 @@ import {
   ArrowUpRight, 
   ArrowDownRight,
   Loader2,
-  Scale,
   Printer,
   TrendingUp,
   Building2,
@@ -39,7 +38,7 @@ export default function BillingPage() {
 
   const financialQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "financial_titles"), orderBy("dueDate", "desc"))
+    return query(collection(db!, "financial_titles"), orderBy("dueDate", "desc"))
   }, [db, user])
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
@@ -96,7 +95,7 @@ export default function BillingPage() {
       delete newTitle.numericValue
       delete newTitle.recurrenceMonths
 
-      addDocumentNonBlocking(collection(db, "financial_titles"), newTitle)
+      addDocumentNonBlocking(collection(db!, "financial_titles"), newTitle)
     }
 
     setIsNewTitleOpen(false)

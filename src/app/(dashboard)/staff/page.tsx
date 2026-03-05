@@ -8,71 +8,34 @@ import {
   Users2, 
   Search, 
   Plus, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  Briefcase,
   Loader2, 
   Trash2,
   Settings2,
-  MapPin,
-  Fingerprint,
-  User,
-  Heart,
-  ChevronRight,
-  ShieldCheck
+  ChevronRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState("geral")
-  const [loadingCep, setLoadingCep] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
-    motherName: "",
-    fatherName: "",
-    cpf: "",
-    rg: "",
-    rgIssuer: "",
-    rgIssueDate: "",
-    rgState: "",
-    pis: "",
-    ctps: "",
-    voterCard: "",
-    birthDate: "",
-    oab: "",
     role: "Secretária",
     email: "",
-    phone: "",
-    hiringDate: new Date().toISOString().split('T')[0],
     status: "Ativo",
-    specialty: "",
-    zipCode: "",
-    address: "",
-    number: "",
-    neighborhood: "",
-    city: "",
-    state: "",
-    maritalStatus: "Solteiro(a)",
-    spouseName: "",
-    childrenInfo: ""
   })
 
   const db = useFirestore()
@@ -80,11 +43,10 @@ export default function StaffPage() {
   const { toast } = useToast()
 
   const canManage = role === 'admin'
-  const canQuery = !!user && !!db
 
   const staffQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "employees"), orderBy("name", "asc"))
+    return query(collection(db!, "employees"), orderBy("name", "asc"))
   }, [db, user])
 
   const { data: employees, isLoading } = useCollection(staffQuery)
@@ -97,26 +59,13 @@ export default function StaffPage() {
     )
   }, [employees, searchTerm])
 
-  const handleCepBlur = async () => {
-    const cep = formData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
-    setLoadingCep(true)
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await res.json()
-      if (!data.erro) {
-        setFormData(p => ({ ...p, address: data.logradouro, neighborhood: data.bairro, city: data.localidade, state: data.uf }))
-      }
-    } finally { setLoadingCep(false) }
-  }
-
   const handleSave = () => {
     if (!db || !formData.name || !formData.role) return
     if (editingStaff) {
-      updateDocumentNonBlocking(doc(db, "employees", editingStaff.id), { ...formData, updatedAt: serverTimestamp() })
+      updateDocumentNonBlocking(doc(db!, "employees", editingStaff.id), { ...formData, updatedAt: serverTimestamp() })
       toast({ title: "Registro Atualizado" })
     } else {
-      addDocumentNonBlocking(collection(db, "employees"), { ...formData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      addDocumentNonBlocking(collection(db!, "employees"), { ...formData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
       toast({ title: "Colaborador Adicionado" })
     }
     setIsDialogOpen(false)
@@ -125,7 +74,7 @@ export default function StaffPage() {
   const handleDelete = (id: string) => {
     if (!db || !canManage) return
     if (confirm("Remover este colaborador?")) {
-      deleteDocumentNonBlocking(doc(db, "employees", id))
+      deleteDocumentNonBlocking(doc(db!, "employees", id))
       toast({ variant: "destructive", title: "Colaborador Removido" })
     }
   }
@@ -213,7 +162,7 @@ export default function StaffPage() {
             </div>
           </ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
             <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-10 h-14 rounded-xl shadow-xl">Confirmar Registro</Button>
           </DialogFooter>
         </DialogContent>

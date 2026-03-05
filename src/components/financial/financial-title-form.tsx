@@ -6,25 +6,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { 
-  Search, 
-  ShieldCheck, 
-  Wallet, 
-  Gavel, 
-  Scale, 
-  Loader2, 
-  X, 
-  Plus, 
   Calculator, 
   Building2, 
   UserCircle, 
   Zap,
-  Calendar
+  Scale,
+  Gavel,
+  Wallet,
+  ShieldCheck,
+  X,
+  Loader2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
-import { cn } from "@/lib/utils"
 
 interface FinancialTitleFormProps {
   onSubmit: (data: any) => void
@@ -35,8 +30,6 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
   const db = useFirestore()
   const { user } = useUser()
   const [loading, setLoading] = useState(false)
-  const [processSearch, setProcessSearch] = useState("")
-  const [showProcessSearch, setShowProcessSearch] = useState(false)
 
   const [formData, setFormData] = useState({
     type: "Entrada (Receita)",
@@ -58,11 +51,6 @@ export function FinancialTitleForm({ onSubmit, onCancel }: FinancialTitleFormPro
   }, [db, canQuery])
 
   const { data: processes } = useCollection(processesQuery)
-
-  const filteredProcesses = (processes || []).filter(p => 
-    p.processNumber?.includes(processSearch) || 
-    p.description?.toLowerCase().includes(processSearch.toLowerCase())
-  )
 
   const handleValueChange = (val: string) => {
     let clean = val.replace(/\D/g, "")

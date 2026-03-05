@@ -38,7 +38,7 @@ export default function ClientsPage() {
 
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "clients"), orderBy("name", "asc"), limit(100))
+    return query(collection(db!, "clients"), orderBy("name", "asc"), limit(100))
   }, [db, user])
 
   const { data: clientsData, isLoading } = useCollection(clientsQuery)
@@ -68,7 +68,7 @@ export default function ClientsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db, "clients"), newClient)
+    addDocumentNonBlocking(collection(db!, "clients"), newClient)
       .then(() => {
         setIsNewClientOpen(false)
         toast({

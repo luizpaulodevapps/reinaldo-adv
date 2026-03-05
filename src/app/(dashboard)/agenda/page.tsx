@@ -44,7 +44,7 @@ export default function AgendaPage() {
   // Busca Audiências
   const hearingsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "hearings"), orderBy("startDateTime", "asc"))
+    return query(collection(db!, "hearings"), orderBy("startDateTime", "asc"))
   }, [db, user])
   
   const { data: hearings, isLoading: loadingHearings } = useCollection(hearingsQuery)
@@ -52,7 +52,7 @@ export default function AgendaPage() {
   // Busca Prazos
   const deadlinesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "deadlines"), orderBy("dueDate", "asc"))
+    return query(collection(db!, "deadlines"), orderBy("dueDate", "asc"))
   }, [db, user])
   
   const { data: deadlines, isLoading: loadingDeadlines } = useCollection(deadlinesQuery)

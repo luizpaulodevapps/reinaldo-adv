@@ -40,7 +40,7 @@ export default function ArchivePage() {
 
   const archivedQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "processes"), where("status", "==", "Arquivado"))
+    return query(collection(db!, "processes"), where("status", "==", "Arquivado"))
   }, [db, user])
 
   const { data: archivedProcesses, isLoading } = useCollection(archivedQuery)
@@ -55,7 +55,7 @@ export default function ArchivePage() {
 
   const handleReactivate = (id: string) => {
     if (!db) return
-    const ref = doc(db, "processes", id)
+    const ref = doc(db!, "processes", id)
     updateDocumentNonBlocking(ref, {
       status: "Em Andamento",
       updatedAt: serverTimestamp()

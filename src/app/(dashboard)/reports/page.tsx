@@ -16,10 +16,10 @@ export default function ReportsPage() {
 
   const canQuery = !!user && !!db
 
-  const casesQuery = useMemoFirebase(() => (user && db) ? collection(db, "processes") : null, [db, user])
-  const clientsQuery = useMemoFirebase(() => (user && db) ? collection(db, "clients") : null, [db, user])
-  const financialQuery = useMemoFirebase(() => (user && db) ? collection(db, "financial_titles") : null, [db, user])
-  const deadlinesQuery = useMemoFirebase(() => (user && db) ? collection(db, "deadlines") : null, [db, user])
+  const casesQuery = useMemoFirebase(() => (user && db) ? collection(db!, "processes") : null, [db, user])
+  const clientsQuery = useMemoFirebase(() => (user && db) ? collection(db!, "clients") : null, [db, user])
+  const financialQuery = useMemoFirebase(() => (user && db) ? collection(db!, "financial_titles") : null, [db, user])
+  const deadlinesQuery = useMemoFirebase(() => (user && db) ? collection(db!, "deadlines") : null, [db, user])
 
   const { data: cases, isLoading: loadingCases } = useCollection(casesQuery)
   const { data: clients, isLoading: loadingClients } = useCollection(clientsQuery)

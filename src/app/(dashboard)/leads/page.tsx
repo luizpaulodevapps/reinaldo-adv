@@ -147,6 +147,17 @@ export default function LeadsPage() {
 
   const getLoggedLawyerName = () => profile?.name || user?.displayName || "Dr. Reinaldo Gonçalves"
 
+  const getDrawerWidthClass = () => {
+    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
+    switch (pref) {
+      case "padrão": return "sm:max-w-lg"
+      case "largo": return "sm:max-w-2xl"
+      case "extra-largo": return "sm:max-w-4xl"
+      case "full": return "sm:max-w-full"
+      default: return "sm:max-w-4xl"
+    }
+  }
+
   const normalizeLeadStatus = (status?: string) => {
     if (status === "contratual") return "burocracia"
     return status || "novo"
@@ -198,17 +209,6 @@ export default function LeadsPage() {
     const byProcess = params.hasProcessNumber && params.hasRegistrationComplete ? "distribuicao" : "novo"
 
     return pickMostAdvancedStatus(params.currentStatus, bySchedule, byInterview, byChecklist, byProcess)
-  }
-
-  const getDrawerWidthClass = () => {
-    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
-    switch (pref) {
-      case "padrão": return "sm:max-w-lg"
-      case "largo": return "sm:max-w-2xl"
-      case "extra-largo": return "sm:max-w-4xl"
-      case "full": return "sm:max-w-full"
-      default: return "sm:max-w-4xl"
-    }
   }
 
   const handleOpenLead = (lead: any) => {
@@ -523,8 +523,18 @@ export default function LeadsPage() {
 
                     <TabsContent value="distribuicao" className="mt-0 space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Input value={distributionData.processTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })} className="glass border-white/10 h-14 text-white uppercase font-bold" placeholder="NOME DA AÇÃO" />
-                        <Input value={distributionData.processNumber} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistributionData({...distributionData, processNumber: e.target.value})} className="glass border-white/10 h-14 text-white font-mono font-bold" placeholder="NÚMERO CNJ" />
+                        <Input 
+                          value={distributionData.processTitle} 
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistributionData({ ...distributionData, processTitle: e.target.value.toUpperCase() })} 
+                          className="glass border-white/10 h-14 text-white uppercase font-bold" 
+                          placeholder="NOME DA AÇÃO" 
+                        />
+                        <Input 
+                          value={distributionData.processNumber} 
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistributionData({...distributionData, processNumber: e.target.value})} 
+                          className="glass border-white/10 h-14 text-white font-mono font-bold" 
+                          placeholder="NÚMERO CNJ" 
+                        />
                       </div>
                       <Button onClick={handleDistribute} className="w-full h-16 bg-emerald-600 text-white font-black uppercase text-xs rounded-xl shadow-xl tracking-widest">Protocolar Distribuição</Button>
                     </TabsContent>
@@ -534,7 +544,7 @@ export default function LeadsPage() {
 
               <div className="p-8 border-t border-white/5 bg-black/60 flex items-center justify-between gap-4">
                 <Button onClick={handleUpdateLead} className="flex-1 glass border-white/10 text-white font-black h-14 uppercase text-[11px] tracking-widest">Salvar Dossiê</Button>
-                <Button onClick={() => setSelectedLead(null)} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-black h-14 uppercase text-[11px] px-8 tracking-widest border border-rose-500/20">Sair</Button>
+                <Button onClick={() => setIsSheetOpen(false)} variant="ghost" className="text-rose-500 hover:bg-rose-500/10 font-black h-14 uppercase text-[11px] px-8 tracking-widest border border-rose-500/20">Sair</Button>
               </div>
             </>
           )}

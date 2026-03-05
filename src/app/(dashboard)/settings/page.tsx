@@ -8,64 +8,37 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { 
   Settings as SettingsIcon,
   ChevronRight,
   LayoutGrid,
   Save,
-  ShieldCheck,
-  Tag,
-  FolderOpen,
-  Key,
-  Plus,
   Loader2,
   Trash2,
-  UserCheck,
-  Search,
-  Globe,
-  Database,
-  BarChart3,
-  Mail,
-  Smartphone,
-  Cloud,
-  Calendar,
-  CheckSquare,
-  HardDrive,
-  Cpu,
-  Lock,
   User,
-  Moon,
-  Sun,
-  Contrast,
-  Palette,
-  Type,
-  Layout,
-  MousePointer2,
-  Paintbrush,
-  Image as ImageIcon,
-  Upload,
-  Info,
-  Scale,
-  Maximize2,
-  Monitor,
-  MousePointerClick,
-  Square,
-  Fingerprint,
-  Zap,
-  ShieldAlert,
-  Columns
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+
+// Import shadcn select components
+import { 
+  Select as UISelect, 
+  SelectContent as UISelectContent, 
+  SelectItem as UISelectItem, 
+  SelectTrigger as UISelectTrigger, 
+  SelectValue as UISelectValue 
+} from "@/components/ui/select"
 
 function SettingsContent() {
   const { toast } = useToast()
@@ -90,15 +63,6 @@ function SettingsContent() {
   // --- ESTADO DE DRAWER & NAVEGAÇÃO ---
   const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
   const [linkBehavior, setLinkBehavior] = useState("drawer") 
-
-  // --- CRUD DE USUÁRIOS ---
-  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<any>(null)
-  const [userFormData, setUserFormData] = useState({
-    name: "",
-    email: "",
-    role: "lawyer"
-  })
 
   // Dados para Edição do Próprio Perfil
   const [profileFormData, setProfileFormData] = useState({
@@ -126,18 +90,16 @@ function SettingsContent() {
     }
   }, [profile])
 
-  const canQuery = !!user && !!db
-
   const staffQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
   }, [db, user])
 
   const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
   
   const handleUpdateMyProfile = () => {
     if (!user || !db || !profileFormData.name) return
-    const docRef = doc(db, "staff_profiles", user.uid)
+    const docRef = doc(db!, "staff_profiles", user.uid)
     updateDocumentNonBlocking(docRef, {
       name: profileFormData.name.toUpperCase(),
       updatedAt: serverTimestamp()
@@ -150,7 +112,7 @@ function SettingsContent() {
 
   const handleApplyTheme = () => {
     if (!user || !db) return
-    const docRef = doc(db, "staff_profiles", user.uid)
+    const docRef = doc(db!, "staff_profiles", user.uid)
     const themePreferences = {
       preset: selectedTheme,
       font: selectedFont,
@@ -172,43 +134,6 @@ function SettingsContent() {
       title: "Atmosfera Visual Aplicada",
       description: "As configurações foram injetadas no seu perfil.",
     })
-  }
-
-  const handleSaveUser = () => {
-    if (!db || !userFormData.name || !userFormData.email) {
-      toast({ variant: "destructive", title: "Campos Obrigatórios" })
-      return
-    }
-
-    if (editingUser) {
-      const docRef = doc(db, "staff_profiles", editingUser.id)
-      updateDocumentNonBlocking(docRef, {
-        ...userFormData,
-        updatedAt: serverTimestamp()
-      })
-      toast({ title: "Usuário Atualizado" })
-    } else {
-      const newId = crypto.randomUUID()
-      addDocumentNonBlocking(collection(db, "staff_profiles"), {
-        id: newId,
-        googleId: "",
-        ...userFormData,
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      })
-      toast({ title: "Novo Usuário Criado" })
-    }
-    setIsUserDialogOpen(false)
-  }
-
-  const handleDeleteUser = (id: string) => {
-    if (!db) return
-    if (confirm("Deseja realmente remover este usuário da banca?")) {
-      const docRef = doc(db, "staff_profiles", id)
-      deleteDocumentNonBlocking(docRef)
-      toast({ variant: "destructive", title: "Usuário Removido" })
-    }
   }
 
   return (
@@ -255,15 +180,15 @@ function SettingsContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">LARGURA OFICIAL DA GAVETA</Label>
-                  <Select value={drawerWidth} onValueChange={setDrawerWidth}>
-                    <SelectTrigger className="glass border-white/10 h-14 text-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                      <SelectItem value="padrão">PADRÃO (512PX)</SelectItem>
-                      <SelectItem value="largo">LARGO (672PX)</SelectItem>
-                      <SelectItem value="extra-largo">EXTRA-LARGO (896PX)</SelectItem>
-                      <SelectItem value="full">TELA CHEIA (FULL)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <UISelect value={drawerWidth} onValueChange={setDrawerWidth}>
+                    <UISelectTrigger className="glass border-white/10 h-14 text-white"><UISelectValue /></UISelectTrigger>
+                    <UISelectContent className="bg-[#0d121f] border-white/10 text-white">
+                      <UISelectItem value="padrão">PADRÃO (512PX)</UISelectItem>
+                      <UISelectItem value="largo">LARGO (672PX)</UISelectItem>
+                      <UISelectItem value="extra-largo">EXTRA-LARGO (896PX)</UISelectItem>
+                      <UISelectItem value="full">TELA CHEIA (FULL)</UISelectItem>
+                    </UISelectContent>
+                  </UISelect>
                 </div>
               </div>
               <Button onClick={handleApplyTheme} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-xl">
@@ -297,7 +222,7 @@ function SettingsContent() {
                   <Input value={profileFormData.email} disabled className="glass border-white/5 h-14 text-muted-foreground opacity-50 cursor-not-allowed" />
                 </div>
               </div>
-              <Button onClick={handleUpdateMyProfile} className="blue-gradient text-white font-black gap-3 h-16 px-12 uppercase text-[11px] rounded-xl shadow-lg">
+              <Button onClick={handleUpdateMyProfile} className="bg-primary text-background font-black gap-3 h-16 px-12 uppercase text-[11px] rounded-xl shadow-lg">
                 <Save className="h-5 w-5" /> SALVAR MEUS DADOS
               </Button>
             </CardContent>

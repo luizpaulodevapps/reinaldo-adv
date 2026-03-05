@@ -18,7 +18,6 @@ import {
   UserCheck, 
   Target,
   CheckCircle2,
-  Loader2,
   UserPlus,
   ShieldAlert
 } from "lucide-react"
@@ -76,7 +75,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
 
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "clients"), orderBy("name", "asc"))
+    return query(collection(db!, "clients"), orderBy("name", "asc"))
   }, [db, user])
   const { data: clients } = useCollection(clientsQuery)
 
@@ -123,7 +122,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
         updatedAt: serverTimestamp(),
       }
 
-      const result = await addDocumentNonBlocking(collection(db, "clients"), newClient);
+      const result = await addDocumentNonBlocking(collection(db!, "clients"), newClient);
       const docRef = result as DocumentReference<any, DocumentData>;
       
       if (docRef && docRef.id) {
@@ -338,7 +337,12 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                 </div>
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ESTRATÉGIA / NOTAS INTERNAS</Label>
-                  <Textarea value={formData.strategyNotes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange("strategyNotes", e.target.value)} className="bg-black/20 border-white/10 min-h-[150px] text-white resize-none text-sm" placeholder="Inisira as teses principais ou alertas para a audiência..." />
+                  <Textarea 
+                    value={formData.strategyNotes} 
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange("strategyNotes", e.target.value)} 
+                    className="bg-black/20 border-white/10 min-h-[150px] text-white resize-none text-sm" 
+                    placeholder="Inisira as teses principais ou alertas para a audiência..." 
+                  />
                 </div>
               </div>
             </div>

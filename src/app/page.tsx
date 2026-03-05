@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from 'next/link'
@@ -18,7 +19,8 @@ import {
   Mail,
   MapPin,
   Brain,
-  Target
+  Target,
+  Zap
 } from 'lucide-react'
 
 const fadeInUp = {
@@ -66,20 +68,23 @@ export default function HomePage() {
       <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Background image */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat marble-bg"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/image/hero-bg.jpg')" }}
         />
+        {/* Overlay para profundidade */}
+        <div className="absolute inset-0 bg-[#050a19]/70" />
         
-        {/* Decorative elements from prompt */}
-        <div className="absolute left-[10%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/15 to-transparent hidden lg:block" />
-        <div className="absolute right-[15%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/8 to-transparent hidden lg:block" />
+        {/* Decorative elements */}
+        <div className="absolute left-[10%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/15 to-transparent hidden lg:block" />
+        <div className="absolute right-[15%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D4AF37]/8 to-transparent hidden lg:block" />
 
         <div className="absolute top-32 left-[10%] hidden lg:block">
-          <div className="w-20 h-px bg-primary/20" />
-          <div className="w-px h-20 bg-primary/20" />
+          <div className="w-20 h-px bg-[#D4AF37]/20" />
+          <div className="w-px h-20 bg-[#D4AF37]/20" />
         </div>
         <div className="absolute bottom-20 right-[10%] hidden lg:block">
-          <div className="w-20 h-px bg-primary/20 ml-auto" />
-          <div className="w-px h-20 bg-primary/20 ml-auto" />
+          <div className="w-20 h-px bg-[#D4AF37]/20 ml-auto" />
+          <div className="w-px h-20 bg-[#D4AF37]/20 ml-auto" />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 pt-20 w-full">
@@ -96,8 +101,8 @@ export default function HomePage() {
                 transition={{ duration: 0.8, delay: 0.5 }}
                 className="flex items-center gap-4 mb-12"
               >
-                <div className="gold-line" />
-                <span className="text-primary/80 font-body text-[11px] tracking-[0.4em] uppercase font-light">
+                <div className="h-px w-16 bg-[#D4AF37]/60" />
+                <span className="text-[#D4AF37]/80 font-body text-[11px] tracking-[0.4em] uppercase font-light">
                   Excelência & Blindagem Jurídica
                 </span>
               </motion.div>
@@ -154,7 +159,7 @@ export default function HomePage() {
             className="absolute bottom-10 left-6 lg:left-16 flex items-center gap-4"
           >
             <span className="text-white/25 font-body text-[10px] tracking-[0.3em] uppercase">OAB/SP 497650</span>
-            <div className="w-24 h-px bg-primary/15" />
+            <div className="w-24 h-px bg-[#D4AF37]/15" />
           </motion.div>
         </div>
       </section>

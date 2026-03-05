@@ -56,21 +56,21 @@ export default function FinancialPage() {
   // Busca Equipe
   const staffQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
   }, [db, user])
   const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
 
   // Busca Créditos
   const creditsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "staff_credits"), orderBy("createdAt", "desc"))
+    return query(collection(db!, "staff_credits"), orderBy("createdAt", "desc"))
   }, [db, user])
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery)
 
   // Busca Títulos Financeiros
   const titlesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db, "financial_titles"), where("status", "==", "Recebido"))
+    return query(collection(db!, "financial_titles"), where("status", "==", "Recebido"))
   }, [db, user])
   const { data: receivedTitles } = useCollection(titlesQuery)
 
@@ -114,7 +114,7 @@ export default function FinancialPage() {
       if (!existing && title.processResponsibleStaffId) {
         const amount = (Number(title.value) || 0) * 0.3
         
-        await addDocumentNonBlocking(collection(db, "staff_credits"), {
+        await addDocumentNonBlocking(collection(db!, "staff_credits"), {
           staffId: title.processResponsibleStaffId,
           financialTitleId: title.id,
           description: `Repasse: ${title.description}`,
@@ -141,7 +141,7 @@ export default function FinancialPage() {
     const pendingCredits = credits.filter(c => c.staffId === selectedStaff.id && c.status === 'Disponível')
     
     pendingCredits.forEach(c => {
-      const cRef = doc(db, "staff_credits", c.id)
+      const cRef = doc(db!, "staff_credits", c.id)
       updateDocumentNonBlocking(cRef, {
         status: "Pago",
         paymentDate: new Date().toISOString().split('T')[0],
@@ -230,7 +230,7 @@ export default function FinancialPage() {
                     {filteredTeam.map((member) => {
                       const balance = getStaffBalance(member.id)
                       return (
-                        <TableRow key={member.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableRow key={member.id} className="border-white/5 hover-gold transition-colors">
                           <TableCell className="py-6 pl-10">
                             <div className="flex items-center gap-4">
                               <Avatar className="h-10 w-10 border border-primary/20"><AvatarFallback className="text-[10px] font-black bg-secondary text-primary uppercase">{member.name.substring(0, 2)}</AvatarFallback></Avatar>
@@ -245,8 +245,8 @@ export default function FinancialPage() {
                           </TableCell>
                           <TableCell className="text-right pr-10">
                             <div className="flex justify-end gap-6">
-                              <button onClick={() => { setSelectedStaff(member); setIsWalletOpen(true); }} className="text-[10px] font-black text-blue-400 uppercase tracking-widest">VER CARTEIRA</button>
-                              <button onClick={() => { setSelectedStaff(member); setIsPayConfirmOpen(true); }} disabled={balance <= 0} className={cn("text-[10px] font-black uppercase tracking-widest", balance > 0 ? "text-emerald-500" : "text-white/10 opacity-50")}>QUITAR</button>
+                              <button onClick={() => { setSelectedStaff(member); setIsWalletOpen(true); }} className="text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300">VER CARTEIRA</button>
+                              <button onClick={() => { setSelectedStaff(member); setIsPayConfirmOpen(true); }} disabled={balance <= 0} className={cn("text-[10px] font-black uppercase tracking-widest", balance > 0 ? "text-emerald-500 hover:text-emerald-400" : "text-white/10 opacity-50")}>QUITAR</button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -283,7 +283,7 @@ export default function FinancialPage() {
                   <TableRow key={credit.id} className="border-white/5">
                     <TableCell className="pl-8 py-4">
                       <p className="text-xs font-bold text-white uppercase">{credit.description}</p>
-                      <p className="text-[9px] text-muted-foreground font-bold">{credit.createdAt?.toDate?.()?.toLocaleDateString() || '--/--/----'}</p>
+                      <p className="text-[9px] text-muted-foreground font-bold">{credit.createdAt?.toDate ? format(credit.createdAt.toDate(), "dd/MM/yyyy") : '--/--/----'}</p>
                     </TableCell>
                     <TableCell className="text-right pr-8">
                       <p className="text-sm font-black text-white">R$ {(credit.amount || 0).toLocaleString('pt-BR')}</p>
