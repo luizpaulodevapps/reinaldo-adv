@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ArrowRight,
   MessageSquare,
+  MessageCircle,
   Sparkles,
   X,
   PlusCircle,
