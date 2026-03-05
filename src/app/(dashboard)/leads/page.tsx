@@ -9,29 +9,18 @@ import {
   ChevronRight, 
   Clock, 
   Zap, 
-  UserPlus, 
   Brain,
-  Scale,
   Loader2,
-  ShieldCheck,
-  ArrowRight,
-  MessageSquare,
-  MessageCircle,
-  Sparkles,
   X,
   PlusCircle,
   LayoutGrid,
-  FileText,
-  Phone,
-  Mail,
-  MapPin,
-  History,
-  Trash2,
-  ExternalLink,
-  Edit3,
-  Save,
   Video,
-  Link as LinkIcon
+  Link as LinkIcon,
+  MessageCircle,
+  ShieldCheck,
+  Play,
+  ArrowRight,
+  Gavel
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -47,19 +36,16 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogFooter
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
-import { aiSummarizeInterviewCaseDetails } from "@/ai/flows/ai-summarize-interview-case-details"
 import Link from "next/link"
 
 const columns = [
@@ -89,11 +75,6 @@ export default function LeadsPage() {
   
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
-  const [isAiLoading, setIsAiLoading] = useState(false)
-
-  const [isEditInterviewOpen, setIsEditInterviewOpen] = useState(false)
-  const [interviewToEdit, setInterviewToEdit] = useState<any>(null)
-  const [editResponses, setEditResponses] = useState<Record<string, any>>({})
 
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -149,15 +130,6 @@ export default function LeadsPage() {
     })
     setSelectedLead({ ...selectedLead, status })
     toast({ title: "Fluxo Atualizado", description: `Mover para ${status.toUpperCase()}.` })
-  }
-
-  const handleDeleteLead = async () => {
-    if (!selectedLead || !db) return
-    if (confirm("Deseja remover permanentemente este lead?")) {
-      await deleteDocumentNonBlocking(doc(db!, "leads", selectedLead.id))
-      setIsSheetOpen(false)
-      toast({ variant: "destructive", title: "Lead Removido" })
-    }
   }
 
   const handleStartInterview = (template: any) => {
@@ -302,29 +274,45 @@ export default function LeadsPage() {
                     <TabsList className="bg-transparent border-b border-white/5 h-12 w-full justify-start rounded-none p-0 gap-8">
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
+                      <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">GESTÃO</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="space-y-10">
                       {(selectedLead.scheduledDate || selectedLead.meetingType) && (
                         <div className="space-y-4">
-                          <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-4 w-4" /> Dados do Agendamento</h4>
-                          <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div className="space-y-4">
+                          <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-4 w-4" /> Sala de Atendimento</h4>
+                          <div className="p-8 rounded-2xl bg-amber-500/5 border border-amber-500/20 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                              <Gavel className="h-24 w-24 text-amber-500" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
+                              <div className="md:col-span-7 grid grid-cols-2 gap-8 border-r border-white/5">
                                 <div><p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-1">DATA E HORA</p><p className="text-sm font-bold text-white uppercase">{new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} ÀS {selectedLead.scheduledTime || "--:--"}</p></div>
                                 <div><p className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest mb-1">TIPO</p><p className="text-sm font-bold text-white uppercase">{selectedLead.meetingType === 'online' ? '🖥️ VIDEOCHAMADA' : '🏢 PRESENCIAL'}</p></div>
+                                {selectedLead.meetingType === 'online' && selectedLead.meetingLink && (
+                                  <div className="col-span-2 pt-4"><p className="text-[8px] font-black text-primary uppercase tracking-widest mb-1">LINK DA SALA</p><a href={selectedLead.meetingLink} target="_blank" rel="noreferrer" className="text-[10px] font-black text-white hover:text-primary transition-colors underline truncate block">{selectedLead.meetingLink}</a></div>
+                                )}
                               </div>
-                              {selectedLead.meetingType === 'online' && selectedLead.meetingLink && (
-                                <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 space-y-3">
-                                  <p className="text-[8px] font-black text-primary uppercase tracking-widest flex items-center gap-2"><Video className="h-3 w-3" /> CANAL DE ATENDIMENTO</p>
-                                  <a href={selectedLead.meetingLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[10px] font-black text-white hover:text-primary transition-colors truncate">
-                                    <LinkIcon className="h-3 w-3" /> {selectedLead.meetingLink}
-                                  </a>
-                                  <Button asChild variant="outline" className="w-full h-10 border-primary/30 text-primary text-[10px] font-black uppercase hover:bg-primary hover:text-background">
-                                    <a href={selectedLead.meetingLink} target="_blank" rel="noreferrer">INICIAR CHAMADA AGORA</a>
+                              <div className="md:col-span-5 flex flex-col justify-center gap-3">
+                                <Button 
+                                  onClick={() => {
+                                    handleUpdateStatus("atendimento")
+                                    // Adiciona um pequeno atraso para o usuário ver a transição
+                                    setTimeout(() => {
+                                      const interviewsTab = document.querySelector('[value="entrevistas"]') as HTMLButtonElement
+                                      if (interviewsTab) interviewsTab.click()
+                                    }, 500)
+                                  }}
+                                  className="w-full h-16 gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-3 shadow-2xl hover:scale-[1.02] transition-all"
+                                >
+                                  <Play className="h-5 w-5 fill-current" /> INICIAR PROTOCOLO TÉCNICO
+                                </Button>
+                                {selectedLead.meetingType === 'online' && selectedLead.meetingLink && (
+                                  <Button asChild variant="outline" className="w-full h-12 border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-background">
+                                    <a href={selectedLead.meetingLink} target="_blank" rel="noreferrer"><Video className="h-4 w-4 mr-2" /> ENTRAR NA CHAMADA</a>
                                   </Button>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -340,23 +328,51 @@ export default function LeadsPage() {
 
                     <TabsContent value="entrevistas" className="space-y-6">
                       <div className="grid grid-cols-1 gap-4">
-                        {templates?.map((t) => (
-                          <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/20 text-primary font-black uppercase text-[10px] h-12 gap-3 hover:bg-primary hover:text-background transition-all">
-                            <Plus className="h-4 w-4" /> Iniciar {t.title}
-                          </Button>
-                        ))}
+                        <div className="p-6 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 mb-4 text-center">
+                          <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Escolha a matriz para iniciar a captura de dados:</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {templates?.map((t) => (
+                              <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] h-14 gap-3 hover:bg-primary hover:text-background transition-all">
+                                <FileSignature className="h-4 w-4" /> {t.title}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="space-y-4 mt-8">
-                        {leadInterviews?.map((int) => (
-                          <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group">
-                            <div>
-                              <p className="text-xs font-black text-white uppercase">{int.interviewType}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">POR: {int.interviewerName} • {new Date(int.createdAt.toDate()).toLocaleDateString()}</p>
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">Histórico de Atos Capturados</h4>
+                        {leadInterviews && leadInterviews.length > 0 ? (
+                          leadInterviews.map((int) => (
+                            <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/30 transition-all">
+                              <div>
+                                <p className="text-xs font-black text-white uppercase">{int.interviewType}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">POR: {int.interviewerName} • {new Date(int.createdAt.toDate()).toLocaleDateString()}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
+                              </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
+                          ))
+                        ) : (
+                          <div className="py-12 text-center opacity-30">
+                            <Clock className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em]">Nenhuma entrevista protocolada.</p>
                           </div>
-                        ))}
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="gestao" className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="glass border-primary/20 p-8 space-y-6">
+                          <div><h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Converter em Processo</h4><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Transformar lead em dossiê ativo na banca.</p></div>
+                          <Button className="w-full gold-gradient text-background font-black h-14 uppercase text-[11px] tracking-widest">PROSSEGUIR PARA PROTOCOLO</Button>
+                        </Card>
+                        <Card className="glass border-rose-500/20 p-8 space-y-6">
+                          <div><h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Arquivar Lead</h4><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Mover para acervo passivo (Desistência/Risco).</p></div>
+                          <Button variant="outline" className="w-full h-14 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[11px] tracking-widest">ENCERRAR ATENDIMENTO</Button>
+                        </Card>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -391,5 +407,27 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
     </div>
+  )
+}
+
+function FileSignature({ className }: { className?: string }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="M20 19.5c0 .829-.672 1.5-1.5 1.5s-1.5-.671-1.5-1.5.672-1.5 1.5-1.5 1.5.671 1.5 1.5z" />
+      <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" />
+      <path d="M16 5 6.7 14.3a1 1 0 0 0 0 1.4l.6.6a1 1 0 0 0 1.4 0L18 7l-2-2Z" />
+      <path d="m19 3-1 1 2 2 1-1-2-2Z" />
+    </svg>
   )
 }
