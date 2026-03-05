@@ -4,7 +4,7 @@ service cloud.firestore {
     /**
      * LexFlow ERP - Blindagem de Acesso RGMJ
      * Conforme diretriz soberana: Se o usuário logou, ele tem permissão total (CRUD).
-     * Esta regra garante acesso absoluto para qualquer membro autenticado.
+     * Qualquer membro autenticado via Google tem liberdade absoluta para operar o sistema.
      */
     match /{document=**} {
       allow read, write: if request.auth != null;

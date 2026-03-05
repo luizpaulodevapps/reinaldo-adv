@@ -321,7 +321,6 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Dossiê de Detalhes do Lead */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <SheetHeader className="sr-only">
@@ -331,7 +330,6 @@ export default function LeadsPage() {
           
           {selectedLead && (
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Header do Dossiê */}
               <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
@@ -400,7 +398,6 @@ export default function LeadsPage() {
                     </TabsList>
 
                     <TabsContent value="overview" className="space-y-10 focus:ring-0">
-                      {/* Seção de Resumo IA */}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
@@ -429,7 +426,6 @@ export default function LeadsPage() {
                         )}
                       </div>
 
-                      {/* Briefing Original */}
                       <div className="space-y-4">
                         <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" /> Briefing do Comercial
@@ -529,7 +525,6 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Dialog de Execução de Entrevista */}
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl font-sans max-h-[90vh]">
           {executingTemplate && (
@@ -542,7 +537,6 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Sheet de Novo Lead */}
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
           <div className="p-8 border-b border-white/5 bg-[#0a0f1e]">

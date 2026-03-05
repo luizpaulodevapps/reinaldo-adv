@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Client": {
@@ -76,11 +75,9 @@
     "providers": ["google"]
   },
   "firestore": {
-    "structure": [
-      { "path": "/staff_profiles/{staffId}", "definition": { "entityName": "StaffProfile", "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." } },
-      { "path": "/clients/{clientId}", "definition": { "entityName": "Client", "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." } },
-      { "path": "/processes/{processId}", "definition": { "entityName": "Process", "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." } },
-      { "path": "/interviews/{interviewId}", "definition": { "entityName": "Interview", "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." } }
-    ]
+    "/staff_profiles/{staffId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." },
+    "/clients/{clientId}": { "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." },
+    "/processes/{processId}": { "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." },
+    "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." }
   }
 }
