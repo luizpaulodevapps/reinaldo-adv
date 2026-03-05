@@ -54,7 +54,6 @@ export default function HomePage() {
             <Link href="/login">
               <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-xl px-8 text-[9px] font-black uppercase tracking-widest transition-all h-10">
                 <Lock className="h-3.5 w-3.5 mr-2" />
-                Portal de Comando
               </Button>
             </Link>
           </div>

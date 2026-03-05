@@ -170,6 +170,14 @@ export default function LeadsPage() {
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
+          <SheetHeader className="sr-only">
+            <SheetTitle>
+              {selectedLead?.name ? `Lead ${selectedLead.name}` : "Detalhes do lead"}
+            </SheetTitle>
+            <SheetDescription>
+              Visualize e gerencie os dados do lead selecionado.
+            </SheetDescription>
+          </SheetHeader>
           {selectedLead && (
             <div className="p-10 flex flex-col h-full">
               <div className="flex items-center justify-between mb-8">

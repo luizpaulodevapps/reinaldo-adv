@@ -51,6 +51,24 @@ import { collection, query, orderBy, serverTimestamp, doc, where } from "firebas
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const CATEGORIES = [
   { id: "Entrevista de Triagem", label: "Entrevista de Triagem", icon: MessageSquare },
@@ -130,6 +148,206 @@ const TARGET_FIELDS_BY_REUSE_TARGET: Record<string, Array<{ id: string; label: s
 
 const MIN_QUESTIONS_REQUIRED = 1
 
+type ReadyQuestionTemplate = {
+  id: string
+  label: string
+  type: string
+  required?: boolean
+  reuseEnabled?: boolean
+  reuseTarget?: string
+  targetField?: string
+  reusePriority?: string
+  balizaObrigatoria?: boolean
+}
+
+const READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
+  { id: "id-nome", label: "IDENTIFICACAO: NOME COMPLETO", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "id-cpf", label: "IDENTIFICACAO: CPF", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "cpf", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "id-rg", label: "IDENTIFICACAO: RG", type: "text", required: false, reuseEnabled: true, reuseTarget: "client", targetField: "rg", reusePriority: "media" },
+  { id: "id-estado-profissao", label: "IDENTIFICACAO: ESTADO CIVIL E PROFISSAO ATUAL", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "baixa" },
+  { id: "id-endereco", label: "IDENTIFICACAO: ENDERECO COMPLETO", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "address", reusePriority: "media" },
+  { id: "id-contato", label: "IDENTIFICACAO: TELEFONE, WHATSAPP E EMAIL", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "empresa-nome", label: "EMPRESA: NOME DA EMPRESA", type: "text", required: true, reuseEnabled: true, reuseTarget: "claimant", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "empresa-cnpj", label: "EMPRESA: CNPJ (SE SOUBER)", type: "text", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "documentNumber", reusePriority: "media" },
+  { id: "empresa-endereco", label: "EMPRESA: ENDERECO DA EMPRESA", type: "text", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "address", reusePriority: "media" },
+  { id: "empresa-responsavel", label: "EMPRESA: RESPONSAVEL DIRETO (GERENTE/SUPERVISOR)", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "empresa-ativa", label: "EMPRESA: AINDA ESTA ATIVA?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "baixa" },
+
+  { id: "contrato-admissao", label: "CONTRATO: DATA DE ADMISSAO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "contrato-demissao", label: "CONTRATO: DATA DE DEMISSAO OU SE AINDA TRABALHA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "contrato-tipo-demissao", label: "CONTRATO: TIPO DE DEMISSAO (SEM JUSTA CAUSA/JUSTA CAUSA/PEDIDO/INDIRETA)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "contrato-cargo", label: "CONTRATO: CARGO REGISTRADO X CARGO REAL", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "contrato-salario", label: "CONTRATO: SALARIO REGISTRADO", type: "number", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "contrato-por-fora", label: "CONTRATO: RECEBIA POR FORA OU HOUVE AUMENTO NAO REGISTRADO?", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+
+  { id: "jornada-horario", label: "JORNADA: HORARIO DE ENTRADA, SAIDA E INTERVALO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "jornada-fim-semana", label: "JORNADA: TRABALHAVA AOS SABADOS/DOMINGOS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "jornada-horas-extras", label: "JORNADA: HORAS EXTRAS (QUANTIDADE E PAGAMENTO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "jornada-banco-ponto", label: "JORNADA: BANCO DE HORAS E CONTROLE DE PONTO", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+
+  { id: "verbas-ferias", label: "VERBAS: RECEBEU FERIAS + 1/3?", type: "boolean", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "verbas-decimo", label: "VERBAS: RECEBEU 13 SALARIO?", type: "boolean", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "verbas-fgts", label: "VERBAS: RECEBEU FGTS E MULTA DE 40%?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "verbas-aviso-seguro", label: "VERBAS: RECEBEU AVISO PREVIO E SEGURO-DESEMPREGO?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "docs-trct", label: "DOCUMENTOS: POSSUI TRCT?", type: "boolean", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "docs-fgts", label: "DOCUMENTOS: POSSUI CHAVE E EXTRATO DO FGTS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "docs-comprovantes", label: "DOCUMENTOS: POSSUI COMPROVANTES DE PAGAMENTO?", type: "boolean", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+
+  { id: "especifico-desvio", label: "SITUACOES ESPECIFICAS: HOUVE DESVIO OU ACUMULO DE FUNCAO?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "especifico-insalubridade", label: "SITUACOES ESPECIFICAS: INSALUBRIDADE/PERICULOSIDADE E ADICIONAL", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "especifico-assedio", label: "SITUACOES ESPECIFICAS: ASSEDIO MORAL, TESTEMUNHAS E PROVAS", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "especifico-acidente", label: "SITUACOES ESPECIFICAS: ACIDENTE, CAT E AUXILIO-DOENCA", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "especifico-estabilidade", label: "SITUACOES ESPECIFICAS: ESTABILIDADE (GESTANTE/CIPA/DOENCA/SINDICAL)", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+
+  { id: "provas-gerais", label: "PROVAS: CTPS, HOLERITES, EXTRATO FGTS, WHATSAPP, FOTOS, CONTRATO, ADVERTENCIAS", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "testemunhas", label: "TESTEMUNHAS: NOME, TELEFONE, SE AINDA TRABALHAM E O QUE SABEM", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "situacao-atual", label: "SITUACAO ATUAL: DESEMPREGADO, RESCISAO, INFORMALIDADE E URGENCIA FINANCEIRA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "expectativa-cliente", label: "EXPECTATIVA DO CLIENTE: OBJETIVO, PRAZO E ACEITE DE ACORDO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "avaliacao-interna", label: "AVALIACAO JURIDICA INTERNA: VIAVEL/RISCO/PROVAS/ACORDO/VALOR", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "formalizacao", label: "FORMALIZACAO DO LEAD: HONORARIOS, CUSTAS, PERICIA E ASSINATURAS", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "pergunta-final", label: "PERGUNTA FINAL: EXISTE ALGO A MAIS QUE TE INCOMODAVA E AINDA NAO COMENTOU?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+]
+
+const READY_TEMPLATE_STARTER_PACK = [
+  "id-nome",
+  "id-cpf",
+  "contrato-tipo-demissao",
+  "jornada-horas-extras",
+  "provas-gerais",
+  "pergunta-final",
+]
+
+const READY_TEMPLATE_BASE_PACK = READY_QUESTION_TEMPLATES.map((template) => template.id)
+
+const DEFAULT_CHECKLIST_TITLE = "CHECKLIST - ENTREVISTA PARA PROCESSO TRABALHISTA"
+const DEFAULT_CHECKLIST_DESCRIPTION = "Padrao basico trabalhista para triagem. Voce pode editar, remover e adicionar perguntas a qualquer momento."
+
+const READY_QUESTION_TEMPLATES_EXTRA: ReadyQuestionTemplate[] = [
+  { id: "civel-conflito", label: "CIVEL: QUAL E O CONFLITO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "civel-inicio", label: "CIVEL: QUANDO O CONFLITO COMECOU?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "civel-amigavel", label: "CIVEL: JA TENTOU RESOLVER AMIGAVELMENTE?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "civel-contrato", label: "CIVEL: EXISTE CONTRATO?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "civel-documentos", label: "CIVEL: POSSUI CONTRATO, PAGAMENTOS, MENSAGENS, NOTIFICACOES OU BOLETIM?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "civel-pontos", label: "CIVEL: EXISTE DANO MORAL, PROVA DOCUMENTAL OU TESTEMUNHAS?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "criminal-preso", label: "CRIMINAL: FOI PRESO?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "criminal-flagrante", label: "CRIMINAL: FOI EM FLAGRANTE?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "criminal-custodia", label: "CRIMINAL: JA HOUVE AUDIENCIA DE CUSTODIA?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "criminal-liberdade", label: "CRIMINAL: RESPONDE EM LIBERDADE?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "criminal-acusacao", label: "CRIMINAL: QUAL A ACUSACAO E A DATA DO FATO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "criminal-provas", label: "CRIMINAL: TESTEMUNHAS E PROVAS CONTRA ELE", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "criminal-documentos", label: "CRIMINAL: POSSUI INQUERITO, BO, PROCESSO OU MANDADO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "prev-beneficio", label: "PREVIDENCIARIO: TIPO DE BENEFICIO (APOSENTADORIA/AUXILIO/BPC/PENSAO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "prev-historico", label: "PREVIDENCIARIO: TRABALHOU REGISTRADO OU CONTRIBUIU COMO AUTONOMO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "prev-cnis", label: "PREVIDENCIARIO: TEM CNIS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "prev-documentos", label: "PREVIDENCIARIO: POSSUI RG/CPF, CTPS, CNIS E LAUDOS MEDICOS?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "trib-problema", label: "TRIBUTARIO: PROBLEMA (DIVIDA ATIVA/EXECUCAO/MULTA/PLANEJAMENTO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "trib-dados", label: "TRIBUTARIO: CNPJ/CPF, TIPO DE EMPRESA, REGIME E PARCELAMENTO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "trib-documentos", label: "TRIBUTARIO: POSSUI CDA, AUTOS DE INFRACAO E NOTIFICACOES?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "familia-acao", label: "FAMILIA: TIPO DE ACAO (DIVORCIO/GUARDA/PENSAO/VISITAS)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "familia-filhos", label: "FAMILIA: FILHOS, IDADES E ACORDO PREVIO", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "familia-violencia", label: "FAMILIA: EXISTE VIOLENCIA ENVOLVIDA?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "familia-documentos", label: "FAMILIA: POSSUI CERTIDOES E COMPROVANTES DE RENDA?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "empresarial-problema", label: "EMPRESARIAL: NATUREZA DO PROBLEMA (SOCIETARIO/CONTRATO/COBRANCA/RECUPERACAO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "empresarial-dados", label: "EMPRESARIAL: CONTRATO SOCIAL, ALTERACOES, FATURAMENTO E DIVIDAS", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+
+  { id: "geral-area", label: "TRIAGEM GERAL: QUAL AREA DO DIREITO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "geral-descricao", label: "TRIAGEM GERAL: BREVE DESCRICAO DO PROBLEMA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "geral-urgencia", label: "TRIAGEM GERAL: EXISTE URGENCIA?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "geral-processo", label: "TRIAGEM GERAL: JA EXISTE PROCESSO?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "distribution", targetField: "processNumber", reusePriority: "media" },
+  { id: "geral-documentos", label: "TRIAGEM GERAL: PODE ENVIAR DOCUMENTOS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+]
+
+const READY_TEMPLATE_CIVEL_PACK = ["civel-conflito", "civel-inicio", "civel-amigavel", "civel-contrato", "civel-documentos", "civel-pontos"]
+const READY_TEMPLATE_CRIMINAL_PACK = ["criminal-preso", "criminal-flagrante", "criminal-custodia", "criminal-liberdade", "criminal-acusacao", "criminal-provas", "criminal-documentos"]
+const READY_TEMPLATE_PREVIDENCIARIO_PACK = ["prev-beneficio", "prev-historico", "prev-cnis", "prev-documentos"]
+const READY_TEMPLATE_TRIBUTARIO_PACK = ["trib-problema", "trib-dados", "trib-documentos"]
+const READY_TEMPLATE_FAMILIA_PACK = ["familia-acao", "familia-filhos", "familia-violencia", "familia-documentos"]
+const READY_TEMPLATE_EMPRESARIAL_PACK = ["empresarial-problema", "empresarial-dados"]
+const READY_TEMPLATE_GERAL_PACK = ["geral-area", "geral-descricao", "geral-urgencia", "geral-processo", "geral-documentos"]
+
+const ALL_READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
+  ...READY_QUESTION_TEMPLATES,
+  ...READY_QUESTION_TEMPLATES_EXTRA,
+]
+
+const CHECKLIST_PRESETS_BY_LEGAL_AREA: Record<string, { title: string; description: string; templateIds: string[] }> = {
+  "Trabalhista": {
+    title: DEFAULT_CHECKLIST_TITLE,
+    description: DEFAULT_CHECKLIST_DESCRIPTION,
+    templateIds: READY_TEMPLATE_BASE_PACK,
+  },
+  "Cível": {
+    title: "CHECKLIST - ENTREVISTA CIVEL",
+    description: "Padrao civil para conflitos contratuais e obrigacionais.",
+    templateIds: READY_TEMPLATE_CIVEL_PACK,
+  },
+  "Criminal": {
+    title: "CHECKLIST - ENTREVISTA CRIMINAL",
+    description: "Padrao criminal para coleta tecnica inicial do caso.",
+    templateIds: READY_TEMPLATE_CRIMINAL_PACK,
+  },
+  "Previdenciário": {
+    title: "CHECKLIST - ENTREVISTA PREVIDENCIARIA",
+    description: "Padrao previdenciario para beneficios e historico contributivo.",
+    templateIds: READY_TEMPLATE_PREVIDENCIARIO_PACK,
+  },
+  "Tributário": {
+    title: "CHECKLIST - ENTREVISTA TRIBUTARIA",
+    description: "Padrao tributario para passivo fiscal e planejamento.",
+    templateIds: READY_TEMPLATE_TRIBUTARIO_PACK,
+  },
+  "Família": {
+    title: "CHECKLIST - ENTREVISTA FAMILIA",
+    description: "Padrao familia para divorcio, guarda, pensao e visitas.",
+    templateIds: READY_TEMPLATE_FAMILIA_PACK,
+  },
+  "Empresarial": {
+    title: "CHECKLIST - ENTREVISTA EMPRESARIAL",
+    description: "Padrao empresarial para demandas societarias e contratuais.",
+    templateIds: READY_TEMPLATE_EMPRESARIAL_PACK,
+  },
+  "Geral": {
+    title: "CHECKLIST - TRIAGEM GERAL",
+    description: "Triagem inicial rapida para direcionar o lead para a area correta.",
+    templateIds: READY_TEMPLATE_GERAL_PACK,
+  },
+}
+
+const normalizeTemplateLabel = (value: string) => value.trim().toUpperCase()
+
+const buildChecklistItemFromTemplate = (template: ReadyQuestionTemplate) => {
+  const reuseTarget = template.reuseTarget || "caseDetails"
+  const availableFields = TARGET_FIELDS_BY_REUSE_TARGET[reuseTarget] || []
+  const fallbackField = availableFields[0]?.id || "caseDetails"
+  const targetField = availableFields.some((field) => field.id === template.targetField)
+    ? template.targetField
+    : fallbackField
+
+  return {
+    label: normalizeTemplateLabel(template.label),
+    type: template.type || "text",
+    required: template.required ?? true,
+    reuseEnabled: template.reuseEnabled ?? false,
+    reuseTarget,
+    targetField,
+    reusePriority: template.reusePriority || "media",
+    balizaObrigatoria: template.balizaObrigatoria ?? false,
+  }
+}
+
+const buildChecklistItemsFromTemplateIds = (templateIds: string[]) => {
+  const templateIdSet = new Set(templateIds)
+  return ALL_READY_QUESTION_TEMPLATES
+    .filter((template) => templateIdSet.has(template.id))
+    .map(buildChecklistItemFromTemplate)
+}
+
 type EditorStep = "geral" | "perguntas" | "revisao"
 
 const EDITOR_STEPS: Array<{ id: EditorStep; label: string }> = [
@@ -143,6 +361,8 @@ export default function LaboratorioChecklistsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
   const [editorStep, setEditorStep] = useState<EditorStep>("geral")
+  const [isAreaChangeDialogOpen, setIsAreaChangeDialogOpen] = useState(false)
+  const [pendingAreaChange, setPendingAreaChange] = useState<string | null>(null)
 
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Entrevista de Triagem")
@@ -175,14 +395,77 @@ export default function LaboratorioChecklistsPage() {
   const currentStepIndex = EDITOR_STEPS.findIndex(step => step.id === editorStep)
   const canGoBack = currentStepIndex > 0
   const isLastStep = currentStepIndex === EDITOR_STEPS.length - 1
+  const selectedAreaPreset = CHECKLIST_PRESETS_BY_LEGAL_AREA[legalArea] || CHECKLIST_PRESETS_BY_LEGAL_AREA["Trabalhista"]
+  const pendingAreaPreset = pendingAreaChange
+    ? (CHECKLIST_PRESETS_BY_LEGAL_AREA[pendingAreaChange] || CHECKLIST_PRESETS_BY_LEGAL_AREA["Trabalhista"])
+    : null
+  const currentQuestionsCount = items.length
+  const pendingAreaQuestionsCount = pendingAreaPreset?.templateIds.length || 0
+  const templateById = useMemo(() => {
+    const templates = new Map<string, ReadyQuestionTemplate>()
+    for (const template of ALL_READY_QUESTION_TEMPLATES) {
+      templates.set(template.id, template)
+    }
+    return templates
+  }, [])
+  const pendingAreaPreviewQuestions = useMemo(() => {
+    if (!pendingAreaPreset) return []
+    return pendingAreaPreset.templateIds
+      .slice(0, 3)
+      .map((templateId) => templateById.get(templateId))
+      .filter((template): template is ReadyQuestionTemplate => Boolean(template))
+  }, [pendingAreaPreset, templateById])
+  const pendingAreaPreviewBalizasCount = pendingAreaPreviewQuestions.filter((question) => Boolean(question.balizaObrigatoria)).length
+  const selectedAreaTemplates = useMemo(() => {
+    const templateIdSet = new Set(selectedAreaPreset?.templateIds || READY_TEMPLATE_BASE_PACK)
+    return ALL_READY_QUESTION_TEMPLATES.filter((template) => templateIdSet.has(template.id))
+  }, [selectedAreaPreset])
+
+  const applyChecklistPreset = (area: string, mode: "replace" | "append" = "replace") => {
+    const preset = CHECKLIST_PRESETS_BY_LEGAL_AREA[area]
+    if (!preset) return
+
+    const presetItems = buildChecklistItemsFromTemplateIds(preset.templateIds)
+
+    if (mode === "replace") {
+      setTitle(preset.title)
+      setCategory("Entrevista de Triagem")
+      setLegalArea(area)
+      setDescription(preset.description)
+      setItems(presetItems)
+      toast({
+        title: `Padrao ${area.toUpperCase()} aplicado`,
+        description: `${preset.templateIds.length} perguntas carregadas como base.`,
+      })
+      return
+    }
+
+    const existingLabels = new Set(items.map((item) => normalizeTemplateLabel(item.label || "")))
+    const entriesToAdd = presetItems.filter((entry) => !existingLabels.has(entry.label))
+
+    if (entriesToAdd.length === 0) {
+      toast({
+        title: "Pacote ja aplicado",
+        description: `O pacote ${area.toUpperCase()} ja esta refletido no checklist atual.`,
+      })
+      return
+    }
+
+    setItems((prev) => [...prev, ...entriesToAdd])
+    toast({
+      title: `Pacote ${area.toUpperCase()} adicionado`,
+      description: `${entriesToAdd.length} pergunta(s) incorporada(s).`,
+    })
+  }
 
   const handleOpenCreate = () => {
+    const preset = CHECKLIST_PRESETS_BY_LEGAL_AREA["Trabalhista"]
     setEditingList(null)
-    setTitle("")
+    setTitle(preset.title)
     setCategory("Entrevista de Triagem")
     setLegalArea("Trabalhista")
-    setDescription("")
-    setItems([])
+    setDescription(preset.description)
+    setItems(buildChecklistItemsFromTemplateIds(preset.templateIds))
     setEditorStep("geral")
     setIsDialogOpen(true)
   }
@@ -212,6 +495,79 @@ export default function LaboratorioChecklistsPage() {
         balizaObrigatoria: false,
       },
     ])
+  }
+
+  const handleAddReadyQuestions = (templates: ReadyQuestionTemplate[]) => {
+    if (templates.length === 0) return
+
+    const existingLabels = new Set(items.map((item) => normalizeTemplateLabel(item.label || "")))
+    const entriesToAdd = templates
+      .map(buildChecklistItemFromTemplate)
+      .filter((entry) => !existingLabels.has(entry.label))
+
+    if (entriesToAdd.length === 0) {
+      toast({
+        title: "Perguntas ja adicionadas",
+        description: "As perguntas selecionadas ja estao no checklist.",
+      })
+      return
+    }
+
+    setItems((prev) => [...prev, ...entriesToAdd])
+    toast({
+      title: "Perguntas adicionadas",
+      description: `${entriesToAdd.length} item(ns) incluido(s).`,
+    })
+  }
+
+  const handleAddReadyQuestionById = (templateId: string) => {
+    const template = ALL_READY_QUESTION_TEMPLATES.find((entry) => entry.id === templateId)
+    if (!template) return
+    handleAddReadyQuestions([template])
+  }
+
+  const handleAddStarterPack = () => {
+    const starterTemplates = ALL_READY_QUESTION_TEMPLATES.filter((template) =>
+      READY_TEMPLATE_STARTER_PACK.includes(template.id)
+    )
+    handleAddReadyQuestions(starterTemplates)
+  }
+
+  const handleApplyDefaultChecklist = (area?: string) => {
+    applyChecklistPreset(area || legalArea || "Trabalhista", "replace")
+  }
+
+  const handleAddAreaPack = (area?: string) => {
+    applyChecklistPreset(area || legalArea || "Trabalhista", "append")
+  }
+
+  const handleLegalAreaChange = (nextArea: string) => {
+    if (nextArea === legalArea) return
+
+    const hasExistingDraft = items.length > 0 || Boolean(title.trim()) || Boolean(description.trim())
+    if (!hasExistingDraft) {
+      handleApplyDefaultChecklist(nextArea)
+      return
+    }
+
+    setPendingAreaChange(nextArea)
+    setIsAreaChangeDialogOpen(true)
+  }
+
+  const handleConfirmAreaChange = () => {
+    if (!pendingAreaChange) {
+      setIsAreaChangeDialogOpen(false)
+      return
+    }
+
+    handleApplyDefaultChecklist(pendingAreaChange)
+    setPendingAreaChange(null)
+    setIsAreaChangeDialogOpen(false)
+  }
+
+  const handleCancelAreaChange = () => {
+    setPendingAreaChange(null)
+    setIsAreaChangeDialogOpen(false)
   }
 
   const handleUpdateField = (index: number, field: string, value: any) => {
@@ -444,7 +800,7 @@ export default function LaboratorioChecklistsPage() {
                     <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
                       <Scale className="h-3.5 w-3.5" /> ÁREA JURÍDICA VINCULADA
                     </Label>
-                    <Select value={legalArea} onValueChange={setLegalArea}>
+                    <Select value={legalArea} onValueChange={handleLegalAreaChange}>
                       <SelectTrigger className="bg-black/40 border-primary h-14 text-white ring-1 ring-primary/20">
                         <SelectValue placeholder="Selecione a área para vincular esta entrevista..." />
                       </SelectTrigger>
@@ -455,7 +811,7 @@ export default function LaboratorioChecklistsPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-[9px] text-muted-foreground italic font-medium uppercase tracking-tight">
-                      * ESTE FORMULÁRIO APARECERÁ AUTOMATICAMENTE AO TRIAR NOVOS LEADS DESTA ÁREA.
+                      * AO TROCAR A AREA, O PADRAO DA AREA E APLICADO MEDIANTE CONFIRMACAO.
                     </p>
                   </div>
 
@@ -479,6 +835,9 @@ export default function LaboratorioChecklistsPage() {
                         <LayoutGrid className="h-5 w-5" /> ELEMENTOS DA ENTREVISTA
                       </h4>
                       <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Defina as perguntas e campos de captura de dados.</p>
+                      <p className="text-[9px] font-bold text-primary/80 uppercase tracking-wider">
+                        Voce pode aplicar o padrao da area selecionada e editar tudo em seguida.
+                      </p>
                       <div className="flex items-center gap-2 pt-1">
                         <Badge
                           variant="outline"
@@ -496,12 +855,80 @@ export default function LaboratorioChecklistsPage() {
                         </span>
                       </div>
                     </div>
-                    <Button
-                      onClick={handleAddField}
-                      className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-2 h-12 px-8 rounded-xl shadow-xl shadow-primary/10"
-                    >
-                      <Plus className="h-4 w-4" /> ADICIONAR PERGUNTA
-                    </Button>
+                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full sm:w-auto border-primary/35 bg-primary/5 text-primary hover:bg-primary hover:text-[#0a0f1e] font-black uppercase text-[10px] tracking-widest gap-2 h-12 px-6"
+                          >
+                            <ListPlus className="h-4 w-4" /> PERGUNTAS PRONTAS
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-80 max-h-[65vh] overflow-y-auto bg-[#0d121f] border-white/10 text-white"
+                        >
+                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                            Biblioteca tatica
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuItem
+                            onClick={() => handleApplyDefaultChecklist(legalArea)}
+                            className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
+                          >
+                            <ShieldCheck className="h-4 w-4 text-primary" /> APLICAR PADRAO {legalArea.toUpperCase()} ({selectedAreaPreset.templateIds.length})
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuItem
+                            onClick={handleAddStarterPack}
+                            className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
+                          >
+                            <PlusCircle className="h-4 w-4 text-primary" /> INSERIR PACOTE RAPIDO ({READY_TEMPLATE_STARTER_PACK.length})
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleAddAreaPack(legalArea)}
+                            className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
+                          >
+                            <Plus className="h-4 w-4 text-primary" /> SOMAR PACOTE {legalArea.toUpperCase()} ({selectedAreaPreset.templateIds.length})
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
+                            Aplicar por area
+                          </DropdownMenuLabel>
+                          {LEGAL_AREAS.map((area) => (
+                            <DropdownMenuItem
+                              key={`preset-${area}`}
+                              onClick={() => handleApplyDefaultChecklist(area)}
+                              className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
+                            >
+                              APLICAR {area.toUpperCase()}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
+                            Perguntas individuais ({legalArea.toUpperCase()})
+                          </DropdownMenuLabel>
+                          {selectedAreaTemplates.map((template) => (
+                            <DropdownMenuItem
+                              key={template.id}
+                              onClick={() => handleAddReadyQuestionById(template.id)}
+                              className="text-[10px] font-bold uppercase tracking-wide focus:bg-primary/20"
+                            >
+                              {template.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Button
+                        onClick={handleAddField}
+                        className="w-full sm:w-auto gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-2 h-12 px-8 rounded-xl shadow-xl shadow-primary/10"
+                      >
+                        <Plus className="h-4 w-4" /> ADICIONAR PERGUNTA
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -778,6 +1205,74 @@ export default function LaboratorioChecklistsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={isAreaChangeDialogOpen}
+        onOpenChange={(open) => {
+          setIsAreaChangeDialogOpen(open)
+          if (!open) {
+            setPendingAreaChange(null)
+          }
+        }}
+      >
+        <AlertDialogContent className="glass border-white/10 bg-[#0d121f] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white text-xl font-black uppercase tracking-tight">
+              Aplicar padrao da area
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              A troca para {pendingAreaChange?.toUpperCase() || "NOVA AREA"} vai sobrescrever titulo, descricao e perguntas atuais.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Impacto da troca</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/90">
+              {currentQuestionsCount} pergunta(s) atual(is) -&gt; {pendingAreaQuestionsCount} pergunta(s) do novo padrao
+            </p>
+          </div>
+          {pendingAreaPreviewQuestions.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary/90">Preview das 3 primeiras</p>
+              <ul className="space-y-1">
+                {pendingAreaPreviewQuestions.map((question, index) => (
+                  <li key={`${question.id}-${index}`} className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider text-white/85">
+                    <span>{index + 1}. {question.label}</span>
+                    {question.balizaObrigatoria && (
+                      <span className="px-2 py-0.5 rounded-full border border-amber-400/30 bg-amber-500/10 text-[8px] font-black uppercase tracking-widest text-amber-300">
+                        Baliza
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {pendingAreaPreviewBalizasCount > 0 && (
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                  {pendingAreaPreviewBalizasCount} baliza(s) obrigatoria(s) neste preview
+                </p>
+              )}
+              {pendingAreaQuestionsCount > pendingAreaPreviewQuestions.length && (
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  ... e mais {pendingAreaQuestionsCount - pendingAreaPreviewQuestions.length} pergunta(s)
+                </p>
+              )}
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={handleCancelAreaChange}
+              className="border-white/15 bg-transparent text-white hover:bg-white/5"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAreaChange}
+              className="gold-gradient text-background font-black uppercase tracking-widest"
+            >
+              Aplicar e sobrescrever
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
