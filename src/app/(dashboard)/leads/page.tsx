@@ -34,7 +34,8 @@ import {
   Building,
   Database,
   CloudLightning,
-  FolderOpen
+  FolderOpen,
+  UserPlus
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -83,12 +84,20 @@ export default function LeadsPage() {
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
 
+  // Busca base de clientes para verificação de vínculo
+  const clientsQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "clients"))
+  }, [db, user])
+  const { data: clients } = useCollection(clientsQuery)
+
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
   const [isEditModeOpen, setIsEditModeOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSyncingDrive, setIsSyncingDrive] = useState(false)
+  const [isPromoting, setIsPromoting] = useState(false)
   
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
@@ -119,6 +128,13 @@ export default function LeadsPage() {
       default: return "sm:max-w-4xl"
     }
   }
+
+  const isAlreadyClient = useMemo(() => {
+    if (!selectedLead || !clients) return false
+    const leadDoc = (selectedLead.cpf || selectedLead.documentNumber || "").replace(/\D/g, "")
+    if (!leadDoc) return false
+    return clients.some(c => (c.documentNumber || "").replace(/\D/g, "") === leadDoc)
+  }, [selectedLead, clients])
 
   const handleOpenLead = (lead: any) => {
     setSelectedLead(lead)
@@ -161,11 +177,45 @@ export default function LeadsPage() {
     toast({ title: "Fluxo Atualizado", description: `Mover para ${status.toUpperCase()}.` })
   }
 
+  const handlePromoteToClient = async () => {
+    if (!selectedLead || !db || !user) return
+    if (isAlreadyClient) {
+      toast({ variant: "destructive", title: "Cliente já cadastrado", description: "Este lead já possui um registro oficial na base de clientes." })
+      return
+    }
+
+    setIsPromoting(true)
+    try {
+      const clientPayload = {
+        name: selectedLead.name,
+        documentNumber: selectedLead.cpf || selectedLead.documentNumber || "",
+        email: selectedLead.email || "",
+        phone: selectedLead.phone || "",
+        type: selectedLead.type || "individual",
+        status: "Ativo",
+        responsibleStaffIds: [user.uid],
+        registrationData: selectedLead,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      await addDocumentNonBlocking(collection(db!, "clients"), clientPayload)
+      
+      toast({ 
+        title: "Cliente Oficializado", 
+        description: `${selectedLead.name} agora faz parte da base estratégica RGMJ.` 
+      })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na oficialização" })
+    } finally {
+      setIsPromoting(false)
+    }
+  }
+
   const handleSyncDrive = async () => {
     if (!selectedLead || !db) return
     setIsSyncingDrive(true)
     
-    // Simulação de lógica de pastas Google Drive RGMJ
     setTimeout(async () => {
       let nextStatus = "pasta_lead"
       if (selectedLead.status === "distribuicao" || selectedLead.status === "burocracia") {
@@ -325,6 +375,17 @@ export default function LeadsPage() {
                         <span className="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em]">Banco de Dados: Protegido</span>
                       </div>
 
+                      {/* STATUS CLIENTE OFICIAL */}
+                      <div className={cn(
+                        "flex items-center gap-2 px-3 py-1 rounded-full border",
+                        isAlreadyClient ? "bg-emerald-500/10 border-emerald-500/20" : "bg-amber-500/10 border-amber-500/20 animate-pulse"
+                      )}>
+                        <UserPlus className={cn("h-3 w-3", isAlreadyClient ? "text-emerald-500" : "text-amber-500")} />
+                        <span className={cn("text-[8px] font-black uppercase tracking-[0.2em]", isAlreadyClient ? "text-emerald-500" : "text-amber-500")}>
+                          {isAlreadyClient ? "Perfil Vinculado" : "Cliente não Oficializado"}
+                        </span>
+                      </div>
+
                       {/* STATUS GOOGLE DRIVE */}
                       <div className={cn(
                         "flex items-center gap-2 px-3 py-1 rounded-full border",
@@ -360,6 +421,17 @@ export default function LeadsPage() {
                       <Button onClick={handleWhatsApp} variant="outline" className="h-12 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white text-[10px] font-black uppercase gap-3 tracking-[0.2em] rounded-xl transition-all">
                         <MessageCircle className="h-4 w-4" /> WHATSAPP DIRECT
                       </Button>
+
+                      {!isAlreadyClient && (
+                        <Button 
+                          onClick={handlePromoteToClient} 
+                          disabled={isPromoting}
+                          className="h-12 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background text-[10px] font-black uppercase gap-3 tracking-[0.2em] rounded-xl transition-all shadow-xl"
+                        >
+                          {isPromoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                          Vincular à Base de Clientes
+                        </Button>
+                      )}
 
                       <Button 
                         onClick={handleSyncDrive} 
@@ -578,6 +650,14 @@ export default function LeadsPage() {
                             <UserCog className="h-5 w-5" /> ATUALIZAR CADASTRO
                           </Button>
                         </Card>
+                        {!isAlreadyClient && (
+                          <Card className="glass border-emerald-500/20 p-10 space-y-8 rounded-[2rem] shadow-2xl">
+                            <div><h4 className="text-lg font-black text-white uppercase tracking-tighter mb-2">OFICIALIZAR CLIENTE</h4><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Injetar lead na base estratégica de clientes.</p></div>
+                            <Button onClick={handlePromoteToClient} disabled={isPromoting} variant="outline" className="w-full h-16 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black uppercase text-[11px] tracking-[0.3em] gap-3 rounded-xl shadow-lg transition-all">
+                              {isPromoting ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" />} OFICIALIZAR AGORA
+                            </Button>
+                          </Card>
+                        )}
                         <Card className="glass border-rose-500/20 p-10 space-y-8 rounded-[2rem] shadow-2xl">
                           <div><h4 className="text-lg font-black text-white uppercase tracking-tighter mb-2">ARQUIVAR LEAD</h4><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Mover para acervo passivo (Desistência/Risco).</p></div>
                           <Button variant="outline" className="w-full h-16 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[11px] tracking-[0.3em] rounded-xl transition-all">ENCERRAR ATENDIMENTO</Button>
