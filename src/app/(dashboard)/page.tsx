@@ -1,25 +1,9 @@
 
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
 /**
- * Este arquivo na raiz do dashboard causava conflito com a landing page em src/app/page.tsx.
- * Neutralizamos o conflito redirecionando para a sub-rota específica de comando.
+ * ARQUIVO NEUTRALIZADO PARA EVITAR CONFLITO DE ROTA RAIZ (/)
+ * O Dashboard principal reside em /dashboard.
+ * A Landing Page reside em src/app/page.tsx.
  */
-export default function DashboardIndexRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/dashboard');
-  }, [router]);
-
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-[#0a0a14]">
-      <div className="animate-pulse text-primary font-black uppercase tracking-[0.4em] text-[10px]">
-        Acessando Centro de Comando...
-      </div>
-    </div>
-  );
+export default function DashboardRootNeutralizer() {
+  return null;
 }
