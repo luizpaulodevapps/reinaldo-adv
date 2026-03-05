@@ -1,8 +1,7 @@
-
 /**
  * REDIRECIONADOR TÁTICO RGMJ
- * Arquivo neutralizado para evitar conflito de rota raiz (/) com a Landing Page.
- * A Vercel exige apenas uma página na raiz para evitar erros de manifesto.
+ * Este arquivo foi neutralizado para resolver o conflito de rota raiz (/) com a Landing Page.
+ * A Landing Page reside agora em src/app/page.tsx como autoridade única.
  */
 import { redirect } from 'next/navigation';
 

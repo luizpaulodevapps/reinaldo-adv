@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -19,7 +18,8 @@ import {
   Target,
   CheckCircle2,
   UserPlus,
-  ShieldAlert
+  ShieldAlert,
+  Loader2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -163,6 +163,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
           {steps.map((step) => (
             <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
               <button 
+                type="button"
                 onClick={() => step.id < currentStep && setCurrentStep(step.id)}
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center text-xs font-black transition-all border-2",
@@ -242,7 +243,7 @@ export function ProcessForm({ onSubmit, onCancel }: ProcessFormProps) {
                           <div className="p-10 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum cliente no radar</p></div>
                         )}
                       </div>
-                      <button onClick={handleOpenQuickClient} className="w-full p-5 bg-primary/10 border-t border-white/5 flex items-center justify-center gap-3 text-primary hover:bg-primary/20 transition-all font-black text-[10px] uppercase tracking-widest">
+                      <button type="button" onClick={handleOpenQuickClient} className="w-full p-5 bg-primary/10 border-t border-white/5 flex items-center justify-center gap-3 text-primary hover:bg-primary/20 transition-all font-black text-[10px] uppercase tracking-widest">
                         <UserPlus className="h-4 w-4" /> INJETAR NOVO CLIENTE NA BASE
                       </button>
                     </div>

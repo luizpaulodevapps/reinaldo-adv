@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
@@ -16,55 +15,37 @@ import {
   Save,
   Loader2,
   Trash2,
-  User,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+  User
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
-// Import shadcn select components
 import { 
-  Select as UISelect, 
-  SelectContent as UISelectContent, 
-  SelectItem as UISelectItem, 
-  SelectTrigger as UISelectTrigger, 
-  SelectValue as UISelectValue 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from "@/components/ui/select"
 
 function SettingsContent() {
   const { toast } = useToast()
   const searchParams = useSearchParams()
-  const initialTab = searchParams.get("tab") || "google"
+  const initialTab = searchParams.get("tab") || "perfil"
   const [activeTab, setActiveTab] = useState(initialTab)
   const db = useFirestore()
-  const { user, profile, role } = useUser()
+  const { user, profile } = useUser()
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
   }, [initialTab])
 
-  // --- ESTADO DO LABORATÓRIO DE TEMAS ---
-  const [selectedTheme, setSelectedTheme] = useState("dark")
-  const [selectedFont, setSelectedFont] = useState("roboto")
-  const [sidebarColor, setSidebarColor] = useState("#1e1b2e")
-  const [dashboardColor, setDashboardColor] = useState("#0a0a14")
-  const [accentColor, setAccentColor] = useState("#3b82f6")
-  const [cardStyle, setCardStyle] = useState("glass")
-
-  // --- ESTADO DE DRAWER & NAVEGAÇÃO ---
   const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
-  const [linkBehavior, setLinkBehavior] = useState("drawer") 
 
-  // Dados para Edição do Próprio Perfil
   const [profileFormData, setProfileFormData] = useState({
     name: profile?.name || "",
     email: profile?.email || ""
@@ -77,15 +58,7 @@ function SettingsContent() {
         email: profile.email || ""
       })
       if (profile.themePreferences) {
-        const tp = profile.themePreferences
-        setSelectedTheme(tp.preset || "dark")
-        setSelectedFont(tp.font || "roboto")
-        setSidebarColor(tp.sidebarColor || "#1e1b2e")
-        setDashboardColor(tp.dashboardColor || "#0a0a14")
-        setAccentColor(tp.accentColor || "#3b82f6")
-        setCardStyle(tp.cardStyle || "glass")
-        setDrawerWidth(tp.drawerWidth || "extra-largo")
-        setLinkBehavior(tp.linkBehavior || "drawer")
+        setDrawerWidth(profile.themePreferences.drawerWidth || "extra-largo")
       }
     }
   }, [profile])
@@ -95,7 +68,7 @@ function SettingsContent() {
     return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
   }, [db, user])
 
-  const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
+  const { isLoading: loadingTeam } = useCollection(staffQuery)
   
   const handleUpdateMyProfile = () => {
     if (!user || !db || !profileFormData.name) return
@@ -114,14 +87,7 @@ function SettingsContent() {
     if (!user || !db) return
     const docRef = doc(db!, "staff_profiles", user.uid)
     const themePreferences = {
-      preset: selectedTheme,
-      font: selectedFont,
-      sidebarColor,
-      dashboardColor,
-      accentColor,
-      cardStyle,
       drawerWidth,
-      linkBehavior,
       updatedAt: new Date().toISOString()
     }
     
@@ -131,7 +97,7 @@ function SettingsContent() {
     })
 
     toast({
-      title: "Atmosfera Visual Aplicada",
+      title: "Preferências Salvas",
       description: "As configurações foram injetadas no seu perfil.",
     })
   }
@@ -156,10 +122,7 @@ function SettingsContent() {
         <TabsList className="bg-transparent border-b border-white/5 h-14 p-0 gap-1 w-full justify-start rounded-none mb-10 overflow-x-auto scrollbar-hide">
           {[
             { id: "perfil", label: "Meu Perfil" },
-            { id: "google", label: "Integração Google" },
-            { id: "gov", label: "Integração Gov.br" },
-            { id: "usuarios", label: "Usuários" },
-            { id: "temas", label: "Personalização" },
+            { id: "temas", label: "Interface" },
           ].map((tab) => (
             <TabsTrigger 
               key={tab.id}
@@ -180,15 +143,15 @@ function SettingsContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">LARGURA OFICIAL DA GAVETA</Label>
-                  <UISelect value={drawerWidth} onValueChange={setDrawerWidth}>
-                    <UISelectTrigger className="glass border-white/10 h-14 text-white"><UISelectValue /></UISelectTrigger>
-                    <UISelectContent className="bg-[#0d121f] border-white/10 text-white">
-                      <UISelectItem value="padrão">PADRÃO (512PX)</UISelectItem>
-                      <UISelectItem value="largo">LARGO (672PX)</UISelectItem>
-                      <UISelectItem value="extra-largo">EXTRA-LARGO (896PX)</UISelectItem>
-                      <UISelectItem value="full">TELA CHEIA (FULL)</UISelectItem>
-                    </UISelectContent>
-                  </UISelect>
+                  <Select value={drawerWidth} onValueChange={setDrawerWidth}>
+                    <SelectTrigger className="glass border-white/10 h-14 text-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                      <SelectItem value="padrão">PADRÃO (512PX)</SelectItem>
+                      <SelectItem value="largo">LARGO (672PX)</SelectItem>
+                      <SelectItem value="extra-largo">EXTRA-LARGO (896PX)</SelectItem>
+                      <SelectItem value="full">TELA CHEIA (FULL)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <Button onClick={handleApplyTheme} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-xl">

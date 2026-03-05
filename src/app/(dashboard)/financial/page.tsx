@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -38,6 +37,7 @@ import { collection, query, orderBy, doc, where, serverTimestamp } from "firebas
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { format } from "date-fns"
 
 export default function FinancialPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -48,30 +48,27 @@ export default function FinancialPage() {
   const [folhaLoading, setFolhaLoading] = useState(false)
   
   const db = useFirestore()
-  const { user, role } = useUser()
+  const { user } = useUser()
   const { toast } = useToast()
 
   const canQuery = !!user && !!db
 
-  // Busca Equipe
   const staffQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
+    if (!canQuery) return null
     return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, user])
+  }, [db, canQuery])
   const { data: team, isLoading: loadingTeam } = useCollection(staffQuery)
 
-  // Busca Créditos
   const creditsQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
+    if (!canQuery) return null
     return query(collection(db!, "staff_credits"), orderBy("createdAt", "desc"))
-  }, [db, user])
+  }, [db, canQuery])
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery)
 
-  // Busca Títulos Financeiros
   const titlesQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
+    if (!canQuery) return null
     return query(collection(db!, "financial_titles"), where("status", "==", "Recebido"))
-  }, [db, user])
+  }, [db, canQuery])
   const { data: receivedTitles } = useCollection(titlesQuery)
 
   const stats = useMemo(() => {
@@ -260,7 +257,6 @@ export default function FinancialPage() {
         </TabsContent>
       </Tabs>
 
-      {/* DIALOG CARTEIRA */}
       <Dialog open={isWalletOpen} onOpenChange={setIsWalletOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
@@ -301,7 +297,6 @@ export default function FinancialPage() {
         </DialogContent>
       </Dialog>
 
-      {/* CONFIRMAÇÃO PAGAMENTO */}
       <Dialog open={isPayConfirmOpen} onOpenChange={setIsPayConfirmOpen}>
         <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[450px] p-10 text-center font-sans">
           <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6">
