@@ -26,7 +26,8 @@ import {
   Phone,
   Mail,
   MapPin,
-  ClipboardList
+  ClipboardList,
+  FileCheck
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -52,6 +53,7 @@ import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
+import { BurocraciaView } from "@/components/leads/burocracia-view"
 import Link from "next/link"
 
 const columns = [
@@ -160,7 +162,6 @@ export default function LeadsPage() {
     }
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
     
-    // Se estiver no início, avança para atendimento se ainda não estiver
     if (selectedLead.status === 'novo') {
       await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
         status: "atendimento",
@@ -342,6 +343,7 @@ export default function LeadsPage() {
                     <TabsList className="bg-transparent border-b border-white/5 h-12 w-full justify-start rounded-none p-0 gap-8">
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
+                      <TabsTrigger value="burocracia" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">BUROCRACIA</TabsTrigger>
                       <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">GESTÃO</TabsTrigger>
                     </TabsList>
 
@@ -393,7 +395,6 @@ export default function LeadsPage() {
                         </div>
                       )}
 
-                      {/* Exibe atalhos de entrevistas se já estiver em atendimento */}
                       {selectedLead.status !== 'novo' && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
                           <h4 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Ações Rápidas de Atendimento</h4>
@@ -456,6 +457,10 @@ export default function LeadsPage() {
                           </div>
                         )}
                       </div>
+                    </TabsContent>
+
+                    <TabsContent value="burocracia" className="space-y-6">
+                      <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} />
                     </TabsContent>
 
                     <TabsContent value="gestao" className="space-y-8">

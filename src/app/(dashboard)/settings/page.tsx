@@ -12,7 +12,11 @@ import {
   ChevronRight,
   LayoutGrid,
   Save,
-  Loader2
+  Loader2,
+  FileText,
+  Plus,
+  Trash2,
+  Settings2
 } from "lucide-react"
 import { 
   Select, 
@@ -111,6 +115,7 @@ function SettingsContent() {
           {[
             { id: "perfil", label: "Meu Perfil" },
             { id: "temas", label: "Interface" },
+            { id: "modelos", label: "Modelos de Documentos" },
           ].map((tab) => (
             <TabsTrigger 
               key={tab.id}
@@ -176,6 +181,55 @@ function SettingsContent() {
               <Button onClick={handleUpdateMyProfile} className="bg-primary text-background font-black gap-3 h-16 px-12 uppercase text-[11px] rounded-xl shadow-lg">
                 <Save className="h-5 w-5" /> SALVAR MEUS DADOS
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="modelos" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-3xl font-black text-white uppercase tracking-tighter">Gestão de Modelos (.DOC)</CardTitle>
+                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-50">KITS DOCUMENTAIS POR ÁREA JURÍDICA.</p>
+              </div>
+              <Button className="gold-gradient font-black text-[10px] uppercase h-12 px-6 rounded-lg gap-2">
+                <Plus className="h-4 w-4" /> Novo Modelo
+              </Button>
+            </CardHeader>
+            <CardContent className="p-10">
+              <div className="space-y-6">
+                {["Trabalhista", "Cível", "Criminal", "Família"].map((area) => (
+                  <div key={area} className="space-y-4">
+                    <h4 className="text-primary font-black uppercase text-[11px] tracking-[0.2em] flex items-center gap-3">
+                      <Settings2 className="h-4 w-4" /> KIT {area.toUpperCase()}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <Card className="glass border-white/5 p-5 hover:border-primary/30 transition-all cursor-pointer group">
+                        <div className="flex items-center justify-between mb-4">
+                          <FileText className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div className="flex gap-2">
+                            <button className="text-white/20 hover:text-white"><Settings2 className="h-3.5 w-3.5" /></button>
+                            <button className="text-white/20 hover:text-rose-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                        <p className="text-xs font-black text-white uppercase">Procuração Ad Judicia</p>
+                        <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1">3 tags ativas</p>
+                      </Card>
+                      <Card className="glass border-white/5 p-5 hover:border-primary/30 transition-all cursor-pointer group">
+                        <div className="flex items-center justify-between mb-4">
+                          <FileText className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div className="flex gap-2">
+                            <button className="text-white/20 hover:text-white"><Settings2 className="h-3.5 w-3.5" /></button>
+                            <button className="text-white/20 hover:text-rose-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                        <p className="text-xs font-black text-white uppercase">Contrato de Honorários</p>
+                        <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1">5 tags ativas</p>
+                      </Card>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
