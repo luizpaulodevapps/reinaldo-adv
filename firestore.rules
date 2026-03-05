@@ -5,6 +5,7 @@ service cloud.firestore {
     /**
      * LexFlow ERP - Controle Soberano via Login
      * Todo usuário autenticado tem permissão total de leitura e escrita.
+     * Atualização: Índices compostos aplicados para consultas de entrevistas e leads.
      */
     match /{document=**} {
       allow read, write: if request.auth != null;

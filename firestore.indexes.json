@@ -2,6 +2,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "interviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "financial_titles",
       "queryScope": "COLLECTION",
       "fields": [
@@ -39,14 +47,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "startDateTime", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "interviews",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "clientId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
