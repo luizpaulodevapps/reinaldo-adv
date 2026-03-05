@@ -101,7 +101,8 @@ const DEFAULT_TEMPLATES = {
     clientTemplate: "Prezado(a) {{NOME_CLIENTE}},\n\nConfirmamos sua AUDIÊNCIA PRESENCIAL no dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nENDEREÇO: {{LOCAL_ATO}}\nFórum: {{FORUM_VARA}}\n\nIMPORTANTE: Chegar com 30 minutos de antecedência portando RG original.\n\nAtenciosamente,\nRGMJ Advogados.",
     reminderMinutes: 120,
     calendarColorId: "11",
-    useMeetLink: false
+    useMeetLink: false,
+    sendWhatsApp: true
   },
   "Audiência Virtual": {
     profileName: "AUDIÊNCIA VIRTUAL (TELEPRESENCIAL)",
@@ -109,15 +110,17 @@ const DEFAULT_TEMPLATES = {
     clientTemplate: "Olá {{NOME_CLIENTE}},\n\nSua AUDIÊNCIA VIRTUAL está confirmada para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLINK DE ACESSO: {{LINK_ATO}}\nSENHA: {{SENHA_ATO}}\n\nINSTRUÇÕES:\n1. Conecte-se 15 minutos antes.\n2. Utilize fones de ouvido.\n3. Esteja em ambiente silencioso.\n\n{{ALERTA_LEGAL}}",
     reminderMinutes: 60,
     calendarColorId: "9",
-    useMeetLink: true
+    useMeetLink: true,
+    sendWhatsApp: true
   },
   "Atendimento": {
     profileName: "TRIAGEM INICIAL (LEAD)",
-    calendarTemplate: "Título: ⚡ ATENDIMENTO: {{NOME_CLIENTE}}\n\nSALA DE VIDEO: {{LINK_MEET}}\n\nBREVE RELATO:\n{{DESC_CURTA}}",
-    clientTemplate: "Olá {{NOME_CLIENTE}},\n\nAgendamos seu atendimento com o Dr. Reinaldo Gonçalves para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLink da sala virtual: {{LINK_MEET}}\n\nAté breve!",
+    calendarTemplate: "Título: ⚡ ATENDIMENTO: {{NOME_CLIENTE}}\n\nSALA DE VIDEO: {{LINK_ATO}}\n\nBREVE RELATO:\n{{DESC_CURTA}}",
+    clientTemplate: "Olá {{NOME_CLIENTE}},\n\nAgendamos seu atendimento com o Dr. Reinaldo Gonçalves para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLink da sala virtual: {{LINK_ATO}}\n\nAté breve!",
     reminderMinutes: 30,
     calendarColorId: "7",
-    useMeetLink: true
+    useMeetLink: true,
+    sendWhatsApp: true
   },
   "Prazo": {
     profileName: "ALERTA DE PRAZO JUDICIAL",
@@ -125,7 +128,8 @@ const DEFAULT_TEMPLATES = {
     clientTemplate: "",
     reminderMinutes: 1440,
     calendarColorId: "4",
-    useMeetLink: false
+    useMeetLink: false,
+    sendWhatsApp: false
   }
 }
 
@@ -318,6 +322,12 @@ function SettingsContent() {
     }
     setIsMessageDialogOpen(false)
     toast({ title: "Perfil de Notificação Salvo" })
+  }
+
+  const handleDeleteMessageTemplate = (id: string) => {
+    if (!db || !confirm("Remover este perfil de notificação?")) return
+    deleteDocumentNonBlocking(doc(db!, "notification_templates", id))
+    toast({ variant: "destructive", title: "Perfil Removido" })
   }
 
   return (
@@ -605,6 +615,7 @@ function SettingsContent() {
       {/* Dialog Notificação (Scroll-Lock UX) */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1150px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col">
+          {/* HEADER FIXO */}
           <div className="flex-none p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between z-10">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
@@ -629,14 +640,18 @@ function SettingsContent() {
                   </Select>
                 </div>
               )}
-              <Button variant="ghost" size="icon" onClick={() => setIsMessageDialogOpen(false)} className="text-white/20 hover:text-white"><X className="h-6 w-6" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsMessageDialogOpen(false)} className="text-white/20 hover:text-white transition-colors">
+                <X className="h-6 w-6" />
+              </Button>
             </div>
           </div>
           
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-            <div className="lg:col-span-8 flex flex-col border-r border-white/5 bg-[#0a0f1e]/50">
-              <ScrollArea className="flex-1">
-                <div className="p-10 space-y-10 pb-20">
+          {/* CORPO CENTRAL COM GRID E SCROLL INDEPENDENTE */}
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
+            {/* COLUNA DE FORMULÁRIO */}
+            <div className="lg:col-span-8 h-full flex flex-col border-r border-white/5 bg-[#0a0f1e]/50 overflow-hidden">
+              <ScrollArea className="flex-1 h-full">
+                <div className="p-10 space-y-10 pb-32">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL *</Label>
@@ -656,7 +671,7 @@ function SettingsContent() {
                     </div>
                   </div>
 
-                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 relative overflow-hidden">
+                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 relative overflow-hidden shadow-inner">
                     <div className="absolute top-0 right-0 p-4 opacity-5"><Calendar className="h-24 w-24 text-primary" /></div>
                     <div className="flex items-center justify-between relative z-10">
                       <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3"><Calendar className="h-4 w-4" /> Configurações Google Calendar</h4>
@@ -686,11 +701,11 @@ function SettingsContent() {
                     </div>
                     <div className="space-y-3 relative z-10">
                       <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Descrição Técnica (Agenda Interna)</Label>
-                      <Textarea onFocus={() => setLastFocusedField("calendar")} value={messageFormData.calendarTemplate} onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs font-mono" />
+                      <Textarea onFocus={() => setLastFocusedField("calendar")} value={messageFormData.calendarTemplate} onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})} className="glass min-h-[180px] text-white text-xs font-mono leading-relaxed" />
                     </div>
                   </div>
 
-                  <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-6 relative overflow-hidden">
+                  <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-6 relative overflow-hidden shadow-inner">
                     <div className="absolute top-0 right-0 p-4 opacity-5"><Smartphone className="h-24 w-24 text-emerald-500" /></div>
                     <div className="flex items-center justify-between relative z-10">
                       <h4 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-3"><Smartphone className="h-4 w-4" /> Experiência do Cliente</h4>
@@ -708,16 +723,24 @@ function SettingsContent() {
               </ScrollArea>
             </div>
 
-            <div className="lg:col-span-4 bg-black/40 flex flex-col border-l border-white/5">
-              <div className="p-8 border-b border-white/5 flex-none">
-                <div className="flex items-center gap-3 mb-2"><Sparkles className="h-5 w-5 text-primary" /><h4 className="text-sm font-black text-white uppercase tracking-tighter">Biblioteca de Tags</h4></div>
+            {/* COLUNA DE TAGS */}
+            <div className="lg:col-span-4 h-full bg-black/40 flex flex-col border-l border-white/5 overflow-hidden">
+              <div className="p-8 border-b border-white/5 flex-none bg-black/20">
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h4 className="text-sm font-black text-white uppercase tracking-tighter">Biblioteca de Tags</h4>
+                </div>
                 <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Injeção instantânea de dados táticos.</p>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="p-8 space-y-3 pb-20">
+              <ScrollArea className="flex-1 h-full">
+                <div className="p-8 space-y-3 pb-32">
                   {MESSAGE_PLACEHOLDERS.map((p) => (
-                    <button key={p.tag} onClick={() => handleInjectTag(p.tag)} className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group active:scale-95">
-                      <code className="text-primary font-black text-[11px] block mb-1">{p.tag}</code>
+                    <button 
+                      key={p.tag} 
+                      onClick={() => handleInjectTag(p.tag)} 
+                      className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group active:scale-95 flex flex-col gap-1"
+                    >
+                      <code className="text-primary font-black text-[11px] block">{p.tag}</code>
                       <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest group-hover:text-white transition-colors">{p.desc}</p>
                     </button>
                   ))}
@@ -726,9 +749,18 @@ function SettingsContent() {
             </div>
           </div>
 
-          <DialogFooter className="flex-none p-8 bg-black/60 border-t border-white/5 flex items-center justify-between z-10 shadow-2xl">
-            <button onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors">DESCARTAR</button>
-            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-xl flex items-center gap-3 shadow-xl">
+          {/* FOOTER FIXO */}
+          <DialogFooter className="flex-none p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            <button 
+              onClick={() => setIsMessageDialogOpen(false)} 
+              className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors px-4 py-2"
+            >
+              DESCARTAR ALTERAÇÕES
+            </button>
+            <Button 
+              onClick={handleSaveMessageTemplate} 
+              className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-xl flex items-center gap-3 shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
+            >
               <ShieldCheck className="h-6 w-6" /> CONFIRMAR PERFIL TÁTICO
             </Button>
           </DialogFooter>
