@@ -35,7 +35,10 @@ import {
   Info,
   ChevronDown,
   Copy,
-  Zap
+  Zap,
+  Sparkles,
+  Clock,
+  Palette
 } from "lucide-react"
 import { 
   Select, 
@@ -44,6 +47,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
@@ -59,6 +63,8 @@ const LEGAL_AREAS = ["Trabalhista", "Cível", "Criminal", "Família", "Previdenc
 
 const MESSAGE_PLACEHOLDERS = [
   { tag: "{{NOME_CLIENTE}}", desc: "Nome completo do lead ou cliente" },
+  { tag: "{{CLIENTE_CPF}}", desc: "CPF/CNPJ do cliente" },
+  { tag: "{{CLIENTE_ENDERECO}}", desc: "Endereço completo capturado" },
   { tag: "{{DATA_ATO}}", desc: "Data formatada do compromisso" },
   { tag: "{{HORA_ATO}}", desc: "Horário do compromisso" },
   { tag: "{{LOCAL_ATO}}", desc: "Endereço ou Link da reunião" },
@@ -69,6 +75,47 @@ const MESSAGE_PLACEHOLDERS = [
   { tag: "{{NOME_ADVOGADO}}", desc: "Nome do advogado responsável" },
   { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
 ]
+
+const CALENDAR_COLORS = [
+  { id: "1", name: "Lavanda (Padrão)", hex: "#a4bdfc" },
+  { id: "2", name: "Sálvia", hex: "#7ae7bf" },
+  { id: "3", name: "Uva", hex: "#dbadff" },
+  { id: "4", name: "Flamingo", hex: "#ff887c" },
+  { id: "5", name: "Banana", hex: "#fbd75b" },
+  { id: "6", name: "Tangerina", hex: "#ffb878" },
+  { id: "7", name: "Pavão", hex: "#46d6db" },
+  { id: "8", name: "Grafite", hex: "#e1e1e1" },
+  { id: "9", name: "Mirtilo", hex: "#5484ed" },
+  { id: "10", name: "Manjericão", hex: "#51b749" },
+  { id: "11", name: "Tomate (Crítico)", hex: "#dc2127" },
+]
+
+const DEFAULT_TEMPLATES = {
+  "Audiência": {
+    profileName: "PADRÃO AUDIÊNCIA RGMJ",
+    calendarTemplate: "Título: 🏛️ AUDIÊNCIA: {{NOME_CLIENTE}}\n\nDETALHES DO PROCESSO:\nNúmero: {{NUMERO_PROCESSO}}\nLocal: {{FORUM_VARA}}\n\nOBJETO:\n{{DESC_CURTA}}\n\nLINK VIRTUAL: {{LINK_MEET}}\nResponsável: {{NOME_ADVOGADO}}",
+    clientTemplate: "Prezado(a) {{NOME_CLIENTE}},\n\nConfirmamos sua AUDIÊNCIA agendada para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLOCAL/LINK: {{LOCAL_ATO}}\n\nPor favor, conecte-se com 15 minutos de antecedência. Caso tenha dúvidas, responda a esta mensagem.\n\nAtenciosamente,\nEquipe RGMJ Advogados.",
+    reminderMinutes: 60,
+    calendarColorId: "11",
+    useMeetLink: true
+  },
+  "Atendimento": {
+    profileName: "TRIAGEM INICIAL (LEAD)",
+    calendarTemplate: "Título: ⚡ ATENDIMENTO: {{NOME_CLIENTE}}\n\nCONTATOS:\nWhatsApp: {{CLIENTE_WHATSAPP}}\nEmail: {{CLIENTE_EMAIL}}\n\nBREVE RELATO:\n{{DESC_CURTA}}\n\nSALA DE VIDEO: {{LINK_MEET}}",
+    clientTemplate: "Olá {{NOME_CLIENTE}}, tudo bem?\n\nAgendamos seu atendimento com o Dr. Reinaldo Gonçalves para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nVocê poderá acessar a sala virtual pelo link: {{LINK_MEET}}\n\nAté breve!",
+    reminderMinutes: 30,
+    calendarColorId: "9",
+    useMeetLink: true
+  },
+  "Prazo": {
+    profileName: "ALERTA DE PRAZO JUDICIAL",
+    calendarTemplate: "Título: ⏰ PRAZO: {{NOME_CLIENTE}} - {{TIPO_ATO}}\n\nPROCESSO: {{NUMERO_PROCESSO}}\nPROVIDÊNCIA: {{DESC_CURTA}}\n\nSTATUS: CRÍTICO",
+    clientTemplate: "",
+    reminderMinutes: 1440, // 24h
+    calendarColorId: "4",
+    useMeetLink: false
+  }
+}
 
 function SettingsContent() {
   const { toast } = useToast()
@@ -97,7 +144,11 @@ function SettingsContent() {
     eventType: "Audiência",
     calendarTemplate: "",
     clientTemplate: "",
-    isActive: true
+    isActive: true,
+    reminderMinutes: 60,
+    calendarColorId: "1",
+    useMeetLink: true,
+    sendWhatsApp: true
   })
 
   // Busca Modelos do Firestore
@@ -222,33 +273,37 @@ function SettingsContent() {
   // Ações de Mensagens
   const handleOpenCreateMessage = () => {
     setEditingMessage(null)
-    setMessageFormData({
-      profileName: "",
-      eventType: "Audiência",
-      calendarTemplate: "Título: AUDIÊNCIA RGMJ - {{NOME_CLIENTE}}\n\nDETALHES DO FEITO:\nProcesso: {{NUMERO_PROCESSO}}\nJuízo: {{FORUM_VARA}}\n\nOBJETO:\n{{DESC_CURTA}}\n\nLINK AUDIÊNCIA VIRTUAL: {{LINK_MEET}}\nResponsável: {{NOME_ADVOGADO}}",
-      clientTemplate: "Olá, {{NOME_CLIENTE}}.\n\nConfirmamos sua {{TIPO_ATO}} para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLOCAL/LINK: {{LOCAL_ATO}}\n\nCaso seja por vídeo, utilize o link: {{LINK_MEET}}\n\nAtenciosamente,\nBanca RGMJ Advogados.",
-      isActive: true
-    })
+    loadDefaultTemplate("Audiência")
     setIsMessageDialogOpen(true)
+  }
+
+  const loadDefaultTemplate = (type: string) => {
+    const preset = DEFAULT_TEMPLATES[type as keyof typeof DEFAULT_TEMPLATES]
+    if (preset) {
+      setMessageFormData({
+        ...messageFormData,
+        ...preset,
+        eventType: type,
+        isActive: true
+      })
+    }
   }
 
   const handleOpenEditMessage = (template: any) => {
     setEditingMessage(template)
     setMessageFormData({
-      profileName: template.profileName,
-      eventType: template.eventType,
-      calendarTemplate: template.calendarTemplate,
-      clientTemplate: template.clientTemplate,
-      isActive: template.isActive
+      ...messageFormData,
+      ...template
     })
     setIsMessageDialogOpen(true)
   }
 
   const handleInjectTag = (tag: string) => {
     const field = lastFocusedField === "calendar" ? "calendarTemplate" : "clientTemplate"
+    const currentValue = messageFormData[field as keyof typeof messageFormData] as string
     setMessageFormData(prev => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev] + ` ${tag}`
+      [field]: currentValue + ` ${tag}`
     }))
   }
 
@@ -506,11 +561,11 @@ function SettingsContent() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Calendar Ativo</span>
+                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Lembrete: {template.reminderMinutes}m</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Smartphone className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">SMS/WA Ativo</span>
+                    <div className={cn("flex items-center gap-1.5", template.sendWhatsApp ? "text-emerald-500" : "text-muted-foreground opacity-30")}>
+                      <Smartphone className="h-3 w-3" />
+                      <span className="text-[9px] font-black uppercase tracking-widest">WhatsApp</span>
                     </div>
                   </div>
                 </Card>
@@ -591,24 +646,38 @@ function SettingsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Cadastro de Mensagem */}
+      {/* Dialog de Cadastro de Mensagem - Editor Ultra Inteligente */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl font-sans">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1100px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 {editingMessage ? "Editar Perfil de Mensagem" : "Novo Perfil de Notificação"}
               </DialogTitle>
               <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                Construção de narrativas táticas para Google Calendar e Clientes.
+                CONSTRUÇÃO DE NARRATIVAS TÁTICAS PARA GOOGLE CALENDAR E CLIENTES.
               </DialogDescription>
             </DialogHeader>
+            {!editingMessage && (
+              <div className="flex items-center gap-2">
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Carregar Base:</p>
+                <Select onValueChange={(v) => loadDefaultTemplate(v)}>
+                  <SelectTrigger className="w-40 glass border-white/10 h-10 text-[9px] font-black uppercase"><SelectValue placeholder="SELECIONE..." /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
+                    <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
+                    <SelectItem value="Prazo">⏰ PRAZO</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 h-[65vh]">
-            <div className="lg:col-span-8 flex flex-col border-r border-white/5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 h-[75vh]">
+            <div className="lg:col-span-8 flex flex-col border-r border-white/5 bg-[#0a0f1e]/50">
               <ScrollArea className="flex-1">
-                <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+                <div className="p-10 space-y-10">
+                  {/* DADOS DE IDENTIFICAÇÃO E TIPO */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL *</Label>
@@ -621,84 +690,153 @@ function SettingsContent() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE EVENTO</Label>
-                      <Select value={messageFormData.eventType} onValueChange={(v) => setMessageFormData({...messageFormData, eventType: v})}>
+                      <Select value={messageFormData.eventType} onValueChange={(v) => loadDefaultTemplate(v)}>
                         <SelectTrigger className="glass border-white/10 h-12 text-white font-black uppercase text-[10px]"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-[#0d121f] text-white">
                           <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
-                          <SelectItem value="Atendimento">⚡ ATENDIMENTO (LEAD)</SelectItem>
+                          <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
                           <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <Label className="text-[10px] font-black text-primary uppercase tracking-widest">TEMPLATE: GOOGLE CALENDAR (INTERNO)</Label>
+                  {/* CONFIGURAÇÕES GOOGLE CALENDAR */}
+                  <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-8 shadow-inner">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3">
+                        <Calendar className="h-4 w-4" /> Integração Google Calendar
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Select value={messageFormData.calendarColorId} onValueChange={(v) => setMessageFormData({...messageFormData, calendarColorId: v})}>
+                          <SelectTrigger className="w-32 glass h-8 text-[8px] font-black uppercase border-primary/30"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-[#0d121f] text-white">
+                            {CALENDAR_COLORS.map(c => (
+                              <SelectItem key={c.id} value={c.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.hex }} />
+                                  {c.name.toUpperCase()}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <Textarea 
-                      onFocus={() => setLastFocusedField("calendar")}
-                      value={messageFormData.calendarTemplate} 
-                      onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})}
-                      className="glass border-white/10 min-h-[120px] text-white text-xs leading-relaxed font-mono"
-                      placeholder="Estruture a descrição do evento na agenda..."
-                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Lembrete Antes (Minutos)</Label>
+                          <span className="text-[10px] font-black text-primary uppercase">{messageFormData.reminderMinutes}m</span>
+                        </div>
+                        <Input 
+                          type="number" 
+                          value={messageFormData.reminderMinutes} 
+                          onChange={(e) => setMessageFormData({...messageFormData, reminderMinutes: parseInt(e.target.value) || 0})}
+                          className="glass h-10 text-white font-bold"
+                        />
+                      </div>
+                      <div className="flex items-center justify-around bg-black/30 rounded-xl p-4 border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <Switch checked={messageFormData.useMeetLink} onCheckedChange={(v) => setMessageFormData({...messageFormData, useMeetLink: v})} />
+                          <Label className="text-[9px] font-black text-white uppercase cursor-pointer">Gerar Google Meet</Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                        <FileText className="h-3 w-3" /> Descrição Técnica (Calendário Interno)
+                      </Label>
+                      <Textarea 
+                        onFocus={() => setLastFocusedField("calendar")}
+                        value={messageFormData.calendarTemplate} 
+                        onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})}
+                        className="glass border-white/10 min-h-[150px] text-white text-xs leading-relaxed font-mono focus:ring-1 focus:ring-primary/50"
+                        placeholder="Ex: Título: AUDIÊNCIA - {{NOME_CLIENTE}}..."
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="h-4 w-4 text-emerald-500" />
-                      <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">TEMPLATE: CLIENTE (WA / E-MAIL)</Label>
+                  {/* CONFIGURAÇÕES DE CANAIS DE CLIENTE */}
+                  <div className="p-8 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <Smartphone className="h-4 w-4" /> Canal do Cliente (WA / Email)
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={messageFormData.sendWhatsApp} onCheckedChange={(v) => setMessageFormData({...messageFormData, sendWhatsApp: v})} className="data-[state=checked]:bg-emerald-500" />
+                        <Label className="text-[9px] font-black text-emerald-500 uppercase">Ativar WhatsApp</Label>
+                      </div>
                     </div>
-                    <Textarea 
-                      onFocus={() => setLastFocusedField("client")}
-                      value={messageFormData.clientTemplate} 
-                      onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})}
-                      className="glass border-white/10 min-h-[120px] text-white text-xs leading-relaxed"
-                      placeholder="Redija a mensagem que o cliente receberá..."
-                    />
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                        <MessageSquare className="h-3 w-3" /> Script de Comunicação
+                      </Label>
+                      <Textarea 
+                        onFocus={() => setLastFocusedField("client")}
+                        value={messageFormData.clientTemplate} 
+                        onChange={(e) => setMessageFormData({...messageFormData, clientTemplate: e.target.value})}
+                        className="glass border-white/10 min-h-[150px] text-white text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500/50"
+                        placeholder="Olá, {{NOME_CLIENTE}}..."
+                      />
+                    </div>
                   </div>
                 </div>
               </ScrollArea>
             </div>
 
-            <div className="lg:col-span-4 bg-black/20 p-8 space-y-6 overflow-y-auto">
-              <div className="flex items-center gap-2 mb-4">
-                <Hash className="h-4 w-4 text-primary" />
-                <h4 className="text-[10px] font-black text-white uppercase tracking-widest">BIBLIOTECA DE TAGS</h4>
+            {/* BARRA LATERAL DE TAGS DINÂMICAS */}
+            <div className="lg:col-span-4 bg-black/40 p-8 space-y-8 overflow-y-auto border-l border-white/5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h4 className="text-sm font-black text-white uppercase tracking-tighter">Biblioteca de Tags</h4>
+                </div>
+                <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold tracking-widest">
+                  Clique nas tags para injetar no campo selecionado (Calendário ou Cliente).
+                </p>
               </div>
-              <p className="text-[9px] text-muted-foreground uppercase leading-relaxed mb-6">
-                Clique nas tags abaixo para injetar no campo selecionado.
-              </p>
+
               <div className="space-y-3">
                 {MESSAGE_PLACEHOLDERS.map((p) => (
                   <button 
                     key={p.tag}
                     onClick={() => handleInjectTag(p.tag)}
-                    className="w-full text-left p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all group"
+                    className="w-full text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all group shadow-sm"
                   >
-                    <code className="text-primary font-black text-[10px]">{p.tag}</code>
-                    <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1 group-hover:text-white transition-colors">{p.desc}</p>
+                    <code className="text-primary font-black text-[11px] block mb-1 group-hover:scale-105 transition-transform origin-left">{p.tag}</code>
+                    <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest group-hover:text-white transition-colors">{p.desc}</p>
                   </button>
                 ))}
               </div>
-              <div className="pt-6 border-t border-white/5">
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex gap-3">
-                  <Info className="h-4 w-4 text-primary shrink-0" />
-                  <p className="text-[8px] text-muted-foreground uppercase leading-normal">
-                    O SISTEMA SUBSTITUIRÁ ESTAS TAGS AUTOMATICAMENTE AO SINCRONIZAR COM O GOOGLE CALENDAR.
+
+              <div className="pt-8 border-t border-white/5">
+                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex gap-4">
+                  <Info className="h-5 w-5 text-primary shrink-0" />
+                  <p className="text-[9px] text-muted-foreground uppercase leading-normal font-medium italic">
+                    O SISTEMA SUBSTITUIRÁ ESTAS TAGS PELOS DADOS CAPTURADOS EM ENTREVISTAS E FORMULÁRIOS AUTOMATICAMENTE.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest">Cancelar</Button>
-            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-xl">
-              {editingMessage ? "Atualizar Perfil" : "Confirmar Perfil"}
-            </Button>
+          <DialogFooter className="p-8 bg-black/60 border-t border-white/5 flex items-center justify-between">
+            <button 
+              onClick={() => setIsMessageDialogOpen(false)} 
+              className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors"
+            >
+              DESCARTAR ALTERAÇÕES
+            </button>
+            <div className="flex gap-4">
+              <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-16 h-16 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3">
+                <ShieldCheck className="h-6 w-6" /> CONFIRMAR PERFIL TÁTICO
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
