@@ -339,15 +339,25 @@ export default function LeadsPage() {
                     </TabsContent>
 
                     <TabsContent value="entrevistas" className="space-y-6">
-                      {leadInterviews?.map((int) => (
-                        <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group">
-                          <div>
-                            <p className="text-xs font-black text-white uppercase">{int.interviewType}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">POR: {int.interviewerName} • {new Date(int.createdAt.toDate()).toLocaleDateString()}</p>
+                      <div className="grid grid-cols-1 gap-4">
+                        {templates?.map((t) => (
+                          <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/20 text-primary font-black uppercase text-[10px] h-12 gap-3 hover:bg-primary hover:text-background transition-all">
+                            <Plus className="h-4 w-4" /> Iniciar {t.title}
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      <div className="space-y-4 mt-8">
+                        {leadInterviews?.map((int) => (
+                          <div key={int.id} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group">
+                            <div>
+                              <p className="text-xs font-black text-white uppercase">{int.interviewType}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">POR: {int.interviewerName} • {new Date(int.createdAt.toDate()).toLocaleDateString()}</p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
                           </div>
-                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><ChevronRight className="h-5 w-5" /></Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -358,7 +368,7 @@ export default function LeadsPage() {
       </Sheet>
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[900px] p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
           {executingTemplate && (
             <DynamicInterviewExecution 
               template={executingTemplate} 
