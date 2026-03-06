@@ -64,10 +64,8 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   const { toast } = useToast()
   const db = useFirestore()
 
-  // CONSOLIDAÇÃO DO DNA DE DADOS (TAGS INTELIGENTES)
   const availableData = useMemo(() => {
     const data: Record<string, any> = {
-      // Tags de Cadastro (Sistema)
       "{{CLIENTE_NOME}}": lead?.name,
       "{{CLIENTE_CPF}}": lead?.cpf || lead?.documentNumber,
       "{{CLIENTE_EMAIL}}": lead?.email,
@@ -75,8 +73,6 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       "{{CLIENTE_ENDERECO}}": lead?.address,
       "{{REU_NOME}}": lead?.defendantName,
       "{{REU_DOCUMENTO}}": lead?.defendantDocument,
-      
-      // Tags de Processo / Distribuição
       "{{PROCESSO_NUMERO}}": lead?.processNumber || "PENDENTE",
       "{{FORUM_NOME}}": lead?.court || "PENDENTE",
       "{{FORUM_ENDERECO}}": lead?.courtAddress ? `${lead.courtAddress}, ${lead.courtNumber}${lead.courtComplement ? ' - ' + lead.courtComplement : ''} - ${lead.courtNeighborhood}, ${lead.courtCity} - ${lead.courtState}` : "PENDENTE",
@@ -84,11 +80,9 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       "{{CIDADE_UF}}": lead?.city ? `${lead.city} - ${lead.state}` : "PENDENTE",
     }
     
-    // Mapeamento Dinâmico de Entrevistas
     interviews.forEach(int => {
       const responses = int.responses || {}
       const snapshot = int.templateSnapshot || []
-
       snapshot.forEach((field: any) => {
         if (field.reuseEnabled && responses[field.label]) {
           const val = responses[field.label]
@@ -101,7 +95,6 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
         }
       })
     })
-    
     return data
   }, [lead, interviews])
 
@@ -121,21 +114,15 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   const handleManualSync = async () => {
     if (!db || !lead) return
     setSyncing(true)
-    
     setTimeout(async () => {
       const isReadyForClientFolder = lead.status === "burocracia" || lead.status === "distribuicao"
       const newDriveStatus = isReadyForClientFolder ? "pasta_cliente" : "pasta_lead"
-      
       await updateDocumentNonBlocking(doc(db, "leads", lead.id), {
         driveStatus: newDriveStatus,
         updatedAt: serverTimestamp()
       })
-      
       setSyncing(false)
-      toast({ 
-        title: "Google Workspace Sincronizado", 
-        description: isReadyForClientFolder ? "Estrutura movida para repositório de CLIENTES." : "Repositório de LEADS atualizado."
-      })
+      toast({ title: "Workspace Sincronizado" })
     }, 1500)
   }
 
@@ -152,30 +139,29 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="space-y-12 animate-in fade-in duration-700 font-sans">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         
-        {/* PAINEL LATERAL: DNA DE DADOS E DRIVE */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card className="glass border-primary/20 bg-black/40 overflow-hidden shadow-2xl">
-            <div className="p-6 bg-primary/5 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Database className="h-5 w-5 text-primary" />
-                <h4 className="text-xs font-black text-white uppercase tracking-widest">DNA de Dados</h4>
+        <div className="lg:col-span-4 space-y-8">
+          <Card className="glass border-primary/20 bg-black/40 overflow-hidden shadow-2xl rounded-3xl">
+            <div className="p-8 bg-primary/5 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Database className="h-6 w-6 text-primary" />
+                <h4 className="text-sm font-black text-white uppercase tracking-widest">DNA de Dados</h4>
               </div>
-              <Badge variant="outline" className="text-[8px] font-black text-primary border-primary/30">INTEGRIDADE ATIVA</Badge>
+              <Badge variant="outline" className="text-[10px] font-black text-primary border-primary/30 px-3 py-1">INTEGRIDADE ATIVA</Badge>
             </div>
             <CardContent className="p-0">
-              <ScrollArea className="h-[400px]">
-                <div className="p-6 space-y-4">
+              <ScrollArea className="h-[500px]">
+                <div className="p-8 space-y-6">
                   {Object.entries(availableData).map(([tag, val]) => (
-                    <div key={tag} className="group p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all">
-                      <div className="flex items-center justify-between mb-2">
-                        <code className="text-[9px] font-black text-primary uppercase tracking-tighter">{tag}</code>
-                        {val && val !== "PENDENTE" ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <AlertCircle className="h-3 w-3 text-amber-500/50" />}
+                    <div key={tag} className="group p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary/30 transition-all shadow-inner">
+                      <div className="flex items-center justify-between mb-3">
+                        <code className="text-xs font-black text-primary uppercase tracking-tighter bg-primary/10 px-2 py-1 rounded-md">{tag}</code>
+                        {val && val !== "PENDENTE" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertCircle className="h-4 w-4 text-amber-500/30" />}
                       </div>
                       <p className={cn(
-                        "text-xs font-bold uppercase truncate",
+                        "text-sm font-bold uppercase truncate leading-tight",
                         val && val !== "PENDENTE" ? "text-white" : "text-muted-foreground/30 italic"
                       )}>
                         {val || "AGUARDANDO CAPTURA"}
@@ -187,19 +173,19 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
             </CardContent>
           </Card>
 
-          <Card className="glass border-emerald-500/20 bg-emerald-500/5">
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center gap-3">
-                <CloudLightning className="h-5 w-5 text-emerald-500" />
-                <h4 className="text-xs font-black text-white uppercase tracking-widest">Repositório Cloud</h4>
+          <Card className="glass border-emerald-500/20 bg-emerald-500/5 rounded-3xl shadow-2xl">
+            <CardContent className="p-10 space-y-8">
+              <div className="flex items-center gap-4">
+                <CloudLightning className="h-8 w-8 text-emerald-500" />
+                <h4 className="text-xl font-black text-white uppercase tracking-tighter">Repositório Cloud</h4>
               </div>
               
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-5 rounded-xl bg-black/40 border border-white/5 shadow-inner">
-                  <div className="space-y-1">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Localização Atual</p>
-                    <p className="text-[10px] font-black text-white uppercase flex items-center gap-2">
-                      {lead.driveStatus === "pasta_cliente" ? <FolderCheck className="h-3.5 w-3.5 text-emerald-500" /> : <FolderOpen className="h-3.5 w-3.5 text-amber-500 animate-pulse" />}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-6 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ESTRUTURA DE DIRETÓRIOS</p>
+                    <p className="text-xs font-black text-white uppercase flex items-center gap-3">
+                      {lead.driveStatus === "pasta_cliente" ? <FolderCheck className="h-5 w-5 text-emerald-500" /> : <FolderOpen className="h-5 w-5 text-amber-500 animate-pulse" />}
                       {lead.driveStatus === "pasta_cliente" ? "REPOSITÓRIO DE CLIENTES" : lead.driveStatus === "pasta_lead" ? "REPOSITÓRIO DE LEADS" : "AGUARDANDO SINCRONIA"}
                     </p>
                   </div>
@@ -208,45 +194,44 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
                 <Button 
                   onClick={handleManualSync}
                   disabled={syncing}
-                  className="w-full h-14 gold-gradient text-background font-black text-[11px] uppercase tracking-widest gap-3 shadow-xl hover:scale-[1.02] transition-all"
+                  className="w-full h-16 gold-gradient text-background font-black text-xs uppercase tracking-[0.2em] gap-4 shadow-2xl hover:scale-105 transition-all rounded-xl"
                 >
-                  {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderSync className="h-4 w-4" />}
-                  Sincronizar Google Workspace
+                  {syncing ? <Loader2 className="h-6 w-6 animate-spin" /> : <FolderSync className="h-6 w-6" />}
+                  SINC. GOOGLE WORKSPACE
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* PAINEL CENTRAL: KIT DE DOCUMENTOS E INTELIGÊNCIA JURÍDICA */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="lg:col-span-8 space-y-10">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
-                <Gavel className="h-8 w-8 text-primary" /> Kit Inicial {lead?.type || "Geral"}
+            <div className="space-y-2">
+              <h3 className="text-4xl font-black text-white uppercase tracking-tighter flex items-center gap-6">
+                <Gavel className="h-10 w-10 text-primary" /> Kit Documental RGMJ
               </h3>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] opacity-60">Processamento tático de minutas títuladas RGMJ.</p>
+              <p className="text-xs text-muted-foreground font-bold uppercase tracking-[0.4em] opacity-60">Geração dinâmica de minutas institucionais por área jurídica.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-6">
             {kit.map((doc) => {
               const isGen = generating === doc.id
               const missingTags = doc.tags.filter(t => !availableData[t] || availableData[t] === "PENDENTE")
               
               return (
-                <Card key={doc.id} className="glass border-white/5 hover-border-primary/30 transition-all group overflow-hidden shadow-xl">
-                  <CardContent className="p-8 flex items-center justify-between">
-                    <div className="flex items-center gap-8">
-                      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-all border border-white/5 shadow-inner">
-                        <FileCheck className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-all" />
+                <Card key={doc.id} className="glass border-white/5 hover:border-primary/40 transition-all group overflow-hidden shadow-2xl rounded-3xl">
+                  <CardContent className="p-10 flex items-center justify-between">
+                    <div className="flex items-center gap-10">
+                      <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-all border border-white/5 shadow-inner">
+                        <FileCheck className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-all" />
                       </div>
-                      <div>
-                        <h4 className="font-black text-white uppercase text-lg tracking-tight mb-2">{doc.title}</h4>
+                      <div className="space-y-3">
+                        <h4 className="font-black text-white uppercase text-xl tracking-tight leading-none">{doc.title}</h4>
                         <div className="flex flex-wrap gap-2">
                           {doc.tags.map(t => (
                             <Badge key={t} variant="outline" className={cn(
-                              "text-[8px] font-black uppercase tracking-widest py-1 px-2",
+                              "text-[10px] font-black uppercase tracking-widest py-1.5 px-3 rounded-md",
                               availableData[t] && availableData[t] !== "PENDENTE" ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/5" : "border-rose-500/30 text-rose-500 bg-rose-500/5"
                             )}>
                               {t}
@@ -256,21 +241,21 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-8">
                       {missingTags.length > 0 && (
-                        <div className="hidden xl:flex items-center gap-2 text-[9px] font-black text-rose-500 uppercase tracking-widest bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">
-                          <AlertCircle className="h-3.5 w-3.5" /> Faltam {missingTags.length} tags
+                        <div className="hidden xl:flex items-center gap-3 text-xs font-black text-rose-500 uppercase tracking-widest bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20">
+                          <AlertCircle className="h-4 w-4" /> Pendências: {missingTags.length}
                         </div>
                       )}
                       <Button 
                         onClick={() => handleGenerateDocument(doc.id, doc.title)}
                         disabled={isGen}
                         className={cn(
-                          "h-14 px-10 font-black uppercase text-[11px] tracking-[0.2em] rounded-xl transition-all shadow-2xl",
+                          "h-16 px-12 font-black uppercase text-xs tracking-[0.2em] rounded-xl transition-all shadow-2xl",
                           isGen ? "bg-secondary text-white" : "gold-gradient text-background hover:scale-105 active:scale-95"
                         )}
                       >
-                        {isGen ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Play className="h-4 w-4 mr-3 fill-current" /> Gerar .DOC</>}
+                        {isGen ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Play className="h-5 w-5 mr-4 fill-current" /> GERAR .DOCX</>}
                       </Button>
                     </div>
                   </CardContent>
@@ -279,76 +264,74 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
             })}
           </div>
 
-          {/* PAINEL DE JURISDIÇÃO (FÓRUM/VARA) */}
           <Card className={cn(
-            "glass p-8 space-y-6 rounded-[2rem] relative overflow-hidden group transition-all",
+            "glass p-10 space-y-10 rounded-[3rem] relative overflow-hidden group transition-all shadow-2xl",
             !isJurisdictionComplete ? "border-amber-500/30 bg-amber-500/5" : "border-white/10 bg-black/20"
           )}>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-              <Scale className="h-24 text-primary" />
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
+              <Scale className="h-48 text-primary" />
             </div>
             
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+              <div className="flex items-center gap-6">
                 <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center border transition-all",
+                  "w-16 h-16 rounded-2xl flex items-center justify-center border-2 transition-all shadow-inner",
                   !isJurisdictionComplete ? "bg-amber-500/20 text-amber-500 border-amber-500/30" : "bg-primary/10 text-primary border-primary/20"
                 )}>
-                  {!isJurisdictionComplete ? <ShieldAlert className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+                  {!isJurisdictionComplete ? <ShieldAlert className="h-8 w-8" /> : <MapPin className="h-8 w-8" />}
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest">Unidade Judiciária (Fórum)</h4>
-                  {!isJurisdictionComplete && <p className="text-[8px] text-amber-500 font-black uppercase tracking-widest mt-1 animate-pulse">Pendência Crítica para Distribuição</p>}
+                  <h4 className="text-2xl font-black text-white uppercase tracking-widest">Unidade Judiciária (Logística)</h4>
+                  {!isJurisdictionComplete && <p className="text-xs text-amber-500 font-black uppercase tracking-[0.3em] mt-2 animate-pulse">ALERTA: Pendência Crítica para Distribuição</p>}
                 </div>
               </div>
-              <div className="flex gap-3">
-                <Button onClick={handleOpenMaps} variant="outline" className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
-                  <Navigation className="h-3 w-3" /> VER NO MAPS
+              <div className="flex gap-4">
+                <Button onClick={handleOpenMaps} variant="outline" className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black text-xs uppercase tracking-widest h-14 px-8 gap-3 rounded-xl shadow-xl">
+                  <Navigation className="h-5 w-5" /> GOOGLE MAPS
                 </Button>
-                <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
-                  <Edit3 className="h-3 w-3" /> EDITAR JURISDIÇÃO
+                <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-xs uppercase tracking-widest h-14 px-8 gap-3 rounded-xl shadow-xl">
+                  <Edit3 className="h-5 w-5" /> SANEAMENTO
                 </Button>
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
-              <div className="md:col-span-4 space-y-2">
-                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum</Label>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-10 relative z-10">
+              <div className="md:col-span-4 space-y-3">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Tribunal / Órgão</Label>
                 <div className={cn(
-                  "p-5 rounded-xl border text-xs font-black uppercase transition-all",
+                  "p-6 rounded-2xl border-2 text-base font-black uppercase transition-all shadow-inner",
                   lead.court ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
-                  {lead.court || "NÃO INFORMADO"}
+                  {lead.court || "NÃO MAPEADO"}
                 </div>
               </div>
-              <div className="md:col-span-4 space-y-2">
-                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
+              <div className="md:col-span-4 space-y-3">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
                 <div className={cn(
-                  "p-5 rounded-xl border text-xs font-black uppercase transition-all",
+                  "p-6 rounded-2xl border-2 text-base font-black uppercase transition-all shadow-inner",
                   lead.vara ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
-                  {lead.vara || "NÃO INFORMADA"}
+                  {lead.vara || "NÃO MAPEADA"}
                 </div>
               </div>
-              <div className="md:col-span-4 space-y-2">
-                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Endereço Completo</Label>
+              <div className="md:col-span-4 space-y-3">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Endereço de Citação</Label>
                 <div className={cn(
-                  "p-5 rounded-xl border text-[10px] font-bold uppercase transition-all leading-relaxed",
+                  "p-6 rounded-2xl border-2 text-xs font-bold uppercase transition-all leading-relaxed shadow-inner",
                   lead.courtAddress ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
                   {lead.courtAddress ? (
                     `${lead.courtAddress}, ${lead.courtNumber} - ${lead.courtNeighborhood}, ${lead.courtCity}/${lead.courtState} (CEP: ${lead.courtZipCode})`
-                  ) : "ENDEREÇO NÃO MAPEADO"}
+                  ) : "ENDEREÇO NÃO LOCALIZADO"}
                 </div>
               </div>
             </div>
           </Card>
 
-          <div className="p-10 rounded-[3rem] border-2 border-dashed border-white/5 bg-white/[0.01] flex flex-col items-center justify-center text-center space-y-6">
-            <ExternalLink className="h-12 w-12 text-muted-foreground opacity-10" />
-            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground opacity-30 max-w-lg leading-loose">
-              SISTEMA DE AUTOMAÇÃO RGMJ INTEGRADO AO GOOGLE DRIVE API.<br/>
-              A ESTRUTURA DOCUMENTAL É DINÂMICA E SEGUE O RITO PROCESSUAL DEFINIDO PELO USUÁRIO.
+          <div className="p-16 rounded-[4rem] border-2 border-dashed border-white/5 bg-white/[0.01] flex flex-col items-center justify-center text-center space-y-8 shadow-inner">
+            <ExternalLink className="h-16 w-16 text-muted-foreground opacity-10" />
+            <p className="text-xs font-black uppercase tracking-[0.5em] text-muted-foreground opacity-30 max-w-2xl leading-loose">
+              ECOSSISTEMA INTEGRADO RGMJ ADVOGADOS. OS DOCUMENTOS SÃO GERADOS COM BASE NO DNA DE DADOS CAPTURADO NAS ETAPAS DE TRIAGEM E ATENDIMENTO.
             </p>
           </div>
         </div>
