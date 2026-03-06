@@ -212,18 +212,40 @@ export function LeadForm({
 
     setSearchingCourt(true)
     try {
+      // 1. Usa a IA para encontrar o CEP e dados básicos
       const result = await aiSearchCourtAddress({ courtName: formData.court })
-      if (result.found) {
-        setFormData(prev => ({
-          ...prev,
-          courtZipCode: result.zipCode || prev.courtZipCode,
-          courtAddress: result.address || prev.courtAddress,
-          courtNumber: result.number || prev.courtNumber,
-          courtNeighborhood: result.neighborhood || prev.courtNeighborhood,
-          courtCity: result.city || prev.courtCity,
-          courtState: result.state || prev.courtState
-        }))
-        toast({ title: "Endereço Localizado", description: "Dados da unidade judiciária oficial injetados no dossiê." })
+      
+      if (result.found && result.zipCode) {
+        const cleanCep = result.zipCode.replace(/\D/g, "")
+        
+        // 2. Consulta o ViaCEP para garantir que o endereço é REAL e oficial
+        const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+        const viaCepData = await viaCepResponse.json()
+
+        if (!viaCepData.erro) {
+          setFormData(prev => ({
+            ...prev,
+            courtZipCode: result.zipCode || prev.courtZipCode,
+            courtAddress: viaCepData.logradouro.toUpperCase(),
+            courtNumber: result.number || prev.courtNumber,
+            courtNeighborhood: viaCepData.bairro.toUpperCase(),
+            courtCity: viaCepData.localidade.toUpperCase(),
+            courtState: viaCepData.uf.toUpperCase()
+          }))
+          toast({ title: "Endereço Localizado (Oficial)", description: "Dados validados via base de endereços nacional." })
+        } else {
+          // Se o ViaCEP falhar mas a IA trouxe algo, usa os dados da IA como fallback mas avisa
+          setFormData(prev => ({
+            ...prev,
+            courtZipCode: result.zipCode || prev.courtZipCode,
+            courtAddress: result.address?.toUpperCase() || prev.courtAddress,
+            courtNumber: result.number || prev.courtNumber,
+            courtNeighborhood: result.neighborhood?.toUpperCase() || prev.courtNeighborhood,
+            courtCity: result.city?.toUpperCase() || prev.courtCity,
+            courtState: result.state?.toUpperCase() || prev.courtState
+          }))
+          toast({ variant: "outline", title: "Endereço por IA", description: "O CEP informado não foi validado na base oficial, mas os dados da IA foram aplicados." })
+        }
       } else {
         toast({ variant: "destructive", title: "Endereço Não Localizado", description: "A inteligência não encontrou o endereço oficial preciso. Preencha manualmente para segurança." })
       }
