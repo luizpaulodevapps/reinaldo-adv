@@ -82,7 +82,7 @@ export function LeadForm({
   const [activeTab, setActiveTab] = useState("autor")
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | null>(null)
+  const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
@@ -123,6 +123,13 @@ export function LeadForm({
     // Jurisdição
     court: "",
     vara: "",
+    courtZipCode: "",
+    courtAddress: "",
+    courtNumber: "",
+    courtComplement: "",
+    courtNeighborhood: "",
+    courtCity: "",
+    courtState: "",
     // Dados Financeiros
     value: ""
   })
@@ -163,8 +170,12 @@ export function LeadForm({
     return `${digits.slice(0, 5)}-${digits.slice(5)}`
   }
 
-  const handleCepBlur = async (type: "client" | "defendant") => {
-    const cep = (type === "client" ? formData.zipCode : formData.defendantZipCode).replace(/\D/g, "")
+  const handleCepBlur = async (type: "client" | "defendant" | "court") => {
+    let cep = ""
+    if (type === "client") cep = formData.zipCode.replace(/\D/g, "")
+    else if (type === "defendant") cep = formData.defendantZipCode.replace(/\D/g, "")
+    else if (type === "court") cep = formData.courtZipCode.replace(/\D/g, "")
+    
     if (cep.length !== 8) return
 
     setLoadingCep(type)
@@ -180,13 +191,21 @@ export function LeadForm({
             city: data.localidade.toUpperCase(),
             state: data.uf.toUpperCase()
           }))
-        } else {
+        } else if (type === "defendant") {
           setFormData(prev => ({
             ...prev,
             defendantAddress: data.logradouro.toUpperCase(),
             defendantNeighborhood: data.bairro.toUpperCase(),
             defendantCity: data.localidade.toUpperCase(),
             defendantState: data.uf.toUpperCase()
+          }))
+        } else if (type === "court") {
+          setFormData(prev => ({
+            ...prev,
+            courtAddress: data.logradouro.toUpperCase(),
+            courtNeighborhood: data.bairro.toUpperCase(),
+            courtCity: data.localidade.toUpperCase(),
+            courtState: data.uf.toUpperCase()
           }))
         }
       }
@@ -345,7 +364,7 @@ export function LeadForm({
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Data de Emissão (RG)</Label>
                     <div className="relative">
                       <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                      <Input type="date" className="pl-12 bg-black/40 border-white/10 h-14 text-white" value={formData.rgIssueDate} onChange={(e) => handleInputChange("rgIssueDate", e.target.value)} />
+                      <Input type="date" className="pl-12 bg-black/40 border border-white/10 h-14 text-white" value={formData.rgIssueDate} onChange={(e) => handleInputChange("rgIssueDate", e.target.value)} />
                     </div>
                   </div>
 
@@ -501,7 +520,43 @@ export function LeadForm({
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                {/* ENDEREÇO DO FÓRUM */}
+                <div className="space-y-6 pt-4">
+                  <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal</SectionTitle>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-1 space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Fórum)</Label>
+                      <div className="relative">
+                        <Input placeholder="00000-000" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.courtZipCode} onChange={(e) => handleInputChange("courtZipCode", formatCep(e.target.value))} onBlur={() => handleCepBlur("court")} />
+                        {loadingCep === "court" && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Logradouro (Fórum)</Label>
+                      <Input placeholder="AVENIDA, RUA, ETC..." className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.courtAddress} onChange={(e) => handleInputChange("courtAddress", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Número</Label>
+                      <Input placeholder="123" className="bg-black/40 border-white/10 h-14 text-white font-bold" value={formData.courtNumber} onChange={(e) => handleInputChange("courtNumber", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
+                      <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.courtNeighborhood} onChange={(e) => handleInputChange("courtNeighborhood", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
+                      <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.courtCity} onChange={(e) => handleInputChange("courtCity", e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                      <Input maxLength={2} className="bg-black/40 border-white/10 h-14 text-white font-black text-center" value={formData.courtState} onChange={(e) => handleInputChange("courtState", e.target.value.toUpperCase())} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-4">
                   <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Relato dos Fatos (Breve Resumo)</Label>
                   <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[200px] text-white text-sm leading-relaxed uppercase resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
                 </div>

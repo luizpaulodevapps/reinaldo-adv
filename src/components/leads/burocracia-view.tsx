@@ -78,6 +78,7 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       // Tags de Processo / Distribuição
       "{{PROCESSO_NUMERO}}": lead?.processNumber || "PENDENTE",
       "{{FORUM_NOME}}": lead?.court || "PENDENTE",
+      "{{FORUM_ENDERECO}}": lead?.courtAddress ? `${lead.courtAddress}, ${lead.courtNumber}${lead.courtComplement ? ' - ' + lead.courtComplement : ''} - ${lead.courtNeighborhood}, ${lead.courtCity} - ${lead.courtState}` : "PENDENTE",
       "{{VARA_NOME}}": lead?.vara || "PENDENTE",
       "{{CIDADE_UF}}": lead?.city ? `${lead.city} - ${lead.state}` : "PENDENTE",
     }
@@ -137,7 +138,7 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
     }, 1500)
   }
 
-  const isJurisdictionComplete = lead.court && lead.vara
+  const isJurisdictionComplete = lead.court && lead.vara && lead.courtAddress
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans">
@@ -223,7 +224,7 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
               const missingTags = doc.tags.filter(t => !availableData[t] || availableData[t] === "PENDENTE")
               
               return (
-                <Card key={doc.id} className="glass border-white/5 hover:border-primary/30 transition-all group overflow-hidden shadow-xl">
+                <Card key={doc.id} className="glass border-white/5 hover-border-primary/30 transition-all group overflow-hidden shadow-xl">
                   <CardContent className="p-8 flex items-center justify-between">
                     <div className="flex items-center gap-8">
                       <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-all border border-white/5 shadow-inner">
@@ -294,29 +295,34 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
+              <div className="md:col-span-4 space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum</Label>
                 <div className={cn(
                   "p-5 rounded-xl border text-xs font-black uppercase transition-all",
                   lead.court ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
-                  {lead.court || "NÃO INFORMADO NO DOSSIÊ"}
+                  {lead.court || "NÃO INFORMADO"}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="md:col-span-4 space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
                 <div className={cn(
                   "p-5 rounded-xl border text-xs font-black uppercase transition-all",
                   lead.vara ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
-                  {lead.vara || "NÃO INFORMADA NO DOSSIÊ"}
+                  {lead.vara || "NÃO INFORMADA"}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Telefone da Unidade</Label>
-                <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5 text-xs font-bold text-white/40 uppercase flex items-center gap-3">
-                  <Phone className="h-3.5 w-3.5 text-primary/30" /> (--) ----- ----
+              <div className="md:col-span-4 space-y-2">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Endereço Completo</Label>
+                <div className={cn(
+                  "p-5 rounded-xl border text-[10px] font-bold uppercase transition-all leading-relaxed",
+                  lead.courtAddress ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
+                )}>
+                  {lead.courtAddress ? (
+                    `${lead.courtAddress}, ${lead.courtNumber} - ${lead.courtNeighborhood}, ${lead.courtCity}/${lead.courtState} (CEP: ${lead.courtZipCode})`
+                  ) : "ENDEREÇO NÃO MAPEADO"}
                 </div>
               </div>
             </div>
