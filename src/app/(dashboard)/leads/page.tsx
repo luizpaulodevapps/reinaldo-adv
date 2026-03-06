@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -7,6 +8,7 @@ import {
   PlusCircle, 
   Search, 
   ChevronRight, 
+  ChevronLeft,
   Clock, 
   Zap, 
   Brain,
@@ -30,7 +32,9 @@ import {
   Gavel,
   MessageCircle,
   FileCheck,
-  Edit3
+  Edit3,
+  ArrowRight,
+  ArrowLeft
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -68,6 +72,8 @@ const columns = [
   { id: "burocracia", title: "BUROCRACIA", color: "text-emerald-400" },
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
+
+const DOSSIER_TABS = ["overview", "entrevistas", "burocracia", "revisao"]
 
 export default function LeadsPage() {
   const db = useFirestore()
@@ -111,19 +117,6 @@ export default function LeadsPage() {
     )
   }, [db, user, selectedLead])
   const { data: leadInterviews } = useCollection(leadInterviewsQuery)
-
-  const bureaucracyReport = useMemo(() => {
-    if (!selectedLead) return { isComplete: false, missing: [] }
-    const missing = []
-    if (!selectedLead.defendantName) missing.push("NOME DO RÉU")
-    if (!selectedLead.court) missing.push("ÓRGÃO JUDICIAL")
-    if (!selectedLead.vara) missing.push("VARA")
-    if (!selectedLead.driveStatus || selectedLead.driveStatus === 'pendente') missing.push("DRIVE")
-    
-    return { isComplete: missing.length === 0, missing }
-  }, [selectedLead])
-
-  const isBureaucracyComplete = bureaucracyReport.isComplete
 
   useEffect(() => {
     if (selectedLead) {
@@ -233,6 +226,18 @@ export default function LeadsPage() {
     toast({ title: "Processo Protocolado" })
   }
 
+  const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
+  const canGoBack = currentTabIndex > 0
+  const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
+
+  const handleNextTab = () => {
+    if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1])
+  }
+
+  const handlePrevTab = () => {
+    if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1])
+  }
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -328,8 +333,8 @@ export default function LeadsPage() {
                     </div>
                     <div className="space-y-2">
                       <SheetTitle className="text-white text-3xl font-bold uppercase tracking-tight">{selectedLead.name}</SheetTitle>
-                      <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> DOSSIÊ ESTRATÉGICO RGMJ
+                      <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> DOSSIÊ ESTRATÉGICO RGMJ
                       </SheetDescription>
                     </div>
                   </div>
@@ -364,7 +369,7 @@ export default function LeadsPage() {
               </div>
 
               <ScrollArea className="flex-1 bg-[#05070a]">
-                <div className="p-10 space-y-10 w-full max-w-[1800px] mx-auto">
+                <div className="p-10 space-y-10 w-full max-w-[1800px] mx-auto pb-32">
                   <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-10">
                     <TabsList className="bg-transparent border-b border-white/5 h-16 w-full justify-start rounded-none p-0 gap-16 flex-none overflow-x-auto scrollbar-hide">
                       {[
@@ -570,6 +575,43 @@ export default function LeadsPage() {
                   </Tabs>
                 </div>
               </ScrollArea>
+
+              {/* BARRA DE NAVEGAÇÃO DO DOSSIÊ (RODAPÉ) */}
+              <div className="flex-none p-6 border-t border-white/5 bg-[#0a0f1e] flex items-center justify-between z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                <Button 
+                  variant="ghost" 
+                  onClick={handlePrevTab} 
+                  disabled={!canGoBack}
+                  className="text-muted-foreground uppercase font-black text-xs tracking-[0.2em] gap-3 px-8 h-14 hover:text-white transition-all disabled:opacity-20"
+                >
+                  <ArrowLeft className="h-5 w-5" /> VOLTAR
+                </Button>
+
+                <div className="hidden md:flex gap-3">
+                  {DOSSIER_TABS.map((tab, i) => (
+                    <div 
+                      key={tab} 
+                      className={cn(
+                        "w-2.5 h-2.5 rounded-full transition-all duration-500",
+                        activeDossierTab === tab ? "bg-primary shadow-[0_0_10px_rgba(245,208,48,0.5)] scale-125" : i < currentTabIndex ? "bg-emerald-500" : "bg-white/10"
+                      )} 
+                    />
+                  ))}
+                </div>
+
+                {canGoNext ? (
+                  <Button 
+                    onClick={handleNextTab} 
+                    className="gold-gradient text-background font-black h-14 px-12 rounded-xl uppercase text-xs tracking-[0.2em] gap-3 shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    PRÓXIMO PASSO <ArrowRight className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <div className="px-8 h-14 flex items-center">
+                    <span className="text-[10px] font-black text-primary/40 uppercase tracking-[0.3em]">Fim do Rito de Triagem</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </SheetContent>
