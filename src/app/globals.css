@@ -50,8 +50,11 @@
   * {
     @apply border-border;
   }
+  html {
+    font-size: 13px;
+  }
   body {
-    @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white text-[13px];
+    @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white;
     font-family: 'Roboto', sans-serif;
   }
 }
@@ -81,6 +84,10 @@
 
 .hover-gold:hover {
   @apply border-primary/20 shadow-[0_0_10px_rgba(245,208,48,0.03)];
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #F5D030 0%, #D4AF37 100%);
 }
 
 ::-webkit-scrollbar {

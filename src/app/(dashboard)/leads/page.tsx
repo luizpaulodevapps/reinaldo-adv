@@ -140,7 +140,7 @@ export default function LeadsPage() {
     if (selectedLead) {
       if (selectedLead.status === 'atendimento') setActiveDossierTab("entrevistas")
       else if (selectedLead.status === 'burocracia') setActiveDossierTab("burocracia")
-      else if (selectedLead.status === 'distribuicao') setActiveDossierTab("protocolo")
+      else if (selectedLead.status === 'distribuicao') setActiveDossierTab("revisão")
       else setActiveDossierTab("overview")
       setStrategicSummary(null)
     }
