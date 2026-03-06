@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -139,6 +140,16 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   }
 
   const isJurisdictionComplete = lead.court && lead.vara && lead.courtAddress
+
+  const handleOpenMaps = () => {
+    const link = lead.courtMapsLink
+    if (link) {
+      window.open(link, "_blank")
+    } else if (lead.courtAddress) {
+      const query = encodeURIComponent(`${lead.courtAddress} ${lead.courtNumber} ${lead.courtCity} ${lead.courtState}`)
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank")
+    }
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans">
@@ -291,11 +302,9 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
                 </div>
               </div>
               <div className="flex gap-3">
-                {lead.courtMapsLink && (
-                  <Button asChild variant="outline" className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
-                    <a href={lead.courtMapsLink} target="_blank" rel="noreferrer"><Navigation className="h-3 w-3" /> VER NO MAPS</a>
-                  </Button>
-                )}
+                <Button onClick={handleOpenMaps} variant="outline" className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
+                  <Navigation className="h-3 w-3" /> VER NO MAPS
+                </Button>
                 <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
                   <Edit3 className="h-3 w-3" /> EDITAR JURISDIÇÃO
                 </Button>

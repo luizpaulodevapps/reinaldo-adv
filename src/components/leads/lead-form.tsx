@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -27,7 +28,11 @@ import {
   Sparkles,
   Link as LinkIcon,
   Database,
-  Save
+  Save,
+  ExternalLink,
+  Lock,
+  Unlock,
+  Library
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -77,6 +82,7 @@ export function LeadForm({
   // Court Search State
   const [courtSearchTerm, setCourtSearchTerm] = useState("")
   const [isCourtSearchOpen, setIsCourtSearchOpen] = useState(false)
+  const [isManualAddressEntry, setIsManualAddressEntry] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
   const [isSavingToDatabase, setIsSavingToDatabase] = useState(false)
 
@@ -154,7 +160,10 @@ export function LeadForm({
         name: initialData.name || ""
       }))
       setSearchTerm(initialData.name || "")
-      if (initialData.court) setCourtSearchTerm(initialData.court)
+      if (initialData.court) {
+        setCourtSearchTerm(initialData.court)
+        setIsManualAddressEntry(false)
+      }
     }
   }, [initialData])
 
@@ -232,6 +241,7 @@ export function LeadForm({
     }))
     setCourtSearchTerm(court.name)
     setIsCourtSearchOpen(false)
+    setIsManualAddressEntry(false)
     toast({ title: "Órgão Selecionado", description: "Dados logísticos injetados via Base RGMJ." })
   }
 
@@ -252,7 +262,7 @@ export function LeadForm({
         neighborhood: formData.courtNeighborhood,
         city: formData.courtCity,
         state: formData.courtState,
-        mapsLink: formData.courtMapsLink,
+        mapsLink: formData.courtMapsLink || generateMapsLink(),
         createdBy: user?.uid,
         createdAt: serverTimestamp()
       })
@@ -262,6 +272,18 @@ export function LeadForm({
     } finally {
       setIsSavingToDatabase(false)
     }
+  }
+
+  const generateMapsLink = () => {
+    const { courtAddress, courtNumber, courtCity, courtState } = formData
+    if (!courtAddress || !courtCity) return ""
+    const query = encodeURIComponent(`${courtAddress} ${courtNumber} ${courtCity} ${courtState}`)
+    return `https://www.google.com/maps/search/?api=1&query=${query}`
+  }
+
+  const handleOpenMaps = () => {
+    const link = formData.courtMapsLink || generateMapsLink()
+    if (link) window.open(link, "_blank")
   }
 
   const filteredLeads = useMemo(() => {
@@ -288,7 +310,7 @@ export function LeadForm({
       toast({ variant: "destructive", title: "Campos Obrigatórios", description: "O rito RGMJ exige Nome e WhatsApp para triagem." })
       return
     }
-    onSubmit({ ...formData, name: finalName })
+    onSubmit({ ...formData, name: finalName, courtMapsLink: formData.courtMapsLink || generateMapsLink() })
   }
 
   const SectionTitle = ({ children, icon: Icon }: { children: React.ReactNode, icon: any }) => (
@@ -297,6 +319,13 @@ export function LeadForm({
       <h4 className="text-[10px] font-black text-white uppercase tracking-[0.25em]">{children}</h4>
     </div>
   )
+
+  const isFieldDisabled = (fieldName: string) => {
+    if (isManualAddressEntry) return false
+    // Se o Tribunal foi selecionado da base, bloqueamos os campos de endereço
+    const isCourtFromDb = dbCourts?.some(c => c.name === formData.court)
+    return isCourtFromDb && !!formData[fieldName as keyof typeof formData]
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#0a0f1e] font-sans overflow-hidden">
@@ -427,7 +456,7 @@ export function LeadForm({
                   </div>
                   <div className="md:col-span-1 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Profissão Atual</Label>
-                    <Input placeholder="EX: ENGENHEIRO MECÂNICO" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
+                    <Input placeholder="EX: ENGENHEIRO MECÂNICO" className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase" value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
                   </div>
                 </div>
               </div>
@@ -507,7 +536,7 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
-                    <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} />
+                    <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.neighborhood} onChange={(e) => handleInputChange("neighborhood", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
@@ -515,7 +544,7 @@ export function LeadForm({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
-                    <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.defendantState} onChange={(e) => handleInputChange("defendantState", e.target.value.toUpperCase())} />
+                    <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.defendantState} onChange={(e) => handleInputChange("state", e.target.value.toUpperCase())} />
                   </div>
                 </div>
               </div>
@@ -525,11 +554,11 @@ export function LeadForm({
           {activeTab === "demanda" && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="space-y-8">
-                <SectionTitle icon={Gavel}>Objeto da Ação & Jurisdição</SectionTitle>
+                <SectionTitle icon={FileText}>Dados da Ação</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Título da Demanda (Objeto)</Label>
-                    <Input placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS" className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
+                    <Input placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Área Jurídica</Label>
@@ -541,23 +570,25 @@ export function LeadForm({
                     </Select>
                   </div>
                 </div>
+              </div>
 
+              <div className="space-y-8">
+                <SectionTitle icon={Gavel}>Órgão Judicial</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2 relative" ref={courtSearchRef}>
                     <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                      <Database className="h-3 w-3" /> Biblioteca de Órgãos Judiciais
+                      <Database className="h-3 w-3" /> Órgão Judicial / Fórum
                     </Label>
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
                       <Input 
-                        placeholder="PESQUISAR FÓRUM NA BASE RGMJ..." 
+                        placeholder="Digite o nome do fórum ou cidade..." 
                         className="pl-12 bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" 
                         value={courtSearchTerm || formData.court} 
                         onChange={(e) => {
                           const val = e.target.value
                           setCourtSearchTerm(val)
                           setIsCourtSearchOpen(true)
-                          // Sincroniza com o formulário caso o usuário queira salvar sem selecionar
                           handleInputChange("court", val.toUpperCase())
                         }}
                         onFocus={() => setIsCourtSearchOpen(true)}
@@ -574,7 +605,7 @@ export function LeadForm({
                                   <p className="font-black text-white text-[10px] uppercase">{c.name}</p>
                                   <p className="text-[8px] text-muted-foreground font-bold mt-1 uppercase">{c.city} - {c.state}</p>
                                 </div>
-                                <Badge variant="outline" className="text-[7px] font-black border-emerald-500/30 text-emerald-500 uppercase bg-emerald-500/5">OFICIAL</Badge>
+                                <Badge variant="outline" className="text-[7px] font-black border-emerald-500/30 text-emerald-500 uppercase bg-emerald-500/5">OFICIAL RGMJ</Badge>
                               </button>
                             ))
                           ) : (
@@ -588,72 +619,142 @@ export function LeadForm({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                      <Gavel className="h-3 w-3" /> Vara / Unidade
+                      <Scale className="h-3 w-3" /> Vara / Unidade
                     </Label>
                     <Input placeholder="EX: 45ª VARA DO TRABALHO" className="bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
                   </div>
                 </div>
+              </div>
 
-                <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 space-y-8">
-                  <SectionTitle icon={MapPin}>Logística do Juízo</SectionTitle>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="md:col-span-1 space-y-2">
-                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Fórum)</Label>
-                      <div className="relative">
-                        <Input placeholder="00000-000" className="bg-black/40 border border-white/10 h-14 text-white font-mono rounded-xl" value={formData.courtZipCode} onChange={(e) => handleInputChange("courtZipCode", formatCep(e.target.value))} onBlur={() => handleCepBlur("court")} />
-                        {loadingCep === "court" && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
-                      </div>
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Logradouro (Fórum)</Label>
-                      <Input placeholder="AVENIDA, RUA, ETC..." className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtAddress} onChange={(e) => handleInputChange("courtAddress", e.target.value.toUpperCase())} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Número</Label>
-                      <Input placeholder="123" className="bg-black/40 border border-white/10 h-14 text-white font-bold rounded-xl" value={formData.courtNumber} onChange={(e) => handleInputChange("courtNumber", e.target.value)} />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    <div className="md:col-span-10 space-y-2">
-                      <Label className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                        <LinkIcon className="h-3 w-3" /> Link do Google Maps
-                      </Label>
-                      <Input placeholder="COLE O LINK DE COMPARTILHAMENTO DO MAPS AQUI..." className="bg-black/40 border-emerald-500/20 h-14 text-white text-xs font-mono rounded-xl focus:border-emerald-500 transition-all" value={formData.courtMapsLink} onChange={(e) => handleInputChange("courtMapsLink", e.target.value)} />
-                    </div>
-                    <div className="md:col-span-2 flex items-end">
+              <div className="space-y-8 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <SectionTitle icon={MapPin}>Endereço do Juízo</SectionTitle>
+                  <div className="flex gap-2 mb-6">
+                    {!isManualAddressEntry && (
                       <Button 
-                        type="button"
-                        onClick={handleSaveCourtToDatabase}
-                        disabled={isSavingToDatabase || !(formData.court || courtSearchTerm)}
-                        className="w-full h-14 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase rounded-xl transition-all"
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsManualAddressEntry(true)}
+                        className="h-8 text-[8px] font-black uppercase border-white/10 bg-white/5 gap-2"
                       >
-                        {isSavingToDatabase ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                        SALVAR BASE
+                        <Unlock className="h-3 w-3" /> EDITAR ENDEREÇO MANUALMENTE
                       </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
-                      <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtNeighborhood} onChange={(e) => handleInputChange("courtNeighborhood", e.target.value.toUpperCase())} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
-                      <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtCity} onChange={(e) => handleInputChange("courtCity", e.target.value.toUpperCase())} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
-                      <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.courtState} onChange={(e) => handleInputChange("courtState", e.target.value.toUpperCase())} />
-                    </div>
+                    )}
+                    {isManualAddressEntry && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsManualAddressEntry(false)}
+                        className="h-8 text-[8px] font-black uppercase border-emerald-500/20 bg-emerald-500/5 text-emerald-500 gap-2"
+                      >
+                        <Lock className="h-3 w-3" /> BLOQUEAR CAMPOS
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-4">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Relato dos Fatos (Breve Resumo)</Label>
-                  <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[200px] text-white text-sm leading-relaxed uppercase resize-none rounded-xl" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="md:col-span-1 space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP</Label>
+                    <div className="relative">
+                      <Input 
+                        placeholder="00000-000" 
+                        className="bg-black/40 border border-white/10 h-14 text-white font-mono rounded-xl focus:ring-primary/50" 
+                        value={formData.courtZipCode} 
+                        disabled={isFieldDisabled("courtZipCode")}
+                        onChange={(e) => handleInputChange("courtZipCode", formatCep(e.target.value))} 
+                        onBlur={() => handleCepBlur("court")} 
+                      />
+                      {loadingCep === "court" && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Logradouro</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      <Input 
+                        placeholder="AVENIDA, RUA, ETC..." 
+                        className="col-span-3 bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" 
+                        value={formData.courtAddress} 
+                        disabled={isFieldDisabled("courtAddress")}
+                        onChange={(e) => handleInputChange("courtAddress", e.target.value.toUpperCase())} 
+                      />
+                      <Input 
+                        placeholder="Nº" 
+                        className="col-span-1 bg-black/40 border border-white/10 h-14 text-white font-bold rounded-xl text-center" 
+                        value={formData.courtNumber} 
+                        onChange={(e) => handleInputChange("courtNumber", e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
+                    <Input 
+                      className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" 
+                      value={formData.courtNeighborhood} 
+                      disabled={isFieldDisabled("courtNeighborhood")}
+                      onChange={(e) => handleInputChange("courtNeighborhood", e.target.value.toUpperCase())} 
+                    />
+                  </div>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
+                    <Input 
+                      className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" 
+                      value={formData.courtCity} 
+                      disabled={isFieldDisabled("courtCity")}
+                      onChange={(e) => handleInputChange("courtCity", e.target.value.toUpperCase())} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                    <Input 
+                      maxLength={2} 
+                      className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" 
+                      value={formData.courtState} 
+                      disabled={isFieldDisabled("courtState")}
+                      onChange={(e) => handleInputChange("courtState", e.target.value.toUpperCase())} 
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end gap-2">
+                    <Label className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Geolocalização</Label>
+                    <Button 
+                      type="button" 
+                      onClick={handleOpenMaps} 
+                      variant="outline" 
+                      disabled={!formData.courtAddress}
+                      className="h-14 border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black text-[9px] uppercase tracking-widest rounded-xl"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" /> ABRIR NO GOOGLE MAPS
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Library className="h-5 w-5" />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest max-w-[300px]">
+                      Salvar este fórum na base RGMJ para acelerar futuros protocolos.
+                    </p>
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={handleSaveCourtToDatabase}
+                    disabled={isSavingToDatabase || !(formData.court || courtSearchTerm)}
+                    className="w-full md:w-auto h-12 gold-gradient text-background font-black text-[9px] uppercase px-10 rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+                  >
+                    {isSavingToDatabase ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    SALVAR NA BIBLIOTECA
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Relato dos Fatos (Breve Resumo)</Label>
+                <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[200px] text-white text-sm leading-relaxed uppercase resize-none rounded-xl focus:ring-primary/50" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
               </div>
             </div>
           )}
