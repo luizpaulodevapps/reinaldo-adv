@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -25,7 +26,10 @@ import {
   Trash2,
   Fingerprint,
   Navigation,
-  ShieldAlert
+  ShieldAlert,
+  User,
+  Gavel,
+  MessageCircle
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -450,40 +454,124 @@ export default function LeadsPage() {
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
-                    <TabsContent value="revisão" className="space-y-6">
-                      <div className="flex items-center justify-between pb-3 border-b border-white/5">
-                        <div className="flex items-center gap-3">
-                          <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                          <h3 className="text-sm font-bold text-white uppercase tracking-tight">Auditória de Protocolo</h3>
+                    <TabsContent value="revisão" className="space-y-4 animate-in fade-in duration-500">
+                      <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                          <h3 className="text-xs font-bold text-white uppercase tracking-tight">Check-in de Protocolo</h3>
                         </div>
-                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-8 px-4 glass border-primary/20 text-primary font-bold uppercase text-[9px] gap-2 rounded-lg">
-                          {isGeneratingSummary ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />} CONSOLIDAR ESTRATÉGIA
+                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-7 px-3 glass border-primary/20 text-primary font-bold uppercase text-[8px] gap-1.5 rounded">
+                          {isGeneratingSummary ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Brain className="h-2.5 w-2.5" />} CONSOLIDAR ESTRATÉGIA IA
                         </Button>
                       </div>
-                      
+
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        {/* Bloco Autor */}
+                        <Card className="glass border-white/5 p-3 rounded-lg space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <User className="h-3 w-3 text-primary" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Qualificação do Autor</span>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-white font-bold uppercase">{selectedLead.name}</p>
+                            <p className="text-[9px] text-muted-foreground font-mono">{selectedLead.cpf || selectedLead.documentNumber || "CPF NÃO INFORMADO"}</p>
+                            <p className="text-[9px] text-muted-foreground">{selectedLead.phone}</p>
+                            <p className="text-[9px] text-muted-foreground truncate">{selectedLead.address || "ENDEREÇO PENDENTE"}</p>
+                          </div>
+                        </Card>
+
+                        {/* Bloco Réu */}
+                        <Card className="glass border-white/5 p-3 rounded-lg space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Building className="h-3 w-3 text-primary" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Polo Passivo</span>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-white font-bold uppercase">{selectedLead.defendantName || "RÉU NÃO INFORMADO"}</p>
+                            <p className="text-[9px] text-muted-foreground font-mono">{selectedLead.defendantDocument || "CNPJ NÃO INFORMADO"}</p>
+                          </div>
+                        </Card>
+
+                        {/* Bloco Juízo */}
+                        <Card className="glass border-white/5 p-3 rounded-lg space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Gavel className="h-3 w-3 text-primary" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Logística Judiciária</span>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-white font-bold uppercase">{selectedLead.court || "TRIBUNAL NÃO INFORMADO"}</p>
+                            <p className="text-[9px] text-white/70">{selectedLead.vara || "VARA PENDENTE"}</p>
+                            <p className="text-[9px] text-muted-foreground truncate">{selectedLead.courtAddress || "ENDEREÇO DO FÓRUM PENDENTE"}</p>
+                          </div>
+                        </Card>
+                      </div>
+
+                      {/* Resumo das Entrevistas */}
+                      <Card className="glass border-white/5 overflow-hidden">
+                        <div className="p-2 bg-white/[0.02] border-b border-white/5 flex items-center gap-2">
+                          <MessageCircle className="h-3 w-3 text-primary" />
+                          <span className="text-[9px] font-black text-white uppercase tracking-widest">Histórico de Atendimento</span>
+                        </div>
+                        <div className="p-3">
+                          {leadInterviews && leadInterviews.length > 0 ? (
+                            <div className="space-y-3">
+                              {leadInterviews.map((int, idx) => (
+                                <div key={idx} className="p-2 rounded bg-black/20 border border-white/5">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[8px] font-black text-primary uppercase">{int.interviewType}</span>
+                                    <span className="text-[8px] text-muted-foreground font-mono">{int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    {Object.entries(int.responses || {}).slice(0, 6).map(([q, a]: any) => (
+                                      <div key={q} className="space-y-0.5">
+                                        <p className="text-[7px] font-black text-muted-foreground uppercase truncate">{q}</p>
+                                        <p className="text-[9px] text-white font-medium truncate">{String(a)}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[9px] text-muted-foreground italic text-center py-4">Nenhuma entrevista realizada para este lead.</p>
+                          )}
+                        </div>
+                      </Card>
+
                       {strategicSummary && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                           {[
-                            { t: "Fatos Críticos", v: strategicSummary.keyFacts, c: "text-primary" },
-                            { t: "Riscos Detectados", v: strategicSummary.risksAndChallenges, c: "text-rose-500" },
-                            { t: "Análise Técnica", v: strategicSummary.strategicAnalysis, c: "text-emerald-500" }
+                            { t: "Fatos Críticos", v: strategicSummary.keyFacts, c: "text-primary", icon: Brain },
+                            { t: "Riscos & Desafios", v: strategicSummary.risksAndChallenges, c: "text-rose-500", icon: ShieldAlert },
+                            { t: "Análise Estratégica", v: strategicSummary.strategicAnalysis, icon: Zap, c: "text-emerald-500" }
                           ].map(s => (
-                            <div key={s.t} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
-                              <h5 className={cn("text-[8px] font-black uppercase tracking-widest", s.c)}>{s.t}</h5>
-                              <p className="text-[11px] text-white/60 leading-relaxed">{s.v}</p>
+                            <div key={s.t} className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <s.icon className={cn("h-3 w-3", s.c)} />
+                                <h5 className={cn("text-[8px] font-black uppercase tracking-widest", s.c)}>{s.t}</h5>
+                              </div>
+                              <p className="text-[10px] text-white/70 leading-relaxed text-justify">{s.v}</p>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/10 space-y-4 max-w-2xl">
-                        <div className="space-y-1">
-                          <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
-                          <div className="flex gap-2">
-                            <Input placeholder="0000000-00.0000.0.00.0000" className="glass border-white/10 h-10 text-white font-mono text-sm font-bold flex-1" value={selectedLead.processNumber || ""} onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} />
-                            <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-background font-black h-10 px-6 rounded-lg uppercase text-[10px] tracking-widest shadow-lg">PROTOCOLAR E CONVERTER</Button>
-                          </div>
+                      <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 flex flex-col md:flex-row items-end gap-4 max-w-3xl">
+                        <div className="flex-1 space-y-1.5 w-full">
+                          <Label className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Número do Processo (CNJ) *</Label>
+                          <Input 
+                            placeholder="0000000-00.0000.0.00.0000" 
+                            className="bg-black/40 border-purple-500/20 h-9 text-white font-mono text-sm font-bold w-full" 
+                            value={selectedLead.processNumber || ""} 
+                            onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} 
+                          />
                         </div>
+                        <Button 
+                          onClick={() => setIsConversionOpen(true)} 
+                          className="gold-gradient text-background font-black h-9 px-6 rounded uppercase text-[9px] tracking-widest shadow-lg shrink-0 w-full md:w-auto"
+                        >
+                          PROTOCOLAR E CONVERTER
+                        </Button>
                       </div>
                     </TabsContent>
                   </Tabs>
