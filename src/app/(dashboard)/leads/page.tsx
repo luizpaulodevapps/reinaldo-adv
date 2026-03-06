@@ -44,7 +44,11 @@ import {
   Lock,
   ShieldAlert,
   Trash2,
-  Archive
+  Archive,
+  Sparkles,
+  TrendingUp,
+  Fingerprint,
+  Navigation
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -75,6 +79,7 @@ import { DynamicInterviewExecution } from "@/components/interviews/dynamic-inter
 import { BurocraciaView } from "@/components/leads/burocracia-view"
 import { ProcessForm } from "@/components/cases/process-form"
 import Link from "next/link"
+import { generateCaseSummary, type GenerateCaseSummaryOutput } from "@/ai/flows/ai-generate-case-summary"
 
 const columns = [
   { id: "novo", title: "NOVO", color: "text-blue-400" },
@@ -114,6 +119,10 @@ export default function LeadsPage() {
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
 
+  // ESTADOS DE REVISÃO ESTRATÉGICA (IA)
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+  const [strategicSummary, setStrategicSummary] = useState<GenerateCaseSummaryOutput | null>(null)
+
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "checklists"), orderBy("title", "asc"))
@@ -130,7 +139,6 @@ export default function LeadsPage() {
   }, [db, user, selectedLead])
   const { data: leadInterviews } = useCollection(leadInterviewsQuery)
 
-  // LOGICA DE BUROCRACIA COMPLETA (TRAVA PARA DISTRIBUIÇÃO)
   const bureaucracyReport = useMemo(() => {
     if (!selectedLead) return { isComplete: false, missing: [] }
     const missing = []
@@ -165,8 +173,39 @@ export default function LeadsPage() {
       else if (selectedLead.status === 'burocracia') setActiveDossierTab("burocracia")
       else if (selectedLead.status === 'distribuicao') setActiveDossierTab("protocolo")
       else setActiveDossierTab("overview")
+      
+      // Limpa resumo estratégico ao trocar de lead
+      setStrategicSummary(null)
     }
   }, [selectedLead?.id, selectedLead?.status])
+
+  const handleGenerateStrategicSummary = async () => {
+    if (!selectedLead) return
+    setIsGeneratingSummary(true)
+    try {
+      const interviewTexts = (leadInterviews || []).map(i => 
+        Object.entries(i.responses || {}).map(([q, a]) => `${q}: ${a}`).join("\n")
+      )
+
+      const result = await generateCaseSummary({
+        caseId: selectedLead.id,
+        clientName: selectedLead.name,
+        caseTitle: selectedLead.demandTitle || "Reclamação Trabalhista",
+        caseDescription: selectedLead.notes || "Sem descrição adicional.",
+        currentStatus: "Fase de Distribuição (Pré-Protocolo)",
+        lastEvents: ["Entrevista de Triagem Realizada", "Documentação Coletada"],
+        nextDeadlines: ["Protocolo da Inicial", "Audiência Inicial (Agendar)"],
+        relatedParties: [selectedLead.defendantName || "Réu não identificado"],
+        financialStatus: "Aguardando definição de valor da causa."
+      })
+      setStrategicSummary(result)
+      toast({ title: "Análise IA Concluída", description: "O Conselho de Guerra foi atualizado." })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na Análise", description: "Falha ao processar inteligência estratégica." })
+    } finally {
+      setIsGeneratingSummary(false)
+    }
+  }
 
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
@@ -638,57 +677,170 @@ export default function LeadsPage() {
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
-                    <TabsContent value="protocolo" className="space-y-8 animate-in fade-in duration-500">
-                      <div className="space-y-4">
-                        <h4 className="text-[9px] font-black text-purple-500 uppercase tracking-[0.25em] flex items-center gap-2">
-                          <Database className="h-3 w-3" /> IDENTIFICAÇÃO DO FEITO
-                        </h4>
-                        <div className="p-6 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-4 shadow-inner">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
-                            <div className="flex gap-2">
-                              <Input 
-                                placeholder="0000000-00.0000.0.00.0000" 
-                                className="glass border-white/10 h-12 text-white font-mono text-lg font-black focus:ring-purple-500/50"
-                                value={selectedLead.processNumber || ""}
-                                onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})}
-                              />
-                              <Button 
-                                onClick={handleSaveProcessNumber}
-                                className="h-12 px-8 bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg transition-all active:scale-95"
-                              >
-                                VINCULAR CNJ
-                              </Button>
-                            </div>
-                            <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest italic">* O NÚMERO SERÁ HERDADO AUTOMATICAMENTE NA CONVERSÃO FINAL.</p>
-                          </div>
+                    <TabsContent value="protocolo" className="space-y-12 animate-in fade-in duration-700">
+                      {/* HEADER DE REVISÃO FINAL */}
+                      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pb-6 border-b border-white/5">
+                        <div className="space-y-1">
+                          <h3 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
+                            <ShieldCheck className="h-8 w-8 text-primary" /> Dossiê de Check-in
+                          </h3>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] opacity-60">Auditoria final antes da migração para Processos Ativos.</p>
                         </div>
+                        <Button 
+                          onClick={handleGenerateStrategicSummary} 
+                          disabled={isGeneratingSummary}
+                          className="h-14 px-8 glass border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all shadow-xl"
+                        >
+                          {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+                          Consolidar Estratégia (IA)
+                        </Button>
                       </div>
 
-                      <div className="p-8 rounded-[2rem] border border-purple-500/20 bg-purple-500/5 space-y-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                            <CheckSquare className="h-6 w-6 text-purple-400" />
+                      {/* PAINEL DE REVISÃO DE DADOS */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="glass border-white/10 overflow-hidden shadow-2xl">
+                          <div className="p-5 border-b border-white/5 bg-white/[0.02] flex items-center gap-3">
+                            <Fingerprint className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Qualificação das Partes</h4>
                           </div>
-                          <div>
-                            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Checklist de Distribuição</h3>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Auditoria final antes do protocolo judiciário.</p>
+                          <CardContent className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-[8px] font-black text-muted-foreground uppercase">Autor (Reclamante)</p>
+                                <p className="text-xs font-bold text-white uppercase">{selectedLead.name}</p>
+                                <p className="text-[9px] font-mono text-muted-foreground">{selectedLead.cpf || selectedLead.documentNumber || "Sem CPF"}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[8px] font-black text-muted-foreground uppercase">Réu (Reclamada)</p>
+                                <p className="text-xs font-bold text-white uppercase">{selectedLead.defendantName || "NÃO INFORMADO"}</p>
+                                <p className="text-[9px] font-mono text-muted-foreground">{selectedLead.defendantDocument || "Sem CNPJ"}</p>
+                              </div>
+                            </div>
+                            <div className="pt-4 border-t border-white/5">
+                              <p className="text-[8px] font-black text-muted-foreground uppercase mb-2">Localidade de Origem</p>
+                              <p className="text-xs font-bold text-white uppercase flex items-center gap-2"><MapPin className="h-3 w-3 text-primary" /> {selectedLead.city} - {selectedLead.state}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="glass border-white/10 overflow-hidden shadow-2xl">
+                          <div className="p-5 border-b border-white/5 bg-white/[0.02] flex items-center gap-3">
+                            <Scale className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Logística do Juízo</h4>
+                          </div>
+                          <CardContent className="p-6 space-y-6">
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center border border-white/5"><Gavel className="h-5 w-5 text-muted-foreground" /></div>
+                                <div>
+                                  <p className="text-[8px] font-black text-muted-foreground uppercase">Fórum & Vara</p>
+                                  <p className="text-xs font-bold text-white uppercase">{selectedLead.court} • {selectedLead.vara}</p>
+                                </div>
+                              </div>
+                              <div className="pt-2">
+                                <p className="text-[8px] font-black text-muted-foreground uppercase mb-2">Endereço de Citação</p>
+                                <p className="text-[10px] font-bold text-white/80 uppercase leading-relaxed">
+                                  {selectedLead.courtAddress}, {selectedLead.courtNumber} - {selectedLead.courtNeighborhood}<br/>
+                                  {selectedLead.courtCity}/{selectedLead.courtState} - CEP: {selectedLead.courtZipCode}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* CONSELHO DE GUERRA (RESULTADO IA) */}
+                      {strategicSummary && (
+                        <Card className="glass border-primary/30 bg-primary/5 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+                          <div className="p-6 border-b border-primary/20 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+                              <h4 className="text-sm font-black text-white uppercase tracking-[0.2em]">Conselho de Guerra: Inteligência RGMJ</h4>
+                            </div>
+                            <Badge className="bg-primary text-background font-black uppercase text-[8px]">ANÁLISE DE ALTA PERFORMANCE</Badge>
+                          </div>
+                          <CardContent className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
+                            <div className="space-y-4">
+                              <h5 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                                <CheckSquare className="h-3 w-3" /> Fatos Críticos
+                              </h5>
+                              <p className="text-xs text-white/80 leading-relaxed font-serif italic text-justify">
+                                {strategicSummary.keyFacts}
+                              </p>
+                            </div>
+                            <div className="space-y-4">
+                              <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2">
+                                <AlertCircle className="h-3 w-3" /> Riscos e Desafios
+                              </h5>
+                              <p className="text-xs text-white/80 leading-relaxed font-serif italic text-justify">
+                                {strategicSummary.risksAndChallenges}
+                              </p>
+                            </div>
+                            <div className="space-y-4">
+                              <h5 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                                <TrendingUp className="h-3 w-3" /> Análise de Viabilidade
+                              </h5>
+                              <p className="text-xs text-white/80 leading-relaxed font-serif italic text-justify">
+                                {strategicSummary.strategicAnalysis}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* IDENTIFICAÇÃO DO FEITO E CHECKLIST FINAL */}
+                      <div className="space-y-8">
+                        <div className="space-y-4">
+                          <h4 className="text-[9px] font-black text-purple-500 uppercase tracking-[0.25em] flex items-center gap-2">
+                            <Database className="h-3 w-3" /> IDENTIFICAÇÃO DO FEITO
+                          </h4>
+                          <div className="p-6 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-4 shadow-inner">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
+                              <div className="flex gap-2">
+                                <Input 
+                                  placeholder="0000000-00.0000.0.00.0000" 
+                                  className="glass border-white/10 h-12 text-white font-mono text-lg font-black focus:ring-purple-500/50"
+                                  value={selectedLead.processNumber || ""}
+                                  onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})}
+                                />
+                                <Button 
+                                  onClick={handleSaveProcessNumber}
+                                  className="h-12 px-8 bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg transition-all active:scale-95"
+                                >
+                                  VINCULAR CNJ
+                                </Button>
+                              </div>
+                              <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest italic">* O NÚMERO SERÁ HERDADO AUTOMATICAMENTE NA CONVERSÃO FINAL.</p>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          {[
-                            { id: "c1", label: "Petição Inicial Elaborada (Minuta IA Revisada)", checked: true },
-                            { id: "c2", label: "Kit de Procuração e Contrato Assinado", checked: true },
-                            { id: "c3", label: "Provas Documentais Organizadas no Drive", checked: isBureaucracyComplete },
-                            { id: "c4", label: "Cálculos Judiciais Anexados", checked: false },
-                            { id: "c5", label: "Declaração de Hipossuficiência Pronta", checked: true },
-                          ].map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-black/40 border border-white/5">
-                              <span className="text-[11px] font-bold text-white uppercase tracking-tight">{item.label}</span>
-                              {item.checked ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertCircle className="h-4 w-4 text-amber-500/50" />}
+                        <div className="p-8 rounded-[2rem] border border-purple-500/20 bg-purple-500/5 space-y-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                              <CheckSquare className="h-6 w-6 text-purple-400" />
                             </div>
-                          ))}
+                            <div>
+                              <h3 className="text-xl font-black text-white uppercase tracking-tighter">Checklist de Distribuição</h3>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Auditoria final antes do protocolo judiciário.</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {[
+                              { id: "c1", label: "Petição Inicial Elaborada (Minuta IA Revisada)", checked: true },
+                              { id: "c2", label: "Kit de Procuração e Contrato Assinado", checked: true },
+                              { id: "c3", label: "Provas Documentais Organizadas no Drive", checked: isBureaucracyComplete },
+                              { id: "c4", label: "Cálculos Judiciais Anexados", checked: false },
+                              { id: "c5", label: "Declaração de Hipossuficiência Pronta", checked: true },
+                            ].map((item) => (
+                              <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-black/40 border border-white/5">
+                                <span className="text-[11px] font-bold text-white uppercase tracking-tight">{item.label}</span>
+                                {item.checked ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertCircle className="h-4 w-4 text-amber-500/50" />}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
@@ -696,7 +848,7 @@ export default function LeadsPage() {
                         <Scale className="h-12 w-12 text-primary opacity-20" />
                         <div className="space-y-2">
                           <h4 className="text-sm font-black text-white uppercase tracking-widest">Pronto para Oficializar?</h4>
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] max-w-md">Ao protocolar, este lead será convertido em um Processo Ativo na base RGMJ.</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.3em] max-w-md">Ao protocolar, este lead será convertido em um Processo Ativo na base RGMJ e os dados migrados definitivamente.</p>
                         </div>
                         <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-background font-black h-16 px-16 rounded-xl shadow-2xl uppercase text-[12px] tracking-[0.2em] gap-4">
                           <ShieldCheck className="h-6 w-6" /> PROTOCOLAR E CONVERTER
