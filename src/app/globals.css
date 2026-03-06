@@ -16,11 +16,11 @@
     --primary: 43 65% 53%; /* #D4AF37 - Classic Gold */
     --primary-foreground: 222 47% 4%;
     
-    --secondary: 222 47% 10%;
+    --secondary: 222 47% 8%;
     --secondary-foreground: 0 0% 98%;
     
     --muted: 222 47% 10%;
-    --muted-foreground: 0 0% 65%;
+    --muted-foreground: 0 0% 60%;
     
     --accent: 43 65% 53%;
     --accent-foreground: 0 0% 98%;
@@ -29,19 +29,19 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 222 47% 15%;
-    --input: 222 47% 15%;
+    --border: 222 47% 12%;
+    --input: 222 47% 12%;
     --ring: 43 65% 53%;
     
-    --radius: 0.5rem;
+    --radius: 0.4rem;
 
-    --sidebar-background: 222 47% 4%;
-    --sidebar-foreground: 0 0% 98%;
+    --sidebar-background: 222 47% 3%;
+    --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 43 65% 53%;
     --sidebar-primary-foreground: 222 47% 4%;
-    --sidebar-accent: 222 47% 10%;
+    --sidebar-accent: 222 47% 8%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 222 47% 15%;
+    --sidebar-border: 222 47% 10%;
     --sidebar-ring: 43 65% 53%;
   }
 }
@@ -51,30 +51,22 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#020617] text-foreground antialiased selection:bg-primary/30 selection:text-white;
+    @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white text-[13px];
     font-family: 'Roboto', sans-serif;
   }
 }
 
 /* Tipografia Refinada RGMJ */
 .font-headline {
-  @apply font-black tracking-tight uppercase;
+  @apply font-bold tracking-tight uppercase;
 }
 
 .label-mini {
-  @apply text-[8px] font-black uppercase tracking-widest text-muted-foreground/60;
+  @apply text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70;
 }
 
 .text-premium {
-  @apply font-bold tracking-tight text-white;
-}
-
-/* Premium Decorative Elements */
-.marble-bg {
-  background-image: linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  @apply font-medium tracking-tight text-white;
 }
 
 .text-gradient-gold {
@@ -83,30 +75,23 @@
   -webkit-text-fill-color: transparent;
 }
 
-.gold-line {
-  @apply h-px w-12 bg-[#F5D030]/60;
-}
-
-.gold-gradient {
-  @apply bg-gradient-to-br from-[#F5D030] via-[#D4AF37] to-[#B8860B] transition-all duration-300;
-}
-
 .glass {
-  @apply bg-white/[0.02] backdrop-blur-md border border-white/10;
+  @apply bg-white/[0.01] backdrop-blur-sm border border-white/5;
 }
 
 .hover-gold:hover {
-  @apply border-primary/30 shadow-[0_0_15px_rgba(245,208,48,0.05)];
+  @apply border-primary/20 shadow-[0_0_10px_rgba(245,208,48,0.03)];
 }
 
 ::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-[#020617];
+  @apply bg-[#02040a];
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-primary/20 rounded-full;
+  @apply bg-primary/10 rounded-full hover:bg-primary/20 transition-colors;
 }
 
 .scrollbar-hide::-webkit-scrollbar {

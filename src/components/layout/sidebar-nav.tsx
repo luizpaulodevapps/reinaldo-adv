@@ -109,27 +109,27 @@ export function SidebarNav() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0a0a14] font-sans">
-      <SidebarHeader className="py-6 px-4">
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#02040a] font-sans">
+      <SidebarHeader className="py-4 px-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20 border border-primary/30">
-            <Scale className="h-4 w-4 text-primary" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary/10 border border-primary/20">
+            <Scale className="h-3.5 w-3.5 text-primary" />
           </div>
           <div className="flex flex-col overflow-hidden transition-all group-data-[collapsible=icon]:w-0">
-            <span className="text-xs font-black text-white uppercase tracking-tight leading-none">RGMJ</span>
-            <span className="text-[7px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Comando</span>
+            <span className="text-[11px] font-bold text-white uppercase tracking-tight leading-none">RGMJ ADVOGADOS</span>
+            <span className="text-[7px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Comando Central</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-1.5">
         {menuGroups.map((group, idx) => (
-          <SidebarGroup key={idx} className="py-2">
-            <SidebarGroupLabel className="text-[8px] font-black text-white/20 tracking-widest uppercase px-3 mb-1 group-data-[collapsible=icon]:hidden">
+          <SidebarGroup key={idx} className="py-1">
+            <SidebarGroupLabel className="text-[8px] font-bold text-white/20 tracking-wider uppercase px-2.5 mb-0.5 group-data-[collapsible=icon]:hidden">
               {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
+              <SidebarMenu className="gap-0">
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
                   const isActive = pathname === item.href
@@ -141,16 +141,16 @@ export function SidebarNav() {
                         isActive={isActive}
                         tooltip={item.name}
                         className={cn(
-                          "relative flex items-center gap-2 px-3 py-2 transition-all duration-200 h-9 rounded-md",
+                          "relative flex items-center gap-2 px-2.5 py-1.5 transition-all duration-200 h-8 rounded",
                           isActive 
-                            ? "bg-[#1e1b2e] text-white border border-primary/10 shadow-sm" 
-                            : "text-white/50 hover:text-white hover:bg-white/5"
+                            ? "bg-white/5 text-white border border-white/5" 
+                            : "text-white/40 hover:text-white hover:bg-white/[0.03]"
                         )}
                       >
                         <Link href={item.href}>
                           <item.icon className={cn(
-                            "h-4 w-4 transition-colors shrink-0",
-                            isActive ? "text-primary" : "text-white/20 group-hover:text-primary/50"
+                            "h-3.5 w-3.5 transition-colors shrink-0",
+                            isActive ? "text-primary" : "text-white/10 group-hover:text-primary/40"
                           )} />
                           <span className="text-[10px] uppercase tracking-wider font-bold whitespace-nowrap">
                             {item.name}
@@ -166,30 +166,30 @@ export function SidebarNav() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="p-3 bg-black/20 mt-auto">
+      <SidebarFooter className="p-2 bg-black/20 mt-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton size="lg" className="w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-white/5 transition-all outline-none border border-transparent">
-              <Avatar className="h-7 w-7 shrink-0 border border-primary/20">
-                <AvatarFallback className="bg-secondary text-white text-[8px] font-black uppercase">
+            <SidebarMenuButton size="sm" className="w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-white/5 transition-all outline-none border border-transparent">
+              <Avatar className="h-6 w-6 shrink-0 border border-primary/20">
+                <AvatarFallback className="bg-secondary text-white text-[8px] font-bold uppercase">
                   {displayName.substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left overflow-hidden transition-all group-data-[collapsible=icon]:w-0">
-                <span className="text-[9px] font-black truncate text-white uppercase">{displayName}</span>
+                <span className="text-[9px] font-bold truncate text-white uppercase">{displayName}</span>
                 <span className="text-[7px] text-primary font-bold uppercase tracking-widest">{userRoleDisplay}</span>
               </div>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="right" className="w-56 bg-[#1e1b2e] border-white/10 text-white p-1 rounded-xl shadow-2xl">
-            <DropdownMenuItem asChild className="rounded-lg h-9 px-3">
+          <DropdownMenuContent align="end" side="right" className="w-48 bg-[#0d1117] border-white/10 text-white p-1 rounded shadow-2xl">
+            <DropdownMenuItem asChild className="rounded h-8 px-2">
               <Link href="/settings?tab=perfil" className="flex items-center gap-2 text-[10px] uppercase font-bold text-white">
-                <UserIcon className="h-3.5 w-3.5 text-primary" /> Perfil
+                <UserIcon className="h-3 w-3 text-primary" /> Perfil
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/5" />
-            <DropdownMenuItem onClick={handleLogout} className="rounded-lg h-9 px-3 text-rose-400 hover:bg-rose-400/10 text-[10px] uppercase font-bold">
-              <LogOut className="h-3.5 w-3.5" /> Sair
+            <DropdownMenuItem onClick={handleLogout} className="rounded h-8 px-2 text-rose-400 hover:bg-rose-400/10 text-[10px] uppercase font-bold">
+              <LogOut className="h-3 w-3" /> Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
