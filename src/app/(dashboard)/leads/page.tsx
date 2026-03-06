@@ -130,6 +130,23 @@ export default function LeadsPage() {
   }, [db, user, selectedLead])
   const { data: leadInterviews } = useCollection(leadInterviewsQuery)
 
+  // LOGICA DE BUROCRACIA COMPLETA (TRAVA PARA DISTRIBUIÇÃO)
+  const bureaucracyReport = useMemo(() => {
+    if (!selectedLead) return { isComplete: false, missing: [] }
+    const missing = []
+    if (!selectedLead.defendantName) missing.push("NOME DO RÉU")
+    if (!selectedLead.court) missing.push("ÓRGÃO JUDICIAL")
+    if (!selectedLead.vara) missing.push("VARA")
+    if (!selectedLead.driveStatus || selectedLead.driveStatus === 'pendente') missing.push("SINCRONISMO DRIVE")
+    
+    return {
+      isComplete: missing.length === 0,
+      missing
+    }
+  }, [selectedLead])
+
+  const isBureaucracyComplete = bureaucracyReport.isComplete
+
   const missingFields = useMemo(() => {
     if (!selectedLead) return []
     const missing = []
@@ -137,27 +154,10 @@ export default function LeadsPage() {
     if (!selectedLead.email) missing.push("E-MAIL")
     if (!selectedLead.phone) missing.push("WHATSAPP")
     if (!selectedLead.city) missing.push("LOCALIDADE")
-    if (!selectedLead.defendantName) missing.push("NOME DO RÉU")
-    if (!selectedLead.court) missing.push("TRIBUNAL/FÓRUM")
-    if (!selectedLead.vara) missing.push("VARA")
     return missing
   }, [selectedLead])
 
   const isProfileIncomplete = missingFields.length > 0
-
-  const isBureaucracyComplete = useMemo(() => {
-    if (!selectedLead) return false
-    const hasEssentialData = 
-      selectedLead.name && 
-      (selectedLead.cpf || selectedLead.documentNumber) && 
-      selectedLead.defendantName &&
-      selectedLead.court &&
-      selectedLead.vara
-    
-    const hasDrive = selectedLead.driveStatus === 'pasta_cliente' || selectedLead.driveStatus === 'pasta_lead'
-    
-    return !!(hasEssentialData && hasDrive)
-  }, [selectedLead])
 
   useEffect(() => {
     if (selectedLead) {
@@ -198,7 +198,7 @@ export default function LeadsPage() {
       toast({ 
         variant: "destructive", 
         title: "Acesso Bloqueado", 
-        description: "Preencha Tribunal, Vara e Sincronize o Drive para avançar à Distribuição." 
+        description: `Pendências: ${bureaucracyReport.missing.join(", ")}`
       })
       return
     }
@@ -625,9 +625,14 @@ export default function LeadsPage() {
 
                     <TabsContent value="burocracia" className="space-y-6">
                       {!isBureaucracyComplete && (
-                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-4">
+                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
                           <AlertCircle className="h-5 w-5 text-amber-500" />
-                          <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Pendente: Preencha Réu, Tribunal, Vara e Sincronize o Drive para liberar a Distribuição.</p>
+                          <div className="flex-1">
+                            <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">
+                              Pendências de Distribuição: <span className="text-white ml-1">{bureaucracyReport.missing.join(", ")}</span>.
+                            </p>
+                            <p className="text-[8px] text-amber-500/60 uppercase font-black tracking-tighter mt-0.5">O sistema exige estes dados para habilitar o rito de protocolo.</p>
+                          </div>
                         </div>
                       )}
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
