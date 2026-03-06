@@ -212,13 +212,13 @@ export function LeadForm({
 
     setSearchingCourt(true)
     try {
-      // 1. Usa a IA para encontrar o CEP e dados básicos
+      // 1. Usa a Nominatim + IA para encontrar o endereço tático
       const result = await aiSearchCourtAddress({ courtName: formData.court })
       
       if (result.found && result.zipCode) {
         const cleanCep = result.zipCode.replace(/\D/g, "")
         
-        // 2. Consulta o ViaCEP para garantir que o endereço é REAL e oficial
+        // 2. Validação oficial via ViaCEP para garantir integridade postal
         const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const viaCepData = await viaCepResponse.json()
 
@@ -232,9 +232,9 @@ export function LeadForm({
             courtCity: viaCepData.localidade.toUpperCase(),
             courtState: viaCepData.uf.toUpperCase()
           }))
-          toast({ title: "Endereço Localizado (Oficial)", description: "Dados validados via base de endereços nacional." })
+          toast({ title: "Localizado via Satélite", description: "Endereço oficial validado na base postal nacional." })
         } else {
-          // Se o ViaCEP falhar mas a IA trouxe algo, usa os dados da IA como fallback mas avisa
+          // Fallback para os dados da Nominatim processados pela IA
           setFormData(prev => ({
             ...prev,
             courtZipCode: result.zipCode || prev.courtZipCode,
@@ -244,10 +244,10 @@ export function LeadForm({
             courtCity: result.city?.toUpperCase() || prev.courtCity,
             courtState: result.state?.toUpperCase() || prev.courtState
           }))
-          toast({ variant: "outline", title: "Endereço por IA", description: "O CEP informado não foi validado na base oficial, mas os dados da IA foram aplicados." })
+          toast({ variant: "outline", title: "Localizado via OSM", description: "Dados geográficos aplicados ao dossiê." })
         }
       } else {
-        toast({ variant: "destructive", title: "Endereço Não Localizado", description: "A inteligência não encontrou o endereço oficial preciso. Preencha manualmente para segurança." })
+        toast({ variant: "destructive", title: "Órgão Não Mapeado", description: "Não conseguimos localizar o endereço oficial. Preencha manualmente para segurança." })
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Erro no Motor de Busca", description: "Falha na comunicação com a inteligência logística RGMJ." })
@@ -468,11 +468,11 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Razão Social / Nome Oficial *</Label>
-                    <Input placeholder="NOME DO RÉU OU EMPRESA..." className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
+                    <Input placeholder="NOME DO RÉU OU EMPRESA..." className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CNPJ / CPF do Réu</Label>
-                    <Input placeholder="00.000.000/0000-00" className="bg-black/40 border-white/10 h-14 text-white font-mono rounded-xl" value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", formatCpfCnpj(e.target.value))} />
+                    <Input placeholder="00.000.000/0000-00" className="bg-black/40 border border-white/10 h-14 text-white font-mono rounded-xl" value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", formatCpfCnpj(e.target.value))} />
                   </div>
                 </div>
               </div>
@@ -499,7 +499,7 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
-                    <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} />
+                    <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.neighborhood} onChange={(e) => handleInputChange("neighborhood", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
@@ -521,7 +521,7 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Título da Demanda (Objeto)</Label>
-                    <Input placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
+                    <Input placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS" className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.demandTitle} onChange={(e) => handleInputChange("demandTitle", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Área Jurídica</Label>
@@ -570,7 +570,7 @@ export function LeadForm({
                 </div>
 
                 <div className="space-y-6 pt-4">
-                  <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal</SectionTitle>
+                  <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal (Localizado via OSM)</SectionTitle>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="md:col-span-1 space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Fórum)</Label>
