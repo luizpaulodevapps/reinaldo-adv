@@ -51,7 +51,7 @@
     @apply border-border;
   }
   html {
-    font-size: 11px; /* Global Reduction */
+    font-size: 12px; /* Aumentado de 11px para 12px para melhor legibilidade */
   }
   body {
     @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white;
@@ -64,7 +64,7 @@
 }
 
 .label-mini {
-  @apply text-[9px] font-black uppercase tracking-widest text-muted-foreground/60;
+  @apply text-[10px] font-black uppercase tracking-widest text-muted-foreground/60;
 }
 
 .text-premium {
