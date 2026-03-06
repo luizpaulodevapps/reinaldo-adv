@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -82,12 +81,6 @@ export default function LeadsPage() {
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = leadsData || []
-
-  const clientsQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "clients"))
-  }, [db, user])
-  const { data: clients } = useCollection(clientsQuery)
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)

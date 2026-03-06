@@ -250,7 +250,16 @@ export function LeadForm({
                 <div className="space-y-1.5" ref={searchRef}>
                   <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Nome do Cliente *</Label>
                   <div className="relative" onClick={() => !lockMode && setIsSearchOpen(true)}>
-                    <Input placeholder="PESQUISAR OU INSERIR NOME..." className={cn(inputClass, "h-10 text-xs", lockMode && "opacity-60")} value={formData.name || searchTerm} readOnly={!isSearchOpen && !lockMode} />
+                    <Input 
+                      placeholder="PESQUISAR OU INSERIR NOME..." 
+                      className={cn(inputClass, "h-10 text-xs", lockMode && "opacity-60")} 
+                      value={formData.name || searchTerm} 
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value)
+                        if (formData.name) handleInputChange("name", "")
+                      }}
+                      readOnly={!isSearchOpen && !lockMode} 
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
