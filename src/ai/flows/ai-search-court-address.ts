@@ -1,47 +1,24 @@
 'use server';
 /**
- * @fileOverview Flow de IA para busca de endereços de órgãos judiciários integrado com Nominatim (OSM).
+ * @fileOverview Flow de IA focado em localizar o CEP oficial de órgãos judiciários.
  * 
- * - aiSearchCourtAddress - Função que localiza o endereço real via Nominatim e estrutura via IA.
+ * - aiSearchCourtAddress - Localiza o CEP oficial e o número do prédio via Inteligência RGMJ.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SearchCourtAddressInputSchema = z.object({
-  courtName: z.string().describe('O nome do fórum, tribunal ou vara judiciária para buscar o endereço.'),
+  courtName: z.string().describe('O nome do fórum ou tribunal.'),
 });
 
 const SearchCourtAddressOutputSchema = z.object({
-  zipCode: z.string().optional().describe('CEP formatado (00000-000)'),
-  address: z.string().optional().describe('Logradouro (Rua, Avenida, etc)'),
-  number: z.string().optional().describe('Número do prédio (se disponível)'),
-  neighborhood: z.string().optional().describe('Bairro'),
-  city: z.string().optional().describe('Cidade'),
-  state: z.string().optional().describe('UF (Estado)'),
-  found: z.boolean().describe('Se o endereço foi localizado com precisão real.'),
+  zipCode: z.string().optional().describe('CEP oficial (00000-000)'),
+  number: z.string().optional().describe('Número oficial do prédio'),
+  found: z.boolean().describe('Se o CEP oficial foi localizado com certeza absoluta.'),
 });
 
 export type SearchCourtAddressOutput = z.infer<typeof SearchCourtAddressOutputSchema>;
-
-/**
- * Busca o endereço bruto no Nominatim (OpenStreetMap)
- */
-async function fetchNominatim(query: string) {
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' forum tribunal')}&format=json&addressdetails=1&limit=1&countrycodes=br`;
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "RGMJ-Portal-Comando/1.0"
-      }
-    });
-    const data = await res.json();
-    return data && data.length > 0 ? data[0] : null;
-  } catch (error) {
-    console.error("Nominatim fetch error:", error);
-    return null;
-  }
-}
 
 export async function aiSearchCourtAddress(input: { courtName: string }): Promise<SearchCourtAddressOutput> {
   return aiSearchCourtAddressFlow(input);
@@ -51,25 +28,20 @@ const searchCourtAddressPrompt = ai.definePrompt({
   name: 'searchCourtAddressPrompt',
   input: {
     schema: z.object({
-      courtName: z.string(),
-      osmData: z.any().optional()
+      courtName: z.string()
     })
   },
   output: {schema: SearchCourtAddressOutputSchema},
-  prompt: `Você é um assistente jurídico de elite da banca RGMJ, especializado em logística do Poder Judiciário brasileiro.
-Sua tarefa é extrair e formatar o endereço oficial do seguinte órgão judiciário:
+  prompt: `Você é um analista de logística da banca RGMJ, especialista em endereços do Poder Judiciário Brasileiro.
+Sua tarefa é retornar o CEP OFICIAL e o NÚMERO do prédio do seguinte órgão:
 
 Órgão: {{{courtName}}}
 
-Dados de referência obtidos via satélite (Nominatim):
-{{{json osmData}}}
-
-REGRAS CRÍTICAS DE PRECISÃO:
-1. Use os dados do Nominatim como fonte primária, mas limpe nomes redundantes (ex: remova "Fórum" do nome da rua se estiver lá por erro).
-2. O CEP (postcode) deve estar no formato 00000-000.
-3. Se o número (house_number) não estiver nos dados, tente inferir se for um fórum conhecido ou deixe em branco.
-4. Identifique Bairro, Cidade e UF corretamente.
-5. Se os dados forem inconsistentes ou não parecerem ser de um fórum/tribunal, retorne found=false.`,
+REGRAS DE OURO:
+1. Retorne apenas o CEP que consta no site oficial do tribunal ou na base dos Correios.
+2. Se o órgão for uma Vara do Trabalho (ex: Diadema, SBC, Barueri), forneça o CEP exato do edifício do fórum.
+3. Se não tiver 100% de certeza do CEP oficial, retorne found=false.
+4. Não tente adivinhar o endereço completo, foque apenas no CEP e Número.`,
 });
 
 const aiSearchCourtAddressFlow = ai.defineFlow(
@@ -79,17 +51,12 @@ const aiSearchCourtAddressFlow = ai.defineFlow(
     outputSchema: SearchCourtAddressOutputSchema,
   },
   async input => {
-    // 1. Consulta o Nominatim para pegar dados reais de GPS/Mapa
-    const osmData = await fetchNominatim(input.courtName);
-    
-    // 2. Passa para a IA processar a bagunça do Nominatim e retornar o rito técnico RGMJ
     const {output} = await searchCourtAddressPrompt({
-      courtName: input.courtName,
-      osmData: osmData
+      courtName: input.courtName
     });
 
     if (!output) {
-      throw new Error('Falha crítica ao acessar motor de busca judiciário.');
+      throw new Error('Falha ao consultar inteligência logística.');
     }
     return output;
   }

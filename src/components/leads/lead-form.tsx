@@ -206,51 +206,41 @@ export function LeadForm({
 
   const handleSearchCourtAddress = async () => {
     if (!formData.court) {
-      toast({ variant: "destructive", title: "Nome do Tribunal Ausente", description: "Insira o nome do órgão para pesquisar." })
+      toast({ variant: "destructive", title: "Nome do Tribunal Ausente" })
       return
     }
 
     setSearchingCourt(true)
     try {
-      // 1. Usa a Nominatim + IA para encontrar o endereço tático
+      // 1. A IA localiza o CEP oficial do tribunal baseado no nome
       const result = await aiSearchCourtAddress({ courtName: formData.court })
       
       if (result.found && result.zipCode) {
         const cleanCep = result.zipCode.replace(/\D/g, "")
         
-        // 2. Validação oficial via ViaCEP para garantir integridade postal
+        // 2. O sistema consulta OBRIGATORIAMENTE a ViaCEP para garantir endereço real
         const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const viaCepData = await viaCepResponse.json()
 
         if (!viaCepData.erro) {
           setFormData(prev => ({
             ...prev,
-            courtZipCode: result.zipCode || prev.courtZipCode,
+            courtZipCode: result.zipCode,
             courtAddress: viaCepData.logradouro.toUpperCase(),
             courtNumber: result.number || prev.courtNumber,
             courtNeighborhood: viaCepData.bairro.toUpperCase(),
             courtCity: viaCepData.localidade.toUpperCase(),
             courtState: viaCepData.uf.toUpperCase()
           }))
-          toast({ title: "Localizado via Satélite", description: "Endereço oficial validado na base postal nacional." })
+          toast({ title: "Endereço Localizado (ViaCEP)", description: "Dados oficiais validados pela base postal." })
         } else {
-          // Fallback para os dados da Nominatim processados pela IA
-          setFormData(prev => ({
-            ...prev,
-            courtZipCode: result.zipCode || prev.courtZipCode,
-            courtAddress: result.address?.toUpperCase() || prev.courtAddress,
-            courtNumber: result.number || prev.courtNumber,
-            courtNeighborhood: result.neighborhood?.toUpperCase() || prev.courtNeighborhood,
-            courtCity: result.city?.toUpperCase() || prev.courtCity,
-            courtState: result.state?.toUpperCase() || prev.courtState
-          }))
-          toast({ variant: "outline", title: "Localizado via OSM", description: "Dados geográficos aplicados ao dossiê." })
+          toast({ variant: "destructive", title: "CEP Oficial Inválido", description: "O CEP retornado pela inteligência não consta na base ViaCEP." })
         }
       } else {
-        toast({ variant: "destructive", title: "Órgão Não Mapeado", description: "Não conseguimos localizar o endereço oficial. Preencha manualmente para segurança." })
+        toast({ variant: "destructive", title: "Órgão Não Identificado", description: "Não conseguimos mapear o CEP oficial deste fórum." })
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro no Motor de Busca", description: "Falha na comunicação com a inteligência logística RGMJ." })
+      toast({ variant: "destructive", title: "Erro na Pesquisa", description: "Falha ao consultar base postal oficial." })
     } finally {
       setSearchingCourt(false)
     }
@@ -277,7 +267,7 @@ export function LeadForm({
   const handleSubmit = () => {
     const finalName = formData.name || searchTerm
     if (!finalName?.trim() || !formData.phone?.trim()) {
-      toast({ variant: "destructive", title: "Campos obrigatórios", description: "Nome e Telefone são essenciais para a banca." })
+      toast({ variant: "destructive", title: "Campos obrigatórios" })
       return
     }
     onSubmit({ ...formData, name: finalName })
@@ -570,7 +560,7 @@ export function LeadForm({
                 </div>
 
                 <div className="space-y-6 pt-4">
-                  <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal (Localizado via OSM)</SectionTitle>
+                  <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal (Validado via ViaCEP)</SectionTitle>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="md:col-span-1 space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Fórum)</Label>
@@ -599,7 +589,7 @@ export function LeadForm({
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
-                      <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.state} onChange={(e) => handleInputChange("state", e.target.value.toUpperCase())} />
+                      <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.courtState} onChange={(e) => handleInputChange("courtState", e.target.value.toUpperCase())} />
                     </div>
                   </div>
                 </div>
