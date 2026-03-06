@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -224,12 +223,12 @@ export function LeadForm({
           courtCity: result.city || prev.courtCity,
           courtState: result.state || prev.courtState
         }))
-        toast({ title: "Endereço Localizado", description: "Dados da unidade judiciária injetados no dossiê." })
+        toast({ title: "Endereço Localizado", description: "Dados da unidade judiciária oficial injetados no dossiê." })
       } else {
-        toast({ variant: "destructive", title: "Endereço não localizado", description: "A IA não encontrou o endereço exato. Preencha manualmente." })
+        toast({ variant: "destructive", title: "Endereço Não Localizado", description: "A inteligência não encontrou o endereço oficial preciso. Preencha manualmente para segurança." })
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro na API", description: "Falha na comunicação com o motor de busca judiciário." })
+      toast({ variant: "destructive", title: "Erro no Motor de Busca", description: "Falha na comunicação com a inteligência logística RGMJ." })
     } finally {
       setSearchingCourt(false)
     }
@@ -578,7 +577,7 @@ export function LeadForm({
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
-                      <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.courtState} onChange={(e) => handleInputChange("courtState", e.target.value.toUpperCase())} />
+                      <Input maxLength={2} className="bg-black/40 border border-white/10 h-14 text-white font-black text-center rounded-xl" value={formData.state} onChange={(e) => handleInputChange("state", e.target.value.toUpperCase())} />
                     </div>
                   </div>
                 </div>

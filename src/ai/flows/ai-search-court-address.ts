@@ -19,7 +19,7 @@ const SearchCourtAddressOutputSchema = z.object({
   neighborhood: z.string().optional().describe('Bairro'),
   city: z.string().optional().describe('Cidade'),
   state: z.string().optional().describe('UF (Estado)'),
-  found: z.boolean().describe('Se o endereço foi localizado com precisão.'),
+  found: z.boolean().describe('Se o endereço foi localizado com precisão real.'),
 });
 
 export type SearchCourtAddressOutput = z.infer<typeof SearchCourtAddressOutputSchema>;
@@ -37,12 +37,17 @@ Sua tarefa é encontrar o endereço oficial, completo e atualizado do seguinte �
 
 Órgão: {{{courtName}}}
 
-Retorne os dados estruturados no formato JSON. 
-REGRAS:
-1. Se for uma Vara do Trabalho, localize o endereço exato do Fórum Trabalhista daquela localidade.
-2. Certifique-se de que o CEP é o correto para o logradouro.
-3. Se o endereço for complexo, priorize clareza no logradouro.
-4. Se não encontrar com 100% de certeza, marque found=false.`,
+REGRAS CRÍTICAS DE PRECISÃO (RIGOR ABSOLUTO):
+1. Você DEVE retornar o endereço REAL. Não invente números de prédios ou nomes de ruas.
+2. Se for uma Vara do Trabalho (TRT), localize o Fórum Trabalhista oficial daquela localidade.
+3. Se for Tribunal de Justiça (TJ), localize o Fórum Cível/Central ou a sede da Comarca.
+4. O CEP deve ser RIGOROSAMENTE o do logradouro oficial.
+5. EXEMPLOS DE REFERÊNCIA REAL:
+   - "Vara do Trabalho de São Bernardo do Campo": Rua Santa Filomena, 727, Centro, CEP 09710-060.
+   - "Vara do Trabalho de Diadema": Avenida Sete de Setembro, 922, Centro, CEP 09912-010.
+   - "Vara do Trabalho de Santo André": Avenida Dom Pedro II, 555, Jardim, CEP 09080-001.
+   - "Fórum Trabalhista Ruy Barbosa": Av. Marquês de São Vicente, 235, Barra Funda, São Paulo, CEP 01139-001.
+6. Se não tiver certeza absoluta do endereço oficial, retorne found=false. Jamais retorne um endereço aproximado ou fictício.`,
 });
 
 const aiSearchCourtAddressFlow = ai.defineFlow(
@@ -54,7 +59,7 @@ const aiSearchCourtAddressFlow = ai.defineFlow(
   async input => {
     const {output} = await searchCourtAddressPrompt(input);
     if (!output) {
-      throw new Error('Falha ao localizar endereço judiciário.');
+      throw new Error('Falha crítica ao acessar motor de busca judiciário.');
     }
     return output;
   }
