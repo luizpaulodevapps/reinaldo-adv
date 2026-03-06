@@ -66,7 +66,7 @@ const columns = [
 
 export default function LeadsPage() {
   const db = useFirestore()
-  const { user, profile } = useUser()
+  const { user } = useUser()
   const { toast } = useToast()
 
   const leadsQuery = useMemoFirebase(() => {
@@ -362,61 +362,41 @@ export default function LeadsPage() {
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a]">
           {selectedLead && (
             <div className="flex flex-col h-full">
-              <SheetHeader className="sr-only">
-                <SheetTitle>{selectedLead.name}</SheetTitle>
-                <SheetDescription>Dossiê detalhado do lead RGMJ</SheetDescription>
-              </SheetHeader>
-              
-              <div className="p-3 md:p-4 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-3 flex-none shadow-lg">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline" className="text-[8px] border-primary/20 text-primary uppercase font-bold px-1.5 py-0 tracking-wider bg-primary/5">
-                        {(selectedLead.status || "novo").toUpperCase()}
-                      </Badge>
-                      <div className={cn("flex items-center gap-1 px-1 py-0 rounded-full border", isAlreadyClient ? "bg-emerald-500/10 border-emerald-500/20" : "bg-amber-500/10 border-amber-500/20")}>
-                        <Fingerprint className={cn("h-2 w-2", isAlreadyClient ? "text-emerald-500" : "text-amber-500")} />
-                        <span className={cn("text-[7px] font-bold uppercase tracking-wider", isAlreadyClient ? "text-emerald-500" : "text-amber-500")}>
-                          {isAlreadyClient ? "VINCULADO" : "PENDENTE"}
-                        </span>
-                      </div>
+              <SheetHeader className="p-3 border-b border-white/5 bg-[#0a0f1e] z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <Fingerprint className="h-4 w-4 text-primary" />
                     </div>
-                    <h2 className="text-base md:text-lg font-bold text-white uppercase tracking-tight">{selectedLead.name}</h2>
-                    <div className="flex flex-wrap items-center gap-1">
-                      <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-6 border-white/10 bg-white/5 text-white text-[8px] font-bold uppercase px-2 rounded">
-                        <UserCog className="h-2.5 w-2.5 mr-1" /> EDITAR
-                      </Button>
-                      <Button onClick={handleSyncDrive} disabled={isSyncingDrive} variant="outline" className="h-6 border-amber-500/20 bg-amber-500/5 text-amber-500 text-[8px] font-bold uppercase px-2 rounded">
-                        {isSyncingDrive ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <CloudLightning className="h-2.5 w-2.5 mr-1" />} DRIVE
-                      </Button>
-                      <Button onClick={handleArchiveLead} variant="outline" className="h-6 border-blue-500/20 bg-blue-500/5 text-blue-400 text-[8px] font-bold uppercase px-2 rounded">
-                        <Archive className="h-2.5 w-2.5 mr-1" /> ARQUIVAR
-                      </Button>
-                      <Button onClick={handleDeleteLead} variant="outline" className="h-6 border-rose-500/20 bg-rose-500/5 text-rose-500 text-[8px] font-bold uppercase px-2 rounded">
-                        <Trash2 className="h-2.5 w-2.5 mr-1" /> EXCLUIR
-                      </Button>
+                    <div>
+                      <SheetTitle className="text-white text-sm font-bold uppercase tracking-tight">{selectedLead.name}</SheetTitle>
+                      <SheetDescription className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Dossiê Estratégico RGMJ</SheetDescription>
                     </div>
                   </div>
-                  <div className="bg-black/40 border border-white/5 p-0.5 rounded flex flex-col gap-0.5 w-full lg:w-36">
-                    {columns.map(c => (
-                      <button key={c.id} onClick={() => handleUpdateStatus(c.id)} className={cn("h-6 px-1.5 text-[8px] font-bold uppercase tracking-wider rounded transition-all flex items-center justify-between", selectedLead.status === c.id ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white")}>
-                        {c.title} {selectedLead.status === c.id && <CheckCircle2 className="h-2 w-2 text-primary" />}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-7 border-white/10 bg-white/5 text-[8px] font-bold uppercase px-3 rounded">
+                      {isSyncingDrive ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <CloudLightning className="h-3 w-3 mr-1.5 text-amber-500" />} SINC. DRIVE
+                    </Button>
+                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-7 border-white/10 bg-white/5 text-[8px] font-bold uppercase px-3 rounded">
+                      <UserCog className="h-3 w-3 mr-1.5 text-primary" /> EDITAR
+                    </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+              </SheetHeader>
+              
+              <div className="p-3 bg-[#0a0f1e]/40 border-b border-white/5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   {[
-                    { label: "RÉU", value: selectedLead.defendantName || "N/D", icon: Building },
-                    { label: "WHATSAPP", value: selectedLead.phone, icon: Phone },
-                    { label: "EMAIL", value: selectedLead.email || "N/I", icon: Mail },
-                    { label: "LOCALIDADE", value: selectedLead.city ? `${selectedLead.city}-${selectedLead.state}` : "N/A", icon: MapPin },
+                    { label: "Status", value: selectedLead.status, icon: Zap, color: "text-primary" },
+                    { label: "Réu", value: selectedLead.defendantName || "Não Informado", icon: Building, color: "text-muted-foreground" },
+                    { label: "WhatsApp", value: selectedLead.phone, icon: Phone, color: "text-emerald-500" },
+                    { label: "Localidade", value: selectedLead.city ? `${selectedLead.city}-${selectedLead.state}` : "N/A", icon: MapPin, color: "text-muted-foreground" },
                   ].map((item, i) => (
-                    <div key={i} className="p-1.5 rounded bg-white/[0.02] border border-white/5 flex items-center gap-1.5">
-                      <item.icon className="h-2.5 w-2.5 text-primary/60 shrink-0" />
+                    <div key={i} className="p-2 rounded bg-white/[0.02] border border-white/5 flex items-center gap-2.5">
+                      <item.icon className={cn("h-3 w-3 shrink-0", item.color)} />
                       <div className="min-w-0">
-                        <p className="text-[7px] font-bold text-muted-foreground uppercase">{item.label}</p>
-                        <p className="text-[8px] font-bold text-white uppercase truncate">{item.value}</p>
+                        <p className="text-[7px] font-bold text-muted-foreground uppercase tracking-widest">{item.label}</p>
+                        <p className="text-[9px] font-bold text-white uppercase truncate">{item.value}</p>
                       </div>
                     </div>
                   ))}
@@ -424,80 +404,85 @@ export default function LeadsPage() {
               </div>
 
               <ScrollArea className="flex-1 bg-[#05070a]">
-                <div className="p-3 md:p-4 pb-16 space-y-4 max-w-5xl mx-auto">
+                <div className="p-4 space-y-4 w-full">
                   {isProfileIncomplete && (
-                    <div className="p-2 rounded bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldAlert className="h-3 w-3 text-amber-500" />
-                        <p className="text-[8px] font-bold text-white uppercase tracking-wider">Pendências: <span className="text-amber-400">{missingFields.join(", ")}</span></p>
+                    <div className="p-2.5 rounded bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
+                        <p className="text-[9px] font-bold text-white uppercase tracking-wider">Campos Pendentes: <span className="text-amber-400 font-black">{missingFields.join(", ")}</span></p>
                       </div>
-                      <Button onClick={() => setIsEditModeOpen(true)} className="h-5 px-2 gold-gradient text-background font-bold uppercase text-[7px] rounded">SANEAR</Button>
+                      <Button onClick={() => setIsEditModeOpen(true)} className="h-6 px-3 gold-gradient text-background font-black uppercase text-[8px] rounded">SANEAMENTO IMEDIATO</Button>
                     </div>
                   )}
 
-                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-3">
-                    <TabsList className="bg-transparent border-b border-white/5 h-7 w-full justify-start rounded-none p-0 gap-3">
+                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-4">
+                    <TabsList className="bg-transparent border-b border-white/5 h-8 w-full justify-start rounded-none p-0 gap-6">
                       {["VISÃO GERAL", "ENTREVISTAS", "BUROCRACIA", "REVISÃO & PROTOCOLO"].map(label => (
-                        <TabsTrigger key={label} value={label.toLowerCase().split(' ')[0]} className="data-[state=active]:text-primary text-muted-foreground font-bold text-[9px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-wider">{label}</TabsTrigger>
+                        <TabsTrigger key={label} value={label.toLowerCase().split(' ')[0]} className="data-[state=active]:text-primary text-muted-foreground font-bold text-[10px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-wider">{label}</TabsTrigger>
                       ))}
                     </TabsList>
 
-                    <TabsContent value="overview" className="space-y-3 animate-in fade-in duration-300 outline-none">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <Card className="glass border-white/5 p-3 rounded">
-                          <h4 className="text-[8px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 mb-2"><Clock className="h-2.5 w-2.5" /> AGENDAMENTO</h4>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-white uppercase">{selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString()} ÀS ${selectedLead.scheduledTime}` : "SEM AGENDAMENTO"}</p>
-                            <p className="text-[8px] text-muted-foreground uppercase font-bold">{selectedLead.meetingType === 'online' ? '🖥️ VIRTUAL' : '🏢 PRESENCIAL'}</p>
+                    <TabsContent value="overview" className="space-y-4 animate-in fade-in duration-300 outline-none">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="glass border-white/5 p-4 rounded-xl">
+                          <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2 mb-3"><Clock className="h-3.5 w-3.5" /> Agenda do Atendimento</h4>
+                          <div className="space-y-1.5">
+                            <p className="text-sm font-bold text-white uppercase">{selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString()} às ${selectedLead.scheduledTime}` : "SEM DATA REGISTRADA"}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black">{selectedLead.meetingType === 'online' ? '🖥️ REUNIÃO VIRTUAL' : '🏢 VISITA PRESENCIAL'}</p>
                           </div>
                         </Card>
-                        <Card className="glass border-primary/10 p-3 rounded">
-                          <h4 className="text-[8px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 mb-2"><Brain className="h-2.5 w-2.5" /> SÍNTESE IA</h4>
-                          <p className="text-[9px] text-white/70 leading-relaxed italic line-clamp-3">{selectedLead.aiSummary || "Aguardando consolidação..."}</p>
+                        <Card className="glass border-primary/10 p-4 rounded-xl">
+                          <h4 className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2 mb-3"><Brain className="h-3.5 w-3.5" /> Síntese Preliminar (IA)</h4>
+                          <p className="text-[11px] text-white/70 leading-relaxed italic line-clamp-4">{selectedLead.aiSummary || "Aguardando conclusão da entrevista para consolidação de fatos..."}</p>
                         </Card>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <TabsContent value="entrevistas" className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {templates?.map(t => (
-                        <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/10 text-primary font-bold uppercase text-[8px] h-8 gap-1.5 rounded justify-start px-2">
-                          <Zap className="h-2.5 w-2.5" /> {t.title}
+                        <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/10 text-primary font-bold uppercase text-[9px] h-10 gap-2 rounded-lg justify-start px-4 hover:bg-primary/5 transition-all">
+                          <Zap className="h-3.5 w-3.5" /> {t.title}
                         </Button>
                       ))}
                     </TabsContent>
 
-                    <TabsContent value="burocracia">
+                    <TabsContent value="burocracia" className="w-full">
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
-                    <TabsContent value="revisão" className="space-y-4">
-                      <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                        <h3 className="text-xs font-bold text-white uppercase tracking-tight flex items-center gap-1.5"><ShieldCheck className="h-3 w-3 text-primary" /> Check-in de Protocolo</h3>
-                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-7 px-3 glass border-primary/20 text-primary font-bold uppercase text-[8px] gap-1.5 rounded">
-                          {isGeneratingSummary ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Brain className="h-2.5 w-2.5" />} CONSOLIDAR
+                    <TabsContent value="revisão" className="space-y-6">
+                      <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                        <div className="flex items-center gap-3">
+                          <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                          <h3 className="text-sm font-bold text-white uppercase tracking-tight">Auditória de Protocolo</h3>
+                        </div>
+                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-8 px-4 glass border-primary/20 text-primary font-bold uppercase text-[9px] gap-2 rounded-lg">
+                          {isGeneratingSummary ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />} CONSOLIDAR ESTRATÉGIA
                         </Button>
                       </div>
                       
                       {strategicSummary && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                           {[
                             { t: "Fatos Críticos", v: strategicSummary.keyFacts, c: "text-primary" },
-                            { t: "Riscos", v: strategicSummary.risksAndChallenges, c: "text-rose-500" },
-                            { t: "Análise", v: strategicSummary.strategicAnalysis, c: "text-emerald-500" }
+                            { t: "Riscos Detectados", v: strategicSummary.risksAndChallenges, c: "text-rose-500" },
+                            { t: "Análise Técnica", v: strategicSummary.strategicAnalysis, c: "text-emerald-500" }
                           ].map(s => (
-                            <div key={s.t} className="p-2 rounded bg-white/[0.02] border border-white/5">
-                              <h5 className={cn("text-[7px] font-bold uppercase tracking-wider mb-1", s.c)}>{s.t}</h5>
-                              <p className="text-[9px] text-white/60 leading-relaxed">{s.v}</p>
+                            <div key={s.t} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+                              <h5 className={cn("text-[8px] font-black uppercase tracking-widest", s.c)}>{s.t}</h5>
+                              <p className="text-[11px] text-white/60 leading-relaxed">{s.v}</p>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      <div className="p-3 rounded bg-purple-500/5 border border-purple-500/10 space-y-2">
-                        <Label className="text-[8px] font-bold text-muted-foreground uppercase">NÚMERO DO PROCESSO (CNJ) *</Label>
-                        <div className="flex gap-1.5">
-                          <Input placeholder="0000000-00.0000.0.00.0000" className="glass border-white/10 h-8 text-white font-mono text-xs font-bold" value={selectedLead.processNumber || ""} onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} />
-                          <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-background font-bold h-8 px-4 rounded uppercase text-[8px] tracking-wider">CONVERTER</Button>
+                      <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/10 space-y-4 max-w-2xl">
+                        <div className="space-y-1">
+                          <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
+                          <div className="flex gap-2">
+                            <Input placeholder="0000000-00.0000.0.00.0000" className="glass border-white/10 h-10 text-white font-mono text-sm font-bold flex-1" value={selectedLead.processNumber || ""} onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} />
+                            <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-background font-black h-10 px-6 rounded-lg uppercase text-[10px] tracking-widest shadow-lg">PROTOCOLAR E CONVERTER</Button>
+                          </div>
                         </div>
                       </div>
                     </TabsContent>
@@ -511,9 +496,9 @@ export default function LeadsPage() {
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[700px] w-[95vw] p-0 overflow-hidden shadow-2xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Execução de Entrevista</DialogTitle>
-            <DialogDescription>Preenchimento estruturado do roteiro de triagem</DialogDescription>
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogTitle className="text-white text-xl font-bold uppercase">Execução de Entrevista</DialogTitle>
+            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-bold mt-1">Preenchimento estruturado do rito de triagem RGMJ</DialogDescription>
           </DialogHeader>
           {executingTemplate && (
             <DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />
@@ -523,9 +508,9 @@ export default function LeadsPage() {
 
       <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[700px] w-[95vw] p-0 overflow-hidden shadow-2xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Protocolar Processo</DialogTitle>
-            <DialogDescription>Migração final do lead para a base de processos ativos</DialogDescription>
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogTitle className="text-white text-xl font-bold uppercase">Migração para Base de Ativos</DialogTitle>
+            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-bold mt-1">O dossiê do lead será encerrado e um novo processo será aberto.</DialogDescription>
           </DialogHeader>
           {selectedLead && (
             <ProcessForm 
@@ -548,9 +533,9 @@ export default function LeadsPage() {
 
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a]">
-          <SheetHeader className="p-3 border-b border-white/5">
-            <SheetTitle className="text-[11px] font-bold text-white uppercase tracking-tight">Novo Atendimento RGMJ</SheetTitle>
-            <SheetDescription className="sr-only">Cadastro de novo lead no funil comercial</SheetDescription>
+          <SheetHeader className="p-4 border-b border-white/5 bg-[#0a0f1e]">
+            <SheetTitle className="text-sm font-bold text-white uppercase tracking-tight">Novo Atendimento RGMJ</SheetTitle>
+            <SheetDescription className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Cadastro de nova oportunidade no funil estratégico</SheetDescription>
           </SheetHeader>
           <LeadForm 
             existingLeads={leads} 
@@ -568,9 +553,9 @@ export default function LeadsPage() {
 
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a]">
-          <SheetHeader className="p-3 border-b border-white/5">
-            <SheetTitle className="text-[11px] font-bold text-white uppercase tracking-tight">Saneamento de Dossiê</SheetTitle>
-            <SheetDescription className="sr-only">Retificação de dados cadastrais do lead</SheetDescription>
+          <SheetHeader className="p-4 border-b border-white/5 bg-[#0a0f1e]">
+            <SheetTitle className="text-sm font-bold text-white uppercase tracking-tight">Saneamento de Dossiê</SheetTitle>
+            <SheetDescription className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Retificação técnica de dados cadastrais</SheetDescription>
           </SheetHeader>
           {selectedLead && (
             <LeadForm 
