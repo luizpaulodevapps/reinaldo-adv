@@ -33,7 +33,7 @@
     --input: 222 47% 12%;
     --ring: 43 65% 53%;
     
-    --radius: 0.4rem;
+    --radius: 0.3rem;
 
     --sidebar-background: 222 47% 3%;
     --sidebar-foreground: 0 0% 90%;
@@ -51,7 +51,7 @@
     @apply border-border;
   }
   html {
-    font-size: 13px;
+    font-size: 11px; /* Global Reduction */
   }
   body {
     @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white;
@@ -59,13 +59,12 @@
   }
 }
 
-/* Tipografia Refinada RGMJ */
 .font-headline {
   @apply font-bold tracking-tight uppercase;
 }
 
 .label-mini {
-  @apply text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70;
+  @apply text-[9px] font-black uppercase tracking-widest text-muted-foreground/60;
 }
 
 .text-premium {
@@ -91,8 +90,8 @@
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-[#02040a];
