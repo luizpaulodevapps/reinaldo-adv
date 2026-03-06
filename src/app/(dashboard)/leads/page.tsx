@@ -55,6 +55,13 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
@@ -376,8 +383,8 @@ export default function LeadsPage() {
                     </div>
                     <div className="space-y-2">
                       <SheetTitle className="text-white text-3xl font-bold uppercase tracking-tight">{selectedLead.name}</SheetTitle>
-                      <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> DOSSIÊ ESTRATÉGICO RGMJ
+                      <SheetDescription asChild className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-2">
+                        <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-2" /> DOSSIÊ ESTRATÉGICO RGMJ</span>
                       </SheetDescription>
                     </div>
                   </div>
