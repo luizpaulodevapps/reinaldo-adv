@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -26,7 +25,8 @@ import {
   Building,
   Edit3,
   Scale,
-  ShieldAlert
+  ShieldAlert,
+  Navigation
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -290,9 +290,16 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
                   {!isJurisdictionComplete && <p className="text-[8px] text-amber-500 font-black uppercase tracking-widest mt-1 animate-pulse">Pendência Crítica para Distribuição</p>}
                 </div>
               </div>
-              <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
-                <Edit3 className="h-3 w-3" /> EDITAR JURISDIÇÃO
-              </Button>
+              <div className="flex gap-3">
+                {lead.courtMapsLink && (
+                  <Button asChild variant="outline" className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
+                    <a href={lead.courtMapsLink} target="_blank" rel="noreferrer"><Navigation className="h-3 w-3" /> VER NO MAPS</a>
+                  </Button>
+                )}
+                <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
+                  <Edit3 className="h-3 w-3" /> EDITAR JURISDIÇÃO
+                </Button>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">

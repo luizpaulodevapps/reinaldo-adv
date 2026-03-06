@@ -24,12 +24,16 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Link as LinkIcon,
+  Database,
+  Save
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { aiSearchCourtAddress } from "@/ai/flows/ai-search-court-address"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, where, serverTimestamp } from "firebase/firestore"
 
 interface Lead {
   id: string
@@ -56,22 +60,6 @@ const BRAZIL_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ]
 
-const COMMON_COURTS = [
-  "VARA DO TRABALHO DE DIADEMA",
-  "VARA DO TRABALHO DE SÃO BERNARDO DO CAMPO",
-  "VARA DO TRABALHO DE SANTO ANDRÉ",
-  "VARA DO TRABALHO DE SÃO CAETANO DO SUL",
-  "FÓRUM TRABALHISTA RUY BARBOSA (BARRA FUNDA)",
-  "FÓRUM TRABALHISTA DA ZONA SUL (SP)",
-  "FÓRUM TRABALHISTA DA ZONA LESTE (SP)",
-  "TRT 2ª REGIÃO (SP-CAPITAL)",
-  "TRT 15ª REGIÃO (CAMPINAS)",
-  "TRT 1ª REGIÃO (RJ)",
-  "TRT 3ª REGIÃO (MG)",
-  "TRT 4ª REGIÃO (RS)",
-  "TJSP - TRIBUNAL DE JUSTIÇA DE SÃO PAULO"
-]
-
 export function LeadForm({ 
   existingLeads, 
   onSubmit, 
@@ -85,10 +73,18 @@ export function LeadForm({
   const [activeTab, setActiveTab] = useState("autor")
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  
+  // Court Search State
+  const [courtSearchTerm, setCourtSearchTerm] = useState("")
+  const [isCourtSearchOpen, setIsCourtSearchOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
-  const [searchingCourt, setSearchingCourt] = useState(false)
+  const [isSavingToDatabase, setIsSavingToDatabase] = useState(false)
+
   const searchRef = useRef<HTMLDivElement>(null)
+  const courtSearchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
+  const db = useFirestore()
+  const { user } = useUser()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -131,8 +127,24 @@ export function LeadForm({
     courtNeighborhood: "",
     courtCity: "",
     courtState: "",
+    courtMapsLink: "",
     value: ""
   })
+
+  // BUSCA NA BASE TÁTICA DE FÓRUNS
+  const courtsQuery = useMemoFirebase(() => {
+    if (!db) return null
+    return query(collection(db, "courts"), orderBy("name", "asc"))
+  }, [db])
+  const { data: dbCourts } = useCollection(courtsQuery)
+
+  const filteredCourts = useMemo(() => {
+    if (!courtSearchTerm || courtSearchTerm.length < 2) return []
+    return (dbCourts || []).filter(c => 
+      c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
+      c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
+    )
+  }, [courtSearchTerm, dbCourts])
 
   useEffect(() => {
     if (initialData) {
@@ -204,42 +216,45 @@ export function LeadForm({
     }
   }
 
-  const handleSearchCourtAddress = async () => {
-    if (!formData.court) {
-      toast({ variant: "destructive", title: "Nome do Tribunal Ausente" })
-      return
-    }
+  const handleSelectCourt = (court: any) => {
+    setFormData(prev => ({
+      ...prev,
+      court: court.name,
+      courtZipCode: court.zipCode || "",
+      courtAddress: court.address || "",
+      courtNumber: court.number || "",
+      courtComplement: court.complement || "",
+      courtNeighborhood: court.neighborhood || "",
+      courtCity: court.city || "",
+      courtState: court.state || "",
+      courtMapsLink: court.mapsLink || ""
+    }))
+    setCourtSearchTerm(court.name)
+    setIsCourtSearchOpen(false)
+    toast({ title: "Órgão Selecionado", description: "Dados logísticos injetados via Base RGMJ." })
+  }
 
-    setSearchingCourt(true)
+  const handleSaveCourtToDatabase = async () => {
+    if (!db || !formData.court) return
+    setIsSavingToDatabase(true)
     try {
-      const result = await aiSearchCourtAddress({ courtName: formData.court })
-      
-      if (result.found && result.zipCode) {
-        const cleanCep = result.zipCode.replace(/\D/g, "")
-        const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-        const viaCepData = await viaCepResponse.json()
-
-        if (!viaCepData.erro) {
-          setFormData(prev => ({
-            ...prev,
-            courtZipCode: result.zipCode,
-            courtAddress: viaCepData.logradouro.toUpperCase(),
-            courtNumber: result.number || prev.courtNumber,
-            courtNeighborhood: viaCepData.bairro.toUpperCase(),
-            courtCity: viaCepData.localidade.toUpperCase(),
-            courtState: viaCepData.uf.toUpperCase()
-          }))
-          toast({ title: "Endereço Localizado (ViaCEP)", description: "Dados oficiais validados pela base postal nacional." })
-        } else {
-          toast({ variant: "destructive", title: "CEP Não Validado", description: "O CEP retornado pela inteligência não consta na base ativa dos Correios." })
-        }
-      } else {
-        toast({ variant: "destructive", title: "Órgão Não Mapeado", description: "Não conseguimos localizar o CEP oficial deste fórum. Por favor, insira manualmente." })
-      }
+      await addDocumentNonBlocking(collection(db, "courts"), {
+        name: formData.court.toUpperCase(),
+        zipCode: formData.courtZipCode,
+        address: formData.courtAddress,
+        number: formData.courtNumber,
+        neighborhood: formData.courtNeighborhood,
+        city: formData.courtCity,
+        state: formData.courtState,
+        mapsLink: formData.courtMapsLink,
+        createdBy: user?.uid,
+        createdAt: serverTimestamp()
+      })
+      toast({ title: "Base Alimentada", description: "Órgão salvo para futuras consultas." })
     } catch (error) {
-      toast({ variant: "destructive", title: "Falha na Inteligência", description: "Não foi possível consultar a base postal no momento." })
+      toast({ variant: "destructive", title: "Erro ao salvar" })
     } finally {
-      setSearchingCourt(false)
+      setIsSavingToDatabase(false)
     }
   }
 
@@ -486,7 +501,7 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
-                    <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.neighborhood} onChange={(e) => handleInputChange("neighborhood", e.target.value.toUpperCase())} />
+                    <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
@@ -522,31 +537,46 @@ export function LeadForm({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative" ref={courtSearchRef}>
                     <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                      <Scale className="h-3 w-3" /> Tribunal / Fórum Sugerido
+                      <Database className="h-3 w-3" /> Biblioteca de Órgãos Judiciais
                     </Label>
-                    <div className="flex gap-2">
-                      <div className="relative group flex-1">
-                        <Input 
-                          placeholder="PESQUISAR NOME DO FÓRUM..." 
-                          list="court-suggestions"
-                          className="bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" 
-                          value={formData.court} 
-                          onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} 
-                        />
-                        <datalist id="court-suggestions">
-                          {COMMON_COURTS.map(court => <option key={court} value={court} />)}
-                        </datalist>
-                      </div>
-                      <Button 
-                        onClick={handleSearchCourtAddress}
-                        disabled={searchingCourt || !formData.court}
-                        className="h-14 w-14 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background rounded-xl transition-all"
-                      >
-                        {searchingCourt ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
-                      </Button>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                      <Input 
+                        placeholder="PESQUISAR FÓRUM NA BASE RGMJ..." 
+                        className="pl-12 bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" 
+                        value={formData.court || courtSearchTerm} 
+                        onChange={(e) => {
+                          setCourtSearchTerm(e.target.value)
+                          setIsCourtSearchOpen(true)
+                          if (formData.court) handleInputChange("court", "")
+                        }}
+                        onFocus={() => setIsCourtSearchOpen(true)}
+                      />
                     </div>
+
+                    {isCourtSearchOpen && courtSearchTerm.length >= 2 && (
+                      <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 shadow-2xl rounded-xl overflow-hidden animate-in fade-in zoom-in-95">
+                        <ScrollArea className="max-h-[250px]">
+                          {filteredCourts.length > 0 ? (
+                            filteredCourts.map(c => (
+                              <button key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 transition-colors">
+                                <div className="text-left">
+                                  <p className="font-black text-white text-[10px] uppercase">{c.name}</p>
+                                  <p className="text-[8px] text-muted-foreground font-bold mt-1 uppercase">{c.city} - {c.state}</p>
+                                </div>
+                                <Badge variant="outline" className="text-[7px] font-black border-emerald-500/30 text-emerald-500 uppercase bg-emerald-500/5">OFICIAL</Badge>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="p-8 text-center opacity-40">
+                              <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado na base estratégica</p>
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
@@ -556,13 +586,13 @@ export function LeadForm({
                   </div>
                 </div>
 
-                <div className="space-y-6 pt-4">
-                  <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal (Validado via ViaCEP)</SectionTitle>
+                <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 space-y-8">
+                  <SectionTitle icon={MapPin}>Logística do Juízo</SectionTitle>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="md:col-span-1 space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CEP (Fórum)</Label>
                       <div className="relative">
-                        <Input placeholder="00000-000" className="bg-black/40 border border-white/10 h-14 text-white font-mono rounded-xl focus:ring-primary/50" value={formData.courtZipCode} onChange={(e) => handleInputChange("courtZipCode", formatCep(e.target.value))} onBlur={() => handleCepBlur("court")} />
+                        <Input placeholder="00000-000" className="bg-black/40 border border-white/10 h-14 text-white font-mono rounded-xl" value={formData.courtZipCode} onChange={(e) => handleInputChange("courtZipCode", formatCep(e.target.value))} onBlur={() => handleCepBlur("court")} />
                         {loadingCep === "court" && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
                       </div>
                     </div>
@@ -575,6 +605,26 @@ export function LeadForm({
                       <Input placeholder="123" className="bg-black/40 border border-white/10 h-14 text-white font-bold rounded-xl" value={formData.courtNumber} onChange={(e) => handleInputChange("courtNumber", e.target.value)} />
                     </div>
                   </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div className="md:col-span-10 space-y-2">
+                      <Label className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                        <LinkIcon className="h-3 w-3" /> Link do Google Maps
+                      </Label>
+                      <Input placeholder="COLE O LINK DE COMPARTILHAMENTO DO MAPS AQUI..." className="bg-black/40 border-emerald-500/20 h-14 text-white text-xs font-mono rounded-xl focus:border-emerald-500 transition-all" value={formData.courtMapsLink} onChange={(e) => handleInputChange("courtMapsLink", e.target.value)} />
+                    </div>
+                    <div className="md:col-span-2 flex items-end">
+                      <Button 
+                        onClick={handleSaveCourtToDatabase}
+                        disabled={isSavingToDatabase || !formData.court}
+                        className="w-full h-14 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase rounded-xl transition-all"
+                      >
+                        {isSavingToDatabase ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                        SALVAR BASE
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Bairro</Label>
