@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -34,7 +33,9 @@ import {
   FileCheck,
   Edit3,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Lock,
+  Plus
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -65,6 +66,7 @@ import { BurocraciaView } from "@/components/leads/burocracia-view"
 import { ProcessForm } from "@/components/cases/process-form"
 import Link from "next/link"
 import { generateCaseSummary, type GenerateCaseSummaryOutput } from "@/ai/flows/ai-generate-case-summary"
+import { Switch } from "@/components/ui/switch"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -102,6 +104,17 @@ export default function LeadsPage() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [strategicSummary, setStrategicSummary] = useState<GenerateCaseSummaryOutput | null>(null)
 
+  // Hearing state
+  const [isSchedulingHearing, setIsSchedulingHearing] = useState(false)
+  const [hearingData, setHearingData] = useState({
+    type: "UNA",
+    date: "",
+    time: "",
+    meetingLink: "",
+    accessCode: "",
+    location: ""
+  })
+
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "checklists"), orderBy("title", "asc"))
@@ -125,6 +138,15 @@ export default function LeadsPage() {
       else if (selectedLead.status === 'distribuicao') setActiveDossierTab("revisao")
       else setActiveDossierTab("overview")
       setStrategicSummary(null)
+      setIsSchedulingHearing(false)
+      setHearingData({
+        type: "UNA",
+        date: "",
+        time: "",
+        meetingLink: "",
+        accessCode: "",
+        location: ""
+      })
     }
   }, [selectedLead?.id, selectedLead?.status])
 
@@ -206,7 +228,7 @@ export default function LeadsPage() {
     toast({ title: "Entrevista Registrada" })
   }
 
-  const handleConvertProcess = (data: any) => {
+  const handleConvertProcess = async (data: any) => {
     if (!db || !selectedLead) return
     const processPayload = {
       ...data,
@@ -215,7 +237,28 @@ export default function LeadsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
-    addDocumentNonBlocking(collection(db!, "processes"), processPayload)
+    const processRef = await addDocumentNonBlocking(collection(db!, "processes"), processPayload)
+    
+    // Create hearing if scheduled
+    if (isSchedulingHearing && hearingData.date && hearingData.time) {
+      const hearingPayload = {
+        title: `Audiência ${hearingData.type}: ${selectedLead.name}`,
+        type: hearingData.type,
+        startDateTime: `${hearingData.date}T${hearingData.time}:00`,
+        processId: (processRef as any).id,
+        processNumber: processPayload.processNumber,
+        clientName: selectedLead.name,
+        clientId: selectedLead.id,
+        location: hearingData.type === 'Virtual' ? 'SALA VIRTUAL RGMJ' : (hearingData.location || selectedLead.courtAddress || 'Fórum'),
+        meetingLink: hearingData.meetingLink,
+        accessCode: hearingData.accessCode,
+        hearingType: hearingData.type === 'Virtual' ? 'Virtual' : 'Física',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+      await addDocumentNonBlocking(collection(db!, "hearings"), hearingPayload)
+    }
+
     updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
       status: "arquivado",
       convertedAt: serverTimestamp(),
@@ -223,7 +266,7 @@ export default function LeadsPage() {
     })
     setIsConversionOpen(false)
     setIsSheetOpen(false)
-    toast({ title: "Processo Protocolado" })
+    toast({ title: "Processo Protocolado e Agenda Atualizada" })
   }
 
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
@@ -333,7 +376,7 @@ export default function LeadsPage() {
                     </div>
                     <div className="space-y-2">
                       <SheetTitle className="text-white text-3xl font-bold uppercase tracking-tight">{selectedLead.name}</SheetTitle>
-                      <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-2">
+                      <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> DOSSIÊ ESTRATÉGICO RGMJ
                       </SheetDescription>
                     </div>
@@ -551,6 +594,77 @@ export default function LeadsPage() {
                           ))}
                         </div>
                       )}
+
+                      {/* PAINEL DE AGENDAMENTO DE AUDIÊNCIA */}
+                      <Card className="glass border-amber-500/20 bg-amber-500/5 p-8 rounded-3xl space-y-8 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-amber-500/10 pb-6">
+                          <div className="flex items-center gap-6">
+                            <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                              <Gavel className="h-8 w-8 text-amber-500" />
+                            </div>
+                            <div className="space-y-1">
+                              <h3 className="text-2xl font-bold text-white uppercase tracking-widest">Agendar Primeira Audiência</h3>
+                              <p className="text-xs text-amber-500/60 uppercase font-bold tracking-widest">Opcional: Sincronismo automático com agenda RGMJ</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                            <span className="text-xs font-black text-white uppercase tracking-widest">Habilitar Agendamento?</span>
+                            <Switch checked={isSchedulingHearing} onCheckedChange={setIsSchedulingHearing} className="data-[state=checked]:bg-amber-500" />
+                          </div>
+                        </div>
+
+                        {isSchedulingHearing && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-in slide-in-from-top-4 duration-500">
+                            <div className="space-y-3">
+                              <Label className="text-xs font-black text-muted-foreground uppercase">Tipo de Audiência</Label>
+                              <Select value={hearingData.type} onValueChange={(v) => setHearingData({...hearingData, type: v})}>
+                                <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
+                                <SelectContent className="bg-[#0d121f] text-white">
+                                  <SelectItem value="UNA">AUDIÊNCIA UNA</SelectItem>
+                                  <SelectItem value="Conciliação">CONCILIAÇÃO</SelectItem>
+                                  <SelectItem value="Instrução">INSTRUÇÃO</SelectItem>
+                                  <SelectItem value="Virtual">SALA VIRTUAL</SelectItem>
+                                  <SelectItem value="Julgamento">JULGAMENTO</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-3">
+                              <Label className="text-xs font-black text-muted-foreground uppercase">Data do Ato</Label>
+                              <Input type="date" className="bg-black/40 border-white/10 h-14 text-white font-bold" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
+                            </div>
+                            <div className="space-y-3">
+                              <Label className="text-xs font-black text-muted-foreground uppercase">Horário</Label>
+                              <Input type="time" className="bg-black/40 border-white/10 h-14 text-white font-bold" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
+                            </div>
+                            <div className="space-y-3">
+                              <Label className="text-xs font-black text-muted-foreground uppercase">Logística / Local</Label>
+                              <Input 
+                                placeholder={hearingData.type === 'Virtual' ? "Sala Virtual RGMJ" : "Fórum Trabalhista"}
+                                className="bg-black/40 border-white/10 h-14 text-white font-bold" 
+                                value={hearingData.location} 
+                                onChange={(e) => setHearingData({...hearingData, location: e.target.value})} 
+                              />
+                            </div>
+
+                            {hearingData.type === 'Virtual' && (
+                              <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-white/5">
+                                <div className="space-y-3">
+                                  <Label className="text-xs font-black text-emerald-500 uppercase flex items-center gap-2">
+                                    <Video className="h-4 w-4" /> Link da Sala Virtual
+                                  </Label>
+                                  <Input className="bg-black/40 border-emerald-500/20 h-14 text-white font-bold" placeholder="https://zoom.us/j/..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
+                                </div>
+                                <div className="space-y-3">
+                                  <Label className="text-xs font-black text-emerald-500 uppercase flex items-center gap-2">
+                                    <Lock className="h-4 w-4" /> Senha / Código de Acesso
+                                  </Label>
+                                  <Input className="bg-black/40 border-emerald-500/20 h-14 text-white font-bold" placeholder="Código de 6 dígitos" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Card>
 
                       <div className="p-10 rounded-[2.5rem] bg-purple-500/5 border border-purple-500/15 flex flex-col md:flex-row items-end gap-10 w-full shadow-2xl">
                         <div className="flex-1 space-y-4 w-full">

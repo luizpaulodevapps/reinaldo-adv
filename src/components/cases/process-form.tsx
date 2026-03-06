@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   UserPlus,
   ShieldAlert,
-  Loader2
+  Loader2,
+  Clock
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -28,6 +29,7 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ProcessFormProps {
   initialData?: any
@@ -51,6 +53,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   const [isQuickClientOpen, setIsQuickClientOpen] = useState(false)
   const [quickClientData, setQuickClientData] = useState({ name: '', cpf: '' })
   const [isSavingClient, setIsSavingClient] = useState(false)
+  const [isAwaitingNumber, setIsAwaitingNumber] = useState(false)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -282,22 +285,42 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
           {currentStep === 3 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <StepHeader title="Dados Processuais" subtitle="Identificação técnica do dossiê" icon={FileText} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
-                  <Input value={formData.processNumber} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("processNumber", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono text-lg font-black" placeholder="0000000-00.0000.0.00.0000" />
+              <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
+                <div className="flex items-center space-x-3 mb-2">
+                  <Checkbox 
+                    id="awaiting-number" 
+                    checked={isAwaitingNumber} 
+                    onCheckedChange={(checked) => {
+                      setIsAwaitingNumber(!!checked)
+                      if (checked) handleInputChange("processNumber", "AGUARDANDO NÚMERO")
+                      else handleInputChange("processNumber", "")
+                    }} 
+                  />
+                  <Label htmlFor="awaiting-number" className="text-[10px] font-black text-amber-500 uppercase cursor-pointer tracking-widest">Aguardando número do processo (Protocolo em andamento)</Label>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ÁREA JURÍDICA</Label>
-                  <Select value={formData.caseType} onValueChange={(v) => handleInputChange("caseType", v)}>
-                    <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                      <SelectItem value="Trabalhista">⚖️ TRABALHISTA</SelectItem>
-                      <SelectItem value="Cível">🏛️ CÍVEL</SelectItem>
-                      <SelectItem value="Previdenciário">👴 PREVIDENCIÁRIO</SelectItem>
-                      <SelectItem value="Tributário">💰 TRIBUTÁRIO</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
+                    <Input 
+                      disabled={isAwaitingNumber}
+                      value={formData.processNumber} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("processNumber", e.target.value)} 
+                      className={cn("bg-black/20 border-white/10 h-14 text-white font-mono text-lg font-black", isAwaitingNumber && "opacity-50")} 
+                      placeholder="0000000-00.0000.0.00.0000" 
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ÁREA JURÍDICA</Label>
+                    <Select value={formData.caseType} onValueChange={(v) => handleInputChange("caseType", v)}>
+                      <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                        <SelectItem value="Trabalhista">⚖️ TRABALHISTA</SelectItem>
+                        <SelectItem value="Cível">🏛️ CÍVEL</SelectItem>
+                        <SelectItem value="Previdenciário">👴 PREVIDENCIÁRIO</SelectItem>
+                        <SelectItem value="Tributário">💰 TRIBUTÁRIO</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
