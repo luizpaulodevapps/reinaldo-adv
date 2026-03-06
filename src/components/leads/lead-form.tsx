@@ -212,13 +212,10 @@ export function LeadForm({
 
     setSearchingCourt(true)
     try {
-      // 1. A IA localiza o CEP oficial do tribunal baseado no nome
       const result = await aiSearchCourtAddress({ courtName: formData.court })
       
       if (result.found && result.zipCode) {
         const cleanCep = result.zipCode.replace(/\D/g, "")
-        
-        // 2. O sistema consulta OBRIGATORIAMENTE a ViaCEP para garantir endereço real
         const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
         const viaCepData = await viaCepResponse.json()
 
@@ -232,15 +229,15 @@ export function LeadForm({
             courtCity: viaCepData.localidade.toUpperCase(),
             courtState: viaCepData.uf.toUpperCase()
           }))
-          toast({ title: "Endereço Localizado (ViaCEP)", description: "Dados oficiais validados pela base postal." })
+          toast({ title: "Endereço Localizado (ViaCEP)", description: "Dados oficiais validados pela base postal nacional." })
         } else {
-          toast({ variant: "destructive", title: "CEP Oficial Inválido", description: "O CEP retornado pela inteligência não consta na base ViaCEP." })
+          toast({ variant: "destructive", title: "CEP Não Validado", description: "O CEP retornado pela inteligência não consta na base ativa dos Correios." })
         }
       } else {
-        toast({ variant: "destructive", title: "Órgão Não Identificado", description: "Não conseguimos mapear o CEP oficial deste fórum." })
+        toast({ variant: "destructive", title: "Órgão Não Mapeado", description: "Não conseguimos localizar o CEP oficial deste fórum. Por favor, insira manualmente." })
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro na Pesquisa", description: "Falha ao consultar base postal oficial." })
+      toast({ variant: "destructive", title: "Falha na Inteligência", description: "Não foi possível consultar a base postal no momento." })
     } finally {
       setSearchingCourt(false)
     }
@@ -267,7 +264,7 @@ export function LeadForm({
   const handleSubmit = () => {
     const finalName = formData.name || searchTerm
     if (!finalName?.trim() || !formData.phone?.trim()) {
-      toast({ variant: "destructive", title: "Campos obrigatórios" })
+      toast({ variant: "destructive", title: "Campos Obrigatórios", description: "O rito RGMJ exige Nome e WhatsApp para triagem." })
       return
     }
     onSubmit({ ...formData, name: finalName })
@@ -403,7 +400,7 @@ export function LeadForm({
                     <Select value={formData.maritalStatus} onValueChange={(v) => handleInputChange("maritalStatus", v)}>
                       <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold text-xs uppercase"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#0d121f] text-white">
-                        {["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União Estável"].map(s => <SelectItem key={s} value={s}>{s.toUpperCase()}</SelectItem>)}
+                        {["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União Estável"].map(status => <SelectItem key={status} value={status}>{status.toUpperCase()}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -518,7 +515,7 @@ export function LeadForm({
                     <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
                       <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#0d121f] text-white">
-                        {["Trabalhista", "Cível", "Criminal", "Previdenciário", "Tributário"].map(a => <SelectItem key={a} value={a}>{a.toUpperCase()}</SelectItem>)}
+                        {["Trabalhista", "Cível", "Criminal", "Previdenciário", "Tributário"].map(area => <SelectItem key={area} value={area}>{area.toUpperCase()}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -539,7 +536,7 @@ export function LeadForm({
                           onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} 
                         />
                         <datalist id="court-suggestions">
-                          {COMMON_COURTS.map(c => <option key={c} value={c} />)}
+                          {COMMON_COURTS.map(court => <option key={court} value={court} />)}
                         </datalist>
                       </div>
                       <Button 
@@ -585,7 +582,7 @@ export function LeadForm({
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
-                      <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtCity} onChange={(e) => handleInputChange("city", e.target.value.toUpperCase())} />
+                      <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtCity} onChange={(e) => handleInputChange("courtCity", e.target.value.toUpperCase())} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
