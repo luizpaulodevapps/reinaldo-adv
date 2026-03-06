@@ -154,6 +154,7 @@ export function LeadForm({
         name: initialData.name || ""
       }))
       setSearchTerm(initialData.name || "")
+      if (initialData.court) setCourtSearchTerm(initialData.court)
     }
   }, [initialData])
 
@@ -235,11 +236,16 @@ export function LeadForm({
   }
 
   const handleSaveCourtToDatabase = async () => {
-    if (!db || !formData.court) return
+    const finalName = (formData.court || courtSearchTerm || "").trim()
+    if (!db || !finalName) {
+      toast({ variant: "destructive", title: "Nome obrigatório", description: "O nome do órgão deve ser preenchido para salvar." })
+      return
+    }
+    
     setIsSavingToDatabase(true)
     try {
       await addDocumentNonBlocking(collection(db, "courts"), {
-        name: formData.court.toUpperCase(),
+        name: finalName.toUpperCase(),
         zipCode: formData.courtZipCode,
         address: formData.courtAddress,
         number: formData.courtNumber,
@@ -250,7 +256,7 @@ export function LeadForm({
         createdBy: user?.uid,
         createdAt: serverTimestamp()
       })
-      toast({ title: "Base Alimentada", description: "Órgão salvo para futuras consultas." })
+      toast({ title: "Base Alimentada", description: `${finalName.toUpperCase()} salvo para futuras consultas.` })
     } catch (error) {
       toast({ variant: "destructive", title: "Erro ao salvar" })
     } finally {
@@ -377,17 +383,17 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ</Label>
-                    <Input placeholder="000.000.000-00" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.cpf} onChange={(e) => handleInputChange("cpf", formatCpfCnpj(e.target.value))} />
+                    <Input placeholder="000.000.000-00" className="bg-black/40 border border-white/10 h-14 text-white font-mono" value={formData.cpf} onChange={(e) => handleInputChange("cpf", formatCpfCnpj(e.target.value))} />
                   </div>
                   
                   <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">RG / Número</Label>
-                      <Input placeholder="00.000.000-0" className="bg-black/40 border-white/10 h-14 text-white font-mono" value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value.toUpperCase())} />
+                      <Input placeholder="00.000.000-0" className="bg-black/40 border border-white/10 h-14 text-white font-mono" value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value.toUpperCase())} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Emissor</Label>
-                      <Input placeholder="SSP" className="bg-black/40 border-white/10 h-14 text-white font-black text-center" value={formData.rgIssuer} onChange={(e) => handleInputChange("rgIssuer", e.target.value.toUpperCase())} />
+                      <Input placeholder="SSP" className="bg-black/40 border border-white/10 h-14 text-white font-black text-center" value={formData.rgIssuer} onChange={(e) => handleInputChange("rgIssuer", e.target.value.toUpperCase())} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
@@ -546,11 +552,13 @@ export function LeadForm({
                       <Input 
                         placeholder="PESQUISAR FÓRUM NA BASE RGMJ..." 
                         className="pl-12 bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" 
-                        value={formData.court || courtSearchTerm} 
+                        value={courtSearchTerm || formData.court} 
                         onChange={(e) => {
-                          setCourtSearchTerm(e.target.value)
+                          const val = e.target.value
+                          setCourtSearchTerm(val)
                           setIsCourtSearchOpen(true)
-                          if (formData.court) handleInputChange("court", "")
+                          // Sincroniza com o formulário caso o usuário queira salvar sem selecionar
+                          handleInputChange("court", val.toUpperCase())
                         }}
                         onFocus={() => setIsCourtSearchOpen(true)}
                       />
@@ -615,8 +623,9 @@ export function LeadForm({
                     </div>
                     <div className="md:col-span-2 flex items-end">
                       <Button 
+                        type="button"
                         onClick={handleSaveCourtToDatabase}
-                        disabled={isSavingToDatabase || !formData.court}
+                        disabled={isSavingToDatabase || !(formData.court || courtSearchTerm)}
                         className="w-full h-14 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase rounded-xl transition-all"
                       >
                         {isSavingToDatabase ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
