@@ -24,11 +24,13 @@ import {
   Scale,
   Calendar,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { aiSearchCourtAddress } from "@/ai/flows/ai-search-court-address"
 
 interface Lead {
   id: string
@@ -54,66 +56,6 @@ interface LeadFormProps {
 const BRAZIL_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ]
-
-// BASE DE DADOS TÁTICA RGMJ - ENDEREÇOS DE TRIBUNAIS
-const FORUM_DATABASE: Record<string, any> = {
-  "VARA DO TRABALHO DE DIADEMA": {
-    zipCode: "09911-160",
-    address: "AVENIDA ANTÔNIO PIRANGA",
-    number: "1162",
-    neighborhood: "CENTRO",
-    city: "DIADEMA",
-    state: "SP"
-  },
-  "VARA DO TRABALHO DE SÃO BERNARDO DO CAMPO": {
-    zipCode: "09751-250",
-    address: "AVENIDA GETÚLIO VARGAS",
-    number: "57",
-    neighborhood: "BAETA NEVES",
-    city: "SÃO BERNARDO DO CAMPO",
-    state: "SP"
-  },
-  "VARA DO TRABALHO DE SANTO ANDRÉ": {
-    zipCode: "09080-000",
-    address: "AVENIDA DOM PEDRO II",
-    number: "555",
-    neighborhood: "JARDIM",
-    city: "SANTO ANDRÉ",
-    state: "SP"
-  },
-  "VARA DO TRABALHO DE SÃO CAETANO DO SUL": {
-    zipCode: "09521-160",
-    address: "RUA MANOEL COELHO",
-    number: "600",
-    neighborhood: "CENTRO",
-    city: "SÃO CAETANO DO SUL",
-    state: "SP"
-  },
-  "FÓRUM TRABALHISTA RUY BARBOSA (BARRA FUNDA)": {
-    zipCode: "01133-020",
-    address: "AVENIDA DR. ABRÃO RIBEIRO",
-    number: "313",
-    neighborhood: "BOM RETIRO",
-    city: "SÃO PAULO",
-    state: "SP"
-  },
-  "FÓRUM TRABALHISTA DA ZONA SUL (SP)": {
-    zipCode: "04795-100",
-    address: "AVENIDA DAS NAÇÕES UNIDAS",
-    number: "22939",
-    neighborhood: "VILA ALMEIDA",
-    city: "SÃO PAULO",
-    state: "SP"
-  },
-  "FÓRUM TRABALHISTA DA ZONA LESTE (SP)": {
-    zipCode: "03064-000",
-    address: "AVENIDA CELSO GARCIA",
-    number: "3500",
-    neighborhood: "TATUAPÉ",
-    city: "SÃO PAULO",
-    state: "SP"
-  }
-}
 
 const COMMON_COURTS = [
   "VARA DO TRABALHO DE DIADEMA",
@@ -145,6 +87,7 @@ export function LeadForm({
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
+  const [searchingCourt, setSearchingCourt] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
@@ -262,26 +205,33 @@ export function LeadForm({
     }
   }
 
-  const handleCourtChange = (value: string) => {
-    const upperVal = value.toUpperCase()
-    handleInputChange("court", upperVal)
-    
-    // Busca Inteligente de Fórum (RGMJ Exclusive Database)
-    const forum = FORUM_DATABASE[upperVal]
-    if (forum) {
-      setFormData(prev => ({
-        ...prev,
-        courtZipCode: forum.zipCode,
-        courtAddress: forum.address,
-        courtNumber: forum.number,
-        courtNeighborhood: forum.neighborhood,
-        courtCity: forum.city,
-        courtState: forum.state
-      }))
-      toast({ 
-        title: "Endereço do Fórum Localizado", 
-        description: "A logística da unidade foi preenchida automaticamente." 
-      })
+  const handleSearchCourtAddress = async () => {
+    if (!formData.court) {
+      toast({ variant: "destructive", title: "Nome do Tribunal Ausente", description: "Insira o nome do órgão para pesquisar." })
+      return
+    }
+
+    setSearchingCourt(true)
+    try {
+      const result = await aiSearchCourtAddress({ courtName: formData.court })
+      if (result.found) {
+        setFormData(prev => ({
+          ...prev,
+          courtZipCode: result.zipCode || prev.courtZipCode,
+          courtAddress: result.address || prev.courtAddress,
+          courtNumber: result.number || prev.courtNumber,
+          courtNeighborhood: result.neighborhood || prev.courtNeighborhood,
+          courtCity: result.city || prev.courtCity,
+          courtState: result.state || prev.courtState
+        }))
+        toast({ title: "Endereço Localizado", description: "Dados da unidade judiciária injetados no dossiê." })
+      } else {
+        toast({ variant: "destructive", title: "Endereço não localizado", description: "A IA não encontrou o endereço exato. Preencha manualmente." })
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na API", description: "Falha na comunicação com o motor de busca judiciário." })
+    } finally {
+      setSearchingCourt(false)
     }
   }
 
@@ -568,17 +518,26 @@ export function LeadForm({
                     <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
                       <Scale className="h-3 w-3" /> Tribunal / Fórum Sugerido
                     </Label>
-                    <div className="relative group">
-                      <Input 
-                        placeholder="PESQUISAR NOME DO FÓRUM (EX: DIADEMA, BARRA FUNDA...)" 
-                        list="court-suggestions"
-                        className="bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" 
-                        value={formData.court} 
-                        onChange={(e) => handleCourtChange(e.target.value)} 
-                      />
-                      <datalist id="court-suggestions">
-                        {COMMON_COURTS.map(c => <option key={c} value={c} />)}
-                      </datalist>
+                    <div className="flex gap-2">
+                      <div className="relative group flex-1">
+                        <Input 
+                          placeholder="PESQUISAR NOME DO FÓRUM..." 
+                          list="court-suggestions"
+                          className="bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all rounded-xl" 
+                          value={formData.court} 
+                          onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} 
+                        />
+                        <datalist id="court-suggestions">
+                          {COMMON_COURTS.map(c => <option key={c} value={c} />)}
+                        </datalist>
+                      </div>
+                      <Button 
+                        onClick={handleSearchCourtAddress}
+                        disabled={searchingCourt || !formData.court}
+                        className="h-14 w-14 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background rounded-xl transition-all"
+                      >
+                        {searchingCourt ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -589,7 +548,6 @@ export function LeadForm({
                   </div>
                 </div>
 
-                {/* ENDEREÇO DO FÓRUM */}
                 <div className="space-y-6 pt-4">
                   <SectionTitle icon={MapPin}>Endereço do Fórum / Tribunal</SectionTitle>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -616,7 +574,7 @@ export function LeadForm({
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cidade</Label>
-                      <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtCity} onChange={(e) => handleInputChange("courtCity", e.target.value.toUpperCase())} />
+                      <Input className="bg-black/40 border border-white/10 h-14 text-white font-bold uppercase rounded-xl" value={formData.courtCity} onChange={(e) => handleInputChange("city", e.target.value.toUpperCase())} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
