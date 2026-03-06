@@ -56,9 +56,9 @@ export function DashboardContent() {
 
   if (loadingLeads || loadingCases || loadingHearings || !canQuery) {
     return (
-      <div className="h-[40vh] flex flex-col items-center justify-center space-y-2 text-white font-sans">
-        <Loader2 className="w-5 h-5 animate-spin text-primary" />
-        <p className="text-[9px] font-bold uppercase tracking-wider opacity-40">Sincronizando...</p>
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-4 text-white font-sans">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-xs font-bold uppercase tracking-widest opacity-40">Sincronizando Ecossistema...</p>
       </div>
     )
   }
@@ -66,126 +66,126 @@ export function DashboardContent() {
   const displayName = profile?.name || user?.displayName || "REINALDO GONÇALVES"
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-700 font-sans">
-      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-2 border-b border-white/5 pb-3">
-        <div className="space-y-0.5">
-          <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[8px] font-bold uppercase tracking-wider">
-            Painel Estratégico
+    <div className="space-y-8 animate-in fade-in duration-700 font-sans">
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 border-b border-white/5 pb-6">
+        <div className="space-y-2">
+          <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
+            Painel Estratégico de Comando
           </Badge>
-          <h1 className="text-lg font-bold text-white uppercase tracking-tight">
+          <h1 className="text-3xl font-bold text-white uppercase tracking-tight">
             DR. <span className="text-primary">{displayName.split(' ')[0]}</span>
           </h1>
         </div>
-        <div className="flex gap-1.5 w-full md:w-auto">
-          <Button variant="outline" className="flex-1 md:flex-none glass border-white/10 text-[8px] font-bold uppercase h-7 px-2.5" asChild>
-            <Link href="/leads"><Zap className="mr-1 h-2.5 w-2.5 text-amber-500" /> Triagem</Link>
+        <div className="flex gap-3 w-full md:w-auto">
+          <Button variant="outline" className="flex-1 md:flex-none glass border-white/10 text-xs font-bold uppercase h-11 px-6" asChild>
+            <Link href="/leads"><Zap className="mr-2 h-4 w-4 text-amber-500" /> Triagem</Link>
           </Button>
-          <Button className="flex-1 md:flex-none gold-gradient font-bold text-[8px] uppercase h-7 px-3 rounded shadow-md" asChild>
-            <Link href="/cases"><Plus className="mr-1 h-2.5 w-2.5" /> Novo Processo</Link>
+          <Button className="flex-1 md:flex-none gold-gradient font-bold text-xs uppercase h-11 px-8 rounded-lg shadow-xl" asChild>
+            <Link href="/cases"><Plus className="mr-2 h-4 w-4" /> Novo Processo</Link>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <Card key={i} className={cn("glass border-white/5 shadow-md hover-gold transition-all group relative overflow-hidden", stat.bg)}>
-            <CardHeader className="p-2 pb-0.5">
-              <CardTitle className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                <stat.icon className={cn("h-2.5 w-2.5", stat.color)} /> {stat.label}
+          <Card key={i} className={cn("glass border-white/5 shadow-xl hover-gold transition-all group relative overflow-hidden", stat.bg)}>
+            <CardHeader className="p-5 pb-2">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <stat.icon className={cn("h-4 w-4", stat.color)} /> {stat.label}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-2 pt-0">
-              <div className="text-base font-bold text-white tracking-tight">{stat.value}</div>
+            <CardContent className="p-5 pt-0">
+              <div className="text-3xl font-bold text-white tracking-tight">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <Card className="lg:col-span-2 glass border-white/5 shadow-md overflow-hidden flex flex-col">
-          <CardHeader className="p-2 border-b border-white/5 bg-white/[0.01] flex flex-row items-center justify-between">
-            <CardTitle className="text-[9px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Gavel className="h-2.5 w-2.5 text-primary" /> Próximas Audiências
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 glass border-white/5 shadow-2xl overflow-hidden flex flex-col">
+          <CardHeader className="p-6 border-b border-white/5 bg-white/[0.01] flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-3">
+              <Gavel className="h-5 w-5 text-primary" /> Próximas Audiências
             </CardTitle>
-            <Button variant="ghost" asChild className="text-[8px] font-bold text-primary uppercase h-5 px-1.5">
-              <Link href="/agenda" className="flex items-center">Ver Tudo <ChevronRight className="ml-0.5 h-2.5 w-2.5" /></Link>
+            <Button variant="ghost" asChild className="text-xs font-bold text-primary uppercase h-8 px-4 hover:bg-primary/5">
+              <Link href="/agenda" className="flex items-center">Visualizar Pauta <ChevronRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </CardHeader>
-          <CardContent className="p-2 flex-1">
+          <CardContent className="p-6 flex-1">
             {recentHearings && recentHearings.length > 0 ? (
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 {recentHearings.map((hearing, i) => (
-                  <div key={i} className="flex items-center justify-between p-1.5 rounded bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group">
-                    <div className="flex gap-2 items-center">
-                      <div className="flex flex-col items-center justify-center bg-secondary/50 h-7 w-9 rounded border border-white/5">
-                        <span className="text-[8px] font-bold text-primary uppercase leading-none">
+                  <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group">
+                    <div className="flex gap-4 items-center">
+                      <div className="flex flex-col items-center justify-center bg-secondary/50 h-12 w-16 rounded-lg border border-white/5">
+                        <span className="text-xs font-bold text-primary uppercase leading-none">
                           {hearing.startDateTime ? new Date(hearing.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-[10px] text-white uppercase truncate group-hover:text-primary transition-colors">{hearing.title}</div>
-                        <p className="text-[7px] text-muted-foreground/60 uppercase font-bold tracking-wider">{hearing.location || "Virtual"}</p>
+                        <div className="font-bold text-sm text-white uppercase truncate group-hover:text-primary transition-colors">{hearing.title}</div>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">{hearing.location || "Virtual RGMJ"}</p>
                       </div>
                     </div>
-                    <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-primary" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/20 group-hover:text-primary" />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 opacity-20 space-y-1">
-                <Gavel className="h-5 w-5" />
-                <p className="text-[8px] font-bold uppercase tracking-wider">Pauta Limpa</p>
+              <div className="flex flex-col items-center justify-center py-12 opacity-20 space-y-3">
+                <Gavel className="h-10 w-10" />
+                <p className="text-xs font-bold uppercase tracking-widest">Pauta Judiciária Limpa</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <div className="space-y-3">
-          <Card className="glass border-destructive/20 shadow-md relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-0.5 h-full bg-destructive/50" />
-            <CardHeader className="p-2 pb-1">
-              <CardTitle className="text-[9px] font-bold text-white uppercase tracking-wider flex items-center gap-1">
-                <AlertCircle className="h-2.5 w-2.5 text-destructive" /> Radar de Riscos
+        <div className="space-y-6">
+          <Card className="glass border-destructive/20 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-destructive/50" />
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive" /> Radar de Riscos
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-2 pt-0 space-y-2">
-              <div className="space-y-1">
+            <CardContent className="p-6 pt-0 space-y-4">
+              <div className="space-y-3">
                 {deadlines && deadlines.length > 0 ? (
                   deadlines.slice(0, 3).map((d, i) => (
-                    <div key={i} className="p-1.5 rounded bg-destructive/5 border border-destructive/10 group hover:border-destructive/30 transition-all">
-                      <div className="flex justify-between items-center mb-0.5">
-                        <span className="text-[7px] font-bold text-destructive uppercase">URGENTE</span>
-                        <span className="text-[7px] font-mono text-white/40">{d.dueDate}</span>
+                    <div key={i} className="p-4 rounded-xl bg-destructive/5 border border-destructive/10 group hover:border-destructive/30 transition-all">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-black text-destructive uppercase tracking-widest">URGENTE</span>
+                        <span className="text-[10px] font-mono text-white/40">{d.dueDate}</span>
                       </div>
-                      <p className="text-white text-[9px] font-bold truncate uppercase">{d.title}</p>
+                      <p className="text-white text-xs font-bold truncate uppercase">{d.title}</p>
                     </div>
                   ))
                 ) : (
-                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                    <p className="text-[8px] font-bold text-emerald-500 uppercase mt-1">Ambiente Seguro</p>
+                  <div className="p-6 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                    <p className="text-xs font-bold text-emerald-500 uppercase mt-3 tracking-widest">Ambiente Seguro</p>
                   </div>
                 )}
               </div>
-              <Button variant="ghost" asChild className="w-full text-[7px] font-bold uppercase tracking-wider text-muted-foreground h-5 hover:text-primary">
-                <Link href="/deadlines">Auditoria Completa <ArrowRight className="h-2 w-2 ml-0.5" /></Link>
+              <Button variant="ghost" asChild className="w-full text-[10px] font-black uppercase tracking-widest text-muted-foreground h-8 hover:text-primary hover:bg-primary/5">
+                <Link href="/deadlines" className="flex items-center justify-center">Auditoria Completa <ArrowRight className="h-3 w-3 ml-2" /></Link>
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="glass border-white/5 p-2 space-y-2">
-            <h4 className="text-[7px] font-bold text-muted-foreground uppercase tracking-wider">Acesso Rápido</h4>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button asChild variant="outline" className="glass border-white/5 h-8 rounded hover:border-primary/30 group transition-all text-white p-0">
-                <Link href="/leads" className="flex flex-col items-center justify-center w-full h-full">
-                  <Zap className="h-2.5 w-2.5 text-amber-500" />
-                  <span className="text-[6px] font-bold uppercase">Triagem</span>
+          <Card className="glass border-white/5 p-6 space-y-4 shadow-xl">
+            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Acesso Rápido</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <Button asChild variant="outline" className="glass border-white/5 h-16 rounded-xl hover:border-primary/30 group transition-all text-white p-0">
+                <Link href="/leads" className="flex flex-col items-center justify-center w-full h-full gap-1">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Triagem</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="glass border-white/5 h-8 rounded hover:border-primary/30 group transition-all text-white p-0">
-                <Link href="/drafting" className="flex flex-col items-center justify-center w-full h-full">
-                  <FileText className="h-2.5 w-2.5 text-primary" />
-                  <span className="text-[6px] font-bold uppercase">Minuta IA</span>
+              <Button asChild variant="outline" className="glass border-white/5 h-16 rounded-xl hover:border-primary/30 group transition-all text-white p-0">
+                <Link href="/drafting" className="flex flex-col items-center justify-center w-full h-full gap-1">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Minuta IA</span>
                 </Link>
               </Button>
             </div>

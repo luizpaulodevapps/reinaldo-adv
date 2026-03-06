@@ -33,7 +33,7 @@
     --input: 222 47% 12%;
     --ring: 43 65% 53%;
     
-    --radius: 0.3rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 222 47% 3%;
     --sidebar-foreground: 0 0% 90%;
@@ -51,7 +51,7 @@
     @apply border-border;
   }
   html {
-    font-size: 12px; /* Aumentado de 11px para 12px para melhor legibilidade */
+    font-size: 16px;
   }
   body {
     @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white;
@@ -64,7 +64,7 @@
 }
 
 .label-mini {
-  @apply text-[10px] font-black uppercase tracking-widest text-muted-foreground/60;
+  @apply text-xs font-black uppercase tracking-widest text-muted-foreground/60;
 }
 
 .text-premium {
@@ -82,7 +82,7 @@
 }
 
 .hover-gold:hover {
-  @apply border-primary/20 shadow-[0_0_10px_rgba(245,208,48,0.03)];
+  @apply border-primary/20 shadow-[0_0_15px_rgba(245,208,48,0.05)];
 }
 
 .gold-gradient {
@@ -90,8 +90,8 @@
 }
 
 ::-webkit-scrollbar {
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-[#02040a];
