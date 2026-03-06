@@ -333,6 +333,15 @@ export default function LeadsPage() {
     toast({ title: "Processo Protocolado" })
   }
 
+  const handleSaveProcessNumber = async () => {
+    if (!db || !selectedLead) return
+    await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      processNumber: selectedLead.processNumber || "",
+      updatedAt: serverTimestamp()
+    })
+    toast({ title: "Número CNJ Vinculado", description: "O rito de distribuição foi atualizado." })
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -538,6 +547,7 @@ export default function LeadsPage() {
                       <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">VISÃO GERAL</TabsTrigger>
                       <TabsTrigger value="entrevistas" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">ENTREVISTAS ({leadInterviews?.length || 0})</TabsTrigger>
                       <TabsTrigger value="burocracia" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">BUROCRACIA</TabsTrigger>
+                      <TabsTrigger value="protocolo" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">PROTOCOLO</TabsTrigger>
                       <TabsTrigger value="gestao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[8px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.15em]">GESTÃO</TabsTrigger>
                     </TabsList>
 
@@ -624,6 +634,32 @@ export default function LeadsPage() {
                     </TabsContent>
 
                     <TabsContent value="protocolo" className="space-y-8 animate-in fade-in duration-500">
+                      <div className="space-y-4">
+                        <h4 className="text-[9px] font-black text-purple-500 uppercase tracking-[0.25em] flex items-center gap-2">
+                          <Database className="h-3 w-3" /> IDENTIFICAÇÃO DO FEITO
+                        </h4>
+                        <div className="p-6 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-4 shadow-inner">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
+                            <div className="flex gap-2">
+                              <Input 
+                                placeholder="0000000-00.0000.0.00.0000" 
+                                className="glass border-white/10 h-12 text-white font-mono text-lg font-black focus:ring-purple-500/50"
+                                value={selectedLead.processNumber || ""}
+                                onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})}
+                              />
+                              <Button 
+                                onClick={handleSaveProcessNumber}
+                                className="h-12 px-8 bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg transition-all active:scale-95"
+                              >
+                                VINCULAR CNJ
+                              </Button>
+                            </div>
+                            <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest italic">* O NÚMERO SERÁ HERDADO AUTOMATICAMENTE NA CONVERSÃO FINAL.</p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="p-8 rounded-[2rem] border border-purple-500/20 bg-purple-500/5 space-y-6">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
@@ -768,6 +804,7 @@ export default function LeadsPage() {
                 caseType: selectedLead.type,
                 court: selectedLead.court,
                 vara: selectedLead.vara,
+                processNumber: selectedLead.processNumber || "",
                 description: selectedLead.demandTitle || selectedLead.notes?.substring(0, 100),
                 responsibleStaffId: user?.uid
               }}
