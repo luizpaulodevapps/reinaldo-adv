@@ -22,7 +22,8 @@ import {
   FileText,
   Gavel,
   Scale,
-  Calendar
+  Calendar,
+  AlertCircle
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -51,6 +52,21 @@ interface LeadFormProps {
 
 const BRAZIL_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+]
+
+const COMMON_COURTS = [
+  "TRT 2ª REGIÃO (SP-CAPITAL)",
+  "TRT 15ª REGIÃO (CAMPINAS)",
+  "TRT 1ª REGIÃO (RJ)",
+  "TRT 3ª REGIÃO (MG)",
+  "TRT 4ª REGIÃO (RS)",
+  "TRT 5ª REGIÃO (BA)",
+  "TRT 10ª REGIÃO (DF/TO)",
+  "TJSP - TRIBUNAL DE JUSTIÇA DE SÃO PAULO",
+  "TJRJ - TRIBUNAL DE JUSTIÇA DO RIO DE JANEIRO",
+  "TJMG - TRIBUNAL DE JUSTIÇA DE MINAS GERAIS",
+  "TRF 3ª REGIÃO",
+  "TRF 4ª REGIÃO"
 ]
 
 export function LeadForm({ 
@@ -414,11 +430,11 @@ export function LeadForm({
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Logradouro</Label>
-                    <Input className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
+                    <Input placeholder="AVENIDA, RUA, ETC..." className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Número</Label>
-                    <Input className="bg-black/40 border-white/10 h-14 text-white font-bold" value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} />
+                    <Input placeholder="123" className="bg-black/40 border-white/10 h-14 text-white font-bold" value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -442,7 +458,7 @@ export function LeadForm({
           {activeTab === "demanda" && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="space-y-8">
-                <SectionTitle icon={Gavel}>Objeto da Ação</SectionTitle>
+                <SectionTitle icon={Gavel}>Objeto da Ação & Jurisdição</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Título da Demanda (Objeto)</Label>
@@ -458,23 +474,36 @@ export function LeadForm({
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-black text-primary uppercase tracking-widest">Relato dos Fatos (Boletim de Ocorrências / Resumo)</Label>
-                  <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO COMPLETO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[300px] text-white text-sm leading-relaxed uppercase resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
-                </div>
-              </div>
 
-              <div className="space-y-8">
-                <SectionTitle icon={Scale}>Jurisdição Sugerida</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum Alvo</Label>
-                    <Input placeholder="EX: TRT 2ª REGIÃO" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.court} onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} />
+                    <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                      <Scale className="h-3 w-3" /> Tribunal / Fórum Sugerido
+                    </Label>
+                    <div className="relative group">
+                      <Input 
+                        placeholder="PESQUISAR TRIBUNAL (EX: TRT 2, TJSP...)" 
+                        list="court-suggestions"
+                        className="bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all" 
+                        value={formData.court} 
+                        onChange={(e) => handleInputChange("court", e.target.value.toUpperCase())} 
+                      />
+                      <datalist id="court-suggestions">
+                        {COMMON_COURTS.map(c => <option key={c} value={c} />)}
+                      </datalist>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
-                    <Input placeholder="EX: 45ª VARA DO TRABALHO" className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase" value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
+                    <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                      <Gavel className="h-3 w-3" /> Vara / Unidade
+                    </Label>
+                    <Input placeholder="EX: 45ª VARA DO TRABALHO" className="bg-black/40 border-primary/20 h-14 text-white font-black uppercase text-xs focus:border-primary transition-all" value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Relato dos Fatos (Breve Resumo)</Label>
+                  <Textarea placeholder="DESCREVA AQUI O RELATO TÉCNICO DO CLIENTE..." className="bg-black/40 border-white/10 min-h-[200px] text-white text-sm leading-relaxed uppercase resize-none" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
                 </div>
               </div>
             </div>

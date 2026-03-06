@@ -25,7 +25,8 @@ import {
   MapPin,
   Building,
   Edit3,
-  Scale
+  Scale,
+  ShieldAlert
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -81,16 +82,14 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       "{{CIDADE_UF}}": lead?.city ? `${lead.city} - ${lead.state}` : "PENDENTE",
     }
     
-    // Mapeamento Dinâmico de Entrevistas (Reuso configurado no Laboratório)
+    // Mapeamento Dinâmico de Entrevistas
     interviews.forEach(int => {
-      // Usamos o snapshot do template para saber qual resposta mapeia para qual tag
       const responses = int.responses || {}
       const snapshot = int.templateSnapshot || []
 
       snapshot.forEach((field: any) => {
         if (field.reuseEnabled && responses[field.label]) {
           const val = responses[field.label]
-          // Mapeamento direto por campo alvo ou por etiqueta de tag
           if (field.targetField === 'fullName') data["{{CLIENTE_NOME}}"] = val
           if (field.targetField === 'cpf') data["{{CLIENTE_CPF}}"] = val
           if (field.targetField === 'address') data["{{CLIENTE_ENDERECO}}"] = val
@@ -137,6 +136,8 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       })
     }, 1500)
   }
+
+  const isJurisdictionComplete = lead.court && lead.vara
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans">
@@ -267,20 +268,29 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
           </div>
 
           {/* PAINEL DE JURISDIÇÃO (FÓRUM/VARA) */}
-          <Card className="glass border-white/10 bg-black/20 p-8 space-y-6 rounded-[2rem] relative overflow-hidden group">
+          <Card className={cn(
+            "glass p-8 space-y-6 rounded-[2rem] relative overflow-hidden group transition-all",
+            !isJurisdictionComplete ? "border-amber-500/30 bg-amber-500/5" : "border-white/10 bg-black/20"
+          )}>
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
               <Scale className="h-24 text-primary" />
             </div>
             
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                  <MapPin className="h-5 w-5" />
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center border transition-all",
+                  !isJurisdictionComplete ? "bg-amber-500/20 text-amber-500 border-amber-500/30" : "bg-primary/10 text-primary border-primary/20"
+                )}>
+                  {!isJurisdictionComplete ? <ShieldAlert className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
                 </div>
-                <h4 className="text-sm font-black text-white uppercase tracking-widest">Unidade Judiciária (Fórum)</h4>
+                <div>
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest">Unidade Judiciária (Fórum)</h4>
+                  {!isJurisdictionComplete && <p className="text-[8px] text-amber-500 font-black uppercase tracking-widest mt-1 animate-pulse">Pendência Crítica para Distribuição</p>}
+                </div>
               </div>
               <Button onClick={onEdit} variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-background font-black text-[9px] uppercase tracking-widest h-10 px-6 gap-2 rounded-lg">
-                <Edit3 className="h-3 w-3" /> Editar Jurisdição
+                <Edit3 className="h-3 w-3" /> EDITAR JURISDIÇÃO
               </Button>
             </div>
             
@@ -288,8 +298,8 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tribunal / Fórum</Label>
                 <div className={cn(
-                  "p-5 rounded-xl bg-white/[0.03] border text-xs font-bold uppercase transition-all",
-                  lead.court ? "text-white border-white/5" : "text-amber-500/50 border-amber-500/20 italic"
+                  "p-5 rounded-xl border text-xs font-black uppercase transition-all",
+                  lead.court ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
                   {lead.court || "NÃO INFORMADO NO DOSSIÊ"}
                 </div>
@@ -297,8 +307,8 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vara / Unidade</Label>
                 <div className={cn(
-                  "p-5 rounded-xl bg-white/[0.03] border text-xs font-bold uppercase transition-all",
-                  lead.vara ? "text-white border-white/5" : "text-amber-500/50 border-amber-500/20 italic"
+                  "p-5 rounded-xl border text-xs font-black uppercase transition-all",
+                  lead.vara ? "bg-white/[0.03] text-white border-white/5" : "bg-amber-500/10 text-amber-500/50 border-amber-500/20 italic"
                 )}>
                   {lead.vara || "NÃO INFORMADA NO DOSSIÊ"}
                 </div>

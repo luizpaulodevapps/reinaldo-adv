@@ -138,6 +138,8 @@ export default function LeadsPage() {
     if (!selectedLead.phone) missing.push("WHATSAPP")
     if (!selectedLead.city) missing.push("LOCALIDADE")
     if (!selectedLead.defendantName) missing.push("NOME DO RÉU")
+    if (!selectedLead.court) missing.push("TRIBUNAL/FÓRUM")
+    if (!selectedLead.vara) missing.push("VARA")
     return missing
   }, [selectedLead])
 
@@ -148,7 +150,9 @@ export default function LeadsPage() {
     const hasEssentialData = 
       selectedLead.name && 
       (selectedLead.cpf || selectedLead.documentNumber) && 
-      selectedLead.defendantName
+      selectedLead.defendantName &&
+      selectedLead.court &&
+      selectedLead.vara
     
     const hasDrive = selectedLead.driveStatus === 'pasta_cliente' || selectedLead.driveStatus === 'pasta_lead'
     
@@ -190,11 +194,11 @@ export default function LeadsPage() {
   const handleUpdateStatus = async (status: string) => {
     if (!selectedLead || !db) return
 
-    if (selectedLead.status === 'burocracia' && status === 'distribuicao' && !isBureaucracyComplete) {
+    if (status === 'distribuicao' && !isBureaucracyComplete) {
       toast({ 
         variant: "destructive", 
         title: "Acesso Bloqueado", 
-        description: "Conclua os requisitos mínimos da Burocracia para avançar." 
+        description: "Preencha Tribunal, Vara e Sincronize o Drive para avançar à Distribuição." 
       })
       return
     }
@@ -404,7 +408,7 @@ export default function LeadsPage() {
           <SheetHeader className="sr-only"><SheetTitle>{selectedLead?.name}</SheetTitle><SheetDescription>Dossiê Lead</SheetDescription></SheetHeader>
           {selectedLead && (
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="p-5 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-4">
+              <div className="p-5 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl space-y-4 flex-none">
                 <div className="flex items-start justify-between">
                   <div className="space-y-3 w-full">
                     <div className="flex flex-wrap items-center gap-2">
@@ -613,7 +617,7 @@ export default function LeadsPage() {
                       {!isBureaucracyComplete && (
                         <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-4">
                           <AlertCircle className="h-5 w-5 text-amber-500" />
-                          <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Pendente: Preencha os dados do Réu e Sincronize o Drive para liberar o Protocolo.</p>
+                          <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Pendente: Preencha Réu, Tribunal, Vara e Sincronize o Drive para liberar a Distribuição.</p>
                         </div>
                       )}
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
@@ -683,7 +687,7 @@ export default function LeadsPage() {
                 </div>
               </ScrollArea>
 
-              <div className="p-6 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20">
+              <div className="p-6 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20 flex-none">
                 <Button 
                   variant="ghost" 
                   onClick={handlePrevStage} 
@@ -776,7 +780,7 @@ export default function LeadsPage() {
 
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
-          <div className="p-8 border-b border-white/5"><SheetHeader><SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Novo Lead RGMJ</SheetTitle></SheetHeader></div>
+          <div className="p-8 border-b border-white/5 flex-none"><SheetHeader><SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Novo Lead RGMJ</SheetTitle></SheetHeader></div>
           <LeadForm 
             existingLeads={leads} 
             onSubmit={(data) => {
@@ -801,7 +805,7 @@ export default function LeadsPage() {
 
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
         <SheetContent className={cn("w-full min-h-0 overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#0a0f1e]", getDrawerWidthClass())}>
-          <div className="p-8 border-b border-white/5"><SheetHeader><SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Retificar Lead RGMJ</SheetTitle></SheetHeader></div>
+          <div className="p-8 border-b border-white/5 flex-none"><SheetHeader><SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Retificar Lead RGMJ</SheetTitle></SheetHeader></div>
           {selectedLead && (
             <LeadForm 
               existingLeads={[]}
