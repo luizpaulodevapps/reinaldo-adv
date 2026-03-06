@@ -42,7 +42,9 @@ import {
   Save,
   CheckSquare,
   Lock,
-  ShieldAlert
+  ShieldAlert,
+  Trash2,
+  Archive
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -67,7 +69,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { BurocraciaView } from "@/components/leads/burocracia-view"
@@ -203,6 +205,29 @@ export default function LeadsPage() {
     })
     setSelectedLead({ ...selectedLead, status })
     toast({ title: "Fluxo Atualizado", description: `Mover para ${status.toUpperCase()}.` })
+  }
+
+  const handleDeleteLead = async () => {
+    if (!selectedLead || !db) return
+    if (confirm(`Deseja EXCLUIR permanentemente o lead ${selectedLead.name}? Esta ação não pode ser desfeita.`)) {
+      await deleteDocumentNonBlocking(doc(db!, "leads", selectedLead.id))
+      setIsSheetOpen(false)
+      setSelectedLead(null)
+      toast({ variant: "destructive", title: "Lead Excluído", description: "O registro foi removido da base tática." })
+    }
+  }
+
+  const handleArchiveLead = async () => {
+    if (!selectedLead || !db) return
+    if (confirm(`Deseja ARQUIVAR o lead ${selectedLead.name}?`)) {
+      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+        status: "arquivado",
+        updatedAt: serverTimestamp()
+      })
+      setIsSheetOpen(false)
+      setSelectedLead(null)
+      toast({ title: "Lead Arquivado", description: "O dossiê foi movido para o acervo passivo." })
+    }
   }
 
   const handleNextStage = () => {
@@ -428,6 +453,14 @@ export default function LeadsPage() {
                         <UserCog className="h-3.5 w-3.5" /> EDITAR CADASTRO
                       </Button>
 
+                      <Button onClick={handleArchiveLead} variant="outline" className="h-9 border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500 hover:text-white text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg">
+                        <Archive className="h-3.5 w-3.5" /> ARQUIVAR
+                      </Button>
+
+                      <Button onClick={handleDeleteLead} variant="outline" className="h-9 border-rose-500/20 bg-rose-500/5 text-rose-500 hover:bg-rose-500 hover:text-white text-[8px] font-black uppercase gap-2 tracking-[0.15em] rounded-lg">
+                        <Trash2 className="h-3.5 w-3.5" /> EXCLUIR
+                      </Button>
+
                       <div className="flex p-0.5 rounded-lg bg-black/40 border border-white/5 ml-auto overflow-hidden">
                         {columns.map(c => (
                           <button 
@@ -637,7 +670,7 @@ export default function LeadsPage() {
                         <Card className="glass border-rose-500/20 p-5 space-y-4 rounded-xl">
                           <div><h4 className="text-xs font-black text-white uppercase tracking-tighter mb-1">ARQUIVAR LEAD</h4><p className="text-[7px] md:text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-60">Mover para acervo passivo.</p></div>
                           <Button 
-                            onClick={() => handleUpdateStatus("arquivado")} 
+                            onClick={handleArchiveLead} 
                             variant="outline" 
                             className="w-full h-10 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white font-black uppercase text-[8px] tracking-[0.2em] rounded-lg"
                           >
