@@ -733,7 +733,7 @@ export default function LaboratorioChecklistsPage() {
 
       {/* DIÁLOGO DE VISUALIZAÇÃO */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[90vh] font-sans rounded-3xl">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[90vh] font-sans rounded-3xl gap-0">
           <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
             <div className="flex items-center gap-6">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
@@ -749,7 +749,7 @@ export default function LaboratorioChecklistsPage() {
                 </div>
               </div>
             </div>
-            <Button onClick={() => { setIsViewDialogOpen(false); handleOpenEdit(viewingList); }} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12 rounded-xl">
+            <Button onClick={() => { setIsViewDialogOpen(false); handleOpenEdit(viewingList); }} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12 rounded-xl shadow-xl">
               ABRIR EDITOR
             </Button>
           </div>
@@ -757,8 +757,8 @@ export default function LaboratorioChecklistsPage() {
           <ScrollArea className="flex-1">
             <div className="p-10 space-y-10">
               {viewingList?.description && (
-                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Finalidade Estratégica</Label>
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2 shadow-inner">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-50">Finalidade Estratégica</Label>
                   <p className="text-sm text-white/80 leading-relaxed font-medium">{viewingList.description}</p>
                 </div>
               )}
@@ -771,7 +771,7 @@ export default function LaboratorioChecklistsPage() {
 
                 <div className="grid grid-cols-1 gap-3">
                   {viewingList?.items?.map((item: any, idx: number) => (
-                    <div key={idx} className="p-5 rounded-xl bg-white/[0.01] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
+                    <div key={idx} className="p-5 rounded-xl bg-white/[0.01] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-lg">
                       <div className="flex items-center gap-5">
                         <span className="text-[10px] font-mono font-black text-muted-foreground/30">#{idx + 1}</span>
                         <div>
@@ -796,8 +796,8 @@ export default function LaboratorioChecklistsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsViewDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex-none">
+            <Button variant="ghost" onClick={() => setIsViewDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14 hover:text-white transition-colors">
               FECHAR DOSSIÊ
             </Button>
           </DialogFooter>
@@ -805,9 +805,9 @@ export default function LaboratorioChecklistsPage() {
       </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh] font-sans">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[95vh] font-sans gap-0">
           {/* Header Editor de Modelo */}
-          <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5 space-y-6">
+          <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5 space-y-6 flex-none">
             <DialogHeader>
               <div className="flex items-center gap-4 mb-2">
                 <FileEdit className="h-8 w-8 text-primary" />
@@ -1180,7 +1180,7 @@ export default function LaboratorioChecklistsPage() {
 
               {editorStep === "revisao" && (
                 <div className="space-y-6">
-                  <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 flex items-start gap-4">
+                  <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 flex items-start gap-4 shadow-xl">
                     {title.trim() && items.length > 0 ? (
                       <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
                     ) : (
@@ -1197,7 +1197,7 @@ export default function LaboratorioChecklistsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-white/[0.02] border-white/10">
+                    <Card className="bg-white/[0.02] border-white/10 shadow-lg">
                       <CardContent className="p-6 space-y-3">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Dados Gerais</p>
                         <div className="space-y-1">
@@ -1215,7 +1215,7 @@ export default function LaboratorioChecklistsPage() {
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-white/[0.02] border-white/10">
+                    <Card className="bg-white/[0.02] border-white/10 shadow-lg">
                       <CardContent className="p-6 space-y-3">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">DNA de Captura</p>
                         <p className="text-3xl font-black text-white">{items.length}</p>
@@ -1239,7 +1239,7 @@ export default function LaboratorioChecklistsPage() {
                     </Card>
                   </div>
 
-                  <Card className="bg-white/[0.02] border-white/10">
+                  <Card className="bg-white/[0.02] border-white/10 shadow-lg">
                     <CardContent className="p-6 space-y-2">
                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Descrição / Finalidade</p>
                       <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1253,7 +1253,7 @@ export default function LaboratorioChecklistsPage() {
           </ScrollArea>
 
           {/* Footer Editor de Modelo */}
-          <div className="p-8 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="p-8 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none">
             <button 
               onClick={() => setIsDialogOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors"
@@ -1302,7 +1302,7 @@ export default function LaboratorioChecklistsPage() {
           }
         }}
       >
-        <AlertDialogContent className="glass border-white/10 bg-[#0d121f] text-white font-sans">
+        <AlertDialogContent className="glass border-white/10 bg-[#0d121f] text-white font-sans shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white text-xl font-black uppercase tracking-tight">
               Aplicar padrao da area
@@ -1311,14 +1311,14 @@ export default function LaboratorioChecklistsPage() {
               A troca para {pendingAreaChange?.toUpperCase() || "NOVA AREA"} vai sobrescrever titulo, descricao e perguntas atuais.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1 shadow-inner">
             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Impacto da troca</p>
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/90">
               {currentQuestionsCount} pergunta(s) atual(is) -&gt; {pendingAreaQuestionsCount} pergunta(s) do novo padrao
             </p>
           </div>
           {pendingAreaPreviewQuestions.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-2">
+            <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-2 shadow-inner">
               <p className="text-[10px] font-black uppercase tracking-widest text-primary/90">Preview das 3 primeiras</p>
               <ul className="space-y-1">
                 {pendingAreaPreviewQuestions.map((question, index) => (
@@ -1347,13 +1347,13 @@ export default function LaboratorioChecklistsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={handleCancelAreaChange}
-              className="border-white/15 bg-transparent text-white hover:bg-white/5"
+              className="border-white/15 bg-transparent text-white hover:bg-white/5 rounded-lg"
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmAreaChange}
-              className="gold-gradient text-background font-black uppercase tracking-widest"
+              className="gold-gradient text-background font-black uppercase tracking-widest rounded-lg shadow-lg"
             >
               Aplicar e sobrescrever
             </AlertDialogAction>
