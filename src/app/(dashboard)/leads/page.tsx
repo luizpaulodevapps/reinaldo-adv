@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -45,7 +45,8 @@ import {
   FileText,
   Home,
   MessageSquare,
-  Save
+  Save,
+  Map as MapIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -159,6 +160,11 @@ export default function LeadsPage() {
     observations: ""
   })
 
+  // Estados para busca de mapas
+  const [locationSearch, setLocationSearch] = useState("")
+  const [locationResults, setLocationResults] = useState<any[]>([])
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false)
+
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "checklists"), orderBy("title", "asc"))
@@ -199,8 +205,43 @@ export default function LeadsPage() {
         customAddress: selectedLead.customAddress || "",
         observations: selectedLead.intakeObservations || ""
       })
+      setLocationSearch(selectedLead.customAddress || "")
     }
   }, [selectedLead?.id, selectedLead?.status])
+
+  // Lógica de busca de mapas (Nominatim API)
+  const handleMapSearch = useCallback(async (query: string) => {
+    if (!query || query.length < 3) {
+      setLocationResults([])
+      return
+    }
+    setIsSearchingLocation(true)
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=br`)
+      const data = await response.json()
+      setLocationResults(data)
+    } catch (error) {
+      console.error("Erro ao buscar mapas:", error)
+    } finally {
+      setIsSearchingLocation(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (locationSearch && locationSearch !== intakeData.customAddress) {
+        handleMapSearch(locationSearch)
+      }
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [locationSearch, intakeData.customAddress, handleMapSearch])
+
+  const handleSelectLocation = (place: any) => {
+    const address = place.display_name
+    setIntakeData(prev => ({ ...prev, customAddress: address }))
+    setLocationSearch(address)
+    setLocationResults([])
+  }
 
   const handleGenerateStrategicSummary = async () => {
     if (!selectedLead) return
@@ -458,8 +499,8 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 font-sans">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="space-y-10 animate-in fade-in duration-500 font-sans">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div>
           <div className="flex items-center gap-3 text-base uppercase tracking-widest font-black text-muted-foreground/40 mb-3">
             <LayoutGrid className="h-6 w-6" />
@@ -500,7 +541,7 @@ export default function LeadsPage() {
                     <div className={cn("w-4 h-4 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]", col.color.replace('text-', 'bg-'))} />
                     <h3 className={cn("font-black text-base tracking-[0.3em] uppercase", col.color)}>{col.title}</h3>
                   </div>
-                  <Badge variant="secondary" className="bg-white/5 text-sm border-white/5 font-black h-8 px-4 rounded-lg">{leadsInCol.length}</Badge>
+                  <Badge variant="secondary" className="bg-white/5 text-base border-white/5 font-black h-10 px-5 rounded-lg">{leadsInCol.length}</Badge>
                 </div>
 
                 <div className={cn(
@@ -531,7 +572,7 @@ export default function LeadsPage() {
                               <div className="space-y-2 flex-1">
                                 <div className="font-bold text-xl text-white group-hover:text-primary transition-colors uppercase tracking-tight leading-snug">{lead.name}</div>
                                 <div className="flex items-center gap-3">
-                                  <span className="text-xs font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span>
+                                  <span className="text-sm font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
@@ -544,22 +585,22 @@ export default function LeadsPage() {
                               {lead.scheduledDate && (
                                 <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 w-fit">
                                   <Clock className="h-5 w-5 text-amber-500" />
-                                  <span className="text-sm font-black text-amber-500 uppercase tracking-widest">
+                                  <span className="text-base font-black text-amber-500 uppercase tracking-widest">
                                     {new Date(lead.scheduledDate).toLocaleDateString('pt-BR')} {lead.scheduledTime}
                                   </span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground font-bold uppercase tracking-widest px-1">
+                              <div className="flex items-center gap-4 text-base text-muted-foreground font-bold uppercase tracking-widest px-1">
                                 <Building className="h-5 w-5 opacity-40" /> {lead.defendantName || "RÉU PENDENTE"}
                               </div>
                             </div>
 
                             <div className="flex items-center justify-between pt-6 border-t border-white/5">
                               <div className="flex gap-3">
-                                {lead.cpf && <Badge variant="outline" className="text-[10px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 font-black uppercase px-3 py-1">CPF OK</Badge>}
-                                {lead.interviewsCount > 0 && <Badge variant="outline" className="text-[10px] border-primary/20 text-primary bg-primary/5 font-black uppercase px-3 py-1">ENTREVISTA</Badge>}
+                                {lead.cpf && <Badge variant="outline" className="text-xs border-emerald-500/20 text-emerald-500 bg-emerald-500/5 font-black uppercase px-4 py-1.5">CPF OK</Badge>}
+                                {lead.interviewsCount > 0 && <Badge variant="outline" className="text-xs border-primary/20 text-primary bg-primary/5 font-black uppercase px-4 py-1.5">ENTREVISTA</Badge>}
                               </div>
-                              <div className="flex items-center gap-3 text-primary font-black text-sm uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+                              <div className="flex items-center gap-3 text-primary font-black text-base uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
                                 ABRIR DOSSIÊ <ArrowRight className="h-5 w-5" />
                               </div>
                             </div>
@@ -572,7 +613,7 @@ export default function LeadsPage() {
                   {leadsInCol.length === 0 && (
                     <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20 space-y-6">
                       <LayoutGrid className="h-14 w-14" />
-                      <span className="text-sm font-black uppercase tracking-[0.5em]">Limbo Operacional</span>
+                      <span className="text-base font-black uppercase tracking-[0.5em]">Limbo Operacional</span>
                     </div>
                   )}
                 </div>
@@ -603,10 +644,10 @@ export default function LeadsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
-                    <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-16 border-white/10 bg-white/5 text-sm font-black uppercase px-10 rounded-2xl gap-5 transition-all hover:bg-primary/5 shadow-2xl">
+                    <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-16 border-white/10 bg-white/5 text-base font-black uppercase px-10 rounded-2xl gap-5 transition-all hover:bg-primary/5 shadow-2xl">
                       {isSyncingDrive ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <CloudLightning className="h-6 w-6 text-amber-500" />} SINC. DRIVE
                     </Button>
-                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-16 border-white/10 bg-white/5 text-sm font-black uppercase px-10 rounded-2xl gap-5 transition-all hover:bg-primary/5 shadow-2xl">
+                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-16 border-white/10 bg-white/5 text-base font-black uppercase px-10 rounded-2xl gap-5 transition-all hover:bg-primary/5 shadow-2xl">
                       <UserCog className="h-6 w-6 text-primary" /> EDITAR QUALIFICAÇÃO
                     </Button>
                   </div>
@@ -626,8 +667,8 @@ export default function LeadsPage() {
                         <item.icon className="h-7 w-7" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest mb-2 opacity-50">{item.label}</p>
-                        <p className="text-lg font-bold text-white uppercase truncate tracking-tight">{item.value}</p>
+                        <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-2 opacity-50">{item.label}</p>
+                        <p className="text-xl font-bold text-white uppercase truncate tracking-tight">{item.value}</p>
                       </div>
                     </div>
                   ))}
@@ -644,7 +685,7 @@ export default function LeadsPage() {
                         { id: "burocracia", label: "BUROCRACIA & KITS" },
                         { id: "revisao", label: "REVISÃO & PROTOCOLO" }
                       ].map(tab => (
-                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-base uppercase h-full rounded-none px-0 border-b-4 border-transparent data-[state=active]:border-primary transition-all tracking-[0.3em]">{tab.label}</TabsTrigger>
+                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-lg uppercase h-full rounded-none px-0 border-b-4 border-transparent data-[state=active]:border-primary transition-all tracking-[0.3em]">{tab.label}</TabsTrigger>
                       ))}
                     </TabsList>
 
@@ -660,16 +701,16 @@ export default function LeadsPage() {
                             <p className="text-4xl font-bold text-white uppercase tracking-tighter">
                               {selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} às ${selectedLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
                             </p>
-                            <Badge variant="outline" className="text-sm font-black text-muted-foreground border-white/10 px-8 py-4 rounded-2xl uppercase tracking-widest bg-white/[0.02]">
+                            <Badge variant="outline" className="text-base font-black text-muted-foreground border-white/10 px-8 py-4 rounded-2xl uppercase tracking-widest bg-white/[0.02]">
                               {selectedLead.meetingType === 'online' ? '🖥️ REUNIÃO VIRTUAL RGMJ' : `🏢 PRESENCIAL: ${selectedLead.meetingLocation || 'LOCAL A DEFINIR'}`}
                             </Badge>
-                            <div className="pt-4 text-xs font-black text-amber-500/40 uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA EDITAR CRONOGRAMA</div>
+                            <div className="pt-4 text-sm font-black text-amber-500/40 uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA EDITAR CRONOGRAMA</div>
                           </div>
                         </Card>
                         <Card className="glass border-primary/15 p-12 rounded-[3rem] shadow-2xl bg-primary/5 relative overflow-hidden">
                           <div className="absolute top-0 right-0 p-12 opacity-5"><Brain className="h-40 w-40" /></div>
                           <h4 className="text-base font-black text-primary uppercase tracking-[0.4em] flex items-center gap-5 mb-10"><Brain className="h-7 w-7" /> Síntese Estratégica (IA)</h4>
-                          <p className="text-xl text-white/80 leading-relaxed italic text-justify font-medium">
+                          <p className="text-2xl text-white/80 leading-relaxed italic text-justify font-medium">
                             {selectedLead.aiSummary || "O sistema aguarda a conclusão das entrevistas técnicas para consolidar os fatos e gerar a tese jurídica preliminar RGMJ. A inteligência analisará depoimentos e documentos sincronizados para propor a melhor abordagem processual."}
                           </p>
                         </Card>
@@ -684,11 +725,11 @@ export default function LeadsPage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                           {templates?.map(t => (
-                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-sm h-24 gap-6 rounded-3xl justify-start px-10 hover:bg-primary/5 transition-all shadow-2xl group border-2">
+                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-base h-24 gap-6 rounded-3xl justify-start px-10 hover:bg-primary/5 transition-all shadow-2xl group border-2">
                               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Zap className="h-7 w-7" /></div>
                               <div className="flex flex-col items-start min-w-0">
                                 <span className="truncate w-full text-left">{t.title}</span>
-                                <span className="text-[10px] opacity-40 tracking-[0.2em] mt-2">INICIAR CAPTURA</span>
+                                <span className="text-xs opacity-40 tracking-[0.2em] mt-2">INICIAR CAPTURA</span>
                               </div>
                             </Button>
                           ))}
@@ -705,22 +746,22 @@ export default function LeadsPage() {
                             {leadInterviews.map((int, idx) => (
                               <Card key={idx} className="glass border-white/5 hover:border-primary/20 transition-all p-8 rounded-[2.5rem] bg-white/[0.01] flex flex-col h-full group">
                                 <div className="flex justify-between items-start mb-6">
-                                  <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 tracking-widest">
+                                  <Badge variant="outline" className="text-xs font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-8 tracking-widest">
                                     {int.interviewType}
                                   </Badge>
-                                  <div className="text-[10px] font-mono font-bold text-muted-foreground uppercase opacity-40">
+                                  <div className="text-xs font-mono font-bold text-muted-foreground uppercase opacity-40">
                                     {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
                                   </div>
                                 </div>
-                                <h4 className="text-lg font-bold text-white uppercase tracking-tight mb-6 line-clamp-1 group-hover:text-primary transition-colors">
+                                <h4 className="text-2xl font-bold text-white uppercase tracking-tight mb-6 line-clamp-1 group-hover:text-primary transition-colors">
                                   Auditoria de Fatos: {selectedLead.name}
                                 </h4>
                                 <div className="space-y-4 flex-1">
-                                  <div className="p-4 rounded-xl bg-black/40 border border-white/5">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
-                                      <User className="h-3 w-3" /> Entrevistador
+                                  <div className="p-5 rounded-xl bg-black/40 border border-white/5">
+                                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+                                      <User className="h-4 w-4" /> Entrevistador
                                     </p>
-                                    <p className="text-xs font-bold text-white uppercase">{int.interviewerName || "Corpo Técnico RGMJ"}</p>
+                                    <p className="text-base font-bold text-white uppercase">{int.interviewerName || "Corpo Técnico RGMJ"}</p>
                                   </div>
                                 </div>
                                 <Button 
@@ -728,7 +769,7 @@ export default function LeadsPage() {
                                     setViewingInterview(int);
                                     setInterviewAnalysis(int.aiAnalysis || null);
                                   }}
-                                  className="mt-8 gold-gradient text-background font-black h-12 rounded-xl uppercase text-[10px] tracking-widest shadow-xl"
+                                  className="mt-8 gold-gradient text-background font-black h-14 rounded-xl uppercase text-sm tracking-widest shadow-xl"
                                 >
                                   ABRIR DOSSIÊ ANALÍTICO
                                 </Button>
@@ -751,10 +792,10 @@ export default function LeadsPage() {
                           </div>
                           <div>
                             <h3 className="text-4xl font-bold text-white uppercase tracking-widest">Auditoria de Protocolo</h3>
-                            <p className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em] mt-2 opacity-50">Validação final de DNA Jurídico antes da conversão.</p>
+                            <p className="text-base text-muted-foreground uppercase font-black tracking-[0.3em] mt-2 opacity-50">Validação final de DNA Jurídico antes da conversão.</p>
                           </div>
                         </div>
-                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-20 px-12 glass border-primary/30 text-primary font-black uppercase text-base gap-5 rounded-[1.5rem] shadow-2xl hover:bg-primary/5 transition-all">
+                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-20 px-12 glass border-primary/30 text-primary font-black uppercase text-lg gap-5 rounded-[1.5rem] shadow-2xl hover:bg-primary/5 transition-all">
                           {isGeneratingSummary ? <Loader2 className="h-7 w-7 animate-spin" /> : <Brain className="h-7 w-7" />} CONSOLIDAR ESTRATÉGIA IA
                         </Button>
                       </div>
@@ -763,7 +804,7 @@ export default function LeadsPage() {
                         <Card className="glass border-white/5 p-12 rounded-[3rem] space-y-10 shadow-2xl bg-white/[0.01]">
                           <div className="flex items-center gap-6 border-b border-white/5 pb-6">
                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center"><User className="h-6 w-6 text-primary" /></div>
-                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">Polo Ativo (Autor)</span>
+                            <span className="text-lg font-black text-white uppercase tracking-[0.3em]">Polo Ativo (Autor)</span>
                           </div>
                           <div className="space-y-8">
                             {[
@@ -773,8 +814,8 @@ export default function LeadsPage() {
                               { label: "Residência Atual", value: selectedLead.address ? `${selectedLead.address}, ${selectedLead.city}` : "PENDENTE" },
                             ].map(item => (
                               <div key={item.label} className="group">
-                                <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
-                                <p className="text-lg font-bold text-white uppercase tracking-tight">{item.value}</p>
+                                <p className="text-sm font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
+                                <p className="text-xl font-bold text-white uppercase tracking-tight">{item.value}</p>
                               </div>
                             ))}
                           </div>
@@ -783,7 +824,7 @@ export default function LeadsPage() {
                         <Card className="glass border-white/5 p-12 rounded-[3rem] space-y-10 shadow-2xl bg-white/[0.01]">
                           <div className="flex items-center gap-6 border-b border-white/5 pb-6">
                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center"><Building className="h-6 w-6 text-primary" /></div>
-                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">Polo Passivo (Réu)</span>
+                            <span className="text-lg font-black text-white uppercase tracking-[0.3em]">Polo Passivo (Réu)</span>
                           </div>
                           <div className="space-y-8">
                             {[
@@ -792,8 +833,8 @@ export default function LeadsPage() {
                               { label: "Sede / Filial", value: selectedLead.defendantAddress || "NÃO MAPEADO" },
                             ].map(item => (
                               <div key={item.label} className="group">
-                                <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
-                                <p className="text-lg font-bold text-white uppercase tracking-tight">{item.value}</p>
+                                <p className="text-sm font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
+                                <p className="text-xl font-bold text-white uppercase tracking-tight">{item.value}</p>
                               </div>
                             ))}
                           </div>
@@ -802,7 +843,7 @@ export default function LeadsPage() {
                         <Card className="glass border-white/5 p-12 rounded-[3rem] space-y-10 shadow-2xl bg-white/[0.01]">
                           <div className="flex items-center gap-6 border-b border-white/5 pb-6">
                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center"><Gavel className="h-6 w-6 text-primary" /></div>
-                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">Logística Judiciária</span>
+                            <span className="text-lg font-black text-white uppercase tracking-[0.3em]">Logística Judiciária</span>
                           </div>
                           <div className="space-y-8">
                             {[
@@ -812,8 +853,8 @@ export default function LeadsPage() {
                               { label: "Logradouro do Juízo", value: selectedLead.courtAddress || "PENDENTE" },
                             ].map(item => (
                               <div key={item.label} className="group">
-                                <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
-                                <p className="text-lg font-bold text-white uppercase tracking-tight">{item.value}</p>
+                                <p className="text-sm font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
+                                <p className="text-xl font-bold text-white uppercase tracking-tight">{item.value}</p>
                               </div>
                             ))}
                           </div>
@@ -825,11 +866,11 @@ export default function LeadsPage() {
                           <div className="flex items-center gap-6">
                             <div className="w-14 h-14 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-2xl"><MessageCircle className="h-7 w-7" /></div>
                             <div className="space-y-2">
-                              <span className="text-2xl font-bold text-white uppercase tracking-widest">DNA de Atendimento</span>
-                              <p className="text-xs text-muted-foreground font-black uppercase tracking-[0.3em] opacity-50">Resumo dos fatos capturados nas entrevistas.</p>
+                              <span className="text-3xl font-bold text-white uppercase tracking-widest">DNA de Atendimento</span>
+                              <p className="text-base text-muted-foreground font-black uppercase tracking-[0.3em] opacity-50">Resumo dos fatos capturados nas entrevistas.</p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-sm font-black border-primary/20 text-primary px-8 py-3 rounded-2xl uppercase tracking-widest bg-primary/5">{leadInterviews?.length || 0} Atendimentos Realizados</Badge>
+                          <Badge variant="outline" className="text-lg font-black border-primary/20 text-primary px-8 py-3 rounded-2xl uppercase tracking-widest bg-primary/5">{leadInterviews?.length || 0} Atendimentos Realizados</Badge>
                         </div>
                         <div className="p-12">
                           {leadInterviews && leadInterviews.length > 0 ? (
@@ -837,16 +878,16 @@ export default function LeadsPage() {
                               {leadInterviews.slice(0, 4).map((int, idx) => (
                                 <div key={idx} className="p-10 rounded-[3rem] bg-black/30 border border-white/5 space-y-8 shadow-2xl hover:border-primary/20 transition-all group">
                                   <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                                    <span className="text-base font-black text-primary uppercase tracking-widest group-hover:scale-105 transition-transform origin-left">{int.interviewType}</span>
-                                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono font-bold">
-                                      <Clock className="h-4 w-4" /> {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
+                                    <span className="text-lg font-black text-primary uppercase tracking-widest group-hover:scale-105 transition-transform origin-left">{int.interviewType}</span>
+                                    <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono font-bold">
+                                      <Clock className="h-5 w-5" /> {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
                                     </div>
                                   </div>
                                   <div className="space-y-8">
                                     {Object.entries(int.responses || {}).slice(0, 2).map(([q, a]: any) => (
                                       <div key={q}>
-                                        <p className="text-xs font-black text-muted-foreground uppercase opacity-40 mb-3 tracking-[0.2em]">{q}</p>
-                                        <p className="text-base text-white/90 font-medium uppercase leading-relaxed text-justify">{String(a)}</p>
+                                        <p className="text-sm font-black text-muted-foreground uppercase opacity-40 mb-3 tracking-[0.2em]">{q}</p>
+                                        <p className="text-xl text-white/90 font-medium uppercase leading-relaxed text-justify">{String(a)}</p>
                                       </div>
                                     ))}
                                   </div>
@@ -856,7 +897,7 @@ export default function LeadsPage() {
                           ) : (
                             <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-8">
                               <div className="w-24 h-24 rounded-full border-2 border-dashed border-muted-foreground flex items-center justify-center"><MessageCircle className="h-12 w-12" /></div>
-                              <p className="text-base font-black uppercase tracking-[0.6em]">Nenhum fato registrado até o momento.</p>
+                              <p className="text-xl font-black uppercase tracking-[0.6em]">Nenhum fato registrado até o momento.</p>
                             </div>
                           )}
                         </div>
@@ -874,9 +915,9 @@ export default function LeadsPage() {
                                 <div className={cn("w-14 h-14 rounded-[1.5rem] flex items-center justify-center bg-black/40 border border-white/5 shadow-2xl", s.c)}>
                                   <s.icon className="h-7 w-7" />
                                 </div>
-                                <h5 className={cn("text-base font-black uppercase tracking-[0.3em]", s.c)}>{s.t}</h5>
+                                <h5 className={cn("text-lg font-black uppercase tracking-[0.3em]", s.c)}>{s.t}</h5>
                               </div>
-                              <p className="text-lg text-white/80 leading-relaxed text-justify font-medium">{s.v}</p>
+                              <p className="text-xl text-white/80 leading-relaxed text-justify font-medium">{s.v}</p>
                             </div>
                           ))}
                         </div>
@@ -890,12 +931,12 @@ export default function LeadsPage() {
                               <Gavel className="h-10 w-10 text-amber-500" />
                             </div>
                             <div className="space-y-2">
-                              <h3 className="text-3xl font-bold text-white uppercase tracking-widest">Agendamento de Pauta</h3>
-                              <p className="text-sm text-amber-500/60 uppercase font-black tracking-[0.3em] opacity-70">Opcional: Sincronismo nativo com Agenda Google Cloud.</p>
+                              <h3 className="text-4xl font-bold text-white uppercase tracking-widest">Agendamento de Pauta</h3>
+                              <p className="text-base text-amber-500/60 uppercase font-black tracking-[0.3em] opacity-70">Opcional: Sincronismo nativo com Agenda Google Cloud.</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-6 bg-black/40 p-6 rounded-[1.5rem] border border-white/5 shadow-inner">
-                            <span className="text-sm font-black text-white uppercase tracking-[0.3em]">HABILITAR ATO?</span>
+                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">HABILITAR ATO?</span>
                             <Switch checked={isSchedulingHearing} onCheckedChange={setIsSchedulingHearing} className="data-[state=checked]:bg-amber-500 shadow-2xl scale-125" />
                           </div>
                         </div>
@@ -903,9 +944,9 @@ export default function LeadsPage() {
                         {isSchedulingHearing && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 animate-in slide-in-from-top-4 duration-700 relative z-10">
                             <div className="space-y-4">
-                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">TIPO DE AUDIÊNCIA</Label>
+                              <Label className="text-sm font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">TIPO DE AUDIÊNCIA</Label>
                               <Select value={hearingData.type} onValueChange={(v) => setHearingData({...hearingData, type: v})}>
-                                <SelectTrigger className="glass border-white/10 h-16 text-white font-bold text-base uppercase tracking-tight shadow-xl">
+                                <SelectTrigger className="glass border-white/10 h-16 text-white font-bold text-lg uppercase tracking-tight shadow-xl">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0d121f] text-white border-white/10">
@@ -918,18 +959,18 @@ export default function LeadsPage() {
                               </Select>
                             </div>
                             <div className="space-y-4">
-                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">DATA DO ATO</Label>
-                              <Input type="date" className="glass border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
+                              <Label className="text-sm font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">DATA DO ATO</Label>
+                              <Input type="date" className="glass border-white/10 h-16 text-white font-black text-lg shadow-xl" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
                             </div>
                             <div className="space-y-4">
-                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">HORÁRIO</Label>
-                              <Input type="time" className="glass border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
+                              <Label className="text-sm font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">HORÁRIO</Label>
+                              <Input type="time" className="glass border-white/10 h-16 text-white font-black text-lg shadow-xl" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
                             </div>
                             <div className="space-y-4">
-                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">LOCALIZAÇÃO FÍSICA</Label>
+                              <Label className="text-sm font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">LOCALIZAÇÃO FÍSICA</Label>
                               <Input 
                                 placeholder={hearingData.type === 'Virtual' ? "Sala Virtual RGMJ" : "Fórum Trabalhista / Outro"}
-                                className="glass border-white/10 h-16 text-white font-bold text-base shadow-xl" 
+                                className="glass border-white/10 h-16 text-white font-bold text-lg shadow-xl" 
                                 value={hearingData.location} 
                                 onChange={(e) => setHearingData({...hearingData, location: e.target.value})} 
                               />
@@ -938,16 +979,16 @@ export default function LeadsPage() {
                             {hearingData.type === 'Virtual' && (
                               <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-10 pt-8 border-t border-white/5">
                                 <div className="space-y-4">
-                                  <Label className="text-sm font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
-                                    <Video className="h-6 w-6" /> LINK DE ACESSO (MEET/ZOOM)
+                                  <Label className="text-base font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
+                                    <Video className="h-7 w-7" /> LINK DE ACESSO (MEET/ZOOM)
                                   </Label>
-                                  <Input className="glass border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="https://..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
+                                  <Input className="glass border-emerald-500/20 h-16 text-white font-bold text-lg shadow-2xl focus:ring-emerald-500/50" placeholder="https://..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
                                 </div>
                                 <div className="space-y-4">
-                                  <Label className="text-sm font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
-                                    <Lock className="h-6 w-6" /> SENHA / CÓDIGO DE ACESSO
+                                  <Label className="text-base font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
+                                    <Lock className="h-7 w-7" /> SENHA / CÓDIGO DE ACESSO
                                   </Label>
-                                  <Input className="glass border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="SENHA DE ACESSO" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
+                                  <Input className="glass border-emerald-500/20 h-16 text-white font-bold text-lg shadow-2xl focus:ring-emerald-500/50" placeholder="SENHA DE ACESSO" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
                                 </div>
                               </div>
                             )}
@@ -958,8 +999,8 @@ export default function LeadsPage() {
                       <div className="p-12 rounded-[3rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-12 w-full shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:scale-110 transition-transform"><FileCheck className="h-40 w-40 text-purple-500" /></div>
                         <div className="flex-1 space-y-6 w-full relative z-10">
-                          <Label className="text-sm font-black text-purple-400 uppercase tracking-[0.4em] flex items-center gap-5">
-                            <FileCheck className="h-7 w-7" /> PROTOCOLO CNJ DO PROCESSO *
+                          <Label className="text-base font-black text-purple-400 uppercase tracking-[0.4em] flex items-center gap-5">
+                            <FileCheck className="h-8 w-8" /> PROTOCOLO CNJ DO PROCESSO *
                           </Label>
                           <Input 
                             placeholder="0000000-00.0000.0.00.0000" 
@@ -967,11 +1008,11 @@ export default function LeadsPage() {
                             value={selectedLead.processNumber || ""} 
                             onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} 
                           />
-                          <p className="text-xs text-purple-400/50 font-black uppercase tracking-[0.2em]">Inisira o número CNJ ou marque "Aguardando Número" no rito de saneamento.</p>
+                          <p className="text-sm text-purple-400/50 font-black uppercase tracking-[0.2em]">Inisira o número CNJ ou marque "Aguardando Número" no rito de saneamento.</p>
                         </div>
                         <Button 
                           onClick={() => setIsConversionOpen(true)} 
-                          className="gold-gradient text-black font-black h-24 px-20 rounded-[2rem] uppercase text-base tracking-[0.3em] shadow-[0_25px_60px_rgba(245,208,48,0.3)] hover:scale-[1.02] active:scale-95 transition-all shrink-0 w-full md:w-auto relative z-10"
+                          className="gold-gradient text-black font-black h-24 px-20 rounded-[2rem] uppercase text-xl tracking-[0.3em] shadow-[0_25px_60px_rgba(245,208,48,0.3)] hover:scale-[1.02] active:scale-95 transition-all shrink-0 w-full md:w-auto relative z-10"
                         >
                           PROTOCOLAR E CONVERTER PARA ATIVO
                         </Button>
@@ -986,17 +1027,17 @@ export default function LeadsPage() {
                   variant="ghost" 
                   onClick={handlePrevTab} 
                   disabled={!canGoBack}
-                  className="text-muted-foreground uppercase font-black text-sm tracking-[0.4em] gap-6 px-12 h-16 hover:text-white disabled:opacity-20 transition-all"
+                  className="text-muted-foreground uppercase font-black text-base tracking-[0.4em] gap-6 px-12 h-16 hover:text-white disabled:opacity-20 transition-all"
                 >
-                  <ArrowLeft className="h-6 w-6" /> VOLTAR AO PASSO ANTERIOR
+                  <ArrowLeft className="h-7 w-7" /> VOLTAR AO PASSO ANTERIOR
                 </Button>
 
-                <div className="hidden md:flex gap-6">
+                <div className="hidden md:flex gap-8">
                   {DOSSIER_TABS.map((tab, i) => (
                     <div 
                       key={tab} 
                       className={cn(
-                        "w-4 h-4 rounded-full transition-all duration-700",
+                        "w-5 h-5 rounded-full transition-all duration-700",
                         activeDossierTab === tab ? "bg-primary shadow-[0_0_20px_rgba(245,208,48,0.6)] scale-150" : i < currentTabIndex ? "bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" : "bg-white/10"
                       )} 
                     />
@@ -1006,14 +1047,14 @@ export default function LeadsPage() {
                 {canGoNext ? (
                   <Button 
                     onClick={handleNextTab} 
-                    className="gold-gradient text-black font-black h-16 px-16 rounded-2xl uppercase text-sm tracking-[0.3em] gap-6 shadow-2xl hover:scale-[1.02] transition-all"
+                    className="gold-gradient text-black font-black h-16 px-16 rounded-2xl uppercase text-base tracking-[0.3em] gap-6 shadow-2xl hover:scale-[1.02] transition-all"
                   >
-                    AVANÇAR NO RITO TÉCNICO <ArrowRight className="h-6 w-6" />
+                    AVANÇAR NO RITO TÉCNICO <ArrowRight className="h-7 w-7" />
                   </Button>
                 ) : (
                   <div className="px-12 h-16 flex items-center bg-white/5 rounded-2xl border border-white/5">
-                    <span className="text-sm font-black text-primary/60 uppercase tracking-[0.4em] flex items-center gap-4">
-                      <ShieldCheck className="h-6 w-6" /> ETAPA FINAL DE PROTOCOLO
+                    <span className="text-base font-black text-primary/60 uppercase tracking-[0.4em] flex items-center gap-4">
+                      <ShieldCheck className="h-7 w-7" /> ETAPA FINAL DE PROTOCOLO
                     </span>
                   </div>
                 )}
@@ -1032,8 +1073,10 @@ export default function LeadsPage() {
               </div>
               <div className="space-y-2 text-center md:text-left">
                 <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Dossiê de Atendimento Técnico</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] opacity-50 flex items-center gap-4 justify-center md:justify-start">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" /> AUDITORIA DE FATOS & INTELIGÊNCIA RGMJ
+                <DialogDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] opacity-50 flex items-center gap-4 justify-center md:justify-start" asChild>
+                  <span>
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" /> AUDITORIA DE FATOS & INTELIGÊNCIA RGMJ
+                  </span>
                 </DialogDescription>
               </div>
             </div>
@@ -1041,12 +1084,12 @@ export default function LeadsPage() {
               <Button 
                 onClick={() => handleRunInterviewAnalysis(viewingInterview)} 
                 disabled={isAiAnalyzing}
-                className="h-16 px-10 gold-gradient text-background font-black uppercase text-sm gap-4 rounded-2xl shadow-2xl hover:scale-105 transition-all"
+                className="h-16 px-10 gold-gradient text-background font-black uppercase text-base gap-4 rounded-2xl shadow-2xl hover:scale-105 transition-all"
               >
                 {isAiAnalyzing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6" />} GERAR ANÁLISE IA
               </Button>
               <Button variant="ghost" onClick={() => setViewingInterview(null)} className="h-16 w-16 rounded-2xl text-muted-foreground hover:text-white border border-white/5">
-                <Trash2 className="h-6 w-6" />
+                <Trash2 className="h-7 w-7" />
               </Button>
             </div>
           </div>
@@ -1055,11 +1098,11 @@ export default function LeadsPage() {
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">
               <div className="px-10 bg-black/20 border-b border-white/5 flex-none">
                 <TabsList className="bg-transparent h-16 gap-12 p-0">
-                  <TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-sm uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
-                    <FileText className="h-4 w-4 mr-3" /> Transcrição RGMJ
+                  <TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-base uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
+                    <FileText className="h-5 w-5 mr-3" /> Transcrição RGMJ
                   </TabsTrigger>
-                  <TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-sm uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
-                    <Brain className="h-4 w-4 mr-3" /> Síntese & Análise IA
+                  <TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-base uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
+                    <Brain className="h-5 w-5 mr-3" /> Síntese & Análise IA
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -1071,11 +1114,11 @@ export default function LeadsPage() {
                       {viewingInterview && Object.entries(viewingInterview.responses || {}).map(([q, a]: any, i) => (
                         <div key={i} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: `${i * 50}ms` }}>
                           <div className="flex items-center gap-4">
-                            <div className="w-2 h-2 rounded-full bg-primary/40" />
-                            <h5 className="text-xs font-black text-muted-foreground uppercase tracking-widest">{q}</h5>
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary/40" />
+                            <h5 className="text-sm font-black text-muted-foreground uppercase tracking-widest">{q}</h5>
                           </div>
                           <div className="pl-6 border-l border-white/5">
-                            <p className="text-lg text-white font-medium uppercase leading-relaxed text-justify">
+                            <p className="text-xl text-white font-medium uppercase leading-relaxed text-justify">
                               {String(a)}
                             </p>
                           </div>
@@ -1093,8 +1136,8 @@ export default function LeadsPage() {
                         <Brain className="h-24 w-24 text-primary relative z-10" />
                       </div>
                       <div className="text-center space-y-3">
-                        <p className="text-xl font-bold text-white uppercase tracking-widest">Auditando Entrevista...</p>
-                        <p className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em]">Consolidando fatos e teses táticas</p>
+                        <p className="text-2xl font-bold text-white uppercase tracking-widest">Auditando Entrevista...</p>
+                        <p className="text-base text-muted-foreground uppercase font-black tracking-[0.3em]">Consolidando fatos e teses táticas</p>
                       </div>
                     </div>
                   ) : interviewAnalysis ? (
@@ -1103,10 +1146,10 @@ export default function LeadsPage() {
                         <div className="grid grid-cols-1 gap-10">
                           <Card className="glass border-primary/20 bg-primary/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-10 opacity-5"><Zap className="h-40 w-40 text-primary" /></div>
-                            <h5 className="text-base font-black text-primary uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
-                              <Sparkles className="h-6 w-6" /> Resumo Executivo
+                            <h5 className="text-lg font-black text-primary uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
+                              <Sparkles className="h-7 w-7" /> Resumo Executivo
                             </h5>
-                            <p className="text-xl text-white/90 leading-relaxed text-justify font-medium">
+                            <p className="text-2xl text-white/90 leading-relaxed text-justify font-medium">
                               {interviewAnalysis.summary}
                             </p>
                           </Card>
@@ -1114,20 +1157,20 @@ export default function LeadsPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                             <Card className="glass border-rose-500/20 bg-rose-500/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
                               <div className="absolute top-0 right-0 p-8 opacity-5"><ShieldAlert className="h-32 w-32 text-rose-500" /></div>
-                              <h5 className="text-base font-black text-rose-500 uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
-                                <Scale className="h-6 w-6" /> Análise de Teses & Riscos
+                              <h5 className="text-lg font-black text-rose-500 uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
+                                <Scale className="h-7 w-7" /> Análise de Teses & Riscos
                               </h5>
-                              <p className="text-lg text-white/80 leading-relaxed text-justify font-medium">
+                              <p className="text-xl text-white/80 leading-relaxed text-justify font-medium">
                                 {interviewAnalysis.legalAnalysis}
                               </p>
                             </Card>
 
                             <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
                               <div className="absolute top-0 right-0 p-8 opacity-5"><FileCheck className="h-32 w-32 text-emerald-500" /></div>
-                              <h5 className="text-base font-black text-emerald-500 uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
-                                <Navigation className="h-6 w-6" /> Recomendações Técnicas
+                              <h5 className="text-lg font-black text-emerald-500 uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
+                                <Navigation className="h-7 w-7" /> Recomendações Técnicas
                               </h5>
-                              <p className="text-lg text-white/80 leading-relaxed text-justify font-medium">
+                              <p className="text-xl text-white/80 leading-relaxed text-justify font-medium">
                                 {interviewAnalysis.recommendations}
                               </p>
                             </Card>
@@ -1137,10 +1180,10 @@ export default function LeadsPage() {
                     </ScrollArea>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-8">
-                      <Sparkles className="h-20 w-20 text-muted-foreground" />
+                      <Sparkles className="h-24 w-24 text-muted-foreground" />
                       <div className="text-center">
-                        <p className="text-lg font-black uppercase tracking-[0.5em]">Aguardando Comando</p>
-                        <p className="text-sm font-bold uppercase tracking-widest mt-3">Clique em "Gerar Análise IA" para iniciar o rito.</p>
+                        <p className="text-xl font-black uppercase tracking-[0.5em]">Aguardando Comando</p>
+                        <p className="text-base font-bold uppercase tracking-widest mt-3">Clique em "Gerar Análise IA" para iniciar o rito.</p>
                       </div>
                     </div>
                   )}
@@ -1158,7 +1201,7 @@ export default function LeadsPage() {
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
                 <CalendarIcon className="h-8 w-8 text-amber-500" /> Agendar Atendimento
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-sm uppercase font-bold tracking-[0.2em] mt-2">
+              <DialogDescription className="text-muted-foreground text-base uppercase font-bold tracking-[0.2em] mt-2">
                 Defina o rito inicial para o lead na pauta da banca.
               </DialogDescription>
             </DialogHeader>
@@ -1167,66 +1210,89 @@ export default function LeadsPage() {
           <ScrollArea className="max-h-[65vh]">
             <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
               <div className="space-y-4">
-                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Modalidade do Encontro</Label>
+                <Label className="text-sm font-black text-muted-foreground uppercase tracking-widest">Modalidade do Encontro</Label>
                 <div className="grid grid-cols-2 gap-4">
                   <Button 
                     onClick={() => setIntakeData({...intakeData, type: 'online'})}
                     variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
-                    className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
+                    className={cn("h-16 font-black uppercase text-xs tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
                   >
-                    <Video className="h-5 w-5" /> REUNIÃO ONLINE
+                    <Video className="h-6 w-6" /> REUNIÃO ONLINE
                   </Button>
                   <Button 
                     onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
                     variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
-                    className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
+                    className={cn("h-16 font-black uppercase text-xs tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
                   >
-                    <MapPin className="h-5 w-5" /> PRESENCIAL
+                    <MapPin className="h-6 w-6" /> PRESENCIAL
                   </Button>
                 </div>
               </div>
 
               {intakeData.type === 'presencial' && (
                 <div className="space-y-6 animate-in slide-in-from-top-2 duration-500">
-                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Localização Física</Label>
+                  <Label className="text-sm font-black text-muted-foreground uppercase tracking-widest">Localização Física</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <Button 
                       onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}
                       variant={intakeData.locationType === 'sede' ? 'secondary' : 'outline'}
-                      className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'sede' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                      className={cn("h-14 font-black uppercase text-xs tracking-widest gap-3 rounded-xl", intakeData.locationType === 'sede' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
                     >
-                      <Home className="h-4 w-4" /> SEDE RGMJ
+                      <Home className="h-5 w-5" /> SEDE RGMJ
                     </Button>
                     <Button 
                       onClick={() => setIntakeData({...intakeData, locationType: 'externo'})}
                       variant={intakeData.locationType === 'externo' ? 'secondary' : 'outline'}
-                      className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'externo' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                      className={cn("h-14 font-black uppercase text-xs tracking-widest gap-3 rounded-xl", intakeData.locationType === 'externo' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
                     >
-                      <Navigation className="h-4 w-4" /> LOCAL EXTERNO
+                      <Navigation className="h-5 w-5" /> LOCAL EXTERNO
                     </Button>
                   </div>
                   
                   {intakeData.locationType === 'externo' && (
-                    <div className="space-y-4 pt-2">
+                    <div className="space-y-4 pt-2 relative">
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Pesquisar ou Digitar Local (Ex: Shopping, Residência)</Label>
+                        <Label className="text-sm font-black text-amber-500 uppercase tracking-widest">Pesquisar Local (API do Map)</Label>
                         <div className="relative">
-                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <MapIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <Input 
-                            placeholder="PESQUISAR LOCAL OU DIGITAR ENDEREÇO..."
-                            className="glass h-14 pl-12 text-white font-bold border-white/20 uppercase text-xs focus:ring-amber-500/50"
-                            value={intakeData.customAddress}
-                            onChange={(e) => setIntakeData({...intakeData, customAddress: e.target.value})}
+                            placeholder="DIGITE O NOME DO LOCAL OU SHOPPING..."
+                            className="glass h-14 pl-12 text-white font-bold border-white/20 uppercase text-sm focus:ring-amber-500/50"
+                            value={locationSearch}
+                            onChange={(e) => setLocationSearch(e.target.value)}
                           />
+                          {isSearchingLocation && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            </div>
+                          )}
                         </div>
                       </div>
+
+                      {/* Lista de Resultados da API */}
+                      {locationResults.length > 0 && (
+                        <div className="absolute z-50 w-full bg-[#0d121f] border border-white/10 rounded-xl mt-1 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+                          <ScrollArea className="max-h-[250px]">
+                            {locationResults.map((place, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleSelectLocation(place)}
+                                className="w-full text-left p-4 hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors group"
+                              >
+                                <p className="text-sm font-bold text-white uppercase group-hover:text-primary transition-colors">{place.display_name}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase mt-1">Fonte: OpenStreetMap</p>
+                              </button>
+                            ))}
+                          </ScrollArea>
+                        </div>
+                      )}
                       
                       {intakeData.customAddress && (
-                        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-4 animate-in fade-in zoom-in duration-300">
-                          <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Confirme o Endereço para o RGMJ:</p>
-                            <p className="text-xs text-white/80 font-bold uppercase italic">"{intakeData.customAddress}"</p>
+                        <div className="p-6 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-5 animate-in fade-in zoom-in duration-300">
+                          <ShieldAlert className="h-6 w-6 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="space-y-2">
+                            <p className="text-xs font-black text-amber-500 uppercase tracking-widest">CONFIRME O ENDEREÇO:</p>
+                            <p className="text-sm text-white/80 font-bold uppercase italic leading-relaxed">"{intakeData.customAddress}"</p>
                           </div>
                         </div>
                       )}
@@ -1237,22 +1303,22 @@ export default function LeadsPage() {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data do Ato</Label>
-                  <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
+                  <Label className="text-sm font-black text-muted-foreground uppercase tracking-widest">Data do Ato</Label>
+                  <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold border-white/20 text-base" />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                  <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
+                  <Label className="text-sm font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
+                  <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold border-white/20 text-base" />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-primary" /> Observações Táticas para o Advogado
+                <Label className="text-sm font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" /> Observações Táticas para o Advogado
                 </Label>
                 <Textarea 
                   placeholder="EX: ENTRAR PELA PORTARIA B, O CLIENTE ESTARÁ COM UMA CAMISA AZUL..."
-                  className="glass min-h-[100px] text-white text-xs uppercase font-bold border-white/20 focus:ring-primary/50 resize-none p-4"
+                  className="glass min-h-[120px] text-white text-sm uppercase font-bold border-white/20 focus:ring-primary/50 resize-none p-5"
                   value={intakeData.observations}
                   onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
                 />
@@ -1261,8 +1327,8 @@ export default function LeadsPage() {
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest">CANCELAR</Button>
-            <Button onClick={handleScheduleIntake} className="gold-gradient text-black font-black h-16 px-12 rounded-xl uppercase text-sm tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
+            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-xs tracking-widest px-8">CANCELAR</Button>
+            <Button onClick={handleScheduleIntake} className="gold-gradient text-black font-black h-16 px-12 rounded-xl uppercase text-base tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
               CONFIRMAR AGENDA
             </Button>
           </DialogFooter>
@@ -1273,8 +1339,10 @@ export default function LeadsPage() {
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem]">
           <DialogHeader className="p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Atendimento Técnico Estratégico</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50 flex items-center gap-4">
-              <span className="w-3 h-3 rounded-full bg-primary animate-pulse" /> CAPTURA ESTRUTURADA DE FATOS RGMJ
+            <DialogDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50 flex items-center gap-4" asChild>
+              <span>
+                <span className="w-3 h-3 rounded-full bg-primary animate-pulse" /> CAPTURA ESTRUTURADA DE FATOS RGMJ
+              </span>
             </DialogDescription>
           </DialogHeader>
           {executingTemplate && (
@@ -1287,7 +1355,7 @@ export default function LeadsPage() {
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem]">
           <DialogHeader className="p-10 bg-[#0a0f1e] border-b border-white/5">
             <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">O dossiê do lead será encerrado e um novo processo tático será iniciado na base RGMJ.</DialogDescription>
+            <DialogDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">O dossiê do lead será encerrado e um novo processo tático será iniciado na base RGMJ.</DialogDescription>
           </DialogHeader>
           {selectedLead && (
             <ProcessForm 
@@ -1311,8 +1379,8 @@ export default function LeadsPage() {
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
           <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
-            <SheetTitle className="text-3xl font-bold text-white uppercase tracking-widest">Novo Atendimento RGMJ</SheetTitle>
-            <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Cadastro de nova oportunidade estratégica no funil comercial de elite.</SheetDescription>
+            <SheetTitle className="text-4xl font-bold text-white uppercase tracking-widest">Novo Atendimento RGMJ</SheetTitle>
+            <SheetDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Cadastro de nova oportunidade estratégica no funil comercial de elite.</SheetDescription>
           </SheetHeader>
           <LeadForm 
             existingLeads={leads} 
@@ -1331,8 +1399,8 @@ export default function LeadsPage() {
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
           <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
-            <SheetTitle className="text-3xl font-bold text-white uppercase tracking-widest">Saneamento de Dossiê</SheetTitle>
-            <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Retificação técnica de dados cadastrais para o rito de distribuição.</SheetDescription>
+            <SheetTitle className="text-4xl font-bold text-white uppercase tracking-widest">Saneamento de Dossiê</SheetTitle>
+            <SheetDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Retificação técnica de dados cadastrais para o rito de distribuição.</SheetDescription>
           </SheetHeader>
           {selectedLead && (
             <LeadForm 
