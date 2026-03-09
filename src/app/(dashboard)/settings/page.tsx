@@ -44,7 +44,8 @@ import {
   Lock,
   ListChecks,
   Key,
-  Mail
+  Mail,
+  Library
 } from "lucide-react"
 import { 
   Select, 
@@ -525,20 +526,23 @@ function SettingsContent() {
               <Card className="glass border-amber-500/20 bg-amber-500/5 p-8 space-y-8 rounded-2xl shadow-2xl">
                 <div className="flex items-center gap-4">
                   <Info className="h-6 w-6 text-amber-500" />
-                  <h3 className="text-base font-black text-white uppercase tracking-widest">Guia de Entrega</h3>
+                  <h3 className="text-base font-black text-white uppercase tracking-widest">Guia de Implantação</h3>
                 </div>
                 <div className="space-y-6 text-xs font-bold text-white/70 uppercase leading-relaxed tracking-wider">
                   <p>Instruções para configurar a conta do cliente final:</p>
                   <ol className="space-y-6 list-decimal pl-5">
-                    <li>Acesse o <span className="text-amber-500">Google Cloud Console</span> com a conta do cliente.</li>
+                    <li>Acesse o <span className="text-amber-500">Google Cloud Console</span> com a conta do Dr. Reinaldo.</li>
                     <li>Crie um Novo Projeto e ative as 6 APIs listadas ao lado.</li>
                     <li>Configure a <span className="text-amber-500">OAuth Consent Screen</span> como "Internal" (Google Workspace).</li>
-                    <li>Gere um <span className="text-amber-500">Client ID OAuth 2.0</span> e copie as credenciais para o arquivo .env.</li>
-                    <li>Certifique-se de que o e-mail Admin tenha permissão de proprietário no projeto.</li>
+                    <li>Gere um <span className="text-amber-500">ID do Cliente OAuth 2.0</span> para "Aplicativo da Web".</li>
+                    <li className="text-primary">Na tela de criação, insira as <span className="underline">Origens JavaScript</span> e os <span className="underline">Redirect URIs</span> do Firebase.</li>
+                    <li>Copie o <span className="text-amber-500">Client ID</span> e cole no campo de identidade abaixo.</li>
                   </ol>
                   <div className="pt-6 border-t border-amber-500/10">
-                    <Button variant="outline" className="w-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10 h-12 text-xs font-black uppercase tracking-widest rounded-xl">
-                      <ExternalLink className="h-4 w-4 mr-3" /> Console de Desenvolvedor
+                    <Button variant="outline" className="w-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10 h-12 text-xs font-black uppercase tracking-widest rounded-xl" asChild>
+                      <a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-3" /> Console de Desenvolvedor
+                      </a>
                     </Button>
                   </div>
                 </div>
@@ -555,8 +559,11 @@ function SettingsContent() {
                     <p className="text-sm font-mono text-white font-bold">rgmj-advocacia-prod</p>
                   </div>
                   <div className="bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase mb-1">CLIENT ID (OAUTH 2.0)</Label>
-                    <p className="text-[11px] font-mono text-white/40 truncate font-bold">8273...apps.googleusercontent.com</p>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase mb-1">CLIENT ID (GOOGLE CLOUD)</Label>
+                    <Input 
+                      placeholder="COLE O ID GERADO AQUI..."
+                      className="glass h-10 text-[10px] font-mono text-white/60 focus:ring-primary/50"
+                    />
                   </div>
                 </div>
               </Card>
