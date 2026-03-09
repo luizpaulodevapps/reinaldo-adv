@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -15,7 +16,9 @@ import {
   User,
   ChevronRight,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2,
+  X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { 
@@ -33,11 +36,14 @@ import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import Link from "next/link"
 
 export default function ChecklistExecutionPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false)
+  const [executingInstanceId, setExecutingInstanceId] = useState<string | null>(null)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -65,6 +71,10 @@ export default function ChecklistExecutionPage() {
     )
   }, [executions, searchTerm])
 
+  const executingInstance = useMemo(() => {
+    return executions?.find(e => e.id === executingInstanceId)
+  }, [executions, executingInstanceId])
+
   const handleStartExecution = (template: any) => {
     if (!user || !db) return
 
@@ -83,13 +93,35 @@ export default function ChecklistExecutionPage() {
     }
 
     addDocumentNonBlocking(collection(db!, "checklist_executions"), newExecution)
-      .then(() => {
+      .then((docRef: any) => {
         setIsStartDialogOpen(false)
+        setExecutingInstanceId(docRef.id)
         toast({
           title: "Rotina Iniciada",
           description: `Você iniciou a execução da rotina: ${template.title}`,
         })
       })
+  }
+
+  const handleUpdateItem = (itemIdx: number, value: boolean) => {
+    if (!db || !executingInstance) return
+    
+    const newResponses = { ...(executingInstance.responses || {}) }
+    if (value) {
+      newResponses[itemIdx] = true
+    } else {
+      delete newResponses[itemIdx]
+    }
+    
+    const totalItems = executingInstance.items?.length || 0
+    const checkedItems = Object.keys(newResponses).length
+    const newProgress = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
+    
+    updateDocumentNonBlocking(doc(db!, "checklist_executions", executingInstance.id), {
+      responses: newResponses,
+      progress: newProgress,
+      updatedAt: serverTimestamp()
+    })
   }
 
   const handleMarkComplete = (executionId: string) => {
@@ -99,6 +131,7 @@ export default function ChecklistExecutionPage() {
       progress: 100,
       updatedAt: serverTimestamp()
     })
+    setExecutingInstanceId(null)
     toast({ title: "Rotina Concluída", description: "A rotina estratégica foi arquivada como concluída." })
   }
 
@@ -192,7 +225,10 @@ export default function ChecklistExecutionPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
-                  <button className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest">
+                  <button 
+                    onClick={() => setExecutingInstanceId(exec.id)}
+                    className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest"
+                  >
                     <ArrowRight className="h-4 w-4" /> Retomar Auditoria
                   </button>
                   {exec.status !== 'Finalizado' && (
@@ -262,6 +298,78 @@ export default function ChecklistExecutionPage() {
               Cancelar Operação
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!executingInstanceId} onOpenChange={(open) => !open && setExecutingInstanceId(null)}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] font-sans rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex items-center justify-between">
+            <DialogHeader>
+              <div className="flex items-center gap-4">
+                <CheckCircle2 className="h-8 w-8 text-primary" />
+                <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                  Auditoria: {executingInstance?.title}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Marque os itens conforme a execução técnica avançar.
+              </DialogDescription>
+            </DialogHeader>
+            <button onClick={() => setExecutingInstanceId(null)} className="text-muted-foreground hover:text-white p-2">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-10 space-y-6">
+              {executingInstance?.items?.map((item: any, idx: number) => (
+                <div 
+                  key={idx} 
+                  className={cn(
+                    "flex items-start gap-6 p-6 rounded-2xl border transition-all cursor-pointer group",
+                    executingInstance.responses?.[idx] 
+                      ? "bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]" 
+                      : "bg-white/[0.02] border-white/5 hover:border-primary/20"
+                  )}
+                  onClick={() => handleUpdateItem(idx, !executingInstance.responses?.[idx])}
+                >
+                  <Checkbox 
+                    id={`item-${idx}`} 
+                    checked={executingInstance.responses?.[idx] === true}
+                    onCheckedChange={(checked) => handleUpdateItem(idx, !!checked)}
+                    className="mt-1 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor={`item-${idx}`} className="text-base font-bold text-white uppercase leading-tight cursor-pointer group-hover:text-primary transition-colors">
+                      {item.label}
+                    </Label>
+                    {item.required && <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Requisito Obrigatório</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                <span>CONFORMIDADE ATUAL</span>
+                <span className="text-white">{executingInstance?.progress || 0}%</span>
+              </div>
+              <Progress value={executingInstance?.progress || 0} className="h-2 bg-secondary" />
+            </div>
+            <div className="flex gap-4 ml-10">
+              <Button variant="ghost" onClick={() => setExecutingInstanceId(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-14">
+                Pausar Ato
+              </Button>
+              <Button 
+                onClick={() => handleMarkComplete(executingInstance!.id)} 
+                className="gold-gradient text-background font-black h-14 px-12 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest"
+              >
+                FINALIZAR ROTINA
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

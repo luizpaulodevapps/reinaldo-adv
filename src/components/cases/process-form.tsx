@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -167,7 +168,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   )
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans">
+    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans relative overflow-hidden">
       <div className="px-10 py-8 border-b border-white/5 bg-[#0a0f1e] flex-none">
         <div className="flex justify-between items-center relative max-w-4xl mx-auto">
           <div className="absolute top-5 left-0 w-full h-0.5 bg-white/5 z-0" />
@@ -207,7 +208,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-10 max-w-4xl mx-auto">
+        <div className="p-10 max-w-4xl mx-auto pb-32">
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <StepHeader title="Partes do Processo" subtitle="Identifique o cliente principal RGMJ" icon={Users} />
@@ -383,28 +384,28 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
         </div>
       </ScrollArea>
 
-      <div className="p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between flex-none">
-        <Button variant="ghost" onClick={handleBack} disabled={currentStep === 1} className="text-muted-foreground uppercase font-black text-[12px] tracking-widest px-10 h-14">
+      <div className="p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between flex-none sticky bottom-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <Button variant="ghost" onClick={handleBack} disabled={currentStep === 1} className="text-muted-foreground uppercase font-black text-[12px] tracking-widest px-10 h-14 hover:text-white">
           <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
         </Button>
         <div className="hidden md:flex gap-2">
           {steps.map(s => (
-            <div key={s.id} className={cn("w-2 h-2 rounded-full", currentStep === s.id ? "bg-primary shadow-[0_0_8px_rgba(245,208,48,0.5)]" : "bg-white/5")} />
+            <div key={s.id} className={cn("w-2.5 h-2.5 rounded-full transition-all duration-500", currentStep === s.id ? "bg-primary shadow-[0_0_10px_rgba(245,208,48,0.6)] scale-125" : "bg-white/10")} />
           ))}
         </div>
         {currentStep < 6 ? (
-          <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-background h-14 px-12 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-xl">
+          <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-background h-14 px-12 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-xl transition-all active:scale-95">
             Próximo Passo <ChevronRight className="h-4 w-4" />
           </Button>
         ) : (
-          <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background h-14 px-14 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-2xl">
+          <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background h-14 px-14 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-2xl transition-all active:scale-95">
             {initialData ? "Atualizar Dossiê" : "Protocolar Processo"} <CheckCircle2 className="h-5 w-5" />
           </Button>
         )}
       </div>
 
       <Dialog open={isQuickClientOpen} onOpenChange={setIsQuickClientOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
