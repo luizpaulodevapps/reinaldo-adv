@@ -44,7 +44,8 @@ import {
   Sparkles,
   FileText,
   Home,
-  MessageSquare
+  MessageSquare,
+  Save
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -153,7 +154,7 @@ export default function LeadsPage() {
     date: "",
     time: "",
     type: "online",
-    locationType: "sede", // 'sede' | 'externo'
+    locationType: "sede", 
     customAddress: "",
     observations: ""
   })
@@ -1151,7 +1152,7 @@ export default function LeadsPage() {
       </Dialog>
 
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
@@ -1208,7 +1209,7 @@ export default function LeadsPage() {
                   {intakeData.locationType === 'externo' && (
                     <div className="space-y-4 pt-2">
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Endereço do Local (Ex: Shopping, Residência)</Label>
+                        <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Pesquisar ou Digitar Local (Ex: Shopping, Residência)</Label>
                         <div className="relative">
                           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input 
@@ -1224,7 +1225,7 @@ export default function LeadsPage() {
                         <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-4 animate-in fade-in zoom-in duration-300">
                           <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                           <div className="space-y-1">
-                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Confirme o Endereço:</p>
+                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Confirme o Endereço para o RGMJ:</p>
                             <p className="text-xs text-white/80 font-bold uppercase italic">"{intakeData.customAddress}"</p>
                           </div>
                         </div>
@@ -1247,10 +1248,10 @@ export default function LeadsPage() {
 
               <div className="space-y-3">
                 <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-primary" /> Observações Táticas
+                  <MessageSquare className="h-4 w-4 text-primary" /> Observações Táticas para o Advogado
                 </Label>
                 <Textarea 
-                  placeholder="EX: ENTRAR PELA PORTARIA B, CLIENTE ESTARÁ COM CAMISA AZUL..."
+                  placeholder="EX: ENTRAR PELA PORTARIA B, O CLIENTE ESTARÁ COM UMA CAMISA AZUL..."
                   className="glass min-h-[100px] text-white text-xs uppercase font-bold border-white/20 focus:ring-primary/50 resize-none p-4"
                   value={intakeData.observations}
                   onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
