@@ -45,7 +45,9 @@ import {
   ListChecks,
   Key,
   Mail,
-  Library
+  Library,
+  Building2,
+  Fingerprint
 } from "lucide-react"
 import { 
   Select, 
@@ -57,7 +59,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -169,6 +171,33 @@ function SettingsContent() {
     sendWhatsApp: true
   })
 
+  const [loadingFirmCep, setLoadingFirmCep] = useState(false)
+  const [firmFormData, setFirmFormData] = useState({
+    name: "RGMJ ADVOGADOS",
+    cnpj: "",
+    zipCode: "",
+    address: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    phone: "",
+    email: ""
+  })
+
+  const firmRef = useMemoFirebase(() => {
+    if (!db) return null
+    return doc(db, 'settings', 'firm')
+  }, [db])
+  const { data: firmData } = useDoc(firmRef)
+
+  useEffect(() => {
+    if (firmData) {
+      setFirmFormData(prev => ({ ...prev, ...firmData }))
+    }
+  }, [firmData])
+
   const modelsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "document_templates"), orderBy("createdAt", "desc"))
@@ -236,6 +265,40 @@ function SettingsContent() {
       updatedAt: serverTimestamp()
     })
     toast({ title: "Preferências Salvas" })
+  }
+
+  const handleSaveFirmProfile = () => {
+    if (!db || !firmFormData.name) return
+    const docRef = doc(db, 'settings', 'firm')
+    setDocumentNonBlocking(docRef, {
+      ...firmFormData,
+      name: firmFormData.name.toUpperCase(),
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+    toast({ title: "Dados da Banca Atualizados" })
+  }
+
+  const handleFirmCepBlur = async () => {
+    const cep = firmFormData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+    setLoadingFirmCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setFirmFormData(prev => ({
+          ...prev,
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }))
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingFirmCep(false)
+    }
   }
 
   const handleOpenCreateModel = () => {
@@ -369,6 +432,7 @@ function SettingsContent() {
         <TabsList className="bg-transparent border-b border-white/5 h-14 p-0 gap-2 w-full justify-start rounded-none mb-10 overflow-x-auto scrollbar-hide">
           {[
             { id: "perfil", label: "Meu Perfil" },
+            { id: "banca", label: "Dados da Banca" },
             { id: "temas", label: "Interface" },
             { id: "google", label: "Integração Google" },
             { id: "modelos", label: "Modelos de Documentos" },
@@ -410,6 +474,87 @@ function SettingsContent() {
               </div>
               <Button onClick={handleUpdateMyProfile} className="gold-gradient text-background font-black gap-3 h-14 px-10 uppercase text-xs rounded-xl shadow-2xl">
                 <Save className="h-5 w-5" /> ATUALIZAR MEUS DADOS
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="banca" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl">
+            <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                  <Building2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Dados da Banca / Sede</CardTitle>
+                  <p className="text-muted-foreground text-xs font-black uppercase tracking-[0.2em] opacity-50">QUALIFICAÇÃO INSTITUCIONAL RGMJ.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DA BANCA</Label>
+                  <Input value={firmFormData.name} onChange={(e) => setFirmFormData({...firmFormData, name: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black text-base" />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">CNPJ DA BANCA</Label>
+                  <Input value={firmFormData.cnpj} onChange={(e) => setFirmFormData({...firmFormData, cnpj: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-base" placeholder="00.000.000/0000-00" />
+                </div>
+              </div>
+
+              <div className="border-t border-white/5 pt-10 space-y-8">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Localização da Sede</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">CEP</Label>
+                    <div className="relative">
+                      <Input value={firmFormData.zipCode} onChange={(e) => setFirmFormData({...firmFormData, zipCode: e.target.value})} onBlur={handleFirmCepBlur} className="glass border-white/10 h-12 text-white font-mono" placeholder="00000-000" />
+                      {loadingFirmCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">LOGRADOURO</Label>
+                    <Input value={firmFormData.address} onChange={(e) => setFirmFormData({...firmFormData, address: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">NÚMERO</Label>
+                    <Input value={firmFormData.number} onChange={(e) => setFirmFormData({...firmFormData, number: e.target.value})} className="glass border-white/10 h-12 text-white" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">BAIRRO</Label>
+                    <Input value={firmFormData.neighborhood} onChange={(e) => setFirmFormData({...firmFormData, neighborhood: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">CIDADE</Label>
+                    <Input value={firmFormData.city} onChange={(e) => setFirmFormData({...firmFormData, city: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">UF</Label>
+                    <Input value={firmFormData.state} onChange={(e) => setFirmFormData({...firmFormData, state: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" maxLength={2} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
+                <div className="space-y-3">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">WHATSAPP INSTITUCIONAL</Label>
+                  <Input value={firmFormData.phone} onChange={(e) => setFirmFormData({...firmFormData, phone: e.target.value})} className="glass border-white/10 h-14 text-white font-bold" />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">E-MAIL DE ATENDIMENTO</Label>
+                  <Input value={firmFormData.email} onChange={(e) => setFirmFormData({...firmFormData, email: e.target.value.toLowerCase()})} className="glass border-white/10 h-14 text-white lowercase" />
+                </div>
+              </div>
+
+              <Button onClick={handleSaveFirmProfile} className="gold-gradient h-14 rounded-xl font-black uppercase text-xs tracking-widest px-10 shadow-2xl hover:scale-[1.02] transition-transform">
+                <Save className="h-5 w-5 mr-3" /> SALVAR DADOS DA SEDE
               </Button>
             </CardContent>
           </Card>
