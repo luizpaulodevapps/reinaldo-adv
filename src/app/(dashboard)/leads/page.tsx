@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -93,13 +92,24 @@ export default function LeadsPage() {
   const { user } = useUser()
   const { toast } = useToast()
 
+  // Consulta restaurada: Pega todos os leads que não estão arquivados
+  // Removi o filtro de status desigual para evitar problemas com registros sem o campo status
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "leads"), where("status", "!=", "arquivado"), orderBy("status"), orderBy("updatedAt", "desc"), limit(100))
+    return query(
+      collection(db!, "leads"), 
+      orderBy("updatedAt", "desc"), 
+      limit(100)
+    )
   }, [db, user])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
-  const leads = leadsData || []
+  
+  // Filtro de arquivados no cliente para garantir máxima visibilidade
+  const leads = useMemo(() => {
+    if (!leadsData) return []
+    return leadsData.filter(l => l.status !== 'arquivado')
+  }, [leadsData])
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -115,10 +125,8 @@ export default function LeadsPage() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [strategicSummary, setStrategicSummary] = useState<GenerateCaseSummaryOutput | null>(null)
 
-  // Drag and Drop State
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
-  // Hearing state
   const [isSchedulingHearing, setIsSchedulingHearing] = useState(false)
   const [hearingData, setHearingData] = useState({
     type: "UNA",
@@ -231,7 +239,7 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp(),
     }
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
-    if (selectedLead.status === 'novo') {
+    if (selectedLead.status === 'novo' || !selectedLead.status) {
       await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
         status: "atendimento",
         updatedAt: serverTimestamp()
@@ -253,7 +261,6 @@ export default function LeadsPage() {
     }
     const processRef = await addDocumentNonBlocking(collection(db!, "processes"), processPayload)
     
-    // Create hearing if scheduled
     if (isSchedulingHearing && hearingData.date && hearingData.time) {
       const hearingPayload = {
         title: `Audiência ${hearingData.type}: ${selectedLead.name}`,
@@ -283,7 +290,6 @@ export default function LeadsPage() {
     toast({ title: "Processo Protocolado e Agenda Atualizada" })
   }
 
-  // Drag and Drop Logic
   const handleDragStart = (leadId: string) => {
     setDraggedLeadId(leadId)
   }
@@ -297,9 +303,7 @@ export default function LeadsPage() {
     const lead = leads.find(l => l.id === draggedLeadId)
     if (!lead) return
 
-    // Validation Rules
     if (targetStatus === 'burocracia') {
-      // Check if lead has interviews
       const interviewsSnap = await getDocs(query(collection(db, "interviews"), where("clientId", "==", lead.id)))
       if (interviewsSnap.empty) {
         toast({
@@ -328,7 +332,6 @@ export default function LeadsPage() {
       }
     }
 
-    // Process Move
     if (lead.status !== targetStatus) {
       await updateDocumentNonBlocking(doc(db, "leads", lead.id), {
         status: targetStatus,
@@ -358,46 +361,51 @@ export default function LeadsPage() {
     <div className="space-y-8 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-3 text-sm uppercase tracking-widest font-black text-muted-foreground/40 mb-3">
-            <LayoutGrid className="h-5 w-5" />
+          <div className="flex items-center gap-3 text-base uppercase tracking-widest font-black text-muted-foreground/40 mb-3">
+            <LayoutGrid className="h-6 w-6" />
             <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
             <span className="text-white">FUNIL DE LEADS</span>
           </div>
-          <h1 className="text-4xl font-bold text-white uppercase tracking-tight">Triagem de Oportunidades</h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-[0.2em] mt-2 opacity-60">Arraste para mover • Respeite os ritos técnicos.</p>
+          <h1 className="text-5xl font-bold text-white uppercase tracking-tight">Triagem de Oportunidades</h1>
+          <p className="text-muted-foreground text-base uppercase tracking-[0.2em] mt-3 opacity-60">Arraste para mover • Respeite os ritos técnicos.</p>
         </div>
-        <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-background font-black gap-3 px-8 h-14 rounded-xl text-sm tracking-widest shadow-2xl hover:scale-105 transition-all">
-          <PlusCircle className="h-6 w-6" /> NOVO ATENDIMENTO ESTRATÉGICO
+        <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-background font-black gap-4 px-10 h-16 rounded-xl text-base tracking-widest shadow-2xl hover:scale-105 transition-all">
+          <PlusCircle className="h-7 w-7" /> NOVO ATENDIMENTO ESTRATÉGICO
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="py-32 flex flex-col items-center justify-center space-y-6">
-          <Loader2 className="h-14 w-14 animate-spin text-primary" />
-          <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Sincronizando Banco de Dados RGMJ...</span>
+        <div className="py-40 flex flex-col items-center justify-center space-y-8">
+          <Loader2 className="h-20 w-20 animate-spin text-primary" />
+          <span className="text-base font-bold uppercase tracking-widest text-muted-foreground">Sincronizando Banco de Dados RGMJ...</span>
         </div>
       ) : (
-        <div className="flex gap-8 overflow-x-auto pb-12 scrollbar-hide min-h-[700px] px-2">
+        <div className="flex gap-10 overflow-x-auto pb-16 scrollbar-hide min-h-[800px] px-2">
           {columns.map((col) => {
-            const leadsInCol = leads.filter(l => (l.status || "novo") === col.id)
+            // Se o lead não tem status, ele cai na primeira coluna (novo)
+            const leadsInCol = leads.filter(l => {
+              const currentStatus = l.status || "novo"
+              return currentStatus === col.id
+            })
+            
             return (
               <div 
                 key={col.id} 
-                className="min-w-[360px] flex-1 flex flex-col"
+                className="min-w-[400px] flex-1 flex flex-col"
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(col.id)}
               >
-                <div className="flex items-center justify-between mb-6 px-4 bg-white/[0.02] py-3 rounded-xl border border-white/5 shadow-inner">
-                  <div className="flex items-center gap-4">
-                    <div className={cn("w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]", col.color.replace('text-', 'bg-'))} />
-                    <h3 className={cn("font-black text-sm tracking-[0.3em] uppercase", col.color)}>{col.title}</h3>
+                <div className="flex items-center justify-between mb-8 px-6 bg-white/[0.02] py-4 rounded-xl border border-white/5 shadow-inner">
+                  <div className="flex items-center gap-5">
+                    <div className={cn("w-4 h-4 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]", col.color.replace('text-', 'bg-'))} />
+                    <h3 className={cn("font-black text-base tracking-[0.3em] uppercase", col.color)}>{col.title}</h3>
                   </div>
-                  <Badge variant="secondary" className="bg-white/5 text-xs border-white/5 font-black h-7 px-3 rounded-lg">{leadsInCol.length}</Badge>
+                  <Badge variant="secondary" className="bg-white/5 text-sm border-white/5 font-black h-8 px-4 rounded-lg">{leadsInCol.length}</Badge>
                 </div>
 
                 <div className={cn(
-                  "space-y-5 flex-1 bg-white/[0.01] rounded-3xl p-4 border border-white/5 transition-all duration-300",
+                  "space-y-6 flex-1 bg-white/[0.01] rounded-[2.5rem] p-6 border border-white/5 transition-all duration-300",
                   draggedLeadId && "ring-2 ring-primary/20 bg-primary/[0.02]"
                 )}>
                   <AnimatePresence>
@@ -414,46 +422,46 @@ export default function LeadsPage() {
                       >
                         <Card 
                           className={cn(
-                            "glass hover-gold transition-all cursor-grab active:cursor-grabbing group border-white/5 shadow-2xl rounded-2xl overflow-hidden",
+                            "glass hover-gold transition-all cursor-grab active:cursor-grabbing group border-white/5 shadow-2xl rounded-3xl overflow-hidden",
                             draggedLeadId === lead.id && "opacity-50 grayscale scale-95"
                           )} 
                           onClick={() => handleOpenLead(lead)}
                         >
-                          <CardContent className="p-6 space-y-5">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="space-y-1 flex-1">
-                                <div className="font-bold text-lg text-white group-hover:text-primary transition-colors uppercase tracking-tight leading-snug">{lead.name}</div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 6).toUpperCase()}</span>
+                          <CardContent className="p-8 space-y-6">
+                            <div className="flex items-start justify-between gap-6">
+                              <div className="space-y-2 flex-1">
+                                <div className="font-bold text-xl text-white group-hover:text-primary transition-colors uppercase tracking-tight leading-snug">{lead.name}</div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {lead.meetingType === 'online' && <Video className="h-5 w-5 text-primary shrink-0 opacity-60" />}
-                                <GripVertical className="h-5 w-5 text-white/10 group-hover:text-primary/40 transition-colors" />
+                              <div className="flex items-center gap-3">
+                                {lead.meetingType === 'online' && <Video className="h-6 w-6 text-primary shrink-0 opacity-60" />}
+                                <GripVertical className="h-6 w-6 text-white/10 group-hover:text-primary/40 transition-colors" />
                               </div>
                             </div>
                             
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                               {lead.scheduledDate && (
-                                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-amber-500/5 border border-amber-500/10 w-fit">
-                                  <Clock className="h-4 w-4 text-amber-500" />
-                                  <span className="text-xs font-black text-amber-500 uppercase tracking-widest">
+                                <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 w-fit">
+                                  <Clock className="h-5 w-5 text-amber-500" />
+                                  <span className="text-sm font-black text-amber-500 uppercase tracking-widest">
                                     {new Date(lead.scheduledDate).toLocaleDateString('pt-BR')} {lead.scheduledTime}
                                   </span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground font-bold uppercase tracking-widest px-1">
-                                <Building className="h-4 w-4 opacity-40" /> {lead.defendantName || "RÉU PENDENTE"}
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground font-bold uppercase tracking-widest px-1">
+                                <Building className="h-5 w-5 opacity-40" /> {lead.defendantName || "RÉU PENDENTE"}
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between pt-5 border-t border-white/5">
-                              <div className="flex gap-2">
-                                {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 font-black uppercase">CPF OK</Badge>}
-                                {lead.interviewsCount > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 font-black uppercase">ENTREVISTA</Badge>}
+                            <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                              <div className="flex gap-3">
+                                {lead.cpf && <Badge variant="outline" className="text-[10px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 font-black uppercase px-3 py-1">CPF OK</Badge>}
+                                {lead.interviewsCount > 0 && <Badge variant="outline" className="text-[10px] border-primary/20 text-primary bg-primary/5 font-black uppercase px-3 py-1">ENTREVISTA</Badge>}
                               </div>
-                              <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-                                ABRIR DOSSIÊ <ArrowRight className="h-4 w-4" />
+                              <div className="flex items-center gap-3 text-primary font-black text-sm uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+                                ABRIR DOSSIÊ <ArrowRight className="h-5 w-5" />
                               </div>
                             </div>
                           </CardContent>
@@ -463,9 +471,9 @@ export default function LeadsPage() {
                   </AnimatePresence>
                   
                   {leadsInCol.length === 0 && (
-                    <div className="h-48 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] opacity-20 space-y-4">
-                      <LayoutGrid className="h-10 w-10" />
-                      <span className="text-xs font-black uppercase tracking-[0.4em]">Limbo Operacional</span>
+                    <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20 space-y-6">
+                      <LayoutGrid className="h-14 w-14" />
+                      <span className="text-sm font-black uppercase tracking-[0.5em]">Limbo Operacional</span>
                     </div>
                   )}
                 </div>
@@ -479,48 +487,48 @@ export default function LeadsPage() {
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
           {selectedLead && (
             <div className="flex flex-col h-full">
-              <SheetHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] z-10 flex-none shadow-2xl">
+              <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] z-10 flex-none shadow-2xl">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-8">
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
-                      <Fingerprint className="h-8 w-8 text-primary" />
+                  <div className="flex items-center gap-10">
+                    <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
+                      <Fingerprint className="h-10 w-10 text-primary" />
                     </div>
-                    <div className="space-y-2">
-                      <SheetTitle className="text-white text-3xl font-bold uppercase tracking-tight">{selectedLead.name}</SheetTitle>
-                      <SheetDescription asChild>
-                        <div className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-3">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> 
-                          DOSSIÊ ESTRATÉGICO RGMJ • ID {selectedLead.id.substring(0, 8).toUpperCase()}
-                        </div>
+                    <div className="space-y-3">
+                      <SheetTitle className="text-white text-4xl font-bold uppercase tracking-tight">{selectedLead.name}</SheetTitle>
+                      <SheetDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.3em] flex items-center gap-4" asChild>
+                        <span>
+                          <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.5)]" /> 
+                          DOSSIÊ ESTRATÉGICO RGMJ • ID {selectedLead.id.substring(0, 12).toUpperCase()}
+                        </span>
                       </SheetDescription>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-14 border-white/10 bg-white/5 text-xs font-black uppercase px-8 rounded-xl gap-4 transition-all hover:bg-primary/5 shadow-2xl">
-                      {isSyncingDrive ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <CloudLightning className="h-5 w-5 text-amber-500" />} SINC. DRIVE
+                  <div className="flex items-center gap-6">
+                    <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-16 border-white/10 bg-white/5 text-sm font-black uppercase px-10 rounded-2xl gap-5 transition-all hover:bg-primary/5 shadow-2xl">
+                      {isSyncingDrive ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <CloudLightning className="h-6 w-6 text-amber-500" />} SINC. DRIVE
                     </Button>
-                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-14 border-white/10 bg-white/5 text-xs font-black uppercase px-8 rounded-xl gap-4 transition-all hover:bg-primary/5 shadow-2xl">
-                      <UserCog className="h-5 w-5 text-primary" /> EDITAR QUALIFICAÇÃO
+                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-16 border-white/10 bg-white/5 text-sm font-black uppercase px-10 rounded-2xl gap-5 transition-all hover:bg-primary/5 shadow-2xl">
+                      <UserCog className="h-6 w-6 text-primary" /> EDITAR QUALIFICAÇÃO
                     </Button>
                   </div>
                 </div>
               </SheetHeader>
               
-              <div className="p-6 bg-[#0a0f1e]/60 border-b border-white/5 flex-none overflow-x-auto scrollbar-hide">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 min-w-[1000px]">
+              <div className="p-8 bg-[#0a0f1e]/60 border-b border-white/5 flex-none overflow-x-auto scrollbar-hide">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 min-w-[1200px]">
                   {[
                     { label: "Status Operacional", value: selectedLead.status?.toUpperCase() || "NOVO", icon: Zap, color: "text-primary" },
                     { label: "Réu Principal", value: selectedLead.defendantName || "NÃO INFORMADO", icon: Building, color: "text-muted-foreground" },
                     { label: "Canal WhatsApp", value: selectedLead.phone, icon: Phone, color: "text-emerald-500" },
                     { label: "Jurisdição", value: selectedLead.city ? `${selectedLead.city}-${selectedLead.state}` : "N/A", icon: MapPin, color: "text-muted-foreground" },
                   ].map((item, i) => (
-                    <div key={i} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-5 shadow-xl">
-                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-black/20 border border-white/5", item.color)}>
-                        <item.icon className="h-6 w-6" />
+                    <div key={i} className="p-6 rounded-[1.5rem] bg-white/[0.02] border border-white/5 flex items-center gap-6 shadow-xl">
+                      <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center bg-black/20 border border-white/5", item.color)}>
+                        <item.icon className="h-7 w-7" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 opacity-50">{item.label}</p>
-                        <p className="text-base font-bold text-white uppercase truncate tracking-tight">{item.value}</p>
+                        <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest mb-2 opacity-50">{item.label}</p>
+                        <p className="text-lg font-bold text-white uppercase truncate tracking-tight">{item.value}</p>
                       </div>
                     </div>
                   ))}
@@ -528,37 +536,37 @@ export default function LeadsPage() {
               </div>
 
               <ScrollArea className="flex-1 bg-[#05070a]">
-                <div className="p-10 space-y-10 w-full max-w-[1800px] mx-auto pb-40">
-                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-10">
-                    <TabsList className="bg-transparent border-b border-white/5 h-14 w-full justify-start rounded-none p-0 gap-16 flex-none overflow-x-auto scrollbar-hide">
+                <div className="p-12 space-y-12 w-full max-w-[1800px] mx-auto pb-40">
+                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-12">
+                    <TabsList className="bg-transparent border-b border-white/5 h-16 w-full justify-start rounded-none p-0 gap-20 flex-none overflow-x-auto scrollbar-hide">
                       {[
                         { id: "overview", label: "VISÃO GERAL" },
                         { id: "entrevistas", label: "ENTREVISTAS TÉCNICAS" },
                         { id: "burocracia", label: "BUROCRACIA & KITS" },
                         { id: "revisao", label: "REVISÃO & PROTOCOLO" }
                       ].map(tab => (
-                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-sm uppercase h-full rounded-none px-0 border-b-4 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">{tab.label}</TabsTrigger>
+                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-base uppercase h-full rounded-none px-0 border-b-4 border-transparent data-[state=active]:border-primary transition-all tracking-[0.3em]">{tab.label}</TabsTrigger>
                       ))}
                     </TabsList>
 
-                    <TabsContent value="overview" className="space-y-10 animate-in fade-in duration-500 outline-none w-full">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                        <Card className="glass border-white/5 p-10 rounded-[2rem] shadow-2xl bg-white/[0.01] relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-10 opacity-5"><Clock className="h-32 w-32" /></div>
-                          <h4 className="text-sm font-black text-amber-500 uppercase tracking-[0.3em] flex items-center gap-4 mb-8"><Clock className="h-6 w-6" /> Cronograma de Atendimento</h4>
-                          <div className="space-y-6">
-                            <p className="text-3xl font-bold text-white uppercase tracking-tighter">
+                    <TabsContent value="overview" className="space-y-12 animate-in fade-in duration-500 outline-none w-full">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <Card className="glass border-white/5 p-12 rounded-[3rem] shadow-2xl bg-white/[0.01] relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-12 opacity-5"><Clock className="h-40 w-40" /></div>
+                          <h4 className="text-base font-black text-amber-500 uppercase tracking-[0.4em] flex items-center gap-5 mb-10"><Clock className="h-7 w-7" /> Cronograma de Atendimento</h4>
+                          <div className="space-y-8">
+                            <p className="text-4xl font-bold text-white uppercase tracking-tighter">
                               {selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} às ${selectedLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
                             </p>
-                            <Badge variant="outline" className="text-xs font-black text-muted-foreground border-white/10 px-6 py-3 rounded-xl uppercase tracking-widest bg-white/[0.02]">
+                            <Badge variant="outline" className="text-sm font-black text-muted-foreground border-white/10 px-8 py-4 rounded-2xl uppercase tracking-widest bg-white/[0.02]">
                               {selectedLead.meetingType === 'online' ? '🖥️ REUNIÃO VIRTUAL RGMJ' : '🏢 VISITA PRESENCIAL À BANCA'}
                             </Badge>
                           </div>
                         </Card>
-                        <Card className="glass border-primary/15 p-10 rounded-[2rem] shadow-2xl bg-primary/5 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-10 opacity-5"><Brain className="h-32 w-32" /></div>
-                          <h4 className="text-sm font-black text-primary uppercase tracking-[0.3em] flex items-center gap-4 mb-8"><Brain className="h-6 w-6" /> Síntese Estratégica (IA)</h4>
-                          <p className="text-lg text-white/80 leading-relaxed italic text-justify font-medium">
+                        <Card className="glass border-primary/15 p-12 rounded-[3rem] shadow-2xl bg-primary/5 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-12 opacity-5"><Brain className="h-40 w-40" /></div>
+                          <h4 className="text-base font-black text-primary uppercase tracking-[0.4em] flex items-center gap-5 mb-10"><Brain className="h-7 w-7" /> Síntese Estratégica (IA)</h4>
+                          <p className="text-xl text-white/80 leading-relaxed italic text-justify font-medium">
                             {selectedLead.aiSummary || "O sistema aguarda a conclusão das entrevistas técnicas para consolidar os fatos e gerar a tese jurídica preliminar RGMJ. A inteligência analisará depoimentos e documentos sincronizados para propor a melhor abordagem processual."}
                           </p>
                         </Card>
@@ -566,13 +574,13 @@ export default function LeadsPage() {
                     </TabsContent>
 
                     <TabsContent value="entrevistas" className="w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {templates?.map(t => (
-                          <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-xs h-20 gap-5 rounded-2xl justify-start px-8 hover:bg-primary/5 transition-all shadow-2xl group border-2">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Zap className="h-6 w-6" /></div>
+                          <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-sm h-24 gap-6 rounded-3xl justify-start px-10 hover:bg-primary/5 transition-all shadow-2xl group border-2">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Zap className="h-7 w-7" /></div>
                             <div className="flex flex-col items-start min-w-0">
                               <span className="truncate w-full text-left">{t.title}</span>
-                              <span className="text-[8px] opacity-40 tracking-widest mt-1">INICIAR CAPTURA</span>
+                              <span className="text-[10px] opacity-40 tracking-[0.2em] mt-2">INICIAR CAPTURA</span>
                             </div>
                           </Button>
                         ))}
@@ -583,29 +591,29 @@ export default function LeadsPage() {
                       <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
-                    <TabsContent value="revisao" className="space-y-10 animate-in fade-in duration-700 w-full">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-10 border-b border-white/5">
-                        <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-2xl">
-                            <ShieldCheck className="h-8 w-8 text-emerald-500" />
+                    <TabsContent value="revisao" className="space-y-12 animate-in fade-in duration-700 w-full">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 pb-12 border-b border-white/5">
+                        <div className="flex items-center gap-8">
+                          <div className="w-20 h-20 rounded-[2rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-2xl">
+                            <ShieldCheck className="h-10 w-10 text-emerald-500" />
                           </div>
                           <div>
-                            <h3 className="text-3xl font-bold text-white uppercase tracking-widest">Auditoria de Protocolo</h3>
-                            <p className="text-xs text-muted-foreground uppercase font-black tracking-widest mt-1 opacity-50">Validação final de DNA Jurídico antes da conversão.</p>
+                            <h3 className="text-4xl font-bold text-white uppercase tracking-widest">Auditoria de Protocolo</h3>
+                            <p className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em] mt-2 opacity-50">Validação final de DNA Jurídico antes da conversão.</p>
                           </div>
                         </div>
-                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-16 px-10 glass border-primary/30 text-primary font-black uppercase text-sm gap-4 rounded-2xl shadow-2xl hover:bg-primary/5 transition-all">
-                          {isGeneratingSummary ? <Loader2 className="h-6 w-6 animate-spin" /> : <Brain className="h-6 w-6" />} CONSOLIDAR ESTRATÉGIA IA
+                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-20 px-12 glass border-primary/30 text-primary font-black uppercase text-base gap-5 rounded-[1.5rem] shadow-2xl hover:bg-primary/5 transition-all">
+                          {isGeneratingSummary ? <Loader2 className="h-7 w-7 animate-spin" /> : <Brain className="h-7 w-7" />} CONSOLIDAR ESTRATÉGIA IA
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <Card className="glass border-white/5 p-10 rounded-[2.5rem] space-y-8 shadow-2xl bg-white/[0.01]">
-                          <div className="flex items-center gap-5 border-b border-white/5 pb-4">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><User className="h-5 w-5 text-primary" /></div>
-                            <span className="text-sm font-black text-white uppercase tracking-[0.2em]">Polo Ativo (Autor)</span>
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                        <Card className="glass border-white/5 p-12 rounded-[3rem] space-y-10 shadow-2xl bg-white/[0.01]">
+                          <div className="flex items-center gap-6 border-b border-white/5 pb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center"><User className="h-6 w-6 text-primary" /></div>
+                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">Polo Ativo (Autor)</span>
                           </div>
-                          <div className="space-y-6">
+                          <div className="space-y-8">
                             {[
                               { label: "Nome Civil", value: selectedLead.name },
                               { label: "Identificação Fiscal", value: selectedLead.cpf || selectedLead.documentNumber || "NÃO INFORMADO" },
@@ -613,38 +621,38 @@ export default function LeadsPage() {
                               { label: "Residência Atual", value: selectedLead.address ? `${selectedLead.address}, ${selectedLead.city}` : "PENDENTE" },
                             ].map(item => (
                               <div key={item.label} className="group">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
-                                <p className="text-base font-bold text-white uppercase tracking-tight">{item.value}</p>
+                                <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
+                                <p className="text-lg font-bold text-white uppercase tracking-tight">{item.value}</p>
                               </div>
                             ))}
                           </div>
                         </Card>
 
-                        <Card className="glass border-white/5 p-10 rounded-[2.5rem] space-y-8 shadow-2xl bg-white/[0.01]">
-                          <div className="flex items-center gap-5 border-b border-white/5 pb-4">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Building className="h-5 w-5 text-primary" /></div>
-                            <span className="text-sm font-black text-white uppercase tracking-[0.2em]">Polo Passivo (Réu)</span>
+                        <Card className="glass border-white/5 p-12 rounded-[3rem] space-y-10 shadow-2xl bg-white/[0.01]">
+                          <div className="flex items-center gap-6 border-b border-white/5 pb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center"><Building className="h-6 w-6 text-primary" /></div>
+                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">Polo Passivo (Réu)</span>
                           </div>
-                          <div className="space-y-6">
+                          <div className="space-y-8">
                             {[
                               { label: "Razão Social / Nome", value: selectedLead.defendantName || "NÃO INFORMADO" },
                               { label: "Documento (CNPJ/CPF)", value: selectedLead.defendantDocument || "NÃO INFORMADO" },
                               { label: "Sede / Filial", value: selectedLead.defendantAddress || "NÃO MAPEADO" },
                             ].map(item => (
                               <div key={item.label} className="group">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
-                                <p className="text-base font-bold text-white uppercase tracking-tight">{item.value}</p>
+                                <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
+                                <p className="text-lg font-bold text-white uppercase tracking-tight">{item.value}</p>
                               </div>
                             ))}
                           </div>
                         </Card>
 
-                        <Card className="glass border-white/5 p-10 rounded-[2.5rem] space-y-8 shadow-2xl bg-white/[0.01]">
-                          <div className="flex items-center gap-5 border-b border-white/5 pb-4">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Gavel className="h-5 w-5 text-primary" /></div>
-                            <span className="text-sm font-black text-white uppercase tracking-[0.2em]">Logística Judiciária</span>
+                        <Card className="glass border-white/5 p-12 rounded-[3rem] space-y-10 shadow-2xl bg-white/[0.01]">
+                          <div className="flex items-center gap-6 border-b border-white/5 pb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center"><Gavel className="h-6 w-6 text-primary" /></div>
+                            <span className="text-base font-black text-white uppercase tracking-[0.3em]">Logística Judiciária</span>
                           </div>
-                          <div className="space-y-6">
+                          <div className="space-y-8">
                             {[
                               { label: "Tribunal Superior / Região", value: selectedLead.court || "NÃO MAPEADO" },
                               { label: "Vara / Unidade Judiciária", value: selectedLead.vara || "NÃO MAPEADA" },
@@ -652,41 +660,41 @@ export default function LeadsPage() {
                               { label: "Logradouro do Juízo", value: selectedLead.courtAddress || "PENDENTE" },
                             ].map(item => (
                               <div key={item.label} className="group">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
-                                <p className="text-base font-bold text-white uppercase tracking-tight">{item.value}</p>
+                                <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-40 group-hover:opacity-100 transition-opacity">{item.label}</p>
+                                <p className="text-lg font-bold text-white uppercase tracking-tight">{item.value}</p>
                               </div>
                             ))}
                           </div>
                         </Card>
                       </div>
 
-                      <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-[2.5rem]">
-                        <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
-                          <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-2xl"><MessageCircle className="h-6 w-6" /></div>
-                            <div className="space-y-1">
-                              <span className="text-xl font-bold text-white uppercase tracking-widest">DNA de Atendimento</span>
-                              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">Resumo dos fatos capturados nas entrevistas.</p>
+                      <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-[3.5rem]">
+                        <div className="p-10 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
+                          <div className="flex items-center gap-6">
+                            <div className="w-14 h-14 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-2xl"><MessageCircle className="h-7 w-7" /></div>
+                            <div className="space-y-2">
+                              <span className="text-2xl font-bold text-white uppercase tracking-widest">DNA de Atendimento</span>
+                              <p className="text-xs text-muted-foreground font-black uppercase tracking-[0.3em] opacity-50">Resumo dos fatos capturados nas entrevistas.</p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-xs font-black border-primary/20 text-primary px-6 py-2 rounded-xl uppercase tracking-widest bg-primary/5">{leadInterviews?.length || 0} Atendimentos Realizados</Badge>
+                          <Badge variant="outline" className="text-sm font-black border-primary/20 text-primary px-8 py-3 rounded-2xl uppercase tracking-widest bg-primary/5">{leadInterviews?.length || 0} Atendimentos Realizados</Badge>
                         </div>
-                        <div className="p-10">
+                        <div className="p-12">
                           {leadInterviews && leadInterviews.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                               {leadInterviews.slice(0, 4).map((int, idx) => (
-                                <div key={idx} className="p-8 rounded-[2rem] bg-black/30 border border-white/5 space-y-6 shadow-2xl hover:border-primary/20 transition-all group">
-                                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                                    <span className="text-sm font-black text-primary uppercase tracking-widest group-hover:scale-105 transition-transform origin-left">{int.interviewType}</span>
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono font-bold">
-                                      <Clock className="h-3 w-3" /> {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
+                                <div key={idx} className="p-10 rounded-[3rem] bg-black/30 border border-white/5 space-y-8 shadow-2xl hover:border-primary/20 transition-all group">
+                                  <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                                    <span className="text-base font-black text-primary uppercase tracking-widest group-hover:scale-105 transition-transform origin-left">{int.interviewType}</span>
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono font-bold">
+                                      <Clock className="h-4 w-4" /> {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
                                     </div>
                                   </div>
-                                  <div className="space-y-6">
+                                  <div className="space-y-8">
                                     {Object.entries(int.responses || {}).slice(0, 2).map(([q, a]: any) => (
                                       <div key={q}>
-                                        <p className="text-[10px] font-black text-muted-foreground uppercase opacity-40 mb-2 tracking-widest">{q}</p>
-                                        <p className="text-sm text-white/90 font-medium uppercase leading-relaxed text-justify">{String(a)}</p>
+                                        <p className="text-xs font-black text-muted-foreground uppercase opacity-40 mb-3 tracking-[0.2em]">{q}</p>
+                                        <p className="text-base text-white/90 font-medium uppercase leading-relaxed text-justify">{String(a)}</p>
                                       </div>
                                     ))}
                                   </div>
@@ -694,58 +702,58 @@ export default function LeadsPage() {
                               ))}
                             </div>
                           ) : (
-                            <div className="py-24 flex flex-col items-center justify-center opacity-20 space-y-6">
-                              <div className="w-20 h-20 rounded-full border-2 border-dashed border-muted-foreground flex items-center justify-center"><MessageCircle className="h-10 w-10" /></div>
-                              <p className="text-sm font-black uppercase tracking-[0.5em]">Nenhum fato registrado até o momento.</p>
+                            <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-8">
+                              <div className="w-24 h-24 rounded-full border-2 border-dashed border-muted-foreground flex items-center justify-center"><MessageCircle className="h-12 w-12" /></div>
+                              <p className="text-base font-black uppercase tracking-[0.6em]">Nenhum fato registrado até o momento.</p>
                             </div>
                           )}
                         </div>
                       </Card>
 
                       {strategicSummary && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom-4 duration-1000">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 animate-in slide-in-from-bottom-4 duration-1000">
                           {[
                             { t: "DNA de Fatos", v: strategicSummary.keyFacts, c: "text-primary", icon: Brain, bg: "bg-primary/5" },
                             { t: "Radar de Riscos", v: strategicSummary.risksAndChallenges, c: "text-rose-500", icon: ShieldAlert, bg: "bg-rose-500/5" },
                             { t: "Tese Estratégica", v: strategicSummary.strategicAnalysis, icon: Zap, c: "text-emerald-500", bg: "bg-emerald-500/5" }
                           ].map(s => (
-                            <div key={s.t} className={cn("p-10 rounded-[2.5rem] border border-white/5 space-y-6 shadow-2xl hover:border-primary/30 transition-all relative overflow-hidden", s.bg)}>
-                              <div className="flex items-center gap-4">
-                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center bg-black/40 border border-white/5 shadow-2xl", s.c)}>
-                                  <s.icon className="h-6 w-6" />
+                            <div key={s.t} className={cn("p-12 rounded-[3rem] border border-white/5 space-y-8 shadow-2xl hover:border-primary/30 transition-all relative overflow-hidden", s.bg)}>
+                              <div className="flex items-center gap-5">
+                                <div className={cn("w-14 h-14 rounded-[1.5rem] flex items-center justify-center bg-black/40 border border-white/5 shadow-2xl", s.c)}>
+                                  <s.icon className="h-7 w-7" />
                                 </div>
-                                <h5 className={cn("text-sm font-black uppercase tracking-[0.2em]", s.c)}>{s.t}</h5>
+                                <h5 className={cn("text-base font-black uppercase tracking-[0.3em]", s.c)}>{s.t}</h5>
                               </div>
-                              <p className="text-base text-white/80 leading-relaxed text-justify font-medium">{s.v}</p>
+                              <p className="text-lg text-white/80 leading-relaxed text-justify font-medium">{s.v}</p>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      <Card className="glass border-amber-500/30 bg-amber-500/5 p-8 rounded-[2.5rem] space-y-8 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-10 opacity-5"><Gavel className="h-32 w-32 text-amber-500" /></div>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-amber-500/10 pb-6 gap-6 relative z-10">
-                          <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-[1.5rem] bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-2xl">
-                              <Gavel className="h-8 w-8 text-amber-500" />
+                      <Card className="glass border-amber-500/30 bg-amber-500/5 p-10 rounded-[3rem] space-y-10 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-12 opacity-5"><Gavel className="h-40 w-40 text-amber-500" /></div>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-amber-500/10 pb-8 gap-8 relative z-10">
+                          <div className="flex items-center gap-8">
+                            <div className="w-20 h-20 rounded-[2rem] bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-2xl">
+                              <Gavel className="h-10 w-10 text-amber-500" />
                             </div>
-                            <div className="space-y-1">
-                              <h3 className="text-2xl font-bold text-white uppercase tracking-widest">Agendamento de Pauta</h3>
-                              <p className="text-xs text-amber-500/60 uppercase font-black tracking-widest opacity-70">Opcional: Sincronismo nativo com Agenda Google Cloud.</p>
+                            <div className="space-y-2">
+                              <h3 className="text-3xl font-bold text-white uppercase tracking-widest">Agendamento de Pauta</h3>
+                              <p className="text-sm text-amber-500/60 uppercase font-black tracking-[0.3em] opacity-70">Opcional: Sincronismo nativo com Agenda Google Cloud.</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 shadow-inner">
-                            <span className="text-xs font-black text-white uppercase tracking-widest">HABILITAR ATO?</span>
-                            <Switch checked={isSchedulingHearing} onCheckedChange={setIsSchedulingHearing} className="data-[state=checked]:bg-amber-500 shadow-2xl scale-110" />
+                          <div className="flex items-center gap-6 bg-black/40 p-6 rounded-[1.5rem] border border-white/5 shadow-inner">
+                            <span className="text-sm font-black text-white uppercase tracking-[0.3em]">HABILITAR ATO?</span>
+                            <Switch checked={isSchedulingHearing} onCheckedChange={setIsSchedulingHearing} className="data-[state=checked]:bg-amber-500 shadow-2xl scale-125" />
                           </div>
                         </div>
 
                         {isSchedulingHearing && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-in slide-in-from-top-4 duration-700 relative z-10">
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">TIPO DE AUDIÊNCIA</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 animate-in slide-in-from-top-4 duration-700 relative z-10">
+                            <div className="space-y-4">
+                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">TIPO DE AUDIÊNCIA</Label>
                               <Select value={hearingData.type} onValueChange={(v) => setHearingData({...hearingData, type: v})}>
-                                <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold text-sm uppercase tracking-tight shadow-xl">
+                                <SelectTrigger className="bg-black/40 border-white/10 h-16 text-white font-bold text-base uppercase tracking-tight shadow-xl">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0d121f] text-white border-white/10">
@@ -757,37 +765,37 @@ export default function LeadsPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA DO ATO</Label>
-                              <Input type="date" className="bg-black/40 border-white/10 h-14 text-white font-black text-sm shadow-xl" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
+                            <div className="space-y-4">
+                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">DATA DO ATO</Label>
+                              <Input type="date" className="bg-black/40 border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
                             </div>
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">HORÁRIO</Label>
-                              <Input type="time" className="bg-black/40 border-white/10 h-14 text-white font-black text-sm shadow-xl" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
+                            <div className="space-y-4">
+                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">HORÁRIO</Label>
+                              <Input type="time" className="bg-black/40 border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
                             </div>
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">LOCALIZAÇÃO FÍSICA</Label>
+                            <div className="space-y-4">
+                              <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">LOCALIZAÇÃO FÍSICA</Label>
                               <Input 
                                 placeholder={hearingData.type === 'Virtual' ? "Sala Virtual RGMJ" : "Fórum Trabalhista / Outro"}
-                                className="bg-black/40 border-white/10 h-14 text-white font-bold text-sm shadow-xl" 
+                                className="bg-black/40 border-white/10 h-16 text-white font-bold text-base shadow-xl" 
                                 value={hearingData.location} 
                                 onChange={(e) => setHearingData({...hearingData, location: e.target.value})} 
                               />
                             </div>
 
                             {hearingData.type === 'Virtual' && (
-                              <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5">
-                                <div className="space-y-3">
-                                  <Label className="text-xs font-black text-emerald-500 uppercase flex items-center gap-3 tracking-widest">
-                                    <Video className="h-5 w-5" /> LINK DE ACESSO (MEET/ZOOM)
+                              <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-10 pt-8 border-t border-white/5">
+                                <div className="space-y-4">
+                                  <Label className="text-sm font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
+                                    <Video className="h-6 w-6" /> LINK DE ACESSO (MEET/ZOOM)
                                   </Label>
-                                  <Input className="bg-black/40 border-emerald-500/20 h-14 text-white font-bold text-sm shadow-2xl focus:ring-emerald-500/50" placeholder="https://..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
+                                  <Input className="bg-black/40 border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="https://..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
                                 </div>
-                                <div className="space-y-3">
-                                  <Label className="text-xs font-black text-emerald-500 uppercase flex items-center gap-3 tracking-widest">
-                                    <Lock className="h-5 w-5" /> SENHA / CÓDIGO DE ACESSO
+                                <div className="space-y-4">
+                                  <Label className="text-sm font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
+                                    <Lock className="h-6 w-6" /> SENHA / CÓDIGO DE ACESSO
                                   </Label>
-                                  <Input className="bg-black/40 border-emerald-500/20 h-14 text-white font-bold text-sm shadow-2xl focus:ring-emerald-500/50" placeholder="SENHA DE ACESSO" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
+                                  <Input className="bg-black/40 border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="SENHA DE ACESSO" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
                                 </div>
                               </div>
                             )}
@@ -795,23 +803,23 @@ export default function LeadsPage() {
                         )}
                       </Card>
 
-                      <div className="p-10 rounded-[2.5rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-10 w-full shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform"><FileCheck className="h-32 w-32 text-purple-500" /></div>
-                        <div className="flex-1 space-y-4 w-full relative z-10">
-                          <Label className="text-xs font-black text-purple-400 uppercase tracking-[0.3em] flex items-center gap-4">
-                            <FileCheck className="h-6 w-6" /> PROTOCOLO CNJ DO PROCESSO *
+                      <div className="p-12 rounded-[3rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-12 w-full shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:scale-110 transition-transform"><FileCheck className="h-40 w-40 text-purple-500" /></div>
+                        <div className="flex-1 space-y-6 w-full relative z-10">
+                          <Label className="text-sm font-black text-purple-400 uppercase tracking-[0.4em] flex items-center gap-5">
+                            <FileCheck className="h-7 w-7" /> PROTOCOLO CNJ DO PROCESSO *
                           </Label>
                           <Input 
                             placeholder="0000000-00.0000.0.00.0000" 
-                            className="bg-black/60 border-purple-500/30 h-20 text-white font-mono text-3xl font-black w-full tracking-[0.2em] focus:ring-purple-500/50 rounded-2xl px-10 shadow-inner" 
+                            className="bg-black/60 border-purple-500/30 h-24 text-white font-mono text-4xl font-black w-full tracking-[0.3em] focus:ring-purple-500/50 rounded-2xl px-12 shadow-inner" 
                             value={selectedLead.processNumber || ""} 
                             onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} 
                           />
-                          <p className="text-[10px] text-purple-400/50 font-black uppercase tracking-widest">Inisira o número CNJ ou marque "Aguardando Número" no rito de saneamento.</p>
+                          <p className="text-xs text-purple-400/50 font-black uppercase tracking-[0.2em]">Inisira o número CNJ ou marque "Aguardando Número" no rito de saneamento.</p>
                         </div>
                         <Button 
                           onClick={() => setIsConversionOpen(true)} 
-                          className="gold-gradient text-background font-black h-20 px-16 rounded-[1.5rem] uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(245,208,48,0.3)] hover:scale-[1.02] active:scale-95 transition-all shrink-0 w-full md:w-auto relative z-10"
+                          className="gold-gradient text-background font-black h-24 px-20 rounded-[2rem] uppercase text-base tracking-[0.3em] shadow-[0_25px_60px_rgba(245,208,48,0.3)] hover:scale-[1.02] active:scale-95 transition-all shrink-0 w-full md:w-auto relative z-10"
                         >
                           PROTOCOLAR E CONVERTER PARA ATIVO
                         </Button>
@@ -821,23 +829,23 @@ export default function LeadsPage() {
                 </div>
               </ScrollArea>
 
-              <div className="flex-none p-6 border-t border-white/5 bg-[#0a0f1e] flex items-center justify-between z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+              <div className="flex-none p-8 border-t border-white/5 bg-[#0a0f1e] flex items-center justify-between z-20 shadow-[0_-25px_60px_rgba(0,0,0,0.5)]">
                 <Button 
                   variant="ghost" 
                   onClick={handlePrevTab} 
                   disabled={!canGoBack}
-                  className="text-muted-foreground uppercase font-black text-xs tracking-[0.3em] gap-4 px-10 h-14 hover:text-white disabled:opacity-20 transition-all"
+                  className="text-muted-foreground uppercase font-black text-sm tracking-[0.4em] gap-6 px-12 h-16 hover:text-white disabled:opacity-20 transition-all"
                 >
-                  <ArrowLeft className="h-5 w-5" /> VOLTAR AO PASSO ANTERIOR
+                  <ArrowLeft className="h-6 w-6" /> VOLTAR AO PASSO ANTERIOR
                 </Button>
 
-                <div className="hidden md:flex gap-4">
+                <div className="hidden md:flex gap-6">
                   {DOSSIER_TABS.map((tab, i) => (
                     <div 
                       key={tab} 
                       className={cn(
-                        "w-3 h-3 rounded-full transition-all duration-700",
-                        activeDossierTab === tab ? "bg-primary shadow-[0_0_15px_rgba(245,208,48,0.6)] scale-150" : i < currentTabIndex ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-white/10"
+                        "w-4 h-4 rounded-full transition-all duration-700",
+                        activeDossierTab === tab ? "bg-primary shadow-[0_0_20px_rgba(245,208,48,0.6)] scale-150" : i < currentTabIndex ? "bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" : "bg-white/10"
                       )} 
                     />
                   ))}
@@ -846,14 +854,14 @@ export default function LeadsPage() {
                 {canGoNext ? (
                   <Button 
                     onClick={handleNextTab} 
-                    className="gold-gradient text-background font-black h-14 px-12 rounded-xl uppercase text-xs tracking-[0.2em] gap-4 shadow-2xl hover:scale-[1.02] transition-all"
+                    className="gold-gradient text-background font-black h-16 px-16 rounded-2xl uppercase text-sm tracking-[0.3em] gap-6 shadow-2xl hover:scale-[1.02] transition-all"
                   >
-                    AVANÇAR NO RITO TÉCNICO <ArrowRight className="h-5 w-5" />
+                    AVANÇAR NO RITO TÉCNICO <ArrowRight className="h-6 w-6" />
                   </Button>
                 ) : (
-                  <div className="px-10 h-14 flex items-center bg-white/5 rounded-xl border border-white/5">
-                    <span className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] flex items-center gap-3">
-                      <ShieldCheck className="h-5 w-5" /> ETAPA FINAL DE PROTOCOLO
+                  <div className="px-12 h-16 flex items-center bg-white/5 rounded-2xl border border-white/5">
+                    <span className="text-sm font-black text-primary/60 uppercase tracking-[0.4em] flex items-center gap-4">
+                      <ShieldCheck className="h-6 w-6" /> ETAPA FINAL DE PROTOCOLO
                     </span>
                   </div>
                 )}
@@ -864,11 +872,11 @@ export default function LeadsPage() {
       </Sheet>
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5">
-            <DialogTitle className="text-white text-2xl font-bold uppercase tracking-widest">Atendimento Técnico Estratégico</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] mt-3 opacity-50 flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> CAPTURA ESTRUTURADA DE FATOS RGMJ
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem]">
+          <DialogHeader className="p-10 bg-[#0a0f1e] border-b border-white/5">
+            <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Atendimento Técnico Estratégico</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50 flex items-center gap-4">
+              <span className="w-3 h-3 rounded-full bg-primary animate-pulse" /> CAPTURA ESTRUTURADA DE FATOS RGMJ
             </DialogDescription>
           </DialogHeader>
           {executingTemplate && (
@@ -878,10 +886,10 @@ export default function LeadsPage() {
       </Dialog>
 
       <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5">
-            <DialogTitle className="text-white text-2xl font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] mt-3 opacity-50">O dossiê do lead será encerrado e um novo processo tático será iniciado na base RGMJ.</DialogDescription>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem]">
+          <DialogHeader className="p-10 bg-[#0a0f1e] border-b border-white/5">
+            <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">O dossiê do lead será encerrado e um novo processo tático será iniciado na base RGMJ.</DialogDescription>
           </DialogHeader>
           {selectedLead && (
             <ProcessForm 
@@ -904,9 +912,9 @@ export default function LeadsPage() {
 
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
-          <SheetHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
-            <SheetTitle className="text-2xl font-bold text-white uppercase tracking-widest">Novo Atendimento RGMJ</SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] mt-3 opacity-50">Cadastro de nova oportunidade estratégica no funil comercial de elite.</SheetDescription>
+          <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
+            <SheetTitle className="text-3xl font-bold text-white uppercase tracking-widest">Novo Atendimento RGMJ</SheetTitle>
+            <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Cadastro de nova oportunidade estratégica no funil comercial de elite.</SheetDescription>
           </SheetHeader>
           <LeadForm 
             existingLeads={leads} 
@@ -924,9 +932,9 @@ export default function LeadsPage() {
 
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
-          <SheetHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
-            <SheetTitle className="text-2xl font-bold text-white uppercase tracking-widest">Saneamento de Dossiê</SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-[0.3em] mt-3 opacity-50">Retificação técnica de dados cadastrais para o rito de distribuição.</SheetDescription>
+          <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
+            <SheetTitle className="text-3xl font-bold text-white uppercase tracking-widest">Saneamento de Dossiê</SheetTitle>
+            <SheetDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Retificação técnica de dados cadastrais para o rito de distribuição.</SheetDescription>
           </SheetHeader>
           {selectedLead && (
             <LeadForm 

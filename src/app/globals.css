@@ -33,7 +33,7 @@
     --input: 222 47% 12%;
     --ring: 43 65% 53%;
     
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --sidebar-background: 222 47% 3%;
     --sidebar-foreground: 0 0% 90%;
@@ -51,7 +51,7 @@
     @apply border-border;
   }
   html {
-    font-size: 16px; /* Base confortável */
+    font-size: 16px; 
   }
   body {
     @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white;
@@ -82,8 +82,8 @@
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-[#02040a];
