@@ -186,17 +186,31 @@ function SettingsContent() {
     email: ""
   })
 
-  const firmRef = useMemoFirebase(() => {
-    if (!db) return null
-    return doc(db, 'settings', 'firm')
-  }, [db])
+  const [googleConfig, setGoogleConfig] = useState({
+    masterEmail: "financeiro@rgmj.com.br",
+    rootFolderId: "",
+    clientId: "",
+    isDriveActive: true,
+    isDocsActive: true,
+    isCalendarActive: true,
+    isTasksActive: true,
+    isMeetActive: true
+  })
+
+  // Carregamento de Configurações do Banco
+  const firmRef = useMemoFirebase(() => db ? doc(db, 'settings', 'firm') : null, [db])
   const { data: firmData } = useDoc(firmRef)
 
+  const googleRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleData } = useDoc(googleRef)
+
   useEffect(() => {
-    if (firmData) {
-      setFirmFormData(prev => ({ ...prev, ...firmData }))
-    }
+    if (firmData) setFirmFormData(prev => ({ ...prev, ...firmData }))
   }, [firmData])
+
+  useEffect(() => {
+    if (googleData) setGoogleConfig(prev => ({ ...prev, ...googleData }))
+  }, [googleData])
 
   const modelsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -215,16 +229,6 @@ function SettingsContent() {
   }, [initialTab])
 
   const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
-  const [googleConfig, setGoogleConfig] = useState({
-    masterEmail: "financeiro@rgmj.com.br",
-    rootFolderId: "",
-    clientId: "",
-    isDriveActive: true,
-    isDocsActive: true,
-    isCalendarActive: true,
-    isTasksActive: true,
-    isMeetActive: true
-  })
 
   const [profileFormData, setProfileFormData] = useState({
     name: profile?.name || "",
@@ -254,7 +258,13 @@ function SettingsContent() {
   }
 
   const handleSaveGoogleConfig = () => {
-    toast({ title: "Configuração Google Salva" })
+    if (!db) return
+    const docRef = doc(db, 'settings', 'google')
+    setDocumentNonBlocking(docRef, {
+      ...googleConfig,
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+    toast({ title: "Gateway Google Sincronizado" })
   }
 
   const handleApplyTheme = () => {
@@ -715,7 +725,7 @@ function SettingsContent() {
                       />
                     </div>
                     <Button 
-                      onClick={() => toast({ title: "Credencial Salva", description: "O Client ID foi atualizado no sistema." })} 
+                      onClick={handleSaveGoogleConfig} 
                       className="w-full gold-gradient text-background font-black text-[10px] uppercase h-10 rounded-lg shadow-lg hover:scale-105 transition-all"
                     >
                       <Save className="h-3 w-3 mr-2" /> SALVAR CREDENCIAIS
