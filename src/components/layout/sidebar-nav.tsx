@@ -35,6 +35,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  useSidebar
 } from "@/components/ui/sidebar"
 import { useUser, useAuth } from "@/firebase"
 import { signOut } from "firebase/auth"
@@ -94,6 +95,7 @@ const menuGroups = [
 export function SidebarNav() {
   const pathname = usePathname()
   const { user, profile, role } = useUser()
+  const { state } = useSidebar()
   const auth = useAuth()
 
   const displayName = profile?.name || user?.displayName || "Membro RGMJ"
@@ -108,28 +110,34 @@ export function SidebarNav() {
     }
   }
 
+  const isCollapsed = state === "collapsed"
+
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#02040a] font-sans">
-      <SidebarHeader className="py-8 px-6">
+      <SidebarHeader className={cn("py-8 transition-all duration-300", isCollapsed ? "px-2" : "px-6")}>
         <div className="flex items-center gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-2xl shadow-primary/5">
             <Scale className="h-5 w-5 text-primary" />
           </div>
-          <div className="flex flex-col overflow-hidden transition-all group-data-[collapsible=icon]:w-0">
-            <span className="text-sm font-bold text-white uppercase tracking-wider leading-none">RGMJ ADVOGADOS</span>
-            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em] mt-1.5 opacity-60">Comando Central</span>
-          </div>
+          {!isCollapsed && (
+            <div className="flex flex-col overflow-hidden animate-in fade-in duration-500">
+              <span className="text-sm font-bold text-white uppercase tracking-wider leading-none">RGMJ ADVOGADOS</span>
+              <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em] mt-1.5 opacity-60">Comando Central</span>
+            </div>
+          )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-4">
+      <SidebarContent className="px-3">
         {menuGroups.map((group, idx) => (
-          <SidebarGroup key={idx} className="py-4">
-            <SidebarGroupLabel className="text-[10px] font-black text-white/30 tracking-[0.4em] uppercase px-3 mb-3 group-data-[collapsible=icon]:hidden">
-              {group.title}
-            </SidebarGroupLabel>
+          <SidebarGroup key={idx} className="py-2">
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-[9px] font-black text-white/20 tracking-[0.4em] uppercase px-3 mb-2">
+                {group.title}
+              </SidebarGroupLabel>
+            )}
             <SidebarGroupContent>
-              <SidebarMenu className="gap-1.5">
+              <SidebarMenu className="gap-1">
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
                   const isActive = pathname === item.href
@@ -141,10 +149,11 @@ export function SidebarNav() {
                         isActive={isActive}
                         tooltip={item.name}
                         className={cn(
-                          "relative flex items-center gap-4 px-4 py-2 transition-all duration-200 h-11 rounded-xl",
+                          "relative flex items-center transition-all duration-200 h-10 rounded-xl",
+                          isCollapsed ? "justify-center px-0" : "gap-4 px-4",
                           isActive 
                             ? "bg-primary/10 text-primary border border-primary/20 shadow-inner" 
-                            : "text-white/50 hover:text-white hover:bg-white/[0.05]"
+                            : "text-white/40 hover:text-white hover:bg-white/[0.05]"
                         )}
                       >
                         <Link href={item.href}>
@@ -152,9 +161,11 @@ export function SidebarNav() {
                             "h-5 w-5 transition-colors shrink-0",
                             isActive ? "text-primary" : "text-white/20 group-hover:text-primary/50"
                           )} />
-                          <span className="text-xs uppercase tracking-widest font-bold whitespace-nowrap">
-                            {item.name}
-                          </span>
+                          {!isCollapsed && (
+                            <span className="text-[11px] uppercase tracking-widest font-black whitespace-nowrap">
+                              {item.name}
+                            </span>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -166,22 +177,30 @@ export function SidebarNav() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 bg-black/20 mt-auto border-t border-white/5">
+      <SidebarFooter className={cn("p-3 bg-black/20 mt-auto border-t border-white/5 transition-all duration-300", isCollapsed ? "items-center" : "")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton size="lg" className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/5 transition-all outline-none border border-transparent">
-              <Avatar className="h-10 w-10 shrink-0 border border-primary/20 shadow-xl">
-                <AvatarFallback className="bg-secondary text-white text-xs font-black uppercase">
+            <SidebarMenuButton 
+              size="lg" 
+              className={cn(
+                "w-full flex items-center rounded-2xl hover:bg-white/5 transition-all outline-none border border-transparent",
+                isCollapsed ? "justify-center px-0 h-12" : "gap-4 px-3 py-3"
+              )}
+            >
+              <Avatar className="h-9 w-9 shrink-0 border border-primary/20 shadow-xl">
+                <AvatarFallback className="bg-secondary text-white text-[10px] font-black uppercase">
                   {displayName.substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col text-left overflow-hidden transition-all group-data-[collapsible=icon]:w-0">
-                <span className="text-sm font-bold truncate text-white uppercase tracking-tight">{displayName}</span>
-                <span className="text-[10px] text-primary font-black uppercase tracking-widest mt-0.5">{userRoleDisplay}</span>
-              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col text-left overflow-hidden animate-in fade-in duration-500">
+                  <span className="text-xs font-bold truncate text-white uppercase tracking-tight">{displayName}</span>
+                  <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5">{userRoleDisplay}</span>
+                </div>
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="right" className="w-64 bg-[#0d1117] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
+          <DropdownMenuContent align={isCollapsed ? "center" : "end"} side={isCollapsed ? "right" : "bottom"} className="w-64 bg-[#0d1117] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
             <DropdownMenuItem asChild className="rounded-xl h-11 px-4 mb-1">
               <Link href="/settings?tab=perfil" className="flex items-center gap-4 text-xs uppercase font-bold text-white">
                 <UserIcon className="h-5 w-5 text-primary" /> Perfil de Usuário

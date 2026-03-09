@@ -1,4 +1,3 @@
-
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -6,7 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Scale, Loader2 } from "lucide-react";
+import { Scale } from "lucide-react";
 import { useRouter } from 'next/navigation';
 
 export function DashboardClientLayout({
@@ -17,7 +16,6 @@ export function DashboardClientLayout({
   const router = useRouter();
   const { user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
 
-  // REDIRECIONAMENTO GLOBAL - Sempre no topo e incondicional para evitar erros de ordem de Hooks
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -76,25 +74,27 @@ export function DashboardClientLayout({
       <div className="flex min-h-screen bg-[#0a0a14] w-full font-sans">
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14] sticky top-0 z-40">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="text-white hover:bg-white/10" />
-              <div className="lg:hidden flex items-center gap-3">
+          <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14]/80 backdrop-blur-md sticky top-0 z-40">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-white/5 transition-all">
+                <SidebarTrigger className="text-white scale-110" />
+              </div>
+              <div className="hidden lg:flex items-center gap-3 border-l border-white/10 pl-6 h-8">
                 <Scale className="text-primary h-5 w-5" />
-                <span className="text-sm font-black text-white uppercase">RGMJ</span>
+                <span className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Comando RGMJ</span>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+              <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[9px] font-black text-primary uppercase tracking-widest">Sincronizado</span>
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sincronizado</span>
               </div>
             </div>
           </header>
 
-          <main className="flex-1">
-            <div className="py-8 px-6 lg:py-12 lg:px-16 max-w-[1600px] mx-auto">
+          <main className="flex-1 overflow-x-hidden">
+            <div className="py-8 px-6 lg:py-12 lg:px-16 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
               {children}
             </div>
           </main>
