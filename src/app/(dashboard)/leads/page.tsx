@@ -38,7 +38,10 @@ import {
   Plus,
   AlertTriangle,
   GripVertical,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  FileSearch,
+  Sparkles,
+  FileText
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -77,6 +80,7 @@ import { BurocraciaView } from "@/components/leads/burocracia-view"
 import { ProcessForm } from "@/components/cases/process-form"
 import Link from "next/link"
 import { generateCaseSummary, type GenerateCaseSummaryOutput } from "@/ai/flows/ai-generate-case-summary"
+import { aiAnalyzeFullInterview, type AnalyzeInterviewOutput } from "@/ai/flows/ai-analyze-full-interview"
 import { Switch } from "@/components/ui/switch"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -121,6 +125,11 @@ export default function LeadsPage() {
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
 
+  // Estados para Visualização de Entrevista Concluída
+  const [viewingInterview, setViewingInterview] = useState<any>(null)
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false)
+  const [interviewAnalysis, setInterviewAnalysis] = useState<AnalyzeInterviewOutput | null>(null)
+
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [strategicSummary, setStrategicSummary] = useState<GenerateCaseSummaryOutput | null>(null)
 
@@ -136,7 +145,6 @@ export default function LeadsPage() {
     location: ""
   })
 
-  // State for Scheduling Intake Meeting (Atendimento)
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeData, setIntakeData] = useState({
     date: "",
@@ -226,10 +234,8 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp()
     }
 
-    // Update lead
     updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), payload)
 
-    // Create entry in appointments collection
     const appointmentPayload = {
       title: `Atendimento: ${selectedLead.name}`,
       type: "Atendimento",
@@ -247,7 +253,6 @@ export default function LeadsPage() {
     setSelectedLead({ ...selectedLead, ...payload })
     setIsSchedulingIntake(false)
     
-    // Feedback de Sincronismo com Google
     toast({ 
       title: "Atendimento Agendado", 
       description: "O ato foi sincronizado com o Google Calendar da banca." 
@@ -301,6 +306,30 @@ export default function LeadsPage() {
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
     toast({ title: "Entrevista Registrada" })
+  }
+
+  const handleRunInterviewAnalysis = async (interview: any) => {
+    setIsAiAnalyzing(true)
+    setInterviewAnalysis(null)
+    try {
+      const result = await aiAnalyzeFullInterview({
+        clientName: selectedLead.name,
+        interviewType: interview.interviewType,
+        responses: interview.responses
+      })
+      setInterviewAnalysis(result)
+      // Opcional: Salvar a análise no documento da entrevista
+      if (db) {
+        updateDocumentNonBlocking(doc(db, "interviews", interview.id), {
+          aiAnalysis: result,
+          updatedAt: serverTimestamp()
+        })
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na análise IA" })
+    } finally {
+      setIsAiAnalyzing(false)
+    }
   }
 
   const handleConvertProcess = async (data: any) => {
@@ -629,18 +658,67 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                        {templates?.map(t => (
-                          <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-sm h-24 gap-6 rounded-3xl justify-start px-10 hover:bg-primary/5 transition-all shadow-2xl group border-2">
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Zap className="h-7 w-7" /></div>
-                            <div className="flex flex-col items-start min-w-0">
-                              <span className="truncate w-full text-left">{t.title}</span>
-                              <span className="text-[10px] opacity-40 tracking-[0.2em] mt-2">INICIAR CAPTURA</span>
-                            </div>
-                          </Button>
-                        ))}
+                    <TabsContent value="entrevistas" className="w-full space-y-12">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                          <PlusCircle className="h-6 w-6 text-primary" />
+                          <h3 className="text-2xl font-bold text-white uppercase tracking-widest">Nova Captura Técnica</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                          {templates?.map(t => (
+                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-sm h-24 gap-6 rounded-3xl justify-start px-10 hover:bg-primary/5 transition-all shadow-2xl group border-2">
+                              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Zap className="h-7 w-7" /></div>
+                              <div className="flex flex-col items-start min-w-0">
+                                <span className="truncate w-full text-left">{t.title}</span>
+                                <span className="text-[10px] opacity-40 tracking-[0.2em] mt-2">INICIAR CAPTURA</span>
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
                       </div>
+
+                      {leadInterviews && leadInterviews.length > 0 && (
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                            <FileSearch className="h-6 w-6 text-emerald-500" />
+                            <h3 className="text-2xl font-bold text-white uppercase tracking-widest">Entrevistas Concluídas</h3>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {leadInterviews.map((int, idx) => (
+                              <Card key={idx} className="glass border-white/5 hover:border-primary/20 transition-all p-8 rounded-[2.5rem] bg-white/[0.01] flex flex-col h-full group">
+                                <div className="flex justify-between items-start mb-6">
+                                  <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 tracking-widest">
+                                    {int.interviewType}
+                                  </Badge>
+                                  <div className="text-[10px] font-mono font-bold text-muted-foreground uppercase opacity-40">
+                                    {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
+                                  </div>
+                                </div>
+                                <h4 className="text-lg font-bold text-white uppercase tracking-tight mb-6 line-clamp-1 group-hover:text-primary transition-colors">
+                                  Auditoria de Fatos: {selectedLead.name}
+                                </h4>
+                                <div className="space-y-4 flex-1">
+                                  <div className="p-4 rounded-xl bg-black/40 border border-white/5">
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+                                      <User className="h-3 w-3" /> Entrevistador
+                                    </p>
+                                    <p className="text-xs font-bold text-white uppercase">{int.interviewerName || "Corpo Técnico RGMJ"}</p>
+                                  </div>
+                                </div>
+                                <Button 
+                                  onClick={() => {
+                                    setViewingInterview(int);
+                                    setInterviewAnalysis(int.aiAnalysis || null);
+                                  }}
+                                  className="mt-8 gold-gradient text-background font-black h-12 rounded-xl uppercase text-[10px] tracking-widest shadow-xl"
+                                >
+                                  ABRIR DOSSIÊ ANALÍTICO
+                                </Button>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </TabsContent>
 
                     <TabsContent value="burocracia" className="w-full">
@@ -926,6 +1004,135 @@ export default function LeadsPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Visualizador de Entrevista Concluída */}
+      <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1200px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem] flex flex-col h-[90vh]">
+          <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 flex-none">
+            <div className="flex items-center gap-8">
+              <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
+                <FileSearch className="h-8 w-8 text-primary" />
+              </div>
+              <div className="space-y-2 text-center md:text-left">
+                <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Dossiê de Atendimento Técnico</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground uppercase font-black tracking-[0.4em] opacity-50 flex items-center gap-4 justify-center md:justify-start">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" /> AUDITORIA DE FATOS & INTELIGÊNCIA RGMJ
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button 
+                onClick={() => handleRunInterviewAnalysis(viewingInterview)} 
+                disabled={isAiAnalyzing}
+                className="h-16 px-10 gold-gradient text-background font-black uppercase text-sm gap-4 rounded-2xl shadow-2xl hover:scale-105 transition-all"
+              >
+                {isAiAnalyzing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6" />} GERAR ANÁLISE IA
+              </Button>
+              <Button variant="ghost" onClick={() => setViewingInterview(null)} className="h-16 w-16 rounded-2xl text-muted-foreground hover:text-white border border-white/5">
+                <Trash2 className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            <Tabs defaultValue="transcricao" className="h-full flex flex-col">
+              <div className="px-10 bg-black/20 border-b border-white/5 flex-none">
+                <TabsList className="bg-transparent h-16 gap-12 p-0">
+                  <TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-sm uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
+                    <FileText className="h-4 w-4 mr-3" /> Transcrição RGMJ
+                  </TabsTrigger>
+                  <TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-sm uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
+                    <Brain className="h-4 w-4 mr-3" /> Síntese & Análise IA
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="flex-1 overflow-hidden p-10">
+                <TabsContent value="transcricao" className="h-full mt-0">
+                  <ScrollArea className="h-full pr-6">
+                    <div className="space-y-10 max-w-4xl mx-auto pb-20">
+                      {viewingInterview && Object.entries(viewingInterview.responses || {}).map(([q, a]: any, i) => (
+                        <div key={i} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: `${i * 50}ms` }}>
+                          <div className="flex items-center gap-4">
+                            <div className="w-2 h-2 rounded-full bg-primary/40" />
+                            <h5 className="text-xs font-black text-muted-foreground uppercase tracking-widest">{q}</h5>
+                          </div>
+                          <div className="pl-6 border-l border-white/5">
+                            <p className="text-lg text-white font-medium uppercase leading-relaxed text-justify">
+                              {String(a)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="analise" className="h-full mt-0">
+                  {isAiAnalyzing ? (
+                    <div className="h-full flex flex-col items-center justify-center space-y-8 animate-pulse">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full animate-pulse" />
+                        <Brain className="h-24 w-24 text-primary relative z-10" />
+                      </div>
+                      <div className="text-center space-y-3">
+                        <p className="text-xl font-bold text-white uppercase tracking-widest">Auditando Entrevista...</p>
+                        <p className="text-sm text-muted-foreground uppercase font-black tracking-[0.3em]">Consolidando fatos e teses táticas</p>
+                      </div>
+                    </div>
+                  ) : interviewAnalysis ? (
+                    <ScrollArea className="h-full pr-6">
+                      <div className="space-y-12 max-w-5xl mx-auto pb-20 animate-in fade-in zoom-in-95 duration-700">
+                        <div className="grid grid-cols-1 gap-10">
+                          <Card className="glass border-primary/20 bg-primary/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-10 opacity-5"><Zap className="h-40 w-40 text-primary" /></div>
+                            <h5 className="text-base font-black text-primary uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
+                              <Sparkles className="h-6 w-6" /> Resumo Executivo
+                            </h5>
+                            <p className="text-xl text-white/90 leading-relaxed text-justify font-medium">
+                              {interviewAnalysis.summary}
+                            </p>
+                          </Card>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <Card className="glass border-rose-500/20 bg-rose-500/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-8 opacity-5"><ShieldAlert className="h-32 w-32 text-rose-500" /></div>
+                              <h5 className="text-base font-black text-rose-500 uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
+                                <Scale className="h-6 w-6" /> Análise de Teses & Riscos
+                              </h5>
+                              <p className="text-lg text-white/80 leading-relaxed text-justify font-medium">
+                                {interviewAnalysis.legalAnalysis}
+                              </p>
+                            </Card>
+
+                            <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-8 opacity-5"><FileCheck className="h-32 w-32 text-emerald-500" /></div>
+                              <h5 className="text-base font-black text-emerald-500 uppercase tracking-[0.4em] flex items-center gap-4 mb-8">
+                                <Navigation className="h-6 w-6" /> Recomendações Técnicas
+                              </h5>
+                              <p className="text-lg text-white/80 leading-relaxed text-justify font-medium">
+                                {interviewAnalysis.recommendations}
+                              </p>
+                            </Card>
+                          </div>
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-8">
+                      <Sparkles className="h-20 w-20 text-muted-foreground" />
+                      <div className="text-center">
+                        <p className="text-lg font-black uppercase tracking-[0.5em]">Aguardando Comando</p>
+                        <p className="text-sm font-bold uppercase tracking-widest mt-3">Clique em "Gerar Análise IA" para iniciar o rito.</p>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Intake Scheduling Dialog */}
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
