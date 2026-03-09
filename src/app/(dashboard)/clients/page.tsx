@@ -76,8 +76,7 @@ export default function ClientsPage() {
   const handleSaveClient = (data: any) => {
     if (!user || !db) return
     
-    // Se vier do ClientForm, o nome pode estar em firstName/lastName ou apenas name
-    const fullName = data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim()
+    const fullName = data.firstName || data.name || ""
     
     const clientPayload = {
       name: fullName.toUpperCase(),
@@ -86,13 +85,13 @@ export default function ClientsPage() {
       phone: data.phone || "",
       type: data.personType === 'Pessoa Jurídica' ? 'corporate' : 'individual',
       status: data.registrationStatus || "Ativo",
-      registrationData: data, // Salva o objeto completo do form para facilitar a reedição
+      registrationData: data,
       updatedAt: serverTimestamp(),
     }
 
     if (editingClient) {
       updateDocumentNonBlocking(doc(db!, "clients", editingClient.id), clientPayload)
-      toast({ title: "Cadastro Atualizado", description: `${fullName} teve seus dados retificados.` })
+      toast({ title: "Ficha Atualizada", description: `${fullName} teve seus dados retificados.` })
     } else {
       addDocumentNonBlocking(collection(db!, "clients"), {
         ...clientPayload,
@@ -162,7 +161,11 @@ export default function ClientsPage() {
           </div>
         ) : filteredClients.length > 0 ? (
           filteredClients.map((client) => (
-            <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl">
+            <Card 
+              key={client.id} 
+              className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl cursor-pointer"
+              onClick={() => handleOpenEdit(client)}
+            >
               <CardContent className="p-8 space-y-6">
                 <div className="flex justify-between items-start">
                   <div className="min-w-0 flex-1">
@@ -170,29 +173,26 @@ export default function ClientsPage() {
                     <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
                   </div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white shrink-0">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
                       <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
-                        <Edit3 className="h-4 w-4" /> Editar Cadastro
+                        <Edit3 className="h-4 w-4" /> Ver Ficha
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id); }} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
                         <Trash2 className="h-4 w-4" /> Excluir Registro
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
                 <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                  <button 
-                    onClick={() => handleOpenEdit(client)}
-                    className="flex items-center gap-2 text-[9px] font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.2em]"
-                  >
-                    <FileText className="h-3.5 w-3.5" /> Abrir Prontuário
-                  </button>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-[0.2em]">
+                    <FileText className="h-3.5 w-3.5" /> Ver Ficha do Cliente
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
                 </div>
               </CardContent>
             </Card>
@@ -210,10 +210,10 @@ export default function ClientsPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
-                {editingClient ? "Editar Cliente" : "Novo Cliente"}
+                {editingClient ? "Ficha do Cliente" : "Novo Cliente"}
               </SheetTitle>
               <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                {editingClient ? "Retificação de ficha de cadastro oficial." : "Ficha de cadastro oficial da banca RGMJ."}
+                {editingClient ? "Dossiê cadastral oficial RGMJ." : "Cadastro estruturado na base de inteligência."}
               </SheetDescription>
             </SheetHeader>
           </div>
