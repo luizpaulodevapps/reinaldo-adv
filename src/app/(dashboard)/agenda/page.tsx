@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -386,7 +387,6 @@ export default function AgendaPage() {
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-primary/30 text-primary">{selectedEvent?.eventType}</Badge>
-                <button onClick={() => setIsDetailOpen(false)} className="text-muted-foreground hover:text-white"><X className="h-5 w-5" /></button>
               </div>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter mt-4">
                 {selectedEvent?.title}
