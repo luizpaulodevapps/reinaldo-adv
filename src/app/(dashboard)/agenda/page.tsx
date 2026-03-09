@@ -18,10 +18,16 @@ import {
   Video,
   Lock,
   ExternalLink,
-  Zap
+  Zap,
+  Trash2,
+  Edit3,
+  Save,
+  X,
+  FileText,
+  AlertCircle
 } from "lucide-react"
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase"
-import { collection, query, orderBy, Timestamp } from "firebase/firestore"
+import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
 import { 
   format, 
   isSameDay, 
@@ -37,12 +43,34 @@ import {
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AgendaPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isRescheduling, setIsRescheduling] = useState(false)
+  
+  const [rescheduleData, setRescheduleData] = useState({ date: "", time: "" })
+  const [newEventData, setNewEventData] = useState({
+    title: "",
+    type: "Atendimento",
+    date: "",
+    time: "",
+    location: "",
+    notes: ""
+  })
+
   const db = useFirestore()
   const { user } = useUser()
+  const { toast } = useToast()
 
   const hearingsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -85,17 +113,17 @@ export default function AgendaPage() {
     const dayHearings = (hearings || []).filter(h => {
       const hDate = parseDate(h.startDateTime)
       return hDate && isSameDay(hDate, selectedDate)
-    }).map(h => ({ ...h, eventType: 'audiencia' }))
+    }).map(h => ({ ...h, eventType: 'audiencia', collection: 'hearings' }))
 
     const dayDeadlines = (deadlines || []).filter(d => {
       const dDate = parseDate(d.dueDate)
       return dDate && isSameDay(dDate, selectedDate)
-    }).map(d => ({ ...d, eventType: 'prazo' }))
+    }).map(d => ({ ...d, eventType: 'prazo', collection: 'deadlines' }))
 
     const dayAppointments = (appointments || []).filter(a => {
       const aDate = parseDate(a.startDateTime)
       return aDate && isSameDay(aDate, selectedDate)
-    }).map(a => ({ ...a, eventType: 'atendimento' }))
+    }).map(a => ({ ...a, eventType: 'atendimento', collection: 'appointments' }))
 
     return [...dayHearings, ...dayDeadlines, ...dayAppointments].sort((a, b) => {
       const dateA = parseDate(a.startDateTime || a.dueDate)
@@ -120,6 +148,73 @@ export default function AgendaPage() {
       return date && isSameDay(aDate, day)
     })
     return { hasHearing, hasDeadline, hasAppointment }
+  }
+
+  const handleOpenEvent = (event: any) => {
+    setSelectedEvent(event)
+    const eventDate = parseDate(event.startDateTime || event.dueDate)
+    setRescheduleData({
+      date: eventDate ? format(eventDate, "yyyy-MM-dd") : "",
+      time: eventDate ? format(eventDate, "HH:mm") : ""
+    })
+    setIsDetailOpen(true)
+    setIsRescheduling(false)
+  }
+
+  const handleDeleteEvent = () => {
+    if (!db || !selectedEvent) return
+    if (!confirm("Confirmar a exclusão permanente deste ato da pauta?")) return
+    
+    deleteDocumentNonBlocking(doc(db, selectedEvent.collection, selectedEvent.id))
+    setIsDetailOpen(false)
+    setSelectedEvent(null)
+    toast({ variant: "destructive", title: "Ato Removido da Pauta" })
+  }
+
+  const handleReschedule = () => {
+    if (!db || !selectedEvent || !rescheduleData.date || !rescheduleData.time) return
+    
+    const newDateTime = `${rescheduleData.date}T${rescheduleData.time}:00`
+    const updatePayload: any = {
+      updatedAt: serverTimestamp()
+    }
+
+    if (selectedEvent.eventType === 'prazo') {
+      updatePayload.dueDate = rescheduleData.date
+    } else {
+      updatePayload.startDateTime = newDateTime
+    }
+
+    updateDocumentNonBlocking(doc(db, selectedEvent.collection, selectedEvent.id), updatePayload)
+    setIsRescheduling(false)
+    setIsDetailOpen(false)
+    toast({ title: "Agenda Atualizada", description: "O novo cronograma foi sincronizado." })
+  }
+
+  const handleCreateEvent = () => {
+    if (!db || !newEventData.title || !newEventData.date || !newEventData.time) {
+      toast({ variant: "destructive", title: "Dados Incompletos" })
+      return
+    }
+
+    const startDateTime = `${newEventData.date}T${newEventData.time}:00`
+    const collectionName = newEventData.type === 'Audiência' ? 'hearings' : 'appointments'
+    
+    const payload = {
+      title: newEventData.title.toUpperCase(),
+      type: newEventData.type,
+      startDateTime,
+      location: newEventData.location,
+      notes: newEventData.notes,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      status: "Agendado"
+    }
+
+    addDocumentNonBlocking(collection(db, collectionName), payload)
+    setIsCreateOpen(false)
+    setNewEventData({ title: "", type: "Atendimento", date: "", time: "", location: "", notes: "" })
+    toast({ title: "Compromisso Injetado na Pauta" })
   }
 
   return (
@@ -221,7 +316,7 @@ export default function AgendaPage() {
                 </div>
               ) : selectedDayEvents.length > 0 ? (
                 selectedDayEvents.map((event, idx) => (
-                  <Card key={idx} className="glass border-l-4 border-l-primary/50 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02]">
+                  <Card key={idx} onClick={() => handleOpenEvent(event)} className="glass border-l-4 border-l-primary/50 hover-gold cursor-pointer transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02]">
                     <CardContent className="p-6 space-y-5">
                       <div className="flex items-center justify-between">
                         <Badge 
@@ -234,7 +329,7 @@ export default function AgendaPage() {
                           {event.eventType === 'atendimento' ? 'Atendimento Lead' : event.hearingType === 'Virtual' ? 'Audiência Virtual' : event.eventType === 'audiencia' ? 'Audiência Física' : 'Prazo'}
                         </Badge>
                         <span className="text-xs text-muted-foreground font-mono font-bold flex items-center gap-2">
-                          <Clock className="h-3 w-3" /> {event.startDateTime ? format(parseDate(event.startDateTime)!, "HH:mm") : "--:--"}
+                          <Clock className="h-3 w-3" /> {event.startDateTime ? format(parseDate(event.startDateTime)!, "HH:mm") : event.dueDate || "--:--"}
                         </span>
                       </div>
                       
@@ -252,13 +347,8 @@ export default function AgendaPage() {
                             <Video className="h-4 w-4" /> Sala Virtual Liberada
                           </div>
                           {event.meetingLink && (
-                            <a href={event.meetingLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-xs text-white hover:text-primary transition-colors font-bold truncate underline decoration-primary/30">
+                            <div className="flex items-center gap-2 text-xs text-white hover:text-primary transition-colors font-bold truncate underline decoration-primary/30">
                               <ExternalLink className="h-3.5 w-3.5" /> {event.meetingLink}
-                            </a>
-                          )}
-                          {event.accessCode && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-black uppercase tracking-widest bg-black/20 p-2 rounded-lg border border-white/5">
-                              <Lock className="h-3.5 w-3.5" /> Chave: <span className="text-white ml-1">{event.accessCode}</span>
                             </div>
                           )}
                         </div>
@@ -281,12 +371,177 @@ export default function AgendaPage() {
               )}
             </div>
 
-            <Button className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-[11px] tracking-[0.2em] hover:scale-[1.02] transition-all">
+            <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-[11px] tracking-[0.2em] hover:scale-[1.02] transition-all">
               Agendar Ato de Elite
             </Button>
           </div>
         </div>
       </div>
+
+      {/* DIÁLOGO DE DETALHES E AÇÕES */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-primary/30 text-primary">{selectedEvent?.eventType}</Badge>
+                <button onClick={() => setIsDetailOpen(false)} className="text-muted-foreground hover:text-white"><X className="h-5 w-5" /></button>
+              </div>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter mt-4">
+                {selectedEvent?.title}
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Dossiê operacional do compromisso agendado.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cronograma</p>
+                <div className="flex items-center gap-3 text-white font-bold">
+                  <Clock className="h-4 w-4 text-primary" />
+                  {selectedEvent?.startDateTime ? format(parseDate(selectedEvent.startDateTime)!, "dd/MM/yyyy HH:mm") : selectedEvent?.dueDate}
+                </div>
+              </div>
+              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Status da Pauta</p>
+                <div className="flex items-center gap-3 text-emerald-500 font-bold uppercase text-xs">
+                  <CheckCircle2 className="h-4 w-4" /> {selectedEvent?.status || "AGENDADO"}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                <MapPin className="h-4 w-4 text-primary" />
+                <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Logística / Localização</h4>
+              </div>
+              <p className="text-sm text-white/80 font-bold uppercase italic bg-black/20 p-4 rounded-xl border border-white/5">
+                {selectedEvent?.location || selectedEvent?.meetingLink || "Local não informado"}
+              </p>
+            </div>
+
+            {selectedEvent?.notes && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Observações Táticas</h4>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed uppercase font-medium">
+                  {selectedEvent.notes}
+                </p>
+              </div>
+            )}
+
+            {isRescheduling && (
+              <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 animate-in slide-in-from-top-2">
+                <div className="flex items-center gap-3 text-primary">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <h4 className="text-[10px] font-black uppercase tracking-widest">Novo Cronograma</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black uppercase text-muted-foreground">Nova Data</Label>
+                    <Input type="date" value={rescheduleData.date} onChange={(e) => setRescheduleData({...rescheduleData, date: e.target.value})} className="glass border-white/10 h-12 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black uppercase text-muted-foreground">Novo Horário</Label>
+                    <Input type="time" value={rescheduleData.time} onChange={(e) => setRescheduleData({...rescheduleData, time: e.target.value})} className="glass border-white/10 h-12 text-white" />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="ghost" onClick={() => setIsRescheduling(false)} className="flex-1 h-12 uppercase font-black text-[10px] text-white">Cancelar</Button>
+                  <Button onClick={handleReschedule} className="flex-1 gold-gradient h-12 text-background font-black uppercase text-[10px]">Confirmar Mudança</Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button onClick={handleDeleteEvent} variant="ghost" className="text-rose-500 hover:text-white hover:bg-rose-500/20 uppercase font-black text-[10px] tracking-widest gap-2">
+              <Trash2 className="h-4 w-4" /> Remover Ato
+            </Button>
+            <div className="flex gap-3">
+              {!isRescheduling && (
+                <Button onClick={() => setIsRescheduling(true)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest h-14 px-8 rounded-xl gap-2">
+                  <RefreshCw className="h-4 w-4" /> Reagendar
+                </Button>
+              )}
+              <Button onClick={() => setIsDetailOpen(false)} className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest h-14 px-10 rounded-xl shadow-2xl">
+                Fechar Dossiê
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE CRIAÇÃO */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Agendar Novo Ato de Elite</DialogTitle>
+              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                Injeção de compromissos táticos na pauta da banca.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Tipo de Ato *</Label>
+                  <Select value={newEventData.type} onValueChange={(v) => setNewEventData({...newEventData, type: v})}>
+                    <SelectTrigger className="glass border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="Audiência">🏛️ AUDIÊNCIA JUDICIAL</SelectItem>
+                      <SelectItem value="Atendimento">⚡ ATENDIMENTO / REUNIÃO</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Título do Ato *</Label>
+                  <Input value={newEventData.title} onChange={(e) => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO ESTRATÉGICA LUIZ DEV" className="glass border-white/10 h-14 text-white font-bold" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Data do Ato *</Label>
+                  <Input type="date" value={newEventData.date} onChange={(e) => setNewEventData({...newEventData, date: e.target.value})} className="glass border-white/10 h-14 text-white font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Horário *</Label>
+                  <Input type="time" value={newEventData.time} onChange={(e) => setNewEventData({...newEventData, time: e.target.value})} className="glass border-white/10 h-14 text-white font-bold" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground">Localização / Link de Acesso</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                  <Input value={newEventData.location} onChange={(e) => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} placeholder="EX: SEDE RGMJ OU LINK DO MEET" className="glass border-white/10 h-14 pl-12 text-white font-bold" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground">Observações Técnicas</Label>
+                <Textarea value={newEventData.notes} onChange={(e) => setNewEventData({...newEventData, notes: e.target.value})} placeholder="Instruções para o ato..." className="glass border-white/10 min-h-[100px] text-white resize-none" />
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
+            <Button onClick={handleCreateEvent} className="gold-gradient text-background font-black uppercase text-[11px] px-14 h-16 rounded-xl shadow-2xl hover:scale-[1.02] transition-all">
+              Confirmar Agendamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
