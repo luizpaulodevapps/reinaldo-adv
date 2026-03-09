@@ -19,8 +19,7 @@ import {
   CheckCircle2,
   UserPlus,
   ShieldAlert,
-  Loader2,
-  Clock
+  Loader2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -162,14 +161,14 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       </div>
       <div>
         <h3 className="text-xl font-headline font-bold text-white uppercase tracking-tight leading-none">{title}</h3>
-        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1.5 opacity-60">{subtitle}</p>
+        <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest mt-1.5 opacity-60">{subtitle}</p>
       </div>
     </div>
   )
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0f1e] font-sans">
-      <div className="px-10 py-8 border-b border-white/5 bg-[#0a0f1e]">
+    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans">
+      <div className="px-10 py-8 border-b border-white/5 bg-[#0a0f1e] flex-none">
         <div className="flex justify-between items-center relative max-w-4xl mx-auto">
           <div className="absolute top-5 left-0 w-full h-0.5 bg-white/5 z-0" />
           
@@ -190,7 +189,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                 {step.id < currentStep ? <CheckCircle2 className="h-5 w-5" /> : step.id}
               </button>
               <span className={cn(
-                "text-[9px] font-black uppercase tracking-widest",
+                "text-[10px] font-black uppercase tracking-widest",
                 currentStep === step.id ? "text-[#f5d030]" : "text-muted-foreground/50"
               )}>
                 {step.label}
@@ -200,7 +199,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
         </div>
       </div>
 
-      <div className="h-1.5 w-full bg-white/5 overflow-hidden">
+      <div className="h-1.5 w-full bg-white/5 overflow-hidden flex-none">
         <div 
           className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
           style={{ width: `${progress}%` }} 
@@ -214,7 +213,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <StepHeader title="Partes do Processo" subtitle="Identifique o cliente principal RGMJ" icon={Users} />
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">POLO PROCESSUAL *</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">POLO PROCESSUAL *</Label>
                   <Select value={formData.poloProcessual} onValueChange={(v) => handleInputChange("poloProcessual", v)}>
                     <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white focus:ring-1 focus:ring-primary/50"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] border-white/10 text-white">
@@ -224,7 +223,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                   </Select>
                 </div>
                 <div className="space-y-3 relative">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CLIENTE PRINCIPAL *</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CLIENTE PRINCIPAL *</Label>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
@@ -249,14 +248,14 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                                 <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{c.name}</p>
                                 <p className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{c.documentNumber}</p>
                               </div>
-                              <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
+                              <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
                             </button>
                           ))
                         ) : (
-                          <div className="p-10 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum cliente no radar</p></div>
+                          <div className="p-10 text-center opacity-40"><p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest">Nenhum cliente no radar</p></div>
                         )}
                       </div>
-                      <button type="button" onClick={handleOpenQuickClient} className="w-full p-5 bg-primary/10 border-t border-white/5 flex items-center justify-center gap-3 text-primary hover:bg-primary/20 transition-all font-black text-[10px] uppercase tracking-widest">
+                      <button type="button" onClick={handleOpenQuickClient} className="w-full p-5 bg-primary/10 border-t border-white/5 flex items-center justify-center gap-3 text-primary hover:bg-primary/20 transition-all font-black text-[11px] uppercase tracking-widest">
                         <UserPlus className="h-4 w-4" /> INJETAR NOVO CLIENTE NA BASE
                       </button>
                     </div>
@@ -271,11 +270,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <StepHeader title="Polo Passivo" subtitle="Identifique a parte contrária da demanda" icon={Building2} />
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
                   <Input value={formData.defendantName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantName", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
                   <Input value={formData.defendantDocument} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantDocument", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
                 </div>
               </div>
@@ -296,11 +295,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                       else handleInputChange("processNumber", "")
                     }} 
                   />
-                  <Label htmlFor="awaiting-number" className="text-[10px] font-black text-amber-500 uppercase cursor-pointer tracking-widest">Aguardando número do processo (Protocolo em andamento)</Label>
+                  <Label htmlFor="awaiting-number" className="text-[11px] font-black text-amber-500 uppercase cursor-pointer tracking-widest">Aguardando número do processo (Protocolo em andamento)</Label>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO DO PROCESSO (CNJ) *</Label>
                     <Input 
                       disabled={isAwaitingNumber}
                       value={formData.processNumber} 
@@ -310,9 +309,9 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ÁREA JURÍDICA</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ÁREA JURÍDICA</Label>
                     <Select value={formData.caseType} onValueChange={(v) => handleInputChange("caseType", v)}>
-                      <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-black text-[11px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                         <SelectItem value="Trabalhista">⚖️ TRABALHISTA</SelectItem>
                         <SelectItem value="Cível">🏛️ CÍVEL</SelectItem>
@@ -332,11 +331,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <div className="space-y-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TRIBUNAL / ÓRGÃO *</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">TRIBUNAL / ÓRGÃO *</Label>
                     <Input value={formData.court} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("court", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: TRT 2ª REGIÃO" />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">VARA / CÂMARA</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">VARA / CÂMARA</Label>
                     <Input value={formData.vara} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("vara", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: 45ª VARA DO TRABALHO" />
                   </div>
                 </div>
@@ -349,7 +348,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <StepHeader title="Corpo Técnico" subtitle="Defina o advogado responsável pela frente" icon={UserCheck} />
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ADVOGADO DE FRENTE *</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ADVOGADO DE FRENTE *</Label>
                   <Select value={formData.responsibleStaffId} onValueChange={(v) => handleInputChange("responsibleStaffId", v)}>
                     <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] border-white/10 text-white">
@@ -366,11 +365,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <StepHeader title="Plano de Batalha" subtitle="Definição tática e resumo do objeto" icon={Target} />
               <div className="space-y-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">OBJETO DA AÇÃO (RESUMO)</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">OBJETO DA AÇÃO (RESUMO)</Label>
                   <Input value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("description", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: RECLAMAÇÃO TRABALHISTA - HORAS EXTRAS E ASSÉDIO" />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ESTRATÉGIA / NOTAS INTERNAS</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ESTRATÉGIA / NOTAS INTERNAS</Label>
                   <Textarea 
                     value={formData.strategyNotes} 
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange("strategyNotes", e.target.value)} 
@@ -384,8 +383,8 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
         </div>
       </ScrollArea>
 
-      <div className="p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between">
-        <Button variant="ghost" onClick={handleBack} disabled={currentStep === 1} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14">
+      <div className="p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between flex-none">
+        <Button variant="ghost" onClick={handleBack} disabled={currentStep === 1} className="text-muted-foreground uppercase font-black text-[12px] tracking-widest px-10 h-14">
           <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
         </Button>
         <div className="hidden md:flex gap-2">
@@ -394,11 +393,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
           ))}
         </div>
         {currentStep < 6 ? (
-          <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-background h-14 px-12 gap-3 uppercase font-black text-[11px] tracking-widest rounded-xl">
+          <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-background h-14 px-12 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-xl">
             Próximo Passo <ChevronRight className="h-4 w-4" />
           </Button>
         ) : (
-          <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background h-14 px-14 gap-3 uppercase font-black text-[11px] tracking-widest rounded-xl shadow-2xl">
+          <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background h-14 px-14 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-2xl">
             {initialData ? "Atualizar Dossiê" : "Protocolar Processo"} <CheckCircle2 className="h-5 w-5" />
           </Button>
         )}
@@ -411,24 +410,24 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter flex items-center gap-3">
                 <ShieldAlert className="h-6 w-6 text-primary" /> Injeção de Dados RGMJ
               </DialogTitle>
-              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
+              <DialogDescription className="text-[11px] uppercase font-bold text-muted-foreground mt-1">
                 Cadastro veloz de novo cliente para protocolo imediato.
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
+              <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
               <Input value={quickClientData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickClientData({...quickClientData, name: e.target.value.toUpperCase()})} className="bg-[#0d121f] border-white/10 h-14 text-white uppercase font-bold" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ *</Label>
+              <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CPF / CNPJ *</Label>
               <Input value={quickClientData.cpf} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickClientData({...quickClientData, cpf: e.target.value})} className="bg-[#0d121f] border-white/10 h-14 text-white font-mono" />
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsQuickClientOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
-            <Button onClick={handleSaveQuickClient} disabled={isSavingClient} className="bg-primary text-background font-black uppercase text-[11px] px-10 h-14 rounded-xl">
+            <Button variant="ghost" onClick={() => setIsQuickClientOpen(false)} className="text-muted-foreground uppercase font-black text-[12px]">Cancelar</Button>
+            <Button onClick={handleSaveQuickClient} disabled={isSavingClient} className="bg-primary text-background font-black uppercase text-[12px] px-10 h-14 rounded-xl shadow-xl">
               {isSavingClient ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar Cadastro"}
             </Button>
           </DialogFooter>

@@ -216,43 +216,43 @@ export function LeadForm({
   const SectionTitle = ({ children, icon: Icon }: { children: React.ReactNode, icon: any }) => (
     <div className="flex items-center gap-2 mb-3 pb-1 border-b border-white/5">
       <Icon className="h-3.5 w-3.5 text-primary" />
-      <h4 className="text-[10px] font-black text-white uppercase tracking-widest">{children}</h4>
+      <h4 className="text-[11px] font-black text-white uppercase tracking-widest">{children}</h4>
     </div>
   )
 
-  const inputClass = "bg-black/40 border-white/10 h-9 text-xs text-white uppercase font-bold focus:ring-primary/50"
+  const inputClass = "bg-black/40 border-white/10 h-10 text-sm text-white uppercase font-bold focus:ring-primary/50"
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0f1e] font-sans overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans overflow-hidden">
       <div className="px-6 pt-4 pb-1 flex-none bg-[#0a0f1e]/50 border-b border-white/5">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-[#1a1f2e] w-full p-1 h-10 rounded-lg gap-1">
-            <TabsTrigger value="autor" className="flex-1 text-[9px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <User className="h-3 w-3" /> AUTOR
+          <TabsList className="bg-[#1a1f2e] w-full p-1 h-12 rounded-lg gap-1">
+            <TabsTrigger value="autor" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
+              <User className="h-4 w-4" /> AUTOR
             </TabsTrigger>
-            <TabsTrigger value="reu" className="flex-1 text-[9px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <Building className="h-3 w-3" /> RÉU
+            <TabsTrigger value="reu" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
+              <Building className="h-4 w-4" /> RÉU
             </TabsTrigger>
-            <TabsTrigger value="demanda" className="flex-1 text-[9px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <Scale className="h-3 w-3" /> DEMANDA
+            <TabsTrigger value="demanda" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
+              <Scale className="h-4 w-4" /> DEMANDA
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <ScrollArea className="flex-1 bg-[#0a0f1e]/20">
-        <div className="px-6 py-4 max-w-4xl mx-auto space-y-6 pb-24">
+        <div className="px-6 py-6 max-w-4xl mx-auto space-y-8 pb-24">
           
           {activeTab === "autor" && (
-            <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-8 animate-in fade-in duration-500">
               <div className="space-y-4">
                 <SectionTitle icon={Fingerprint}>Dados Pessoais</SectionTitle>
                 <div className="space-y-1.5" ref={searchRef}>
-                  <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Nome do Cliente *</Label>
+                  <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Nome do Cliente *</Label>
                   <div className="relative" onClick={() => !lockMode && setIsSearchOpen(true)}>
                     <Input 
                       placeholder="PESQUISAR OU INSERIR NOME..." 
-                      className={cn(inputClass, "h-10 text-xs", lockMode && "opacity-60")} 
+                      className={cn(inputClass, "h-12 text-sm", lockMode && "opacity-60")} 
                       value={formData.name || searchTerm} 
                       onChange={(e) => {
                         setSearchTerm(e.target.value)
@@ -262,13 +262,13 @@ export function LeadForm({
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase text-muted-foreground">WhatsApp *</Label>
+                    <Label className="text-[11px] font-black uppercase text-muted-foreground">WhatsApp *</Label>
                     <Input className={inputClass} value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase text-muted-foreground">E-mail</Label>
+                    <Label className="text-[11px] font-black uppercase text-muted-foreground">E-mail</Label>
                     <Input className={cn(inputClass, "lowercase")} value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} />
                   </div>
                 </div>
@@ -276,17 +276,17 @@ export function LeadForm({
 
               <div className="space-y-4">
                 <SectionTitle icon={FileText}>Qualificação</SectionTitle>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase">CPF / CNPJ</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">CPF / CNPJ</Label>
                     <Input className={cn(inputClass, "font-mono")} value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase">RG</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">RG</Label>
                     <Input className={inputClass} value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black text-muted-foreground uppercase">Profissão</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Profissão</Label>
                     <Input className={inputClass} value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
                   </div>
                 </div>
@@ -295,37 +295,37 @@ export function LeadForm({
           )}
 
           {activeTab === "reu" && (
-            <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-8 animate-in fade-in duration-500">
               <SectionTitle icon={Building}>Dados do Réu</SectionTitle>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase">Nome do Réu *</Label>
-                  <Input className={cn(inputClass, "h-10")} value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Nome do Réu *</Label>
+                  <Input className={cn(inputClass, "h-12")} value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase">CNPJ / CPF</Label>
-                  <Input className={cn(inputClass, "h-10 font-mono")} value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", e.target.value)} />
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">CNPJ / CPF</Label>
+                  <Input className={cn(inputClass, "h-12 font-mono")} value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", e.target.value)} />
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === "demanda" && (
-            <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-8 animate-in fade-in duration-500">
               <SectionTitle icon={Gavel}>Logística Judiciária</SectionTitle>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5" ref={courtSearchRef}>
-                  <Label className="text-[9px] font-black text-primary uppercase">Órgão / Fórum</Label>
-                  <Input placeholder="BUSCAR FÓRUM..." className={cn(inputClass, "h-10")} value={courtSearchTerm || formData.court} onChange={(e) => setCourtSearchTerm(e.target.value)} />
+                  <Label className="text-[11px] font-black text-primary uppercase">Órgão / Fórum</Label>
+                  <Input placeholder="BUSCAR FÓRUM..." className={cn(inputClass, "h-12")} value={courtSearchTerm || formData.court} onChange={(e) => setCourtSearchTerm(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-primary uppercase">Vara</Label>
-                  <Input className={cn(inputClass, "h-10")} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
+                  <Label className="text-[11px] font-black text-primary uppercase">Vara</Label>
+                  <Input className={cn(inputClass, "h-12")} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[9px] font-black text-muted-foreground uppercase">Resumo da Demanda</Label>
-                <textarea className="w-full bg-black/40 border border-white/10 min-h-[100px] text-white text-xs uppercase resize-none p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+                <Label className="text-[11px] font-black text-muted-foreground uppercase">Resumo da Demanda</Label>
+                <textarea className="w-full bg-black/40 border border-white/10 min-h-[120px] text-white text-sm uppercase resize-none p-4 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
               </div>
             </div>
           )}
@@ -333,10 +333,10 @@ export function LeadForm({
         </div>
       </ScrollArea>
 
-      <div className="p-4 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between shadow-2xl z-30 flex-none">
-        <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[9px] tracking-widest px-4 h-9" onClick={onCancel}>ABORTAR</Button>
-        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-10 text-[9px] uppercase tracking-widest shadow-xl rounded-md px-8 flex items-center gap-2">
-          <ShieldCheck className="h-3.5 w-3.5" /> SALVAR DOSSIÊ
+      <div className="p-6 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between shadow-2xl z-30 flex-none">
+        <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[11px] tracking-widest px-8 h-12" onClick={onCancel}>ABORTAR</Button>
+        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-14 text-[12px] uppercase tracking-widest shadow-xl rounded-xl px-12 flex items-center gap-3">
+          <ShieldCheck className="h-5 w-5" /> SALVAR DOSSIÊ
         </Button>
       </div>
     </div>

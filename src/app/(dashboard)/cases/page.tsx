@@ -261,13 +261,13 @@ export default function CasesPage() {
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+        <SheetContent className={cn("flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
                 {editingProcess ? "Editar Processo" : "Novo Processo"}
               </SheetTitle>
-              <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+              <SheetDescription className="text-muted-foreground text-[11px] uppercase font-bold tracking-[0.2em] mt-1">
                 {editingProcess ? "Atualização de dados técnicos no ecossistema." : "Cadastro estruturado no ecossistema RGMJ."}
               </SheetDescription>
             </SheetHeader>
