@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -56,7 +57,7 @@ export default function ClientsPage() {
   const filteredClients = useMemo(() => {
     if (!clientsData) return []
     return clientsData.filter(client => 
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.documentNumber?.includes(searchTerm) ||
       client.email?.toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -74,16 +75,18 @@ export default function ClientsPage() {
 
   const handleSaveClient = (data: any) => {
     if (!user || !db) return
-    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.firstName
+    
+    // Se vier do ClientForm, o nome pode estar em firstName/lastName ou apenas name
+    const fullName = data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim()
     
     const clientPayload = {
-      name: fullName,
-      documentNumber: data.cpf,
+      name: fullName.toUpperCase(),
+      documentNumber: data.cpf || data.documentNumber || "",
       email: data.email || "",
       phone: data.phone || "",
       type: data.personType === 'Pessoa Jurídica' ? 'corporate' : 'individual',
-      status: data.registrationStatus,
-      registrationData: data,
+      status: data.registrationStatus || "Ativo",
+      registrationData: data, // Salva o objeto completo do form para facilitar a reedição
       updatedAt: serverTimestamp(),
     }
 
@@ -93,7 +96,6 @@ export default function ClientsPage() {
     } else {
       addDocumentNonBlocking(collection(db!, "clients"), {
         ...clientPayload,
-        id: crypto.randomUUID(),
         responsibleStaffIds: [user.uid],
         createdAt: serverTimestamp(),
       })
@@ -163,13 +165,13 @@ export default function ClientsPage() {
             <Card key={client.id} className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl">
               <CardContent className="p-8 space-y-6">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <h3 className="text-xl font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{client.name}</h3>
                     <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white shrink-0">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -184,7 +186,10 @@ export default function ClientsPage() {
                   </DropdownMenu>
                 </div>
                 <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                  <button className="flex items-center gap-2 text-[9px] font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.2em]">
+                  <button 
+                    onClick={() => handleOpenEdit(client)}
+                    className="flex items-center gap-2 text-[9px] font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.2em]"
+                  >
                     <FileText className="h-3.5 w-3.5" /> Abrir Prontuário
                   </button>
                   <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -201,8 +206,8 @@ export default function ClientsPage() {
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+        <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl flex flex-col h-full", getDrawerWidthClass())}>
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
                 {editingClient ? "Editar Cliente" : "Novo Cliente"}
@@ -212,11 +217,13 @@ export default function ClientsPage() {
               </SheetDescription>
             </SheetHeader>
           </div>
-          <ClientForm 
-            initialData={editingClient?.registrationData || editingClient}
-            onSubmit={handleSaveClient}
-            onCancel={() => setIsSheetOpen(false)}
-          />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ClientForm 
+              initialData={editingClient?.registrationData || editingClient}
+              onSubmit={handleSaveClient}
+              onCancel={() => setIsSheetOpen(false)}
+            />
+          </div>
         </SheetContent>
       </Sheet>
     </div>
