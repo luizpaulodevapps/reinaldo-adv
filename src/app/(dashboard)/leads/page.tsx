@@ -41,7 +41,8 @@ import {
   Calendar as CalendarIcon,
   FileSearch,
   Sparkles,
-  FileText
+  FileText,
+  Home
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -125,7 +126,6 @@ export default function LeadsPage() {
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
 
-  // Estados para Visualização de Entrevista Concluída
   const [viewingInterview, setViewingInterview] = useState<any>(null)
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false)
   const [interviewAnalysis, setInterviewAnalysis] = useState<AnalyzeInterviewOutput | null>(null)
@@ -149,7 +149,9 @@ export default function LeadsPage() {
   const [intakeData, setIntakeData] = useState({
     date: "",
     time: "",
-    type: "online"
+    type: "online",
+    locationType: "sede", // 'sede' | 'externo'
+    customAddress: ""
   })
 
   const templatesQuery = useMemoFirebase(() => {
@@ -187,7 +189,9 @@ export default function LeadsPage() {
       setIntakeData({
         date: selectedLead.scheduledDate || "",
         time: selectedLead.scheduledTime || "",
-        type: selectedLead.meetingType || "online"
+        type: selectedLead.meetingType || "online",
+        locationType: selectedLead.locationType || "sede",
+        customAddress: selectedLead.customAddress || ""
       })
     }
   }, [selectedLead?.id, selectedLead?.status])
@@ -227,10 +231,17 @@ export default function LeadsPage() {
       return
     }
 
+    const finalLocation = intakeData.type === 'online' 
+      ? 'Virtual RGMJ' 
+      : (intakeData.locationType === 'sede' ? 'Sede RGMJ (Rua do Advogado, 123)' : intakeData.customAddress)
+
     const payload = {
       scheduledDate: intakeData.date,
       scheduledTime: intakeData.time,
       meetingType: intakeData.type,
+      locationType: intakeData.locationType,
+      customAddress: intakeData.customAddress,
+      meetingLocation: finalLocation,
       updatedAt: serverTimestamp()
     }
 
@@ -243,7 +254,7 @@ export default function LeadsPage() {
       clientId: selectedLead.id,
       clientName: selectedLead.name,
       meetingType: intakeData.type,
-      location: intakeData.type === 'online' ? "Virtual RGMJ" : "Sede RGMJ",
+      location: finalLocation,
       status: "Agendado",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -318,7 +329,6 @@ export default function LeadsPage() {
         responses: interview.responses
       })
       setInterviewAnalysis(result)
-      // Opcional: Salvar a análise no documento da entrevista
       if (db) {
         updateDocumentNonBlocking(doc(db, "interviews", interview.id), {
           aiAnalysis: result,
@@ -643,7 +653,7 @@ export default function LeadsPage() {
                               {selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} às ${selectedLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
                             </p>
                             <Badge variant="outline" className="text-sm font-black text-muted-foreground border-white/10 px-8 py-4 rounded-2xl uppercase tracking-widest bg-white/[0.02]">
-                              {selectedLead.meetingType === 'online' ? '🖥️ REUNIÃO VIRTUAL RGMJ' : '🏢 VISITA PRESENCIAL À BANCA'}
+                              {selectedLead.meetingType === 'online' ? '🖥️ REUNIÃO VIRTUAL RGMJ' : `🏢 PRESENCIAL: ${selectedLead.meetingLocation || 'LOCAL A DEFINIR'}`}
                             </Badge>
                             <div className="pt-4 text-xs font-black text-amber-500/40 uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA EDITAR CRONOGRAMA</div>
                           </div>
@@ -1005,7 +1015,6 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Visualizador de Entrevista Concluída */}
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1200px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem] flex flex-col h-[90vh]">
           <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 flex-none">
@@ -1134,9 +1143,8 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Intake Scheduling Dialog */}
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
@@ -1149,27 +1157,64 @@ export default function LeadsPage() {
           </div>
           <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
             <div className="space-y-4">
-              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Modalidade</Label>
+              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Modalidade do Encontro</Label>
               <div className="grid grid-cols-2 gap-4">
                 <Button 
                   onClick={() => setIntakeData({...intakeData, type: 'online'})}
                   variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
-                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
+                  className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
                 >
-                  <Video className="h-4 w-4" /> Reunião Online
+                  <Video className="h-5 w-5" /> REUNIÃO ONLINE
                 </Button>
                 <Button 
                   onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
                   variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
-                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
+                  className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
                 >
-                  <Building className="h-4 w-4" /> Presencial
+                  <MapPin className="h-5 w-5" /> PRESENCIAL
                 </Button>
               </div>
             </div>
+
+            {intakeData.type === 'presencial' && (
+              <div className="space-y-4 animate-in slide-in-from-top-2 duration-500">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Localização Física</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button 
+                    onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}
+                    variant={intakeData.locationType === 'sede' ? 'secondary' : 'outline'}
+                    className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'sede' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                  >
+                    <Home className="h-4 w-4" /> SEDE RGMJ
+                  </Button>
+                  <Button 
+                    onClick={() => setIntakeData({...intakeData, locationType: 'externo'})}
+                    variant={intakeData.locationType === 'externo' ? 'secondary' : 'outline'}
+                    className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'externo' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                  >
+                    <Navigation className="h-4 w-4" /> LOCAL EXTERNO
+                  </Button>
+                </div>
+                {intakeData.locationType === 'externo' && (
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Endereço do Local (Ex: Shopping, Residência)</Label>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Pesquisar local ou digitar endereço..."
+                        className="glass h-14 pl-12 text-white font-bold border-white/20 uppercase text-xs"
+                        value={intakeData.customAddress}
+                        onChange={(e) => setIntakeData({...intakeData, customAddress: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data</Label>
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data do Ato</Label>
                 <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
               </div>
               <div className="space-y-3">
@@ -1178,10 +1223,10 @@ export default function LeadsPage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest">Cancelar</Button>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest">CANCELAR</Button>
             <Button onClick={handleScheduleIntake} className="gold-gradient text-black font-black h-16 px-12 rounded-xl uppercase text-sm tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
-              Confirmar Agenda
+              CONFIRMAR AGENDA
             </Button>
           </DialogFooter>
         </DialogContent>
