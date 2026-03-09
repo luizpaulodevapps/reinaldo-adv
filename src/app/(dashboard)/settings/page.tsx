@@ -189,6 +189,7 @@ function SettingsContent() {
   const [googleConfig, setGoogleConfig] = useState({
     masterEmail: "financeiro@rgmj.com.br",
     rootFolderId: "",
+    clientId: "",
     isDriveActive: true,
     isDocsActive: true,
     isCalendarActive: true,
@@ -558,12 +559,22 @@ function SettingsContent() {
                     <Label className="text-[10px] font-black text-muted-foreground uppercase mb-1">ID DO PROJETO (FIREBASE)</Label>
                     <p className="text-sm font-mono text-white font-bold">rgmj-advocacia-prod</p>
                   </div>
-                  <div className="bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase mb-1">CLIENT ID (GOOGLE CLOUD)</Label>
-                    <Input 
-                      placeholder="COLE O ID GERADO AQUI..."
-                      className="glass h-10 text-[10px] font-mono text-white/60 focus:ring-primary/50"
-                    />
+                  <div className="bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner space-y-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase mb-1">CLIENT ID (GOOGLE CLOUD)</Label>
+                      <Input 
+                        placeholder="COLE O ID GERADO AQUI..."
+                        className="glass h-10 text-[10px] font-mono text-white/60 focus:ring-primary/50"
+                        value={googleConfig.clientId}
+                        onChange={(e) => setGoogleConfig({...googleConfig, clientId: e.target.value})}
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => toast({ title: "Credencial Salva", description: "O Client ID foi atualizado no sistema." })} 
+                      className="w-full gold-gradient text-background font-black text-[10px] uppercase h-10 rounded-lg shadow-lg hover:scale-105 transition-all"
+                    >
+                      <Save className="h-3 w-3 mr-2" /> SALVAR CREDENCIAIS
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -689,7 +700,7 @@ function SettingsContent() {
                 {messageTemplates.map((template) => (
                   <Card key={template.id} className="glass border-white/5 p-8 hover:border-primary/40 transition-all cursor-pointer group relative overflow-hidden shadow-2xl rounded-2xl">
                     <div className="flex items-start justify-between mb-6">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-xl">
                         {template.eventType?.includes("Virtual") ? <Video className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
                       </div>
                       <div className="flex gap-2">
@@ -724,7 +735,6 @@ function SettingsContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs permanecem com ajustes de padding e fontes */}
       <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
@@ -768,7 +778,6 @@ function SettingsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Notificações com scrollarea e tags */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1100px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col rounded-3xl">
           <div className="flex-none p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between z-10 shadow-xl">
