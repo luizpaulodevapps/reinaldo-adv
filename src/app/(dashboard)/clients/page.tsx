@@ -29,7 +29,8 @@ import {
   History,
   CheckCircle2,
   Clock,
-  ExternalLink
+  ExternalLink,
+  MapPin
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -65,12 +66,11 @@ export default function ClientsPage() {
   const { user, profile } = useUser()
   const { toast } = useToast()
 
-  // Busca Clientes Ativos
+  // Busca todos os clientes para não esconder dados legados sem o campo 'status'
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(
       collection(db!, "clients"), 
-      where("status", "==", "Ativo"),
       orderBy("name", "asc")
     )
   }, [db, user])
@@ -79,11 +79,18 @@ export default function ClientsPage() {
 
   const filteredClients = useMemo(() => {
     if (!clientsData) return []
-    return clientsData.filter(client => 
-      client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.documentNumber?.includes(searchTerm) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    return clientsData.filter(client => {
+      // Regra de Negócio: Se não tem status, é considerado Ativo (Legado)
+      // Se tem status, deve ser diferente de "Inativo"
+      const isActive = !client.status || client.status === "Ativo"
+      
+      const matchesSearch = 
+        client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.documentNumber?.includes(searchTerm) ||
+        client.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      return isActive && matchesSearch
+    })
   }, [clientsData, searchTerm])
 
   // Queries para o Dossiê (quando um cliente é selecionado)
