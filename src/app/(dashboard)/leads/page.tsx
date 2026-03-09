@@ -160,7 +160,6 @@ export default function LeadsPage() {
     observations: ""
   })
 
-  // Estados para busca de mapas
   const [locationSearch, setLocationSearch] = useState("")
   const [locationResults, setLocationResults] = useState<any[]>([])
   const [isSearchingLocation, setIsSearchingLocation] = useState(false)
@@ -209,7 +208,6 @@ export default function LeadsPage() {
     }
   }, [selectedLead?.id, selectedLead?.status])
 
-  // Lógica de busca de mapas (Nominatim API)
   const handleMapSearch = useCallback(async (query: string) => {
     if (!query || query.length < 3) {
       setLocationResults([])
@@ -1352,71 +1350,77 @@ export default function LeadsPage() {
       </Dialog>
 
       <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem]">
-          <DialogHeader className="p-10 bg-[#0a0f1e] border-b border-white/5">
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem] flex flex-col h-[90vh]">
+          <DialogHeader className="p-10 bg-[#0a0f1e] border-b border-white/5 flex-none">
             <DialogTitle className="text-white text-3xl font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
             <DialogDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">O dossiê do lead será encerrado e um novo processo tático será iniciado na base RGMJ.</DialogDescription>
           </DialogHeader>
-          {selectedLead && (
-            <ProcessForm 
-              initialData={{
-                clientName: selectedLead.name,
-                clientId: selectedLead.id,
-                defendantName: selectedLead.defendantName,
-                caseType: selectedLead.type,
-                court: selectedLead.court,
-                vara: selectedLead.vara,
-                processNumber: selectedLead.processNumber || "",
-                responsibleStaffId: user?.uid
-              }}
-              onSubmit={handleConvertProcess}
-              onCancel={() => setIsConversionOpen(false)}
-            />
-          )}
+          <div className="flex-1 min-h-0">
+            {selectedLead && (
+              <ProcessForm 
+                initialData={{
+                  clientName: selectedLead.name,
+                  clientId: selectedLead.id,
+                  defendantName: selectedLead.defendantName,
+                  caseType: selectedLead.type,
+                  court: selectedLead.court,
+                  vara: selectedLead.vara,
+                  processNumber: selectedLead.processNumber || "",
+                  responsibleStaffId: user?.uid
+                }}
+                onSubmit={handleConvertProcess}
+                onCancel={() => setIsConversionOpen(false)}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
-        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
-          <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
+        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full">
+          <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl flex-none">
             <SheetTitle className="text-4xl font-bold text-white uppercase tracking-widest">Novo Atendimento RGMJ</SheetTitle>
             <SheetDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Cadastro de nova oportunidade estratégica no funil comercial de elite.</SheetDescription>
           </SheetHeader>
-          <LeadForm 
-            existingLeads={leads} 
-            onSubmit={(data) => {
-              addDocumentNonBlocking(collection(db!, "leads"), { ...data, assignedStaffId: user?.uid, status: "novo", driveStatus: "pendente", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
-              setIsNewEntryOpen(false)
-              toast({ title: "Atendimento Iniciado", description: "O rito de triagem foi injetado na pauta." })
-            }} 
-            onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
-            onCancel={() => setIsNewEntryOpen(false)}
-            defaultResponsibleLawyer={user?.displayName || ""}
-          />
+          <div className="flex-1 min-h-0">
+            <LeadForm 
+              existingLeads={leads} 
+              onSubmit={(data) => {
+                addDocumentNonBlocking(collection(db!, "leads"), { ...data, assignedStaffId: user?.uid, status: "novo", driveStatus: "pendente", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+                setIsNewEntryOpen(false)
+                toast({ title: "Atendimento Iniciado", description: "O rito de triagem foi injetado na pauta." })
+              }} 
+              onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
+              onCancel={() => setIsNewEntryOpen(false)}
+              defaultResponsibleLawyer={user?.displayName || ""}
+            />
+          </div>
         </SheetContent>
       </Sheet>
 
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
-        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
-          <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl">
+        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full">
+          <SheetHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] shadow-2xl flex-none">
             <SheetTitle className="text-4xl font-bold text-white uppercase tracking-widest">Saneamento de Dossiê</SheetTitle>
             <SheetDescription className="text-base text-muted-foreground uppercase font-black tracking-[0.4em] mt-4 opacity-50">Retificação técnica de dados cadastrais para o rito de distribuição.</SheetDescription>
           </SheetHeader>
-          {selectedLead && (
-            <LeadForm 
-              existingLeads={[]}
-              initialData={selectedLead}
-              lockMode={true}
-              onSubmit={async (data) => {
-                await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), { ...data, updatedAt: serverTimestamp() })
-                setSelectedLead({ ...selectedLead, ...data })
-                setIsEditModeOpen(false)
-                toast({ title: "Qualificação Atualizada", description: "Os dados foram retificados com sucesso." })
-              }}
-              onSelectExisting={() => {}}
-              onCancel={() => setIsEditModeOpen(false)}
-            />
-          )}
+          <div className="flex-1 min-h-0">
+            {selectedLead && (
+              <LeadForm 
+                existingLeads={[]}
+                initialData={selectedLead}
+                lockMode={true}
+                onSubmit={async (data) => {
+                  await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), { ...data, updatedAt: serverTimestamp() })
+                  setSelectedLead({ ...selectedLead, ...data })
+                  setIsEditModeOpen(false)
+                  toast({ title: "Qualificação Atualizada", description: "Os dados foram retificados com sucesso." })
+                }}
+                onSelectExisting={() => {}}
+                onCancel={() => setIsEditModeOpen(false)}
+              />
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </div>

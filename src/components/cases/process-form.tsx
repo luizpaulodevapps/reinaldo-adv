@@ -79,10 +79,10 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         ...initialData
-      })
+      }))
     }
   }, [initialData])
 
@@ -168,7 +168,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   )
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans relative overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans relative overflow-hidden h-full">
       <div className="px-10 py-8 border-b border-white/5 bg-[#0a0f1e] flex-none">
         <div className="flex justify-between items-center relative max-w-4xl mx-auto">
           <div className="absolute top-5 left-0 w-full h-0.5 bg-white/5 z-0" />
@@ -181,7 +181,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center text-xs font-black transition-all border-2",
                   currentStep === step.id 
-                    ? "bg-[#f5d030] border-[#f5d030] text-[#0a0f1e] shadow-[0_0_15px_rgba(245,208,48,0.4)] scale-110" 
+                    ? "bg-primary border-primary text-background shadow-[0_0_15px_rgba(245,208,48,0.4)] scale-110" 
                     : step.id < currentStep 
                       ? "bg-emerald-500 border-emerald-500 text-white" 
                       : "bg-[#1a1f2e] border-white/10 text-muted-foreground"
@@ -191,7 +191,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               </button>
               <span className={cn(
                 "text-[10px] font-black uppercase tracking-widest",
-                currentStep === step.id ? "text-[#f5d030]" : "text-muted-foreground/50"
+                currentStep === step.id ? "text-primary" : "text-muted-foreground/50"
               )}>
                 {step.label}
               </span>
@@ -216,7 +216,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                 <div className="space-y-3">
                   <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">POLO PROCESSUAL *</Label>
                   <Select value={formData.poloProcessual} onValueChange={(v) => handleInputChange("poloProcessual", v)}>
-                    <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white focus:ring-1 focus:ring-primary/50"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white focus:ring-1 focus:ring-primary/50 text-sm font-bold uppercase"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                       <SelectItem value="Polo Ativo (Autor/Reclamante)">POLO ATIVO (AUTOR)</SelectItem>
                       <SelectItem value="Polo Passivo (Réu/Reclamada)">POLO PASSIVO (RÉU)</SelectItem>
@@ -374,7 +374,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                   <Textarea 
                     value={formData.strategyNotes} 
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange("strategyNotes", e.target.value)} 
-                    className="bg-black/20 border-white/10 min-h-[150px] text-white resize-none text-sm" 
+                    className="bg-black/20 border-white/10 min-h-[150px] text-white resize-none text-sm p-5 rounded-xl" 
                     placeholder="Inisira as teses principais ou alertas para a audiência..." 
                   />
                 </div>
@@ -388,7 +388,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
         <Button variant="ghost" onClick={handleBack} disabled={currentStep === 1} className="text-muted-foreground uppercase font-black text-[12px] tracking-widest px-10 h-14 hover:text-white">
           <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
         </Button>
-        <div className="hidden md:flex gap-2">
+        <div className="hidden md:flex gap-3">
           {steps.map(s => (
             <div key={s.id} className={cn("w-2.5 h-2.5 rounded-full transition-all duration-500", currentStep === s.id ? "bg-primary shadow-[0_0_10px_rgba(245,208,48,0.6)] scale-125" : "bg-white/10")} />
           ))}
@@ -418,7 +418,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
           </div>
           <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
             <div className="space-y-2">
-              <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NOME COMPLETO *</Label>
+              <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Nome Completo *</Label>
               <Input value={quickClientData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickClientData({...quickClientData, name: e.target.value.toUpperCase()})} className="bg-[#0d121f] border-white/10 h-14 text-white uppercase font-bold" />
             </div>
             <div className="space-y-2">
