@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -37,7 +38,8 @@ import {
   Lock,
   Plus,
   AlertTriangle,
-  GripVertical
+  GripVertical,
+  Calendar as CalendarIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -53,7 +55,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -92,8 +95,6 @@ export default function LeadsPage() {
   const { user } = useUser()
   const { toast } = useToast()
 
-  // Consulta restaurada: Pega todos os leads que não estão arquivados
-  // Removi o filtro de status desigual para evitar problemas com registros sem o campo status
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(
@@ -105,7 +106,6 @@ export default function LeadsPage() {
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   
-  // Filtro de arquivados no cliente para garantir máxima visibilidade
   const leads = useMemo(() => {
     if (!leadsData) return []
     return leadsData.filter(l => l.status !== 'arquivado')
@@ -135,6 +135,14 @@ export default function LeadsPage() {
     meetingLink: "",
     accessCode: "",
     location: ""
+  })
+
+  // State for Scheduling Intake Meeting (Atendimento)
+  const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
+  const [intakeData, setIntakeData] = useState({
+    date: "",
+    time: "",
+    type: "online"
   })
 
   const templatesQuery = useMemoFirebase(() => {
@@ -169,6 +177,11 @@ export default function LeadsPage() {
         accessCode: "",
         location: ""
       })
+      setIntakeData({
+        date: selectedLead.scheduledDate || "",
+        time: selectedLead.scheduledTime || "",
+        type: selectedLead.meetingType || "online"
+      })
     }
   }, [selectedLead?.id, selectedLead?.status])
 
@@ -199,6 +212,42 @@ export default function LeadsPage() {
   const handleOpenLead = (lead: any) => {
     setSelectedLead(lead)
     setIsSheetOpen(true)
+  }
+
+  const handleScheduleIntake = async () => {
+    if (!db || !selectedLead || !intakeData.date || !intakeData.time) {
+      toast({ variant: "destructive", title: "Dados Incompletos", description: "Defina data e hora para o atendimento." })
+      return
+    }
+
+    const payload = {
+      scheduledDate: intakeData.date,
+      scheduledTime: intakeData.time,
+      meetingType: intakeData.type,
+      updatedAt: serverTimestamp()
+    }
+
+    // Update lead
+    updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), payload)
+
+    // Create entry in appointments collection
+    const appointmentPayload = {
+      title: `Atendimento: ${selectedLead.name}`,
+      type: "Atendimento",
+      startDateTime: `${intakeData.date}T${intakeData.time}:00`,
+      clientId: selectedLead.id,
+      clientName: selectedLead.name,
+      meetingType: intakeData.type,
+      location: intakeData.type === 'online' ? "Virtual RGMJ" : "Sede RGMJ",
+      status: "Agendado",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }
+    addDocumentNonBlocking(collection(db, "appointments"), appointmentPayload)
+
+    setSelectedLead({ ...selectedLead, ...payload })
+    setIsSchedulingIntake(false)
+    toast({ title: "Atendimento Agendado", description: "O ato foi injetado na agenda estratégica." })
   }
 
   const handleSyncDrive = async () => {
@@ -383,7 +432,6 @@ export default function LeadsPage() {
       ) : (
         <div className="flex gap-10 overflow-x-auto pb-16 scrollbar-hide min-h-[800px] px-2">
           {columns.map((col) => {
-            // Se o lead não tem status, ele cai na primeira coluna (novo)
             const leadsInCol = leads.filter(l => {
               const currentStatus = l.status || "novo"
               return currentStatus === col.id
@@ -551,7 +599,10 @@ export default function LeadsPage() {
 
                     <TabsContent value="overview" className="space-y-12 animate-in fade-in duration-500 outline-none w-full">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                        <Card className="glass border-white/5 p-12 rounded-[3rem] shadow-2xl bg-white/[0.01] relative overflow-hidden">
+                        <Card 
+                          className="glass border-white/5 p-12 rounded-[3rem] shadow-2xl bg-white/[0.01] relative overflow-hidden group cursor-pointer hover:border-amber-500/30 transition-all"
+                          onClick={() => setIsSchedulingIntake(true)}
+                        >
                           <div className="absolute top-0 right-0 p-12 opacity-5"><Clock className="h-40 w-40" /></div>
                           <h4 className="text-base font-black text-amber-500 uppercase tracking-[0.4em] flex items-center gap-5 mb-10"><Clock className="h-7 w-7" /> Cronograma de Atendimento</h4>
                           <div className="space-y-8">
@@ -561,6 +612,7 @@ export default function LeadsPage() {
                             <Badge variant="outline" className="text-sm font-black text-muted-foreground border-white/10 px-8 py-4 rounded-2xl uppercase tracking-widest bg-white/[0.02]">
                               {selectedLead.meetingType === 'online' ? '🖥️ REUNIÃO VIRTUAL RGMJ' : '🏢 VISITA PRESENCIAL À BANCA'}
                             </Badge>
+                            <div className="pt-4 text-xs font-black text-amber-500/40 uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA EDITAR CRONOGRAMA</div>
                           </div>
                         </Card>
                         <Card className="glass border-primary/15 p-12 rounded-[3rem] shadow-2xl bg-primary/5 relative overflow-hidden">
@@ -870,6 +922,57 @@ export default function LeadsPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Intake Scheduling Dialog */}
+      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
+                <CalendarIcon className="h-8 w-8 text-amber-500" /> Agendar Atendimento
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-xs uppercase font-bold tracking-[0.2em] mt-2">
+                Defina o rito inicial para o lead na pauta da banca.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
+            <div className="space-y-4">
+              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Modalidade</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  onClick={() => setIntakeData({...intakeData, type: 'online'})}
+                  variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
+                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass')}
+                >
+                  <Video className="h-4 w-4" /> Reunião Online
+                </Button>
+                <Button 
+                  onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
+                  variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
+                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass')}
+                >
+                  <Building className="h-4 w-4" /> Presencial
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data</Label>
+                <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold" />
+              </div>
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
+                <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest">Cancelar</Button>
+            <Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black h-14 px-10 rounded-xl uppercase text-[11px] tracking-widest shadow-2xl">Confirmar Agenda</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1100px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-[3rem]">
