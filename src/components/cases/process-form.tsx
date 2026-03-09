@@ -20,7 +20,8 @@ import {
   CheckCircle2,
   UserPlus,
   ShieldAlert,
-  Loader2
+  Loader2,
+  MapPin
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -54,6 +55,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   const [quickClientData, setQuickClientData] = useState({ name: '', cpf: '' })
   const [isSavingClient, setIsSavingClient] = useState(false)
   const [isAwaitingNumber, setIsAwaitingNumber] = useState(false)
+  const [loadingDefendantCep, setLoadingDefendantCep] = useState(false)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -65,6 +67,13 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     clientName: "",
     defendantName: "",
     defendantDocument: "",
+    defendantZipCode: "",
+    defendantAddress: "",
+    defendantNumber: "",
+    defendantComplement: "",
+    defendantNeighborhood: "",
+    defendantCity: "",
+    defendantState: "",
     processNumber: "",
     value: "",
     startDate: "",
@@ -110,6 +119,30 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleDefendantCepBlur = async () => {
+    const cep = formData.defendantZipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+
+    setLoadingDefendantCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          defendantAddress: data.logradouro.toUpperCase(),
+          defendantNeighborhood: data.bairro.toUpperCase(),
+          defendantCity: data.localidade.toUpperCase(),
+          defendantState: data.uf.toUpperCase()
+        }))
+      }
+    } catch (error) {
+      console.error("CEP error")
+    } finally {
+      setLoadingDefendantCep(false)
+    }
   }
 
   const handleOpenQuickClient = () => {
@@ -270,13 +303,67 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <StepHeader title="Polo Passivo" subtitle="Identifique a parte contrária da demanda" icon={Building2} />
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
-                  <Input value={formData.defendantName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantName", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
+                    <Input value={formData.defendantName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantName", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
+                    <Input value={formData.defendantDocument} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantDocument", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
-                  <Input value={formData.defendantDocument} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantDocument", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
+
+                <div className="border-t border-white/5 pt-8 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Localização da Sede (Citação)</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CEP</Label>
+                      <div className="relative">
+                        <Input 
+                          value={formData.defendantZipCode} 
+                          onChange={(e) => handleInputChange("defendantZipCode", e.target.value)} 
+                          onBlur={handleDefendantCepBlur}
+                          className="bg-black/20 border-white/10 h-12 text-white font-mono" 
+                          placeholder="00000-000"
+                        />
+                        {loadingDefendantCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ENDEREÇO (LOGRADOURO)</Label>
+                      <Input value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="RUA, AVENIDA..." />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO</Label>
+                      <Input value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} className="bg-black/20 border-white/10 h-12 text-white" placeholder="123" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">COMPLEMENTO</Label>
+                      <Input value={formData.defendantComplement} onChange={(e) => handleInputChange("defendantComplement", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="SALA, BLOCO..." />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">BAIRRO</Label>
+                      <Input value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="BAIRRO..." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CIDADE</Label>
+                        <Input value={formData.defendantCity} onChange={(e) => handleInputChange("defendantCity", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" />
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                        <Input value={formData.defendantState} onChange={(e) => handleInputChange("defendantState", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" maxLength={2} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
