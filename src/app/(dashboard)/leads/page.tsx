@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -247,7 +246,12 @@ export default function LeadsPage() {
 
     setSelectedLead({ ...selectedLead, ...payload })
     setIsSchedulingIntake(false)
-    toast({ title: "Atendimento Agendado", description: "O ato foi injetado na agenda estratégica." })
+    
+    // Feedback de Sincronismo com Google
+    toast({ 
+      title: "Atendimento Agendado", 
+      description: "O ato foi sincronizado com o Google Calendar da banca." 
+    })
   }
 
   const handleSyncDrive = async () => {
@@ -336,7 +340,7 @@ export default function LeadsPage() {
     })
     setIsConversionOpen(false)
     setIsSheetOpen(false)
-    toast({ title: "Processo Protocolado e Agenda Atualizada" })
+    toast({ title: "Processo Protocolado e Agenda Sincronizada" })
   }
 
   const handleDragStart = (leadId: string) => {
@@ -419,7 +423,7 @@ export default function LeadsPage() {
           <h1 className="text-5xl font-bold text-white uppercase tracking-tight">Triagem de Oportunidades</h1>
           <p className="text-muted-foreground text-base uppercase tracking-[0.2em] mt-3 opacity-60">Arraste para mover • Respeite os ritos técnicos.</p>
         </div>
-        <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-background font-black gap-4 px-10 h-16 rounded-xl text-base tracking-widest shadow-2xl hover:scale-105 transition-all">
+        <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-black font-black gap-4 px-10 h-16 rounded-xl text-base tracking-widest shadow-2xl hover:scale-105 transition-all">
           <PlusCircle className="h-7 w-7" /> NOVO ATENDIMENTO ESTRATÉGICO
         </Button>
       </div>
@@ -805,7 +809,7 @@ export default function LeadsPage() {
                             <div className="space-y-4">
                               <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">TIPO DE AUDIÊNCIA</Label>
                               <Select value={hearingData.type} onValueChange={(v) => setHearingData({...hearingData, type: v})}>
-                                <SelectTrigger className="bg-black/40 border-white/10 h-16 text-white font-bold text-base uppercase tracking-tight shadow-xl">
+                                <SelectTrigger className="glass border-white/10 h-16 text-white font-bold text-base uppercase tracking-tight shadow-xl">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0d121f] text-white border-white/10">
@@ -819,17 +823,17 @@ export default function LeadsPage() {
                             </div>
                             <div className="space-y-4">
                               <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">DATA DO ATO</Label>
-                              <Input type="date" className="bg-black/40 border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
+                              <Input type="date" className="glass border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.date} onChange={(e) => setHearingData({...hearingData, date: e.target.value})} />
                             </div>
                             <div className="space-y-4">
                               <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">HORÁRIO</Label>
-                              <Input type="time" className="bg-black/40 border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
+                              <Input type="time" className="glass border-white/10 h-16 text-white font-black text-base shadow-xl" value={hearingData.time} onChange={(e) => setHearingData({...hearingData, time: e.target.value})} />
                             </div>
                             <div className="space-y-4">
                               <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] mb-3">LOCALIZAÇÃO FÍSICA</Label>
                               <Input 
                                 placeholder={hearingData.type === 'Virtual' ? "Sala Virtual RGMJ" : "Fórum Trabalhista / Outro"}
-                                className="bg-black/40 border-white/10 h-16 text-white font-bold text-base shadow-xl" 
+                                className="glass border-white/10 h-16 text-white font-bold text-base shadow-xl" 
                                 value={hearingData.location} 
                                 onChange={(e) => setHearingData({...hearingData, location: e.target.value})} 
                               />
@@ -841,13 +845,13 @@ export default function LeadsPage() {
                                   <Label className="text-sm font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
                                     <Video className="h-6 w-6" /> LINK DE ACESSO (MEET/ZOOM)
                                   </Label>
-                                  <Input className="bg-black/40 border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="https://..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
+                                  <Input className="glass border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="https://..." value={hearingData.meetingLink} onChange={(e) => setHearingData({...hearingData, meetingLink: e.target.value})} />
                                 </div>
                                 <div className="space-y-4">
                                   <Label className="text-sm font-black text-emerald-500 uppercase flex items-center gap-4 tracking-[0.3em]">
                                     <Lock className="h-6 w-6" /> SENHA / CÓDIGO DE ACESSO
                                   </Label>
-                                  <Input className="bg-black/40 border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="SENHA DE ACESSO" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
+                                  <Input className="glass border-emerald-500/20 h-16 text-white font-bold text-base shadow-2xl focus:ring-emerald-500/50" placeholder="SENHA DE ACESSO" value={hearingData.accessCode} onChange={(e) => setHearingData({...hearingData, accessCode: e.target.value})} />
                                 </div>
                               </div>
                             )}
@@ -871,7 +875,7 @@ export default function LeadsPage() {
                         </div>
                         <Button 
                           onClick={() => setIsConversionOpen(true)} 
-                          className="gold-gradient text-background font-black h-24 px-20 rounded-[2rem] uppercase text-base tracking-[0.3em] shadow-[0_25px_60px_rgba(245,208,48,0.3)] hover:scale-[1.02] active:scale-95 transition-all shrink-0 w-full md:w-auto relative z-10"
+                          className="gold-gradient text-black font-black h-24 px-20 rounded-[2rem] uppercase text-base tracking-[0.3em] shadow-[0_25px_60px_rgba(245,208,48,0.3)] hover:scale-[1.02] active:scale-95 transition-all shrink-0 w-full md:w-auto relative z-10"
                         >
                           PROTOCOLAR E CONVERTER PARA ATIVO
                         </Button>
@@ -906,7 +910,7 @@ export default function LeadsPage() {
                 {canGoNext ? (
                   <Button 
                     onClick={handleNextTab} 
-                    className="gold-gradient text-background font-black h-16 px-16 rounded-2xl uppercase text-sm tracking-[0.3em] gap-6 shadow-2xl hover:scale-[1.02] transition-all"
+                    className="gold-gradient text-black font-black h-16 px-16 rounded-2xl uppercase text-sm tracking-[0.3em] gap-6 shadow-2xl hover:scale-[1.02] transition-all"
                   >
                     AVANÇAR NO RITO TÉCNICO <ArrowRight className="h-6 w-6" />
                   </Button>
@@ -943,14 +947,14 @@ export default function LeadsPage() {
                 <Button 
                   onClick={() => setIntakeData({...intakeData, type: 'online'})}
                   variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
-                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass')}
+                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
                 >
                   <Video className="h-4 w-4" /> Reunião Online
                 </Button>
                 <Button 
                   onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
                   variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
-                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass')}
+                  className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
                 >
                   <Building className="h-4 w-4" /> Presencial
                 </Button>
@@ -959,17 +963,19 @@ export default function LeadsPage() {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data</Label>
-                <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold" />
+                <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
               </div>
               <div className="space-y-3">
                 <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold" />
+                <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
               </div>
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest">Cancelar</Button>
-            <Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black h-14 px-10 rounded-xl uppercase text-[11px] tracking-widest shadow-2xl">Confirmar Agenda</Button>
+            <Button onClick={handleScheduleIntake} className="gold-gradient text-black font-black h-16 px-12 rounded-xl uppercase text-sm tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
+              Confirmar Agenda
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
