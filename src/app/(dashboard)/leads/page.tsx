@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -42,7 +43,8 @@ import {
   FileSearch,
   Sparkles,
   FileText,
-  Home
+  Home,
+  MessageSquare
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -84,6 +86,7 @@ import { generateCaseSummary, type GenerateCaseSummaryOutput } from "@/ai/flows/
 import { aiAnalyzeFullInterview, type AnalyzeInterviewOutput } from "@/ai/flows/ai-analyze-full-interview"
 import { Switch } from "@/components/ui/switch"
 import { motion, AnimatePresence } from "framer-motion"
+import { Textarea } from "@/components/ui/textarea"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -151,7 +154,8 @@ export default function LeadsPage() {
     time: "",
     type: "online",
     locationType: "sede", // 'sede' | 'externo'
-    customAddress: ""
+    customAddress: "",
+    observations: ""
   })
 
   const templatesQuery = useMemoFirebase(() => {
@@ -191,7 +195,8 @@ export default function LeadsPage() {
         time: selectedLead.scheduledTime || "",
         type: selectedLead.meetingType || "online",
         locationType: selectedLead.locationType || "sede",
-        customAddress: selectedLead.customAddress || ""
+        customAddress: selectedLead.customAddress || "",
+        observations: selectedLead.intakeObservations || ""
       })
     }
   }, [selectedLead?.id, selectedLead?.status])
@@ -242,6 +247,7 @@ export default function LeadsPage() {
       locationType: intakeData.locationType,
       customAddress: intakeData.customAddress,
       meetingLocation: finalLocation,
+      intakeObservations: intakeData.observations,
       updatedAt: serverTimestamp()
     }
 
@@ -255,6 +261,7 @@ export default function LeadsPage() {
       clientName: selectedLead.name,
       meetingType: intakeData.type,
       location: finalLocation,
+      observations: intakeData.observations,
       status: "Agendado",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -1144,85 +1151,114 @@ export default function LeadsPage() {
       </Dialog>
 
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
                 <CalendarIcon className="h-8 w-8 text-amber-500" /> Agendar Atendimento
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-xs uppercase font-bold tracking-[0.2em] mt-2">
+              <DialogDescription className="text-muted-foreground text-sm uppercase font-bold tracking-[0.2em] mt-2">
                 Defina o rito inicial para o lead na pauta da banca.
               </DialogDescription>
             </DialogHeader>
           </div>
-          <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
-            <div className="space-y-4">
-              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Modalidade do Encontro</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <Button 
-                  onClick={() => setIntakeData({...intakeData, type: 'online'})}
-                  variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
-                  className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
-                >
-                  <Video className="h-5 w-5" /> REUNIÃO ONLINE
-                </Button>
-                <Button 
-                  onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
-                  variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
-                  className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
-                >
-                  <MapPin className="h-5 w-5" /> PRESENCIAL
-                </Button>
-              </div>
-            </div>
-
-            {intakeData.type === 'presencial' && (
-              <div className="space-y-4 animate-in slide-in-from-top-2 duration-500">
-                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Localização Física</Label>
+          
+          <ScrollArea className="max-h-[65vh]">
+            <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
+              <div className="space-y-4">
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Modalidade do Encontro</Label>
                 <div className="grid grid-cols-2 gap-4">
                   <Button 
-                    onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}
-                    variant={intakeData.locationType === 'sede' ? 'secondary' : 'outline'}
-                    className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'sede' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                    onClick={() => setIntakeData({...intakeData, type: 'online'})}
+                    variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
+                    className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
                   >
-                    <Home className="h-4 w-4" /> SEDE RGMJ
+                    <Video className="h-5 w-5" /> REUNIÃO ONLINE
                   </Button>
                   <Button 
-                    onClick={() => setIntakeData({...intakeData, locationType: 'externo'})}
-                    variant={intakeData.locationType === 'externo' ? 'secondary' : 'outline'}
-                    className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'externo' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                    onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
+                    variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
+                    className={cn("h-16 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
                   >
-                    <Navigation className="h-4 w-4" /> LOCAL EXTERNO
+                    <MapPin className="h-5 w-5" /> PRESENCIAL
                   </Button>
                 </div>
-                {intakeData.locationType === 'externo' && (
-                  <div className="space-y-3 pt-2">
-                    <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Endereço do Local (Ex: Shopping, Residência)</Label>
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        placeholder="Pesquisar local ou digitar endereço..."
-                        className="glass h-14 pl-12 text-white font-bold border-white/20 uppercase text-xs"
-                        value={intakeData.customAddress}
-                        onChange={(e) => setIntakeData({...intakeData, customAddress: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data do Ato</Label>
-                <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
+              {intakeData.type === 'presencial' && (
+                <div className="space-y-6 animate-in slide-in-from-top-2 duration-500">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Localização Física</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button 
+                      onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}
+                      variant={intakeData.locationType === 'sede' ? 'secondary' : 'outline'}
+                      className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'sede' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                    >
+                      <Home className="h-4 w-4" /> SEDE RGMJ
+                    </Button>
+                    <Button 
+                      onClick={() => setIntakeData({...intakeData, locationType: 'externo'})}
+                      variant={intakeData.locationType === 'externo' ? 'secondary' : 'outline'}
+                      className={cn("h-14 font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl", intakeData.locationType === 'externo' ? 'bg-amber-500 text-background' : 'glass border-white/10')}
+                    >
+                      <Navigation className="h-4 w-4" /> LOCAL EXTERNO
+                    </Button>
+                  </div>
+                  
+                  {intakeData.locationType === 'externo' && (
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Endereço do Local (Ex: Shopping, Residência)</Label>
+                        <div className="relative">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="PESQUISAR LOCAL OU DIGITAR ENDEREÇO..."
+                            className="glass h-14 pl-12 text-white font-bold border-white/20 uppercase text-xs focus:ring-amber-500/50"
+                            value={intakeData.customAddress}
+                            onChange={(e) => setIntakeData({...intakeData, customAddress: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      
+                      {intakeData.customAddress && (
+                        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-4 animate-in fade-in zoom-in duration-300">
+                          <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Confirme o Endereço:</p>
+                            <p className="text-xs text-white/80 font-bold uppercase italic">"{intakeData.customAddress}"</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Data do Ato</Label>
+                  <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
+                  <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
+                </div>
               </div>
+
               <div className="space-y-3">
-                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-14 text-white font-bold border-white/20" />
+                <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-primary" /> Observações Táticas
+                </Label>
+                <Textarea 
+                  placeholder="EX: ENTRAR PELA PORTARIA B, CLIENTE ESTARÁ COM CAMISA AZUL..."
+                  className="glass min-h-[100px] text-white text-xs uppercase font-bold border-white/20 focus:ring-primary/50 resize-none p-4"
+                  value={intakeData.observations}
+                  onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
+                />
               </div>
             </div>
-          </div>
+          </ScrollArea>
+
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
             <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest">CANCELAR</Button>
             <Button onClick={handleScheduleIntake} className="gold-gradient text-black font-black h-16 px-12 rounded-xl uppercase text-sm tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
