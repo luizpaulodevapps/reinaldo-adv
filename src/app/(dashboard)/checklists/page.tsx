@@ -9,6 +9,7 @@ import {
   Loader2, 
   Trash2, 
   Edit3, 
+  Eye,
   Star, 
   DollarSign, 
   MessageSquare, 
@@ -357,6 +358,8 @@ const EDITOR_STEPS: Array<{ id: EditorStep; label: string }> = [
 
 export default function LaboratorioChecklistsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [viewingList, setViewingList] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
   const [editorStep, setEditorStep] = useState<EditorStep>("geral")
@@ -478,6 +481,11 @@ export default function LaboratorioChecklistsPage() {
     setItems(list.items || [])
     setEditorStep("geral")
     setIsDialogOpen(true)
+  }
+
+  const handleOpenView = (list: any) => {
+    setViewingList(list)
+    setIsViewDialogOpen(true)
   }
 
   const handleAddField = () => {
@@ -686,11 +694,14 @@ export default function LaboratorioChecklistsPage() {
                     <CatIcon className="h-3 w-3 mr-2" /> {list.category}
                   </Badge>
                   <div className="flex gap-2">
-                    <button onClick={() => handleOpenEdit(list)} className="text-muted-foreground hover:text-primary transition-colors p-1">
+                    <button onClick={() => handleOpenView(list)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Visualizar">
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleOpenEdit(list)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Editar">
                       <Edit3 className="h-4 w-4" />
                     </button>
                     {db && (
-                      <button onClick={() => deleteDocumentNonBlocking(doc(db, "checklists", list.id))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                      <button onClick={() => deleteDocumentNonBlocking(doc(db, "checklists", list.id))} className="text-muted-foreground hover:text-destructive transition-colors p-1" title="Excluir">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     )}
@@ -708,14 +719,90 @@ export default function LaboratorioChecklistsPage() {
                 <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-6 line-clamp-2">
                   {list.description || "Roteiro tático sem descrição técnica."}
                 </p>
-                <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-[0.2em]">
-                  <ListPlus className="h-3.5 w-3.5" /> {list.items?.length || 0} Campos Definidos
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-[0.2em]">
+                    <ListPlus className="h-3.5 w-3.5" /> {list.items?.length || 0} Campos Definidos
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-all group-hover:translate-x-1" />
                 </div>
               </CardContent>
             </Card>
           )
         })}
       </div>
+
+      {/* DIÁLOGO DE VISUALIZAÇÃO */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[90vh] font-sans rounded-3xl">
+          <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
+            <div className="flex items-center gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                <Eye className="h-7 w-7" />
+              </div>
+              <div className="space-y-1">
+                <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                  {viewingList?.title}
+                </DialogTitle>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">{viewingList?.category}</Badge>
+                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">• {viewingList?.legalArea}</span>
+                </div>
+              </div>
+            </div>
+            <Button onClick={() => { setIsViewDialogOpen(false); handleOpenEdit(viewingList); }} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12 rounded-xl">
+              ABRIR EDITOR
+            </Button>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-10 space-y-10">
+              {viewingList?.description && (
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Finalidade Estratégica</Label>
+                  <p className="text-sm text-white/80 leading-relaxed font-medium">{viewingList.description}</p>
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <LayoutGrid className="h-5 w-5 text-primary" />
+                  <h4 className="text-xs font-black text-white uppercase tracking-widest">Inventário de Campos ({viewingList?.items?.length || 0})</h4>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {viewingList?.items?.map((item: any, idx: number) => (
+                    <div key={idx} className="p-5 rounded-xl bg-white/[0.01] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
+                      <div className="flex items-center gap-5">
+                        <span className="text-[10px] font-mono font-black text-muted-foreground/30">#{idx + 1}</span>
+                        <div>
+                          <p className="text-sm font-bold text-white uppercase tracking-tight">{item.label}</p>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <Badge variant="secondary" className="bg-white/5 text-[8px] font-black uppercase text-muted-foreground">{item.type}</Badge>
+                            {item.required && <Badge variant="outline" className="border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase">Obrigatório</Badge>}
+                            {item.balizaObrigatoria && <Badge variant="outline" className="border-amber-500/20 text-amber-500 text-[8px] font-black uppercase">Baliza IA</Badge>}
+                          </div>
+                        </div>
+                      </div>
+                      {item.reuseEnabled && (
+                        <div className="flex items-center gap-2 text-primary/40 group-hover:text-primary transition-colors">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span className="text-[8px] font-black uppercase tracking-widest">Reaproveitável</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsViewDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14">
+              FECHAR DOSSIÊ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[95vh] font-sans">
