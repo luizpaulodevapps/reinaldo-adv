@@ -40,7 +40,10 @@ import {
   AlertCircle,
   Navigation,
   UserPlus,
-  ShieldAlert
+  ShieldAlert,
+  MapPin,
+  Fingerprint,
+  Target
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,7 +75,7 @@ import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { DraftingTool } from "@/components/drafting/drafting-tool"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const AREAS = [
@@ -90,7 +93,10 @@ export default function CasesPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingProcess, setEditingProcess] = useState<any>(null)
   
-  // States para novos modais de Gestão
+  // States para Visão 360º e Gestão
+  const [viewingProcess, setViewingProcess] = useState<any>(null)
+  const [isViewOpen, setIsViewOpen] = useState(false)
+  
   const [activeActionProcess, setActiveActionProcess] = useState<any>(null)
   const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [isMeetingOpen, setIsMeetingOpen] = useState(false)
@@ -167,6 +173,12 @@ export default function CasesPage() {
   const handleOpenEdit = (proc: any) => {
     setEditingProcess(proc)
     setIsSheetOpen(true)
+    setIsViewOpen(false) // Fecha o view se for editar
+  }
+
+  const handleOpenView = (proc: any) => {
+    setViewingProcess(proc)
+    setIsViewOpen(true)
   }
 
   const handleSaveProcess = (data: any) => {
@@ -309,8 +321,8 @@ export default function CasesPage() {
     <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
       <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO PROCESSO</DropdownMenuLabel>
       
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsTimelineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-        <History className="h-4 w-4 text-muted-foreground" /> Timeline do Processo
+      <DropdownMenuItem onClick={() => { handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+        <History className="h-4 w-4 text-muted-foreground" /> Ver Dossiê Completo
       </DropdownMenuItem>
       
       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
@@ -342,7 +354,7 @@ export default function CasesPage() {
       <DropdownMenuSeparator className="bg-white/5 my-1" />
       
       <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-        <FileText className="h-4 w-4 text-muted-foreground" /> Editar Dados
+        <Edit3 className="h-4 w-4 text-muted-foreground" /> Editar Dados
       </DropdownMenuItem>
       
       <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
@@ -474,7 +486,7 @@ export default function CasesPage() {
                   "glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer",
                   viewMode === "list" ? "rounded-xl" : "rounded-3xl"
                 )}
-                onClick={() => handleOpenEdit(proc)}
+                onClick={() => handleOpenView(proc)}
               >
                 <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
                   {viewMode === "list" ? (
@@ -604,6 +616,176 @@ export default function CasesPage() {
         )}
       </div>
 
+      {/* VISÃO 360º DO PROCESSO (DOSSIÊ DE CONSULTA) */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex items-center justify-between shadow-xl">
+            <div className="flex items-center gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
+                <Scale className="h-7 w-7" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</h2>
+                <div className="flex items-center gap-3 mt-2">
+                  <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
+                  <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest">{viewingProcess?.processNumber}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={() => handleOpenEdit(viewingProcess)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl gap-2 hover:bg-primary hover:text-background transition-all">
+                <Edit3 className="h-4 w-4" /> EDITAR PROCESSO
+              </Button>
+              <Button onClick={() => setIsViewOpen(false)} variant="ghost" className="h-11 w-11 rounded-xl text-muted-foreground hover:text-white">
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            <Tabs defaultValue="resumo" className="h-full flex flex-col">
+              <div className="px-8 bg-[#0a0f1e]/50 border-b border-white/5 flex-none">
+                <TabsList className="bg-transparent h-12 gap-8 p-0">
+                  <TabsTrigger value="resumo" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest">DADOS GERAIS</TabsTrigger>
+                  <TabsTrigger value="timeline" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest">TIMELINE & FASES</TabsTrigger>
+                  <TabsTrigger value="estrategia" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest">ESTRATÉGIA</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-10 space-y-10">
+                    <TabsContent value="resumo" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
+                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                            <User className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Polo Ativo (Cliente)</h4>
+                          </div>
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Nome Civil / Razão</p>
+                              <p className="text-sm font-bold text-white uppercase">{viewingProcess?.clientName}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">ID do Cliente</p>
+                              <p className="text-xs font-mono text-white/60">{viewingProcess?.clientId}</p>
+                            </div>
+                          </div>
+                        </Card>
+
+                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
+                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                            <Building className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Polo Passivo (Réu)</h4>
+                          </div>
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Empresa / Reclamada</p>
+                              <p className="text-sm font-bold text-white uppercase">{viewingProcess?.defendantName || "NÃO INFORMADO"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">CNPJ / Documento</p>
+                              <p className="text-sm font-mono text-white/60">{viewingProcess?.defendantDocument || "NÃO MAPEADO"}</p>
+                            </div>
+                          </div>
+                        </Card>
+
+                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6 md:col-span-2">
+                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                            <Gavel className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Informações de Juízo</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Tribunal / Instância</p>
+                              <p className="text-sm font-bold text-white uppercase">{viewingProcess?.court || "NÃO MAPEADO"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Vara / Unidade</p>
+                              <p className="text-sm font-bold text-white uppercase">{viewingProcess?.vara || "NÃO MAPEADA"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Data do Protocolo</p>
+                              <p className="text-sm font-bold text-emerald-500 uppercase">{viewingProcess?.startDate || "PENDENTE"}</p>
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="timeline" className="mt-0 animate-in fade-in duration-500">
+                      <div className="relative pl-10 space-y-12">
+                        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/5" />
+                        {[
+                          { date: "PROTOCOLADO", type: "Fase Inicial", title: "Processo Protocolado na Base", desc: "Ação distribuída e injetada no ecossistema RGMJ.", icon: ShieldCheck, color: "bg-emerald-500" },
+                          { date: "EM ANDAMENTO", type: "Fluxo", title: "Aguardando Citação", desc: "Processo em fase de comunicação oficial à parte contrária.", icon: Clock, color: "bg-amber-500" },
+                        ].map((ev, i) => (
+                          <div key={i} className="relative">
+                            <div className={cn("absolute -left-[31px] top-0 w-5 h-5 rounded-full z-10 flex items-center justify-center shadow-lg", ev.color)}>
+                              <ev.icon className="h-3 w-3 text-background font-black" />
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{ev.date}</span>
+                                <Badge variant="secondary" className="bg-white/5 text-[8px] font-black uppercase text-muted-foreground px-2">{ev.type}</Badge>
+                              </div>
+                              <h4 className="text-base font-bold text-white uppercase tracking-tight">{ev.title}</h4>
+                              <p className="text-sm text-muted-foreground leading-relaxed italic">{ev.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="estrategia" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                      <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-3xl space-y-6">
+                        <div className="flex items-center gap-4 mb-2">
+                          <Target className="h-6 w-6 text-primary" />
+                          <h3 className="text-lg font-bold text-white uppercase tracking-widest">Plano de Batalha Jurídica</h3>
+                        </div>
+                        <div className="space-y-6">
+                          <div>
+                            <Label className="text-[10px] font-black text-primary uppercase tracking-widest mb-2 block">Objeto e Teses</Label>
+                            <p className="text-sm text-white/80 leading-relaxed text-justify font-medium uppercase italic">
+                              {viewingProcess?.description || "Sem objeto definido."}
+                            </p>
+                          </div>
+                          <div className="border-t border-white/10 pt-6">
+                            <Label className="text-[10px] font-black text-primary uppercase tracking-widest mb-2 block">Notas Estratégicas Internas</Label>
+                            <p className="text-sm text-white/60 leading-relaxed text-justify">
+                              {viewingProcess?.strategyNotes || "Nenhuma nota tática registrada para este processo."}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    </TabsContent>
+                  </div>
+                </Bar>
+              </div>
+            </Tabs>
+          </div>
+
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Responsável Técnico</span>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6 border border-primary/20"><AvatarFallback className="text-[8px] bg-secondary text-primary font-black">RG</AvatarFallback></Avatar>
+                  <span className="text-xs font-bold text-white uppercase">DR. {viewingProcess?.responsibleStaffName || "EQUIPE RGMJ"}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <Button variant="ghost" onClick={() => setIsViewOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">FECHAR</Button>
+              <Button className="gold-gradient text-background font-black h-12 px-10 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest flex items-center gap-3">
+                <Brain className="h-4 w-4" /> ANÁLISE IA
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
@@ -614,7 +796,7 @@ export default function CasesPage() {
                 </div>
                 <div>
                   <SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                    {editingProcess ? "GESTÃO DO PROCESSO" : "Novo Processo"}
+                    {editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}
                   </SheetTitle>
                   <SheetDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-60">
                     {editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}
@@ -630,32 +812,6 @@ export default function CasesPage() {
           />
         </SheetContent>
       </Sheet>
-
-      {/* MODAL: TIMELINE DO PROCESSO */}
-      <Dialog open={isTimelineOpen} onOpenChange={setIsTimelineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[70vh]">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
-            <History className="h-6 w-6 text-primary" />
-            <DialogTitle className="text-white font-bold uppercase tracking-widest">Timeline do Processo</DialogTitle>
-          </div>
-          <ScrollArea className="flex-1 p-8">
-            <div className="space-y-8 relative">
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/5" />
-              {[
-                { date: "15/03/2024", type: "Protocolo", title: "Processo Protocolado", desc: "Ação judicial injetada no ecossistema RGMJ." },
-                { date: "20/03/2024", type: "Financeiro", title: "Honorários Provisionados", desc: "Lançamento de verba contratual realizado." },
-              ].map((ev, i) => (
-                <div key={i} className="relative pl-12">
-                  <div className="absolute left-2.5 top-1 w-3.5 h-3.5 rounded-full bg-primary border-4 border-[#05070a] z-10 shadow-[0_0_8px_rgba(245,208,48,0.5)]" />
-                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{ev.date} • {ev.type}</p>
-                  <h4 className="text-sm font-bold text-white uppercase">{ev.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{ev.desc}</p>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
 
       {/* MODAL: AGENDAR REUNIÃO */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
