@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -16,15 +15,10 @@ import {
   RefreshCw,
   ChevronRight,
   Video,
-  Lock,
   ExternalLink,
   Zap,
   Trash2,
-  Edit3,
-  Save,
-  X,
   FileText,
-  AlertCircle,
   CheckCircle2
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
@@ -147,7 +141,7 @@ export default function AgendaPage() {
     })
     const hasAppointment = (appointments || []).some(a => {
       const date = parseDate(a.startDateTime)
-      return date && isSameDay(aDate, day)
+      return date && isSameDay(date, day)
     })
     return { hasHearing, hasDeadline, hasAppointment }
   }
@@ -220,52 +214,52 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 font-sans">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase">Agenda de Compromissos</h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-[0.2em] font-black opacity-60">Visão global de pauta física e virtual RGMJ.</p>
+    <div className="space-y-6 animate-in fade-in duration-700 font-sans">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase">Agenda de Compromissos</h1>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] font-black opacity-60">Visão global de pauta física e virtual RGMJ.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="glass border-white/10 text-[11px] font-black uppercase tracking-widest gap-3 h-12 px-6">
-            <Filter className="h-4 w-4" /> Filtrar Agendas
+        <div className="flex gap-2">
+          <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest gap-2 h-10 px-4">
+            <Filter className="h-3.5 w-3.5" /> Filtrar
           </Button>
-          <Button variant="outline" className="glass border-white/10 text-[11px] font-black uppercase tracking-widest gap-3 h-12 px-6" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-4 w-4" /> Sincronizar
+          <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest gap-2 h-10 px-4" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-3.5 w-3.5" /> Sincronizar
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 pb-2">
-        <Button className="gold-gradient text-background font-black gap-3 text-xs uppercase tracking-[0.2em] h-12 px-8 rounded-xl shadow-xl">
-          <CalendarIcon className="h-4 w-4" /> Calendário Mensal
+      <div className="flex items-center gap-3 pb-2">
+        <Button className="gold-gradient text-background font-black gap-2 text-[10px] uppercase tracking-[0.2em] h-10 px-6 rounded-lg shadow-lg">
+          <CalendarIcon className="h-3.5 w-3.5" /> Calendário Mensal
         </Button>
-        <Button variant="ghost" className="text-muted-foreground hover:text-white font-black gap-3 text-xs uppercase tracking-[0.2em] h-12 px-8">
-          <Clock className="h-4 w-4" /> Próximos Atos
+        <Button variant="ghost" className="text-muted-foreground hover:text-white font-black gap-2 text-[10px] uppercase tracking-[0.2em] h-10 px-6">
+          <Clock className="h-3.5 w-3.5" /> Próximos Atos
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        <div className="xl:col-span-3 space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="xl:col-span-3 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
+            <h2 className="text-xl font-black uppercase tracking-tighter text-white">
               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
             </h2>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-white/5" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                <ChevronLeft className="h-6 w-6" />
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                <ChevronLeft className="h-5 w-5" />
               </Button>
-              <Button variant="secondary" className="h-10 px-6 text-[11px] font-black uppercase bg-[#1a1f2e] text-white border border-white/5" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-white/5" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                <ChevronRight className="h-6 w-6" />
+              <Button variant="secondary" className="h-8 px-4 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/5" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
           </div>
 
-          <div className="glass rounded-[2rem] overflow-hidden border-white/5 shadow-2xl bg-white/[0.01]">
+          <div className="glass rounded-2xl overflow-hidden border-white/5 shadow-xl bg-white/[0.01]">
             <div className="grid grid-cols-7 border-b border-white/5 bg-white/[0.03]">
               {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map(day => (
-                <div key={day} className="py-5 text-center text-[10px] font-black text-muted-foreground tracking-[0.3em] border-r border-white/5 last:border-r-0 uppercase">
+                <div key={day} className="py-3 text-center text-[9px] font-black text-muted-foreground tracking-[0.2em] border-r border-white/5 last:border-r-0 uppercase">
                   {day}
                 </div>
               ))}
@@ -282,18 +276,18 @@ export default function AgendaPage() {
                     key={i}
                     onClick={() => setSelectedDate(day)}
                     className={cn(
-                      "min-h-[140px] p-5 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-primary/5 group relative",
+                      "min-h-[100px] p-3 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-primary/5 group relative",
                       !isCurrentMonth && "opacity-10 pointer-events-none",
-                      isSelected && "bg-primary/5 ring-2 ring-inset ring-primary/30"
+                      isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/30"
                     )}
                   >
-                    <span className={cn("text-sm font-black transition-colors", isSelected ? "text-primary scale-125 inline-block" : "text-muted-foreground group-hover:text-white")}>
+                    <span className={cn("text-xs font-black transition-colors", isSelected ? "text-primary scale-110 inline-block" : "text-muted-foreground group-hover:text-white")}>
                       {format(day, "d")}
                     </span>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {hasHearing && <div className="h-2.5 w-2.5 rounded-full bg-destructive shadow-[0_0_10px_rgba(239,68,68,0.6)]" title="Audiência" />}
-                      {hasDeadline && <div className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_rgba(245,208,48,0.6)]" title="Prazo" />}
-                      {hasAppointment && <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" title="Atendimento" />}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {hasHearing && <div className="h-1.5 w-1.5 rounded-full bg-destructive shadow-[0_0_5px_rgba(239,68,68,0.6)]" />}
+                      {hasDeadline && <div className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(245,208,48,0.6)]" />}
+                      {hasAppointment && <div className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.6)]" />}
                     </div>
                   </div>
                 )
@@ -303,62 +297,57 @@ export default function AgendaPage() {
         </div>
 
         <div className="xl:col-span-1">
-          <div className="sticky top-24 space-y-6">
-            <div className="pb-4 border-b border-white/5">
-              <h3 className="text-primary font-black uppercase tracking-[0.3em] text-xs">
+          <div className="sticky top-24 space-y-4">
+            <div className="pb-2 border-b border-white/5">
+              <h3 className="text-primary font-black uppercase tracking-[0.2em] text-[10px]">
                 {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
               </h3>
             </div>
 
-            <div className="space-y-4 min-h-[500px] flex flex-col">
+            <div className="space-y-3 min-h-[400px] flex flex-col">
               {isLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Auditando Pauta...</span>
+                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Auditando...</span>
                 </div>
               ) : selectedDayEvents.length > 0 ? (
                 selectedDayEvents.map((event, idx) => (
-                  <Card key={idx} onClick={() => handleOpenEvent(event)} className="glass border-l-4 border-l-primary/50 hover-gold cursor-pointer transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02]">
-                    <CardContent className="p-6 space-y-5">
+                  <Card key={idx} onClick={() => handleOpenEvent(event)} className="glass border-l-4 border-l-primary/50 hover-gold cursor-pointer transition-all shadow-lg rounded-xl overflow-hidden bg-white/[0.02]">
+                    <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <Badge 
                           variant={event.eventType === 'audiencia' ? 'destructive' : event.eventType === 'atendimento' ? 'secondary' : 'outline'}
                           className={cn(
-                            "text-[9px] font-black uppercase tracking-widest px-3 py-1",
+                            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5",
                             event.eventType === 'atendimento' && "bg-amber-500 text-background border-0"
                           )}
                         >
-                          {event.eventType === 'atendimento' ? 'Atendimento Lead' : event.hearingType === 'Virtual' ? 'Audiência Virtual' : event.eventType === 'audiencia' ? 'Audiência Física' : 'Prazo'}
+                          {event.eventType === 'atendimento' ? 'Atendimento' : event.hearingType === 'Virtual' ? 'Aud. Virtual' : event.eventType === 'audiencia' ? 'Aud. Física' : 'Prazo'}
                         </Badge>
-                        <span className="text-xs text-muted-foreground font-mono font-bold flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground font-mono font-bold flex items-center gap-1.5">
                           <Clock className="h-3 w-3" /> {event.startDateTime ? format(parseDate(event.startDateTime)!, "HH:mm") : event.dueDate || "--:--"}
                         </span>
                       </div>
                       
                       <div>
-                        <h4 className="font-bold text-base text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{event.title}</h4>
-                        <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-2 font-black uppercase tracking-[0.15em]">
-                          {event.eventType === 'atendimento' ? <Zap className="h-3.5 w-3.5 text-amber-500" /> : <Scale className="h-3.5 w-3.5 text-primary" />}
+                        <h4 className="font-bold text-sm text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{event.title}</h4>
+                        <p className="text-[9px] text-muted-foreground mt-1.5 flex items-center gap-1.5 font-black uppercase tracking-[0.1em]">
+                          {event.eventType === 'atendimento' ? <Zap className="h-3 w-3 text-amber-500" /> : <Scale className="h-3 w-3 text-primary" />}
                           {event.eventType === 'atendimento' ? `Lead: ${event.clientName}` : `Proc: ${event.processNumber || event.processId || "N/A"}`}
                         </p>
                       </div>
 
                       {(event.hearingType === 'Virtual' || event.meetingType === 'online') ? (
-                        <div className="space-y-3 pt-4 border-t border-white/5">
-                          <div className="text-[10px] text-emerald-500 flex items-center gap-2 font-black uppercase tracking-[0.2em]">
-                            <Video className="h-4 w-4" /> Sala Virtual Liberada
+                        <div className="pt-2 border-t border-white/5">
+                          <div className="text-[9px] text-emerald-500 flex items-center gap-1.5 font-black uppercase tracking-[0.15em]">
+                            <Video className="h-3.5 w-3.5" /> Sala Liberada
                           </div>
-                          {event.meetingLink && (
-                            <div className="flex items-center gap-2 text-xs text-white hover:text-primary transition-colors font-bold truncate underline decoration-primary/30">
-                              <ExternalLink className="h-3.5 w-3.5" /> {event.meetingLink}
-                            </div>
-                          )}
                         </div>
                       ) : (
                         event.location && (
-                          <div className="text-[10px] text-muted-foreground flex items-start gap-3 font-bold uppercase tracking-widest pt-4 border-t border-white/5">
-                            <MapPin className="h-4 w-4 text-primary shrink-0" /> 
-                            <span className="leading-relaxed">{event.location}</span>
+                          <div className="text-[9px] text-muted-foreground flex items-start gap-2 font-bold uppercase tracking-widest pt-2 border-t border-white/5">
+                            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> 
+                            <span className="leading-tight truncate">{event.location}</span>
                           </div>
                         )
                       )}
@@ -366,112 +355,109 @@ export default function AgendaPage() {
                   </Card>
                 ))
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-20 space-y-6">
-                  <CalendarIcon className="h-16 w-16 text-muted-foreground" />
-                  <p className="text-xs font-black uppercase tracking-[0.4em] leading-relaxed">Pauta limpa para este ciclo</p>
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-20 space-y-4">
+                  <CalendarIcon className="h-12 w-12 text-muted-foreground" />
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em]">Pauta limpa</p>
                 </div>
               )}
             </div>
 
-            <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-[11px] tracking-[0.2em] hover:scale-[1.02] transition-all">
-              Agendar Ato de Elite
+            <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-2 py-6 rounded-xl shadow-xl uppercase text-[10px] tracking-[0.2em] hover:scale-[1.02] transition-all">
+              Agendar Ato
             </Button>
           </div>
         </div>
       </div>
 
-      {/* DIÁLOGO DE DETALHES E AÇÕES */}
+      {/* DIÁLOGO DE DETALHES */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-primary/30 text-primary">{selectedEvent?.eventType}</Badge>
+                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/30 text-primary">{selectedEvent?.eventType}</Badge>
               </div>
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter mt-4">
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter mt-3">
                 {selectedEvent?.title}
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Dossiê operacional do compromisso agendado.
-              </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="p-8 space-y-8 bg-[#0a0f1e]/50">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cronograma</p>
-                <div className="flex items-center gap-3 text-white font-bold">
-                  <Clock className="h-4 w-4 text-primary" />
+          <div className="p-6 space-y-6 bg-[#0a0f1e]/50">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Cronograma</p>
+                <div className="flex items-center gap-2 text-white font-bold text-xs">
+                  <Clock className="h-3.5 w-3.5 text-primary" />
                   {selectedEvent?.startDateTime ? format(parseDate(selectedEvent.startDateTime)!, "dd/MM/yyyy HH:mm") : selectedEvent?.dueDate}
                 </div>
               </div>
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Status da Pauta</p>
-                <div className="flex items-center gap-3 text-emerald-500 font-bold uppercase text-xs">
-                  <CheckCircle2 className="h-4 w-4" /> {selectedEvent?.status || "AGENDADO"}
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Status</p>
+                <div className="flex items-center gap-2 text-emerald-500 font-bold uppercase text-[10px]">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {selectedEvent?.status || "AGENDADO"}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                <MapPin className="h-4 w-4 text-primary" />
-                <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Logística / Localização</h4>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 pb-1 border-b border-white/5">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Localização</h4>
               </div>
-              <p className="text-sm text-white/80 font-bold uppercase italic bg-black/20 p-4 rounded-xl border border-white/5">
+              <p className="text-xs text-white/80 font-bold uppercase italic bg-black/20 p-3 rounded-lg border border-white/5">
                 {selectedEvent?.location || selectedEvent?.meetingLink || "Local não informado"}
               </p>
             </div>
 
             {selectedEvent?.notes && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                  <FileText className="h-4 w-4 text-primary" />
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Observações Táticas</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-white/5">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-widest">Observações</h4>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed uppercase font-medium">
+                <p className="text-[11px] text-muted-foreground leading-relaxed uppercase font-medium">
                   {selectedEvent.notes}
                 </p>
               </div>
             )}
 
             {isRescheduling && (
-              <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 animate-in slide-in-from-top-2">
-                <div className="flex items-center gap-3 text-primary">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest">Novo Cronograma</h4>
+              <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-4 animate-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 text-primary">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <h4 className="text-[9px] font-black uppercase tracking-widest">Novo Horário</h4>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[9px] font-black uppercase text-muted-foreground">Nova Data</Label>
-                    <Input type="date" value={rescheduleData.date} onChange={(e) => setRescheduleData({...rescheduleData, date: e.target.value})} className="glass border-white/10 h-12 text-white" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Data</Label>
+                    <Input type="date" value={rescheduleData.date} onChange={(e) => setRescheduleData({...rescheduleData, date: e.target.value})} className="glass border-white/10 h-10 text-white text-xs" />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[9px] font-black uppercase text-muted-foreground">Novo Horário</Label>
-                    <Input type="time" value={rescheduleData.time} onChange={(e) => setRescheduleData({...rescheduleData, time: e.target.value})} className="glass border-white/10 h-12 text-white" />
+                  <div className="space-y-1.5">
+                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Hora</Label>
+                    <Input type="time" value={rescheduleData.time} onChange={(e) => setRescheduleData({...rescheduleData, time: e.target.value})} className="glass border-white/10 h-10 text-white text-xs" />
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button variant="ghost" onClick={() => setIsRescheduling(false)} className="flex-1 h-12 uppercase font-black text-[10px] text-white">Cancelar</Button>
-                  <Button onClick={handleReschedule} className="flex-1 gold-gradient h-12 text-background font-black uppercase text-[10px]">Confirmar Mudança</Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={() => setIsRescheduling(false)} className="flex-1 h-10 uppercase font-black text-[9px] text-white">Cancelar</Button>
+                  <Button onClick={handleReschedule} className="flex-1 gold-gradient h-10 text-background font-black uppercase text-[9px]">Confirmar</Button>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button onClick={handleDeleteEvent} variant="ghost" className="text-rose-500 hover:text-white hover:bg-rose-500/20 uppercase font-black text-[10px] tracking-widest gap-2">
-              <Trash2 className="h-4 w-4" /> Remover Ato
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button onClick={handleDeleteEvent} variant="ghost" className="text-rose-500 hover:text-white hover:bg-rose-500/20 uppercase font-black text-[9px] tracking-widest gap-2">
+              <Trash2 className="h-3.5 w-3.5" /> Remover
             </Button>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               {!isRescheduling && (
-                <Button onClick={() => setIsRescheduling(true)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest h-14 px-8 rounded-xl gap-2">
-                  <RefreshCw className="h-4 w-4" /> Reagendar
+                <Button onClick={() => setIsRescheduling(true)} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[9px] tracking-widest h-11 px-6 rounded-lg gap-2">
+                  <RefreshCw className="h-3.5 w-3.5" /> Reagendar
                 </Button>
               )}
-              <Button onClick={() => setIsDetailOpen(false)} className="gold-gradient text-background font-black uppercase text-[10px] tracking-widest h-14 px-10 rounded-xl shadow-2xl">
-                Fechar Dossiê
+              <Button onClick={() => setIsDetailOpen(false)} className="gold-gradient text-background font-black uppercase text-[9px] tracking-widest h-11 px-8 rounded-lg">
+                Fechar
               </Button>
             </div>
           </DialogFooter>
@@ -480,64 +466,61 @@ export default function AgendaPage() {
 
       {/* DIÁLOGO DE CRIAÇÃO */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Agendar Novo Ato de Elite</DialogTitle>
-              <DialogDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                Injeção de compromissos táticos na pauta da banca.
-              </DialogDescription>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Novo Agendamento</DialogTitle>
             </DialogHeader>
           </div>
           
           <ScrollArea className="max-h-[60vh]">
-            <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Tipo de Ato *</Label>
+            <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black uppercase text-muted-foreground">Tipo de Ato *</Label>
                   <Select value={newEventData.type} onValueChange={(v) => setNewEventData({...newEventData, type: v})}>
-                    <SelectTrigger className="glass border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="glass border-white/10 h-11 text-white text-xs font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="Audiência">🏛️ AUDIÊNCIA JUDICIAL</SelectItem>
-                      <SelectItem value="Atendimento">⚡ ATENDIMENTO / REUNIÃO</SelectItem>
+                      <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
+                      <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Título do Ato *</Label>
-                  <Input value={newEventData.title} onChange={(e) => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO ESTRATÉGICA LUIZ DEV" className="glass border-white/10 h-14 text-white font-bold" />
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black uppercase text-muted-foreground">Título *</Label>
+                  <Input value={newEventData.title} onChange={(e) => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO ESTRATÉGICA" className="glass border-white/10 h-11 text-white text-xs font-bold" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Data do Ato *</Label>
-                  <Input type="date" value={newEventData.date} onChange={(e) => setNewEventData({...newEventData, date: e.target.value})} className="glass border-white/10 h-14 text-white font-bold" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black uppercase text-muted-foreground">Data *</Label>
+                  <Input type="date" value={newEventData.date} onChange={(e) => setNewEventData({...newEventData, date: e.target.value})} className="glass border-white/10 h-11 text-white text-xs font-bold" />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">Horário *</Label>
-                  <Input type="time" value={newEventData.time} onChange={(e) => setNewEventData({...newEventData, time: e.target.value})} className="glass border-white/10 h-14 text-white font-bold" />
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black uppercase text-muted-foreground">Horário *</Label>
+                  <Input type="time" value={newEventData.time} onChange={(e) => setNewEventData({...newEventData, time: e.target.value})} className="glass border-white/10 h-11 text-white text-xs font-bold" />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground">Localização / Link de Acesso</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black uppercase text-muted-foreground">Localização / Link</Label>
                 <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                  <Input value={newEventData.location} onChange={(e) => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} placeholder="EX: SEDE RGMJ OU LINK DO MEET" className="glass border-white/10 h-14 pl-12 text-white font-bold" />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary/50" />
+                  <Input value={newEventData.location} onChange={(e) => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} placeholder="EX: SEDE RGMJ OU LINK DO MEET" className="glass border-white/10 h-11 pl-10 text-white text-xs font-bold" />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground">Observações Técnicas</Label>
-                <Textarea value={newEventData.notes} onChange={(e) => setNewEventData({...newEventData, notes: e.target.value})} placeholder="Instruções para o ato..." className="glass border-white/10 min-h-[100px] text-white resize-none" />
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black uppercase text-muted-foreground">Observações</Label>
+                <Textarea value={newEventData.notes} onChange={(e) => setNewEventData({...newEventData, notes: e.target.value})} placeholder="Instruções para o ato..." className="glass border-white/10 min-h-[80px] text-white text-xs resize-none" />
               </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">Cancelar</Button>
-            <Button onClick={handleCreateEvent} className="gold-gradient text-background font-black uppercase text-[11px] px-14 h-16 rounded-xl shadow-2xl hover:scale-[1.02] transition-all">
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button onClick={handleCreateEvent} className="gold-gradient text-background font-black uppercase text-[10px] px-10 h-12 rounded-lg shadow-lg">
               Confirmar Agendamento
             </Button>
           </DialogFooter>
