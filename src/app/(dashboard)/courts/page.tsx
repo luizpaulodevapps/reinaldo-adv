@@ -13,7 +13,6 @@ import {
   Plus, 
   Loader2, 
   MapPin, 
-  ExternalLink, 
   Trash2, 
   Edit3, 
   ChevronRight,
@@ -25,17 +24,12 @@ import {
   ListPlus,
   Scale,
   Gavel,
-  ShieldCheck,
   Tag,
   Phone,
-  Info,
   Eye,
   Brain,
-  Smartphone,
-  Copy,
   CheckCircle2,
-  Navigation,
-  Globe
+  Navigation
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -124,7 +118,6 @@ export default function CourtsPage() {
       if (result.found && result.zipCode) {
         setFormData(prev => ({ ...prev, zipCode: result.zipCode, number: result.number || prev.number }))
         toast({ title: "Localização Encontrada", description: "Dados sincronizados via Inteligência RGMJ." })
-        // Trigger manual blur to fetch address
         setTimeout(() => handleCepBlur(), 100)
       } else {
         toast({ variant: "destructive", title: "CEP não localizado", description: "A IA não encontrou o endereço oficial com certeza absoluta." })
@@ -267,7 +260,7 @@ export default function CourtsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {isLoading ? (
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -277,46 +270,66 @@ export default function CourtsPage() {
           filtered.map((court) => (
             <Card 
               key={court.id} 
-              className="glass border-white/5 hover-gold transition-all group overflow-hidden flex flex-col shadow-2xl cursor-pointer"
+              className="bg-[#0d1117] border-white/5 hover:border-primary/20 transition-all group overflow-hidden flex flex-col shadow-2xl cursor-pointer rounded-[2rem]"
               onClick={() => handleOpenView(court)}
             >
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="p-10 space-y-8 relative">
+                {/* Header do Card - Ícone e Ações */}
                 <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                    <Building2 className="h-7 w-7" />
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                    <Building2 className="h-8 w-8" />
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenEdit(court); }} className="h-8 w-8 text-muted-foreground hover:text-primary"><Edit3 className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(court.id); }} className="h-8 w-8 text-muted-foreground hover:text-rose-500"><Trash2 className="h-4 w-4" /></Button>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleOpenEdit(court); }} 
+                      className="text-white/20 hover:text-white transition-colors"
+                    >
+                      <Edit3 className="h-5 w-5" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDelete(court.id); }} 
+                      className="w-10 h-10 rounded-full bg-[#f5d030] flex items-center justify-center text-[#0d1117] hover:scale-110 transition-all shadow-lg"
+                    >
+                      <Trash2 className="h-5 w-5 text-rose-600" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <h3 className="text-2xl font-black text-primary uppercase tracking-tighter leading-none">
+                {/* Identificação */}
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-[#f5d030] uppercase tracking-tighter leading-tight">
                     {court.name}
                   </h3>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                    <MapPin className="h-3 w-3 opacity-50" /> {court.city} - {court.state}
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-black uppercase tracking-widest">
+                    <MapPin className="h-3.5 w-3.5 opacity-50 text-primary" /> {court.city} - {court.state}
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-inner">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Endereço de Citação</p>
-                  <p className="text-xs font-bold text-white uppercase leading-relaxed tracking-tight">
-                    {court.address}, {court.number} {court.complement && `• ${court.complement}`}<br/>
-                    {court.neighborhood} • CEP {court.zipCode}
-                  </p>
+                {/* Box de Endereço - Fiel ao Print */}
+                <div className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-4 shadow-inner">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Endereço de Citação</p>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-white uppercase leading-relaxed tracking-tight">
+                      {court.address}, {court.number} {court.complement && `• ${court.complement}`}
+                    </p>
+                    <p className="text-sm font-bold text-white uppercase tracking-tight">
+                      {court.neighborhood} • CEP {court.zipCode}
+                    </p>
+                  </div>
                 </div>
 
+                {/* Rodapé do Card */}
                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                  <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/20 text-emerald-500 bg-emerald-500/5 px-3 h-6">LOGÍSTICA OK</Badge>
+                  <Badge variant="outline" className="text-[9px] font-black uppercase border-[#f5d030]/20 text-[#f5d030] bg-[#f5d030]/5 px-4 h-7 rounded-full">
+                    LOGÍSTICA OK
+                  </Badge>
                   {court.mapsLink ? (
-                    <a href={court.mapsLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest">
-                      <MapIcon className="h-3.5 w-3.5" /> VER NO MAPS
+                    <a href={court.mapsLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-2.5 text-[11px] font-black text-[#f5d030] hover:text-white transition-colors uppercase tracking-[0.15em]">
+                      <Navigation className="h-4 w-4" /> VER NO MAPS
                     </a>
                   ) : (
-                    <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest">
-                      <Navigation className="h-3.5 w-3.5" /> ROTA INDISP.
+                    <div className="flex items-center gap-2.5 text-[11px] font-black text-muted-foreground/30 uppercase tracking-widest">
+                      <Navigation className="h-4 w-4" /> ROTA INDISP.
                     </div>
                   )}
                 </div>
@@ -347,7 +360,7 @@ export default function CourtsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="flex gap-2">
-              <Button onClick={handleAiSearch} disabled={isAiSearching || !formData.name} variant="outline" className="glass border-primary/20 text-primary font-black uppercase text-[10px] gap-2 h-11">
+              <Button onClick={handleAiSearch} disabled={isAiSearching || !formData.name} variant="outline" className="glass border-primary/20 text-primary font-black uppercase text-[10px] gap-2.5 h-11 px-6 rounded-xl">
                 {isAiSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />} BUSCAR CEP IA
               </Button>
             </div>
@@ -549,7 +562,10 @@ export default function CourtsPage() {
                     </Card>
                     <Button 
                       className="w-full h-14 glass border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl shadow-lg"
-                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingCourt?.address + ' ' + viewingCourt?.number + ' ' + viewingCourt?.city)}`, "_blank")}
+                      onClick={() => {
+                        const q = encodeURIComponent(`${viewingCourt?.address} ${viewingCourt?.number} ${viewingCourt?.city}`)
+                        window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, "_blank")
+                      }}
                     >
                       <Navigation className="h-5 w-5" /> TRAÇAR ROTA NO GOOGLE MAPS
                     </Button>
@@ -642,7 +658,7 @@ export default function CourtsPage() {
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Biblioteca Jurídica Oficial RGMJ</span>
             </div>
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl hover:scale-[1.02] transition-transform">
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl hover:scale-102 transition-transform">
               FECHAR DOSSIÊ
             </Button>
           </div>
