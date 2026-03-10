@@ -59,6 +59,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   const [isSavingClient, setIsSavingClient] = useState(false)
   const [isAwaitingNumber, setIsAwaitingNumber] = useState(false)
   const [loadingDefendantCep, setLoadingDefendantCep] = useState(false)
+  const [availableVaras, setAvailableVaras] = useState<string[]>([])
   
   const courtSearchRef = useRef<HTMLDivElement>(null)
   const db = useFirestore()
@@ -97,7 +98,9 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
         ...prev,
         ...initialData
       }))
-      if (initialData.court) setCourtSearchTerm(initialData.court)
+      if (initialData.court) {
+        setCourtSearchTerm(initialData.court)
+      }
     }
   }, [initialData])
 
@@ -159,6 +162,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       courtAddress: fullAddress
     }))
     setCourtSearchTerm(court.name)
+    setAvailableVaras(court.varas || [])
     setIsCourtSearchOpen(false)
   }
 
@@ -498,7 +502,18 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                   </div>
                   <div className="space-y-3">
                     <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">VARA / CÂMARA</Label>
-                    <Input value={formData.vara} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("vara", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: 45ª VARA DO TRABALHO" />
+                    {availableVaras.length > 0 ? (
+                      <Select value={formData.vara} onValueChange={(v) => handleInputChange("vara", v)}>
+                        <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-bold uppercase"><SelectValue placeholder="SELECIONE A VARA" /></SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                          {availableVaras.map(v => (
+                            <SelectItem key={v} value={v}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={formData.vara} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("vara", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: 45ª VARA DO TRABALHO" />
+                    )}
                   </div>
                 </div>
                 <div className="space-y-3">

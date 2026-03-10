@@ -20,7 +20,9 @@ import {
   LayoutGrid,
   Map as MapIcon,
   Save,
-  X
+  X,
+  Library,
+  ListPlus
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -35,8 +37,9 @@ export default function CourtsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCourt, setEditingCourt] = useState<any>(null)
   const [loadingCep, setLoadingCep] = useState(false)
+  const [newVara, setNewVara] = useState("")
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name: "",
     zipCode: "",
     address: "",
@@ -46,6 +49,7 @@ export default function CourtsPage() {
     city: "",
     state: "",
     mapsLink: "",
+    varas: [],
     notes: ""
   })
 
@@ -76,7 +80,7 @@ export default function CourtsPage() {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await response.json()
       if (!data.erro) {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
           ...prev,
           address: data.logradouro.toUpperCase(),
           neighborhood: data.bairro.toUpperCase(),
@@ -89,6 +93,27 @@ export default function CourtsPage() {
     } finally {
       setLoadingCep(false)
     }
+  }
+
+  const handleAddVara = () => {
+    if (!newVara.trim()) return
+    const v = newVara.toUpperCase().trim()
+    if (formData.varas.includes(v)) {
+      toast({ variant: "destructive", title: "Vara já cadastrada" })
+      return
+    }
+    setFormData((prev: any) => ({
+      ...prev,
+      varas: [...prev.varas, v]
+    }))
+    setNewVara("")
+  }
+
+  const handleRemoveVara = (v: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      varas: prev.varas.filter((item: string) => item !== v)
+    }))
   }
 
   const handleSave = () => {
@@ -121,7 +146,7 @@ export default function CourtsPage() {
 
   const handleOpenEdit = (court: any) => {
     setEditingCourt(court)
-    setFormData({ ...court })
+    setFormData({ ...court, varas: court.varas || [] })
     setIsDialogOpen(true)
   }
 
@@ -137,6 +162,7 @@ export default function CourtsPage() {
       city: "",
       state: "",
       mapsLink: "",
+      varas: [],
       notes: ""
     })
     setIsDialogOpen(true)
@@ -213,6 +239,18 @@ export default function CourtsPage() {
                     {court.neighborhood} • CEP {court.zipCode}
                   </p>
                 </div>
+
+                {court.varas && court.varas.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-primary uppercase tracking-widest">Unidades Internas ({court.varas.length})</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {court.varas.slice(0, 5).map((v: string) => (
+                        <Badge key={v} variant="secondary" className="bg-white/5 text-[8px] font-black border-white/5 uppercase">{v}</Badge>
+                      ))}
+                      {court.varas.length > 5 && <span className="text-[8px] text-muted-foreground font-black">+ {court.varas.length - 5} OUTRAS</span>}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2">
                   <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-2">LOGÍSTICA OK</Badge>
@@ -292,6 +330,34 @@ export default function CourtsPage() {
                 <div className="space-y-3">
                   <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">UF *</Label>
                   <Input value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" maxLength={2} />
+                </div>
+              </div>
+
+              <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 shadow-inner">
+                <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <Library className="h-4 w-4" /> Unidades Judiciárias (Varas)
+                </Label>
+                <div className="flex gap-3">
+                  <Input 
+                    value={newVara} 
+                    onChange={(e) => setNewVara(e.target.value)} 
+                    placeholder="EX: 45ª VARA DO TRABALHO"
+                    className="glass border-primary/30 h-12 text-white font-bold"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddVara()}
+                  />
+                  <Button onClick={handleAddVara} className="h-12 px-6 gold-gradient text-background font-black uppercase text-[10px] rounded-xl">
+                    <ListPlus className="h-4 w-4 mr-2" /> SOMAR
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {formData.varas.map((v: string) => (
+                    <Badge key={v} className="bg-primary text-background font-black uppercase text-[9px] py-1.5 px-3 gap-2 rounded-lg flex items-center">
+                      {v} <button onClick={() => handleRemoveVara(v)} className="hover:text-rose-700 transition-colors"><X className="h-3 w-3" /></button>
+                    </Badge>
+                  ))}
+                  {formData.varas.length === 0 && (
+                    <p className="text-[10px] text-primary/40 uppercase font-black tracking-widest italic py-2">Nenhuma unidade interna mapeada.</p>
+                  )}
                 </div>
               </div>
 

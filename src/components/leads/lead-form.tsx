@@ -78,6 +78,7 @@ export function LeadForm({
   const [courtSearchTerm, setCourtSearchTerm] = useState("")
   const [isCourtSearchOpen, setIsCourtSearchOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
+  const [availableVaras, setAvailableVaras] = useState<string[]>([])
 
   const searchRef = useRef<HTMLDivElement>(null)
   const courtSearchRef = useRef<HTMLDivElement>(null)
@@ -220,6 +221,7 @@ export function LeadForm({
       courtMapsLink: court.mapsLink || ""
     }))
     setCourtSearchTerm(court.name)
+    setAvailableVaras(court.varas || [])
     setIsCourtSearchOpen(false)
   }
 
@@ -461,7 +463,7 @@ export function LeadForm({
                             </button>
                           ))
                         ) : (
-                          <div className="p-8 text-center opacity-40"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado</p></div>
+                          <div className="p-8 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado</p></div>
                         )}
                       </div>
                     </div>
@@ -469,7 +471,20 @@ export function LeadForm({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Vara / Unidade</Label>
-                  <Input className={cn(inputClass)} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} placeholder="EX: 45ª VARA DO TRABALHO" />
+                  {availableVaras.length > 0 ? (
+                    <Select value={formData.vara} onValueChange={(v) => handleInputChange("vara", v)}>
+                      <SelectTrigger className={cn(inputClass, "h-10")}>
+                        <SelectValue placeholder="SELECIONE A VARA" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                        {availableVaras.map(v => (
+                          <SelectItem key={v} value={v}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input className={cn(inputClass)} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} placeholder="EX: 45ª VARA DO TRABALHO" />
+                  )}
                 </div>
               </div>
               <div className="space-y-2 border-t border-white/5 pt-6">
