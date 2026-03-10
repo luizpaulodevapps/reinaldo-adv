@@ -255,7 +255,7 @@ export default function CourtsPage() {
             onClick={handleOpenCreate}
             className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
-            <Plus className="h-6 w-6 text-background" />
+            <Plus className="h-6 w-6 text-[#0a0f1e]" />
           </button>
         </div>
       </div>
@@ -290,7 +290,7 @@ export default function CourtsPage() {
                       onClick={(e) => { e.stopPropagation(); handleDelete(court.id); }} 
                       className="w-10 h-10 rounded-full bg-[#f5d030] flex items-center justify-center text-[#0d1117] hover:scale-110 transition-all shadow-lg"
                     >
-                      <Trash2 className="h-5 w-5 text-rose-600" />
+                      <Trash2 className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
@@ -347,7 +347,6 @@ export default function CourtsPage() {
         )}
       </div>
 
-      {/* DIÁLOGO DE EDIÇÃO / CRIAÇÃO */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
@@ -501,7 +500,6 @@ export default function CourtsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA (DOSSIÊ DO ÓRGÃO) */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-xl">
@@ -532,7 +530,6 @@ export default function CourtsPage() {
               <div className="p-10 space-y-10 pb-32">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Bloco de Endereço */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                       <MapPin className="h-4 w-4 text-primary" />
@@ -553,12 +550,6 @@ export default function CourtsPage() {
                           <p className="text-xs font-mono font-bold text-white">{viewingCourt?.zipCode}</p>
                         </div>
                       </div>
-                      {viewingCourt?.complement && (
-                        <div>
-                          <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block">Complemento</Label>
-                          <p className="text-xs font-bold text-white uppercase">{viewingCourt.complement}</p>
-                        </div>
-                      )}
                     </Card>
                     <Button 
                       className="w-full h-14 glass border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase text-[11px] tracking-widest gap-3 rounded-xl shadow-lg"
@@ -571,7 +562,6 @@ export default function CourtsPage() {
                     </Button>
                   </div>
 
-                  {/* Bloco de Competência */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                       <Scale className="h-4 w-4 text-primary" />
@@ -583,9 +573,6 @@ export default function CourtsPage() {
                           {area}
                         </Badge>
                       ))}
-                      {(!viewingCourt?.legalAreas || viewingCourt.legalAreas.length === 0) && (
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold italic opacity-30">Nenhuma área vinculada.</p>
-                      )}
                     </Card>
                     
                     <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl space-y-2 shadow-xl border-dashed">
@@ -600,7 +587,6 @@ export default function CourtsPage() {
                   </div>
                 </div>
 
-                {/* Bloco de Varas (Unidades) */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <div className="flex items-center gap-3">
@@ -628,15 +614,13 @@ export default function CourtsPage() {
                             </div>
                           )}
 
-                          {v.notes ? (
+                          {v.notes && (
                             <div className="space-y-1.5">
-                              <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Acesso / Balcão Virtual</Label>
+                              <Label className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Notas Técnicas</Label>
                               <p className="text-[10px] text-white/70 font-bold uppercase truncate bg-black/20 p-2 rounded border border-white/5">
                                 {v.notes}
                               </p>
                             </div>
-                          ) : (
-                            <p className="text-[9px] text-muted-foreground/20 italic font-bold uppercase">Sem notas técnicas.</p>
                           )}
                         </Card>
                       ))}
@@ -656,9 +640,9 @@ export default function CourtsPage() {
           <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
             <div className="flex items-center gap-4">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Biblioteca Jurídica Oficial RGMJ</span>
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Biblioteca Jurídica Oficial RGMJ</span>
             </div>
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl hover:scale-102 transition-transform">
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">
               FECHAR DOSSIÊ
             </Button>
           </div>
