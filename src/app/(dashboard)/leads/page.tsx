@@ -109,7 +109,7 @@ const columns = [
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
 
-const DOSSIER_TABS = ["overview", "entrevistas", "burocracia", "revisao"]
+const DOSSIER_TABS = ["overview", "captura", "dossies", "burocracia", "revisao"]
 
 export default function LeadsPage() {
   const db = useFirestore()
@@ -189,18 +189,25 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (currentTabIndex < 3) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handleNextTab = () => { if (currentTabIndex < DOSSIER_TABS.length - 1) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
   const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   useEffect(() => {
     if (activeLead) {
-      if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("entrevistas")
+      if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("captura")
       else if (activeLead.status === 'burocracia' && activeDossierTab === 'overview') setActiveDossierTab("burocracia")
       else if (activeLead.status === 'distribuicao' && activeDossierTab === 'overview') setActiveDossierTab("revisao")
       setStrategicSummary(null)
       setIsSchedulingHearing(false)
       setIntakeSuccess(false)
-      setIntakeData({ date: activeLead.scheduledDate || "", time: activeLead.scheduledTime || "", type: activeLead.meetingType || "online", locationType: activeLead.locationType || "sede", customAddress: activeLead.customAddress || "", observations: activeLead.intakeObservations || "" })
+      setIntakeData({ 
+        date: activeLead.scheduledDate || "", 
+        time: activeLead.scheduledTime || "", 
+        type: activeLead.meetingType || "online", 
+        locationType: activeLead.locationType || "sede", 
+        customAddress: activeLead.customAddress || "", 
+        observations: activeLead.intakeObservations || "" 
+      })
       setLocationSearch(activeLead.customAddress || "")
     }
   }, [activeLead?.id])
@@ -226,49 +233,38 @@ export default function LeadsPage() {
     setLocationResults([])
   }
 
-  const handleGenerateStrategicSummary = async () => {
-    if (!activeLead) return
-    setIsGeneratingSummary(true)
-    const interviewContext = (leadInterviews || []).map(int => {
-      const responses = Object.entries(int.responses || {}).map(([q, a]) => `${q}: ${a}`).join("\n")
-      return `ENTREVISTA (${int.interviewType}):\n${responses}`
-    }).join("\n\n")
-    try {
-      const result = await generateCaseSummary({ caseId: activeLead.id, clientName: activeLead.name, caseTitle: activeLead.demandTitle || "Demanda Estratégica", caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas.", currentStatus: "Triagem", lastEvents: ["Entrevista"], nextDeadlines: ["Protocolo"], relatedParties: [activeLead.defendantName || "Réu"], financialStatus: "" })
-      setStrategicSummary(result)
-      toast({ title: "DNA Consolidado" })
-    } catch (e) { 
-      console.error(e)
-      toast({ variant: "destructive", title: "Erro IA" }) 
-    } finally { setIsGeneratingSummary(false) }
-  }
-
   const handleOpenLead = (lead: any) => { setSelectedLead(lead); setIsSheetOpen(true); }
 
   const handleScheduleIntake = async () => {
     if (!db || !activeLead || !intakeData.date || !intakeData.time) return
     const meetLink = intakeData.type === 'online' ? `https://meet.google.com/rgmj-${Math.random().toString(36).substring(7)}` : "";
     const finalLocation = intakeData.type === 'online' ? 'Virtual RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
-    const payload = { scheduledDate: intakeData.date, scheduledTime: intakeData.time, meetingType: intakeData.type, locationType: intakeData.locationType, customAddress: intakeData.customAddress, meetingLocation: finalLocation, meetingLink: meetLink, intakeObservations: intakeData.observations, updatedAt: serverTimestamp() }
+    const payload = { 
+      scheduledDate: intakeData.date, 
+      scheduledTime: intakeData.time, 
+      meetingType: intakeData.type, 
+      locationType: intakeData.locationType, 
+      customAddress: intakeData.customAddress, 
+      meetingLocation: finalLocation, 
+      meetingLink: meetLink, 
+      intakeObservations: intakeData.observations, 
+      updatedAt: serverTimestamp() 
+    }
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
-    addDocumentNonBlocking(collection(db, "appointments"), { title: `Atendimento: ${activeLead.name}`, type: "Atendimento", startDateTime: `${intakeData.date}T${intakeData.time}:00`, clientId: activeLead.id, clientName: activeLead.name, meetingType: intakeData.type, location: finalLocation, meetingLink: meetLink, observations: intakeData.observations, status: "Agendado", createdAt: serverTimestamp() })
+    addDocumentNonBlocking(collection(db, "appointments"), { 
+      title: `Atendimento: ${activeLead.name}`, 
+      type: "Atendimento", 
+      startDateTime: `${intakeData.date}T${intakeData.time}:00`, 
+      clientId: activeLead.id, 
+      clientName: activeLead.name, 
+      meetingType: intakeData.type, 
+      location: finalLocation, 
+      meetingLink: meetLink, 
+      observations: intakeData.observations, 
+      status: "Agendado", 
+      createdAt: serverTimestamp() 
+    })
     toast({ title: "Atendimento Agendado" })
-  }
-
-  const handleShareIntake = (method: 'whatsapp' | 'email') => {
-    if (!activeLead) return
-    const message = `Olá ${activeLead.name}, confirmamos seu agendamento para ${new Date(activeLead.scheduledDate).toLocaleDateString()} às ${activeLead.scheduledTime} em ${activeLead.meetingLocation}. ${activeLead.meetingLink ? '\nLink: ' + activeLead.meetingLink : ''}`
-    if (method === 'whatsapp') window.open(`https://wa.me/${activeLead.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, "_blank")
-    else window.open(`mailto:${activeLead.email}?subject=Confirmação&body=${encodeURIComponent(message)}`, "_blank")
-  }
-
-  const handleSyncDrive = async () => {
-    if (!activeLead || !db) return
-    setIsSyncingDrive(true)
-    setTimeout(async () => {
-      await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { driveStatus: (activeLead.status === "distribuicao" ? "pasta_cliente" : "pasta_lead"), driveFolderId: "DRV_" + Math.random().toString(36).substring(7), updatedAt: serverTimestamp() })
-      setIsSyncingDrive(false); toast({ title: "Drive OK" })
-    }, 1000)
   }
 
   const handleStartInterview = (t: any) => { setExecutingTemplate(t); setIsInterviewDialogOpen(true); }
@@ -310,17 +306,47 @@ export default function LeadsPage() {
     } catch (e) { toast({ variant: "destructive", title: "Erro Análise" }) } finally { setIsAiAnalyzing(false) }
   }
 
-  const handlePromoteSummary = async () => {
-    if (!db || !activeLead || !interviewAnalysis) return
-    updateDocumentNonBlocking(doc(db, "leads", activeLead.id), { aiSummary: interviewAnalysis.summary, updatedAt: serverTimestamp() })
-    toast({ title: "Sintese Promovida" })
+  const handleGenerateStrategicSummary = async () => {
+    if (!activeLead) return
+    setIsGeneratingSummary(true)
+    const interviewContext = (leadInterviews || []).map(int => {
+      const responses = Object.entries(int.responses || {}).map(([q, a]) => `${q}: ${a}`).join("\n")
+      return `ENTREVISTA (${int.interviewType}):\n${responses}`
+    }).join("\n\n")
+    try {
+      const result = await generateCaseSummary({ 
+        caseId: activeLead.id, 
+        clientName: activeLead.name, 
+        caseTitle: activeLead.demandTitle || "Demanda Estratégica", 
+        caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas.", 
+        currentStatus: "Triagem", 
+        lastEvents: ["Entrevista"], 
+        nextDeadlines: ["Protocolo"], 
+        relatedParties: [activeLead.defendantName || "Réu"], 
+        financialStatus: "" 
+      })
+      setStrategicSummary(result)
+      toast({ title: "DNA Consolidado" })
+    } catch (e) { 
+      console.error(e)
+      toast({ variant: "destructive", title: "Erro IA" }) 
+    } finally { setIsGeneratingSummary(false) }
   }
 
   const handleConvertProcess = async (data: any) => {
     if (!db || !activeLead) return
     const processRef = await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
     if (isSchedulingHearing && hearingData.date) {
-      addDocumentNonBlocking(collection(db!, "hearings"), { title: `Aud ${hearingData.type}: ${activeLead.name}`, type: hearingData.type, startDateTime: `${hearingData.date}T${hearingData.time}:00`, processId: (processRef as any).id, processNumber: data.processNumber, clientName: activeLead.name, location: hearingData.type === 'Virtual' ? 'Virtual' : (hearingData.location || activeLead.courtAddress), createdAt: serverTimestamp() })
+      addDocumentNonBlocking(collection(db!, "hearings"), { 
+        title: `Aud ${hearingData.type}: ${activeLead.name}`, 
+        type: hearingData.type, 
+        startDateTime: `${hearingData.date}T${hearingData.time}:00`, 
+        processId: (processRef as any).id, 
+        processNumber: data.processNumber, 
+        clientName: activeLead.name, 
+        location: hearingData.type === 'Virtual' ? 'Virtual' : (hearingData.location || activeLead.courtAddress), 
+        createdAt: serverTimestamp() 
+      })
     }
     updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
     setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
@@ -332,12 +358,20 @@ export default function LeadsPage() {
     if (!draggedLeadId || !db) return
     const lead = leads.find(l => l.id === draggedLeadId)
     if (!lead) return
-    if (status === 'burocracia' && (leadInterviews?.length || 0) === 0) { toast({ variant: "destructive", title: "Rito Violado", description: "Entrevista obrigatória antes da burocracia." }); setDraggedLeadId(null); return; }
+    if (status === 'burocracia' && (leadInterviews?.length || 0) === 0) { 
+      toast({ variant: "destructive", title: "Rito Violado", description: "Entrevista obrigatória antes da burocracia." }); 
+      setDraggedLeadId(null); return; 
+    }
     updateDocumentNonBlocking(doc(db, "leads", lead.id), { status, updatedAt: serverTimestamp() })
     setDraggedLeadId(null)
   }
 
-  const handleDeleteLead = (id: string) => { if (!db || !confirm("Excluir Lead?")) return; deleteDocumentNonBlocking(doc(db, "leads", id)); toast({ title: "Lead Removido" }); setIsSheetOpen(false); }
+  const handleDeleteLead = (id: string) => { 
+    if (!db || !confirm("Excluir Lead?")) return; 
+    deleteDocumentNonBlocking(doc(db, "leads", id)); 
+    toast({ title: "Lead Removido" }); 
+    setIsSheetOpen(false); 
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
@@ -444,8 +478,11 @@ export default function LeadsPage() {
                       <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
                         <LayoutGrid className="h-3.5 w-3.5" /> OVERVIEW
                       </TabsTrigger>
-                      <TabsTrigger value="entrevistas" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
-                        <MessageSquare className="h-3.5 w-3.5" /> ENTREVISTAS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-1 border-0 h-4 px-1.5 text-[8px]">{leadInterviews.length}</Badge>}
+                      <TabsTrigger value="captura" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
+                        <Zap className="h-3.5 w-3.5" /> CAPTURA
+                      </TabsTrigger>
+                      <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
+                        <MessageSquare className="h-3.5 w-3.5" /> DOSSIÊS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-1 border-0 h-4 px-1.5 text-[8px]">{leadInterviews.length}</Badge>}
                       </TabsTrigger>
                       <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
                         <ClipboardList className="h-3.5 w-3.5" /> BUROCRACIA
@@ -468,12 +505,12 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
+                    <TabsContent value="captura" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
                       <div className="space-y-6">
                         <div className="flex items-center gap-3 border-b border-white/5 pb-3">
                           <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3>
                         </div>
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           {templates?.map(t => (
                             <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-white/10 text-white font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:border-primary/40 hover:bg-primary/5 transition-all group border-2">
                               <Zap className="h-4 w-4 text-primary shrink-0" /><span className="truncate flex-1 text-left tracking-tight">{t.title}</span>
@@ -481,8 +518,10 @@ export default function LeadsPage() {
                           ))}
                         </div>
                       </div>
+                    </TabsContent>
 
-                      <div className="space-y-6 pt-4">
+                    <TabsContent value="dossies" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
+                      <div className="space-y-6">
                         <div className="flex items-center justify-between border-b border-white/5 pb-3">
                           <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">
                             Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}
@@ -491,7 +530,7 @@ export default function LeadsPage() {
                         {isLoadingInterviews ? (
                           <div className="py-20 flex flex-col items-center justify-center opacity-40 gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-[10px] font-black uppercase tracking-[0.4em]">Auditando...</p></div>
                         ) : leadInterviews && leadInterviews.length > 0 ? (
-                          <div className="grid grid-cols-3 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leadInterviews.map((int) => (
                               <Card key={int.id} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col group shadow-2xl relative overflow-hidden">
                                 {int.aiAnalysis && <div className="absolute top-0 right-0 p-4"><Sparkles className="h-4 w-4 text-primary animate-pulse" /></div>}
@@ -543,6 +582,7 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
+      {/* DIALOGS */}
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
           <div className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl">
@@ -557,7 +597,7 @@ export default function LeadsPage() {
                   const label = typeof item === 'string' ? item : item.label; const answer = viewingInterview?.responses?.[label]; if (!answer) return null;
                   return (<div key={i} className="space-y-1.5"><h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5><p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">{String(answer)}</p></div>)
                 })}</div></ScrollArea></TabsContent>
-                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-4"><Brain className="h-12 w-12 text-primary animate-pulse" /><p className="text-[10px] font-bold text-white uppercase tracking-widest">Processando...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full pr-4"><div className="space-y-6 max-w-4xl mx-auto pb-10"><Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg"><div className="flex items-center justify-between mb-3"><h5 className="text-[10px] font-black text-primary uppercase tracking-widest">Resumo Executivo</h5><Button onClick={handlePromoteSummary} variant="outline" className="h-7 border-primary/20 text-primary text-[8px] font-black uppercase rounded-full">PROMOVER À SÍNTESE</Button></div><p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-2 gap-4"><Card className="glass border-rose-500/20 bg-rose-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-rose-500 uppercase mb-3">Teses & Riscos</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-emerald-500 uppercase mb-3">Recomendações</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3"><Sparkles className="h-10 w-10" /><p className="text-[10px] font-black uppercase tracking-widest">Aguardando Comando</p></div>)}</TabsContent>
+                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-4"><Brain className="h-12 w-12 text-primary animate-pulse" /><p className="text-[10px] font-bold text-white uppercase tracking-widest">Processando...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full pr-4"><div className="space-y-6 max-w-4xl mx-auto pb-10"><Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg"><div className="flex items-center justify-between mb-3"><h5 className="text-[10px] font-black text-primary uppercase tracking-widest">Resumo Executivo</h5></div><p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-2 gap-4"><Card className="glass border-rose-500/20 bg-rose-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-rose-500 uppercase mb-3">Teses & Riscos</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-emerald-500 uppercase mb-3">Recomendações</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3"><Sparkles className="h-10 w-10" /><p className="text-[10px] font-black uppercase tracking-widest">Aguardando Comando</p></div>)}</TabsContent>
               </div>
             </Tabs>
           </div>
