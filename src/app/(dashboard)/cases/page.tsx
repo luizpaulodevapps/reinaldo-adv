@@ -335,7 +335,7 @@ export default function CasesPage() {
 
   const ProcessActionsMenu = ({ proc }: { proc: any }) => (
     <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
-      <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO PROCESSO</DropdownMenuLabel>
+      <DropdownMenuLabel className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
       
       <DropdownMenuItem onClick={() => { handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <History className="h-4 w-4 text-muted-foreground" /> Ver Processo Completo
@@ -431,15 +431,15 @@ export default function CasesPage() {
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
+          <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-bold text-muted-foreground/40 mb-3">
             <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
             <ChevronRight className="h-2 w-2" />
             <span>DASHBOARD</span>
             <ChevronRight className="h-2 w-2" />
             <span className="text-white">ACERVO DE PROCESSOS</span>
           </div>
-          <h1 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Gestão de Processos</h1>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-60">
+          <h1 className="text-xl font-bold text-white mb-1 uppercase tracking-tight">Gestão de Processos</h1>
+          <p className="text-muted-foreground text-[9px] font-bold uppercase tracking-[0.25em] opacity-60">
             CONTROLE JURÍDICO ESTRATÉGICO RGMJ.
           </p>
         </div>
@@ -456,7 +456,7 @@ export default function CasesPage() {
           </div>
           <Button 
             onClick={handleOpenCreate}
-            className="gold-gradient text-background font-black gap-3 px-8 h-11 uppercase text-[11px] tracking-widest rounded-xl shadow-2xl hover:scale-[1.02] transition-all"
+            className="gold-gradient text-background font-black gap-3 px-8 h-11 uppercase text-[10px] tracking-widest rounded-xl shadow-2xl hover:scale-[1.02] transition-all"
           >
             <Plus className="h-4 w-4" /> NOVO PROCESSO
           </Button>
@@ -464,33 +464,33 @@ export default function CasesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center shadow-xl rounded-2xl group hover:border-primary/20 transition-all">
+        <Card className="glass border-white/5 relative overflow-hidden h-24 flex flex-col justify-center shadow-xl rounded-xl group hover:border-primary/20 transition-all">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/50 transition-all" />
-          <CardContent className="p-6">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
-              <Zap className="h-4 w-4" /> PROCESSOS ATIVOS
+          <CardContent className="p-5">
+            <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 flex items-center gap-3">
+              <Zap className="h-3.5 w-3.5" /> PROCESSOS ATIVOS
             </p>
-            <div className="text-2xl font-black text-white tracking-tighter">
+            <div className="text-xl font-black text-white tracking-tighter">
               {isLoading ? "..." : metrics.total}
             </div>
           </CardContent>
         </Card>
         
-        <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center rounded-2xl">
-          <CardContent className="p-6">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
-              <Scale className="h-4 w-4" /> VALOR SOB GESTÃO
+        <Card className="glass border-white/5 relative overflow-hidden h-24 flex flex-col justify-center rounded-xl">
+          <CardContent className="p-5">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5 flex items-center gap-3">
+              <Scale className="h-3.5 w-3.5" /> VALOR SOB GESTÃO
             </p>
-            <div className="text-2xl font-black text-white tracking-tighter tabular-nums">
+            <div className="text-xl font-black text-white tracking-tighter tabular-nums">
               R$ {metrics.valorEmRisco.toLocaleString('pt-BR')}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center rounded-2xl">
-          <CardContent className="p-6">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">TICKET MÉDIO</p>
-            <div className="text-2xl font-black text-white tracking-tighter tabular-nums">
+        <Card className="glass border-white/5 relative overflow-hidden h-24 flex flex-col justify-center rounded-xl">
+          <CardContent className="p-5">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5">TICKET MÉDIO</p>
+            <div className="text-xl font-black text-white tracking-tighter tabular-nums">
               R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </div>
           </CardContent>
@@ -504,7 +504,7 @@ export default function CasesPage() {
               <TabsTrigger 
                 key={area.id} 
                 value={area.id}
-                className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase tracking-[0.25em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all"
+                className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.25em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all"
               >
                 {area.label}
               </TabsTrigger>
@@ -688,7 +688,7 @@ export default function CasesPage() {
                 <Scale className="h-7 w-7" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</h2>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</h2>
                 <div className="flex items-center gap-3 mt-2">
                   <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
                   <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest">{viewingProcess?.processNumber}</span>
@@ -919,7 +919,7 @@ export default function CasesPage() {
           </div>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
-            <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
+            <Button handleScheduleMeeting={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
