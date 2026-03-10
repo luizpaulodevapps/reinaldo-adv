@@ -47,7 +47,8 @@ import {
   MessageSquare,
   Save,
   Map as MapIcon,
-  MoreVertical
+  MoreVertical,
+  X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -505,6 +506,7 @@ export default function LeadsPage() {
     if (!confirm("Deseja EXCLUIR PERMANENTEMENTE este lead? Esta ação não pode ser desfeita.")) return
     deleteDocumentNonBlocking(doc(db, "leads", leadId))
     toast({ variant: "destructive", title: "Lead Removido", description: "O dossiê foi apagado da base tática." })
+    setIsSheetOpen(false)
   }
 
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
@@ -681,11 +683,17 @@ export default function LeadsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button onClick={() => { handleDeleteLead(selectedLead.id); }} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-rose-500/10 hover:text-rose-500 text-rose-400">
+                      <Trash2 className="h-3.5 w-3.5" /> EXCLUIR
+                    </Button>
                     <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
                       {isSyncingDrive ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <CloudLightning className="h-3.5 w-3.5 text-amber-500" />} SINC. DRIVE
                     </Button>
                     <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
                       <UserCog className="h-3.5 w-3.5 text-primary" /> EDITAR
+                    </Button>
+                    <Button onClick={() => setIsSheetOpen(false)} variant="ghost" className="h-9 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 text-muted-foreground hover:text-white">
+                      <X className="h-3.5 w-3.5" /> FECHAR
                     </Button>
                   </div>
                 </div>
@@ -1105,7 +1113,7 @@ export default function LeadsPage() {
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5">
-            <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Atendimento Técnico Estratégico</DialogTitle>
+            <DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle>
           </DialogHeader>
           {executingTemplate && (
             <DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />
