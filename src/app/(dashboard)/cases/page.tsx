@@ -43,7 +43,9 @@ import {
   ShieldAlert,
   MapPin,
   Fingerprint,
-  Target
+  Target,
+  X,
+  Building2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -77,6 +79,7 @@ import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -329,7 +332,7 @@ export default function CasesPage() {
         <CalendarDays className="h-4 w-4" /> Agendar Reunião/Atend.
       </DropdownMenuItem>
 
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
         <Navigation className="h-4 w-4" /> Agendar Diligência
       </DropdownMenuItem>
       
@@ -676,7 +679,7 @@ export default function CasesPage() {
 
                         <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
                           <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                            <Building className="h-4 w-4 text-primary" />
+                            <Building2 className="h-4 w-4 text-primary" />
                             <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Polo Passivo (Réu)</h4>
                           </div>
                           <div className="space-y-4">
@@ -761,7 +764,7 @@ export default function CasesPage() {
                       </Card>
                     </TabsContent>
                   </div>
-                </Bar>
+                </ScrollArea>
               </div>
             </Tabs>
           </div>
