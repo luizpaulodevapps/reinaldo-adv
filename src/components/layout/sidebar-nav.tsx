@@ -23,7 +23,8 @@ import {
   Wallet,
   Users2,
   Navigation,
-  User as UserIcon
+  User as UserIcon,
+  Building2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -88,6 +89,7 @@ const menuGroups = [
   {
     title: "GESTÃO",
     items: [
+      { name: "FÓRUNS", href: "/courts", icon: Building2 },
       { name: "D.P. INTERNO", href: "/staff", icon: Users2 },
       { name: "EQUIPE", href: "/team", icon: UserCheck },
       { name: "AJUSTES", href: "/settings", icon: Settings },

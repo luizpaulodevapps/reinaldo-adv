@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,7 +21,8 @@ import {
   UserPlus,
   ShieldAlert,
   Loader2,
-  MapPin
+  MapPin,
+  Library
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -51,12 +52,15 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   const [currentStep, setCurrentStep] = useState(1)
   const [searchTerm, setSearchTerm] = useState("")
   const [showResults, setShowResults] = useState(false)
+  const [courtSearchTerm, setCourtSearchTerm] = useState("")
+  const [isCourtSearchOpen, setIsCourtSearchOpen] = useState(false)
   const [isQuickClientOpen, setIsQuickClientOpen] = useState(false)
   const [quickClientData, setQuickClientData] = useState({ name: '', cpf: '' })
   const [isSavingClient, setIsSavingClient] = useState(false)
   const [isAwaitingNumber, setIsAwaitingNumber] = useState(false)
   const [loadingDefendantCep, setLoadingDefendantCep] = useState(false)
   
+  const courtSearchRef = useRef<HTMLDivElement>(null)
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
@@ -93,14 +97,31 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
         ...prev,
         ...initialData
       }))
+      if (initialData.court) setCourtSearchTerm(initialData.court)
     }
   }, [initialData])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (courtSearchRef.current && !courtSearchRef.current.contains(event.target as Node)) {
+        setIsCourtSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "clients"), orderBy("name", "asc"))
   }, [db, user])
   const { data: clients } = useCollection(clientsQuery)
+
+  const courtsQuery = useMemoFirebase(() => {
+    if (!db) return null
+    return query(collection(db, "courts"), orderBy("name", "asc"))
+  }, [db])
+  const { data: dbCourts } = useCollection(courtsQuery)
 
   const filteredClients = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return []
@@ -109,6 +130,14 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       c.documentNumber?.includes(searchTerm)
     )
   }, [clients, searchTerm])
+
+  const filteredCourts = useMemo(() => {
+    if (!courtSearchTerm || courtSearchTerm.length < 2) return []
+    return (dbCourts || []).filter(c => 
+      c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
+      c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
+    )
+  }, [courtSearchTerm, dbCourts])
 
   const handleNext = () => {
     if (currentStep < 6) setCurrentStep(currentStep + 1)
@@ -120,6 +149,17 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSelectCourt = (court: any) => {
+    const fullAddress = `${court.address}, ${court.number}${court.complement ? ' - ' + court.complement : ''} - ${court.neighborhood}, ${court.city} - ${court.state}`
+    setFormData(prev => ({
+      ...prev,
+      court: court.name,
+      courtAddress: fullAddress
+    }))
+    setCourtSearchTerm(court.name)
+    setIsCourtSearchOpen(false)
   }
 
   const handleDefendantCepBlur = async () => {
@@ -419,9 +459,42 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <StepHeader title="Jurisdição" subtitle="Localização judiciária do feito" icon={Gavel} />
               <div className="space-y-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
+                  <div className="space-y-3 relative" ref={courtSearchRef}>
                     <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">TRIBUNAL / ÓRGÃO *</Label>
-                    <Input value={formData.court} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("court", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: TRT 2ª REGIÃO" />
+                    <div className="relative">
+                      <Input 
+                        placeholder="PESQUISAR FÓRUM..." 
+                        className="bg-black/20 border-white/10 h-14 text-white font-bold pr-10" 
+                        value={courtSearchTerm || formData.court} 
+                        onChange={(e) => {
+                          setCourtSearchTerm(e.target.value)
+                          setIsCourtSearchOpen(true)
+                          if (formData.court) handleInputChange("court", "")
+                        }}
+                        onFocus={() => setIsCourtSearchOpen(true)}
+                      />
+                      <Library className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                    </div>
+
+                    {isCourtSearchOpen && courtSearchTerm.length >= 2 && (
+                      <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
+                        <div className="max-h-[250px] overflow-y-auto">
+                          {filteredCourts.length > 0 ? (
+                            filteredCourts.map(c => (
+                              <button type="button" key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 text-left group">
+                                <div>
+                                  <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{c.name}</p>
+                                  <p className="text-[9px] text-muted-foreground uppercase mt-1">{c.city} - {c.state}</p>
+                                </div>
+                                <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary uppercase">Mapear</Badge>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="p-8 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum fórum cadastrado</p></div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3">
                     <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">VARA / CÂMARA</Label>
@@ -429,7 +502,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ENDEREÇO DO JUÍZO (PARA DILIGÊNCIAS)</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ENDEREÇO COMPLETO DO JUÍZO</Label>
                   <div className="relative">
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
                     <Input value={formData.courtAddress} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("courtAddress", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 pl-12 text-white font-bold" placeholder="RUA DO FÓRUM, Nº 123 - CIDADE/UF" />

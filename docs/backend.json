@@ -101,6 +101,27 @@
         "requiresSubestabelecimento": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Court": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Court",
+      "type": "object",
+      "description": "Represents a judicial building or organ (Fórum, Tribunal).",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "zipCode": { "type": "string" },
+        "address": { "type": "string" },
+        "number": { "type": "string" },
+        "complement": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "mapsLink": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "zipCode", "address", "city", "state"]
     }
   },
   "auth": {
@@ -111,6 +132,7 @@
     "/clients/{clientId}": { "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." },
     "/processes/{processId}": { "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." },
     "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." },
-    "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Legal diligences and tasks." }
+    "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Legal diligences and tasks." },
+    "/courts/{courtId}": { "schema": { "$ref": "#/backend/entities/Court" }, "description": "Judicial organs and buildings registry." }
   }
 }
