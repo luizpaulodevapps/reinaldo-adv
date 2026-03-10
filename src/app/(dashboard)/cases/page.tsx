@@ -682,13 +682,14 @@ export default function CasesPage() {
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex items-center justify-between shadow-xl">
+          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex flex-row items-center justify-between shadow-xl space-y-0">
             <div className="flex items-center gap-6">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
                 <Scale className="h-7 w-7" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</h2>
+                <DialogTitle className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</DialogTitle>
+                <DialogDescription className="sr-only">Visualização detalhada do rito processual.</DialogDescription>
                 <div className="flex items-center gap-3 mt-2">
                   <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
                   <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest">{viewingProcess?.processNumber}</span>
@@ -703,7 +704,7 @@ export default function CasesPage() {
                 <X className="h-6 w-6" />
               </Button>
             </div>
-          </div>
+          </DialogHeader>
 
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="resumo" className="h-full flex flex-col">
@@ -883,10 +884,13 @@ export default function CasesPage() {
       {/* MODAL: AGENDAR REUNIÃO */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
             <CalendarDays className="h-6 w-6 text-emerald-500" />
-            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
-          </div>
+            <div>
+              <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
+              <DialogDescription className="sr-only">Configure os detalhes da reunião estratégica.</DialogDescription>
+            </div>
+          </DialogHeader>
           <div className="p-8 space-y-6">
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Pauta</Label>
@@ -919,7 +923,7 @@ export default function CasesPage() {
           </div>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
-            <Button handleScheduleMeeting={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
+            <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -927,10 +931,13 @@ export default function CasesPage() {
       {/* MODAL: LANÇAR PRAZO FATAL */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
             <AlarmClock className="h-6 w-6 text-rose-500" />
-            <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
-          </div>
+            <div>
+              <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
+              <DialogDescription className="sr-only">Registro de prazo judicial preclusivo.</DialogDescription>
+            </div>
+          </DialogHeader>
           <div className="p-8 space-y-6">
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase">Título do Ato</Label>
@@ -955,10 +962,13 @@ export default function CasesPage() {
       {/* MODAL: AGENDAR AUDIÊNCIA */}
       <Dialog open={isHearingOpen} onOpenChange={setIsHearingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
             <Gavel className="h-6 w-6 text-amber-500" />
-            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
-          </div>
+            <div>
+              <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
+              <DialogDescription className="sr-only">Cadastro de pauta judiciária para o caso.</DialogDescription>
+            </div>
+          </DialogHeader>
           <div className="p-8 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -999,11 +1009,12 @@ export default function CasesPage() {
       {/* MODAL: AGENDAR DILIGÊNCIA (TASK) */}
       <Dialog open={isDiligenceOpen} onOpenChange={setIsDiligenceOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-4">
               <ListTodo className="h-6 w-6 text-blue-400" />
               <div>
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
+                <DialogDescription className="sr-only">Atribuição de tarefa operacional ou externa.</DialogDescription>
                 {googleConfig?.isTasksActive && (
                   <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest mt-1 flex items-center gap-1.5">
                     <CloudLightning className="h-2.5 w-2.5" /> Sincronismo Google Tasks Ativo
@@ -1011,7 +1022,7 @@ export default function CasesPage() {
                 )}
               </div>
             </div>
-          </div>
+          </DialogHeader>
           <div className="p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -1082,10 +1093,13 @@ export default function CasesPage() {
       {/* MODAL: GERAR DOCUMENTO IA */}
       <Dialog open={isAiDocOpen} onOpenChange={setIsAiDocOpen}>
         <DialogContent className="glass border-primary/20 sm:max-w-[1100px] bg-[#0a0f1e] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
             <Brain className="h-7 w-7 text-primary" />
-            <DialogTitle className="text-white font-bold uppercase tracking-widest text-xl">Minuta Estratégica IA</DialogTitle>
-          </div>
+            <div>
+              <DialogTitle className="text-white font-bold uppercase tracking-widest text-xl">Minuta Estratégica IA</DialogTitle>
+              <DialogDescription className="text-[9px] text-muted-foreground uppercase font-black">Geração de peça jurídica fundamentada via Inteligência RGMJ.</DialogDescription>
+            </div>
+          </DialogHeader>
           <div className="p-10 max-h-[80vh] overflow-y-auto">
             <DraftingTool initialCaseDetails={aiDocInitialDetails} />
           </div>
@@ -1095,12 +1109,10 @@ export default function CasesPage() {
       {/* MODAL: EVENTO FINANCEIRO */}
       <Dialog open={isFinancialOpen} onOpenChange={setIsFinancialOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Evento Financeiro</DialogTitle>
-              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Lançamento de honorários ou custas para o processo.</DialogDescription>
-            </DialogHeader>
-          </div>
+          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
+            <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Evento Financeiro</DialogTitle>
+            <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Lançamento de honorários ou custas para o processo.</DialogDescription>
+          </DialogHeader>
           <div className="px-10 py-8 bg-[#0a0f1e]/50">
             <FinancialTitleForm 
               initialData={{ description: `HONORÁRIOS: ${activeActionProcess?.clientName}`, processNumber: activeActionProcess?.processNumber }}
