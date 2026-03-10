@@ -30,7 +30,13 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
-  MapPin
+  MapPin,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calculator,
+  DollarSign,
+  TrendingUp,
+  Gavel
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -49,10 +55,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ClientForm } from "@/components/clients/client-form"
 import { ProcessForm } from "@/components/cases/process-form"
+import { FinancialTitleForm } from "@/components/financial/financial-title-form"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { addMonths, format, parseISO } from "date-fns"
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -61,12 +70,12 @@ export default function ClientsPage() {
   const [selectedClientDossier, setSelectedClientDossier] = useState<any>(null)
   
   const [isNewProcessOpen, setIsNewProcessOpen] = useState(false)
+  const [isNewFinancialOpen, setIsNewFinancialOpen] = useState(false)
 
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
 
-  // Busca todos os clientes para não esconder dados legados sem o campo 'status'
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(
@@ -80,20 +89,15 @@ export default function ClientsPage() {
   const filteredClients = useMemo(() => {
     if (!clientsData) return []
     return clientsData.filter(client => {
-      // Regra de Negócio: Se não tem status, é considerado Ativo (Legado)
-      // Se tem status, deve ser diferente de "Inativo"
       const isActive = !client.status || client.status === "Ativo"
-      
       const matchesSearch = 
         client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.documentNumber?.includes(searchTerm) ||
         client.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      
       return isActive && matchesSearch
     })
   }, [clientsData, searchTerm])
 
-  // Queries para o Dossiê (quando um cliente é selecionado)
   const clientProcessesQuery = useMemoFirebase(() => {
     if (!db || !selectedClientDossier) return null
     return query(collection(db, "processes"), where("clientId", "==", selectedClientDossier.id))
@@ -105,6 +109,34 @@ export default function ClientsPage() {
     return query(collection(db, "appointments"), where("clientId", "==", selectedClientDossier.id))
   }, [db, selectedClientDossier])
   const { data: clientAgenda } = useCollection(clientAgendaQuery)
+
+  const clientFinancialQuery = useMemoFirebase(() => {
+    if (!db || !selectedClientDossier) return null
+    return query(collection(db, "financial_titles"), where("clientId", "==", selectedClientDossier.id), orderBy("dueDate", "desc"))
+  }, [db, selectedClientDossier])
+  const { data: clientTransactions } = useCollection(clientFinancialQuery)
+
+  const financialStats = useMemo(() => {
+    if (!clientTransactions) return { totalHonorarios: 0, totalPendente: 0, totalDespesas: 0, totalAcordos: 0 }
+    
+    let honorarios = 0
+    let pendente = 0
+    let despesas = 0
+    let acordos = 0
+
+    clientTransactions.forEach(t => {
+      const val = Number(t.value) || 0
+      if (t.type?.includes('Entrada')) {
+        if (t.category?.includes('Honorários')) honorarios += val
+        if (t.category?.includes('Acordo')) acordos += val
+        if (t.status === 'Pendente') pendente += val
+      } else {
+        despesas += val
+      }
+    })
+
+    return { totalHonorarios: honorarios, totalPendente: pendente, totalDespesas: despesas, totalAcordos: acordos }
+  }, [clientTransactions])
 
   const handleOpenCreate = () => {
     setEditingClient(null)
@@ -156,6 +188,36 @@ export default function ClientsPage() {
     setIsSheetOpen(false)
   }
 
+  const handleSaveFinancial = (data: any) => {
+    if (!user || !db || !selectedClientDossier) return
+
+    const iterations = data.isRecurring ? (data.recurrenceMonths || 1) : 1
+    const baseDueDate = parseISO(data.dueDate)
+
+    for (let i = 0; i < iterations; i++) {
+      const currentDueDate = addMonths(baseDueDate, i)
+      const formattedDueDate = format(currentDueDate, 'yyyy-MM-dd')
+      
+      const newTitle = {
+        ...data,
+        clientId: selectedClientDossier.id,
+        clientName: selectedClientDossier.name,
+        dueDate: formattedDueDate,
+        value: data.numericValue,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+      
+      delete newTitle.numericValue
+      delete newTitle.recurrenceMonths
+
+      addDocumentNonBlocking(collection(db!, "financial_titles"), newTitle)
+    }
+
+    setIsNewFinancialOpen(false)
+    toast({ title: "Lançamento Registrado" })
+  }
+
   const handleDeleteClient = (id: string) => {
     if (!db || !confirm("Deseja remover este cliente permanentemente?")) return
     deleteDocumentNonBlocking(doc(db!, "clients", id))
@@ -183,19 +245,19 @@ export default function ClientsPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-4xl font-black text-white uppercase tracking-tighter">{selectedClientDossier.name}</h1>
-                <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary px-3 h-6">DOSSIÊ 360º</Badge>
+                <h1 className="text-3xl font-black text-white uppercase tracking-tighter">{selectedClientDossier.name}</h1>
+                <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary px-3 h-6">DOSSIÊ 360º</Badge>
               </div>
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-60">
+              <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest opacity-60">
                 CPF/CNPJ: {selectedClientDossier.documentNumber} • Cadastrado em {selectedClientDossier.createdAt?.toDate ? new Date(selectedClientDossier.createdAt.toDate()).toLocaleDateString() : 'N/A'}
               </p>
             </div>
           </div>
           <div className="flex gap-3">
-            <Button onClick={() => handleOpenEdit(selectedClientDossier)} className="glass border-white/10 text-[11px] font-black uppercase tracking-widest h-12 px-8 rounded-xl gap-2 hover:bg-white/5 transition-all">
+            <Button onClick={() => handleOpenEdit(selectedClientDossier)} variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest h-11 px-6 rounded-xl gap-2 hover:bg-white/5 transition-all">
               <Edit3 className="h-4 w-4" /> Editar Ficha
             </Button>
-            <Button onClick={() => setIsNewProcessOpen(true)} className="gold-gradient text-background font-black text-[11px] uppercase tracking-widest h-12 px-8 rounded-xl shadow-xl hover:scale-105 transition-all">
+            <Button onClick={() => setIsNewProcessOpen(true)} className="gold-gradient text-background font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl shadow-xl hover:scale-105 transition-all">
               <Plus className="h-4 w-4" /> Novo Processo
             </Button>
           </div>
@@ -203,58 +265,128 @@ export default function ClientsPage() {
 
         <Tabs defaultValue="overview" className="space-y-8">
           <TabsList className="bg-transparent border-b border-white/5 h-12 p-0 gap-8 w-full justify-start rounded-none">
-            <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
-            <TabsTrigger value="processos" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">PROCESSOS ({clientProcesses?.length || 0})</TabsTrigger>
-            <TabsTrigger value="agenda" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">AGENDA & ATOS</TabsTrigger>
+            <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
+            <TabsTrigger value="processos" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">PROCESSOS ({clientProcesses?.length || 0})</TabsTrigger>
+            <TabsTrigger value="financeiro" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">FINANCEIRO</TabsTrigger>
+            <TabsTrigger value="agenda" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">AGENDA & ATOS</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="glass border-white/5 p-8 space-y-6 rounded-2xl shadow-xl">
+              <Card className="glass border-white/5 p-6 space-y-6 rounded-2xl shadow-xl">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><Users className="h-5 w-5" /></div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Informações de Contato</h3>
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Informações de Contato</h3>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">WhatsApp / Celular</p>
-                    <p className="text-base font-bold text-white uppercase">{selectedClientDossier.phone || "Não informado"}</p>
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">WhatsApp / Celular</p>
+                    <p className="text-sm font-bold text-white uppercase">{selectedClientDossier.phone || "Não informado"}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">E-mail</p>
-                    <p className="text-base font-bold text-white lowercase">{selectedClientDossier.email || "Não informado"}</p>
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">E-mail</p>
+                    <p className="text-sm font-bold text-white lowercase">{selectedClientDossier.email || "Não informado"}</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="glass border-white/5 p-8 space-y-6 rounded-2xl shadow-xl">
+              <Card className="glass border-white/5 p-6 space-y-6 rounded-2xl shadow-xl">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><Briefcase className="h-5 w-5" /></div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Resumo Processual</h3>
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Resumo Processual</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white/5 p-4 rounded-xl text-center border border-white/5">
-                    <p className="text-2xl font-black text-white">{clientProcesses?.length || 0}</p>
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">Dossiês Ativos</p>
+                    <p className="text-xl font-black text-white">{clientProcesses?.length || 0}</p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Dossiês Ativos</p>
                   </div>
                   <div className="bg-white/5 p-4 rounded-xl text-center border border-white/5">
-                    <p className="text-2xl font-black text-emerald-500">{clientAgenda?.length || 0}</p>
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">Atos Agendados</p>
+                    <p className="text-xl font-black text-emerald-500">{clientAgenda?.length || 0}</p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Atos Agendados</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 space-y-6 rounded-2xl shadow-xl">
+              <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-6 space-y-6 rounded-2xl shadow-xl">
                 <div className="flex items-center gap-4 border-b border-emerald-500/10 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-500"><Wallet className="h-5 w-5" /></div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Painel Financeiro</h3>
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Painel Financeiro</h3>
                 </div>
-                <p className="text-xs text-emerald-500/70 font-bold uppercase tracking-widest">Consulte repasses e honorários vinculados ao CPF deste cliente na Central Financeira.</p>
-                <Button asChild variant="outline" className="w-full border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 h-10 rounded-xl text-[10px] font-black uppercase">
-                  <Link href="/billing">Acessar Carteira <ChevronRight className="h-3 w-3 ml-2" /></Link>
+                <p className="text-[10px] text-emerald-500/70 font-bold uppercase tracking-widest leading-relaxed">Consulte repasses e honorários vinculados ao CPF deste cliente na Central Financeira.</p>
+                <Button onClick={() => setActiveTab("financeiro")} variant="outline" className="w-full border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 h-10 rounded-xl text-[9px] font-black uppercase tracking-widest">
+                  Acessar Carteira <ChevronRight className="h-3 w-3 ml-2" />
                 </Button>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="financeiro" className="space-y-6 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="glass border-primary/20 p-5 rounded-2xl">
+                <p className="text-[9px] font-black text-primary uppercase mb-2 flex items-center gap-2"><Scale className="h-3 w-3" /> Honorários Totais</p>
+                <p className="text-xl font-black text-white tabular-nums">R$ {financialStats.totalHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </Card>
+              <Card className="glass border-rose-500/20 p-5 rounded-2xl">
+                <p className="text-[9px] font-black text-rose-500 uppercase mb-2 flex items-center gap-2"><AlertCircle className="h-3 w-3" /> Saldo Pendente</p>
+                <p className="text-xl font-black text-rose-400 tabular-nums">R$ {financialStats.totalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </Card>
+              <Card className="glass border-emerald-500/20 p-5 rounded-2xl">
+                <p className="text-[9px] font-black text-emerald-500 uppercase mb-2 flex items-center gap-2"><TrendingUp className="h-3 w-3" /> Verba de Acordos</p>
+                <p className="text-xl font-black text-white tabular-nums">R$ {financialStats.totalAcordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </Card>
+              <Card className="glass border-white/5 p-5 rounded-2xl">
+                <p className="text-[9px] font-black text-muted-foreground uppercase mb-2 flex items-center gap-2"><Calculator className="h-3 w-3" /> Despesas Totais</p>
+                <p className="text-xl font-black text-white tabular-nums">R$ {financialStats.totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </Card>
+            </div>
+
+            <Card className="glass border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+              <div className="p-6 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
+                <h3 className="text-xs font-black text-white uppercase tracking-widest">Extrato Financeiro do Cliente</h3>
+                <Button onClick={() => setIsNewFinancialOpen(true)} className="h-9 px-5 gold-gradient text-background font-black text-[9px] uppercase tracking-widest gap-2 rounded-lg">
+                  <Plus className="h-3.5 w-3.5" /> Lançar Valor
+                </Button>
+              </div>
+              <div className="divide-y divide-white/5">
+                {clientTransactions && clientTransactions.length > 0 ? (
+                  clientTransactions.map(t => (
+                    <div key={t.id} className="p-5 flex items-center justify-between hover:bg-white/[0.01] transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center border",
+                          t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                        )}>
+                          {t.type?.includes("Saída") ? <ArrowDownRight className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-white uppercase tracking-tight">{t.description}</h4>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase">{t.category}</Badge>
+                            <span className="text-[9px] text-muted-foreground font-mono">VENC: {t.dueDate}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("text-base font-black tabular-nums", t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400")}>
+                          {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <Badge className={cn(
+                          "text-[8px] font-black uppercase mt-1",
+                          t.status === 'Pago' || t.status === 'Recebido' ? "bg-emerald-500/10 text-emerald-500 border-0" : "bg-amber-500/10 text-amber-500 border-0"
+                        )}>
+                          {t.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-20 text-center opacity-30 space-y-4">
+                    <Wallet className="h-12 w-12 mx-auto" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma transação registrada</p>
+                  </div>
+                )}
+              </div>
+            </Card>
           </TabsContent>
 
           <TabsContent value="processos">
@@ -314,13 +446,12 @@ export default function ClientsPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Modal de Novo Processo já vinculado */}
         <Sheet open={isNewProcessOpen} onOpenChange={setIsNewProcessOpen}>
           <SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-4xl">
             <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
               <SheetHeader>
-                <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">Vincular Processo</SheetTitle>
-                <SheetDescription className="text-muted-foreground text-[11px] uppercase font-bold tracking-[0.2em] mt-1">Novo dossiê estratégico para {selectedClientDossier.name}.</SheetDescription>
+                <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Vincular Processo</SheetTitle>
+                <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Novo dossiê estratégico para {selectedClientDossier.name}.</SheetDescription>
               </SheetHeader>
             </div>
             <ProcessForm 
@@ -334,6 +465,20 @@ export default function ClientsPage() {
             />
           </SheetContent>
         </Sheet>
+
+        <Dialog open={isNewFinancialOpen} onOpenChange={setIsNewFinancialOpen}>
+          <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
+            <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+              <DialogHeader>
+                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Novo Lançamento RGMJ</DialogTitle>
+                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Registro de crédito ou débito para {selectedClientDossier.name}.</DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="px-10 py-8 bg-[#0a0f1e]/50">
+              <FinancialTitleForm onSubmit={handleSaveFinancial} onCancel={() => setIsNewFinancialOpen(false)} />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
@@ -342,13 +487,13 @@ export default function ClientsPage() {
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
             <LayoutGrid className="h-3 w-3" />
             <Link href="/" className="hover:text-primary transition-colors">Início</Link>
             <ChevronRight className="h-2 w-2" />
             <span className="text-white uppercase tracking-tighter">Base de Clientes</span>
           </div>
-          <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">Clientes Ativos</h1>
+          <h1 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Clientes Ativos</h1>
           <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Gestão estratégica RGMJ.</p>
         </div>
         
@@ -433,7 +578,7 @@ export default function ClientsPage() {
         <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl flex flex-col h-full", getDrawerWidthClass())}>
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
             <SheetHeader>
-              <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
+              <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 {editingClient ? "Ficha do Cliente" : "Novo Cliente"}
               </SheetTitle>
               <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
