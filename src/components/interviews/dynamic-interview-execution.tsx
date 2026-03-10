@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
@@ -17,9 +18,7 @@ import {
   Save, 
   ChevronRight, 
   ListChecks,
-  Activity,
-  Bookmark,
-  GripVertical
+  Bookmark
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -246,7 +245,11 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
             <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Responsável Técnico</span>
             <span className="text-xs font-bold text-white uppercase">{user?.displayName}</span>
           </div>
-          <Button onClick={handleFinalize} disabled={loading} className="gold-gradient text-background font-black h-16 px-16 rounded-2xl shadow-2xl uppercase text-[13px] tracking-[0.2em] gap-4 transition-all hover:scale-[1.02] group relative overflow-hidden">
+          <Button 
+            onClick={handleFinalize} 
+            disabled={loading} 
+            className="gold-gradient text-background font-black h-16 px-16 rounded-2xl shadow-2xl uppercase text-[13px] tracking-[0.2em] gap-4 transition-all hover:scale-[1.02] group relative overflow-hidden"
+          >
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <ShieldCheck className="h-6 w-6" />}
             PROTOCOLAR ATENDIMENTO
           </Button>

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
@@ -65,7 +66,7 @@ import {
 import { 
   Dialog, 
   DialogContent,
-  DialogHeader,
+  DialogHeader, 
   DialogTitle, 
   DialogDescription,
   DialogFooter
@@ -88,7 +89,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
-import { collection, query, serverTimestamp, doc, where, limit, orderBy, getDocs } from "firebase/firestore"
+import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
@@ -172,6 +173,24 @@ export default function LeadsPage() {
   }, [db, user, activeLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
 
+  const getDrawerWidthClass = () => {
+    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
+    switch (pref) {
+      case "padrão": return "sm:max-w-lg"
+      case "largo": return "sm:max-w-2xl"
+      case "extra-largo": return "sm:max-w-4xl"
+      case "full": return "sm:max-w-full"
+      default: return "sm:max-w-4xl"
+    }
+  }
+
+  const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
+  const canGoBack = currentTabIndex > 0
+  const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
+
+  const handleNextTab = () => { if (currentTabIndex < 3) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
+
   useEffect(() => {
     if (activeLead) {
       if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("entrevistas")
@@ -252,7 +271,7 @@ export default function LeadsPage() {
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !activeLead || !user) return
-    await addDocumentNonBlocking(collection(db!, "interviews"), { clientId: activeLead.id, clientName: activeLead.name, templateId: executingTemplate.id, interviewType: executingTemplate.title, responses: payload.responses, templateSnapshot: payload.templateSnapshot, interviewerId: user.uid, interviewerName: user.displayName, status: "Concluída", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+    addDocumentNonBlocking(collection(db!, "interviews"), { clientId: activeLead.id, clientName: activeLead.name, templateId: executingTemplate.id, interviewType: executingTemplate.title, responses: payload.responses, templateSnapshot: payload.templateSnapshot, interviewerId: user.uid, interviewerName: user.displayName, status: "Concluída", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
     if (activeLead.status === 'novo') updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "atendimento", updatedAt: serverTimestamp() })
     setIsInterviewDialogOpen(false); setExecutingTemplate(null); toast({ title: "Protocolo Concluído" })
   }
@@ -295,10 +314,6 @@ export default function LeadsPage() {
 
   const handleDeleteLead = (id: string) => { if (!db || !confirm("Excluir Lead?")) return; deleteDocumentNonBlocking(doc(db, "leads", id)); toast({ title: "Lead Removido" }); setIsSheetOpen(false); }
 
-  const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
-  const handleNextTab = () => { if (currentTabIndex < 3) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -329,7 +344,13 @@ export default function LeadsPage() {
                   <AnimatePresence>
                     {leadsInCol.map((lead) => (
                       <motion.div key={lead.id} layoutId={lead.id} draggable onDragStart={() => handleDragStart(lead.id)}>
-                        <Card className={cn("glass hover-gold transition-all cursor-grab active:cursor-grabbing border-white/5 shadow-lg rounded-xl overflow-hidden", draggedLeadId === lead.id && "opacity-50")} onClick={() => handleOpenLead(lead)}>
+                        <Card 
+                          className={cn(
+                            "glass hover-gold transition-all cursor-grab active:cursor-grabbing border-white/5 shadow-lg rounded-xl overflow-hidden", 
+                            draggedLeadId === lead.id && "opacity-50"
+                          )} 
+                          onClick={() => handleOpenLead(lead)}
+                        >
                           <CardContent className="p-4 space-y-4">
                             <div className="flex items-start justify-between gap-3">
                               <div className="space-y-1 flex-1 min-w-0"><div className="font-bold text-sm text-white group-hover:text-primary uppercase truncate">{lead.name}</div><span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span></div>
@@ -393,7 +414,7 @@ export default function LeadsPage() {
 
               <ScrollArea className="flex-1 bg-[#05070a]">
                 <div className="p-6 space-y-6 w-full max-w-[1400px] mx-auto pb-32">
-                  <Tabs value={activeDossierTab} onValueChange={setActiveTab} className="space-y-6">
+                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-6">
                     <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-8">
                       {["overview", "entrevistas", "burocracia", "revisao"].map(tab => (
                         <TabsTrigger key={tab} value={tab} className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">{tab.toUpperCase()} {tab === 'entrevistas' && leadInterviews && leadInterviews.length > 0 && `(${leadInterviews.length})`}</TabsTrigger>
