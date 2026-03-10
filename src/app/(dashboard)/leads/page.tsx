@@ -48,7 +48,9 @@ import {
   Save,
   Map as MapIcon,
   MoreVertical,
-  X
+  X,
+  Share2,
+  ExternalLink
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -158,6 +160,7 @@ export default function LeadsPage() {
   })
 
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
+  const [intakeSuccess, setIntakeSuccess] = useState(false)
   const [intakeData, setIntakeData] = useState({
     date: "",
     time: "",
@@ -195,6 +198,7 @@ export default function LeadsPage() {
       else setActiveDossierTab("overview")
       setStrategicSummary(null)
       setIsSchedulingHearing(false)
+      setIntakeSuccess(false)
       setHearingData({
         type: "UNA",
         date: "",
@@ -283,6 +287,10 @@ export default function LeadsPage() {
       return
     }
 
+    const meetLink = intakeData.type === 'online' 
+      ? `https://meet.google.com/rgmj-atend-${Math.random().toString(36).substring(7)}` 
+      : "";
+
     const finalLocation = intakeData.type === 'online' 
       ? 'Virtual RGMJ' 
       : (intakeData.locationType === 'sede' ? 'Sede RGMJ (Rua do Advogado, 123)' : intakeData.customAddress)
@@ -294,6 +302,7 @@ export default function LeadsPage() {
       locationType: intakeData.locationType,
       customAddress: intakeData.customAddress,
       meetingLocation: finalLocation,
+      meetingLink: meetLink,
       intakeObservations: intakeData.observations,
       updatedAt: serverTimestamp()
     }
@@ -308,6 +317,7 @@ export default function LeadsPage() {
       clientName: selectedLead.name,
       meetingType: intakeData.type,
       location: finalLocation,
+      meetingLink: meetLink,
       observations: intakeData.observations,
       status: "Agendado",
       createdAt: serverTimestamp(),
@@ -316,12 +326,37 @@ export default function LeadsPage() {
     addDocumentNonBlocking(collection(db, "appointments"), appointmentPayload)
 
     setSelectedLead({ ...selectedLead, ...payload })
-    setIsSchedulingIntake(false)
+    setIntakeSuccess(true)
     
     toast({ 
       title: "Atendimento Agendado", 
       description: "O ato foi sincronizado com o Google Calendar da banca." 
     })
+  }
+
+  const handleShareIntake = (method: 'whatsapp' | 'email') => {
+    if (!selectedLead) return
+    
+    const date = new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')
+    const time = selectedLead.scheduledTime
+    const location = selectedLead.meetingLocation
+    const link = selectedLead.meetingLink
+    
+    let message = `Olá ${selectedLead.name},\n\nConfirmamos seu agendamento com a banca RGMJ Advogados.\n\n📅 Data: ${date}\n⏰ Horário: ${time}\n📍 Local: ${location}`
+    
+    if (link) {
+      message += `\n🔗 Link da Reunião: ${link}`
+    }
+    
+    message += `\n\nAtenciosamente,\nDr. Reinaldo Gonçalves.`
+
+    if (method === 'whatsapp') {
+      const phone = selectedLead.phone?.replace(/\D/g, '')
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank")
+    } else {
+      const subject = encodeURIComponent("Confirmação de Agendamento - RGMJ Advogados")
+      window.open(`mailto:${selectedLead.email}?subject=${subject}&body=${encodeURIComponent(message)}`, "_blank")
+    }
   }
 
   const handleSyncDrive = async () => {
@@ -586,7 +621,7 @@ export default function LeadsPage() {
                         <Card 
                           className={cn(
                             "glass hover-gold transition-all cursor-grab active:cursor-grabbing group border-white/5 shadow-lg rounded-xl overflow-hidden",
-                            draggedLeadId === lead.id && "opacity-50 grayscale scale-95"
+                            draggedLeadId === CalvertId && "opacity-50 grayscale scale-95"
                           )} 
                           onClick={() => handleOpenLead(lead)}
                         >
@@ -741,7 +776,19 @@ export default function LeadsPage() {
                           onClick={() => setIsSchedulingIntake(true)}
                         >
                           <div className="absolute top-0 right-0 p-6 opacity-5"><Clock className="h-16 w-16" /></div>
-                          <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2.5 mb-4"><Clock className="h-4 w-4" /> Cronograma</h4>
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2.5"><Clock className="h-4 w-4" /> Cronograma</h4>
+                            {selectedLead.scheduledDate && (
+                              <div className="flex gap-2">
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10 rounded-lg" onClick={(e) => { e.stopPropagation(); handleShareIntake('whatsapp'); }}>
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 rounded-lg" onClick={(e) => { e.stopPropagation(); handleShareIntake('email'); }}>
+                                  <Mail className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                           <div className="space-y-3">
                             <p className="text-lg font-bold text-white uppercase tracking-tighter">
                               {selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} às ${selectedLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
@@ -749,6 +796,9 @@ export default function LeadsPage() {
                             <Badge variant="outline" className="text-[10px] font-black text-muted-foreground border-white/10 px-3 py-1 rounded-lg uppercase tracking-widest bg-white/[0.02]">
                               {selectedLead.meetingType === 'online' ? '🖥️ VIRTUAL RGMJ' : `🏢 PRESENCIAL: ${selectedLead.meetingLocation || 'LOCAL A DEFINIR'}`}
                             </Badge>
+                            {selectedLead.meetingLink && (
+                              <p className="text-[10px] text-primary font-mono font-bold truncate mt-2 opacity-60">LINK: {selectedLead.meetingLink}</p>
+                            )}
                           </div>
                         </Card>
                         <Card className="glass border-primary/15 p-6 rounded-2xl shadow-xl bg-primary/5 relative overflow-hidden">
@@ -785,7 +835,7 @@ export default function LeadsPage() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {leadInterviews.map((int, idx) => (
-                              <Card key={idx} className="glass border-white/5 hover:border-primary/20 transition-all p-5 rounded-2xl bg-white/[0.01] flex flex-col h-full group">
+                              <Card key={idx} className="glass border-white/5 hover-gold transition-all p-5 rounded-2xl bg-white/[0.01] flex flex-col h-full group">
                                 <div className="flex justify-between items-start mb-3">
                                   <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-2 h-5">
                                     {int.interviewType}
@@ -1046,121 +1096,161 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
+      <Dialog open={isSchedulingIntake} onOpenChange={(open) => {
+        setIsSchedulingIntake(open);
+        if (!open) setIntakeSuccess(false);
+      }}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-lg uppercase tracking-widest flex items-center gap-3">
-                <CalendarIcon className="h-5 w-5 text-amber-500" /> Agendar Atendimento
-              </DialogTitle>
-            </DialogHeader>
-          </div>
-          
-          <ScrollArea className="max-h-[60vh]">
-            <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modalidade</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setIntakeData({...intakeData, type: 'online'})}
-                    className={cn(
-                      "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
-                      intakeData.type === 'online' 
-                        ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
-                        : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
-                    )}
-                  >
-                    <Video className="h-4 w-4" /> REUNIÃO ONLINE
-                  </button>
-                  <button 
-                    onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
-                    className={cn(
-                      "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
-                      intakeData.type === 'presencial' 
-                        ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
-                        : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
-                    )}
-                  >
-                    <MapPin className="h-4 w-4" /> PRESENCIAL
-                  </button>
-                </div>
+          {!intakeSuccess ? (
+            <>
+              <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+                <DialogHeader>
+                  <DialogTitle className="text-white font-headline text-lg uppercase tracking-widest flex items-center gap-3">
+                    <CalendarIcon className="h-5 w-5 text-amber-500" /> Agendar Atendimento
+                  </DialogTitle>
+                </DialogHeader>
               </div>
+              
+              <ScrollArea className="max-h-[60vh]">
+                <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modalidade</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={() => setIntakeData({...intakeData, type: 'online'})}
+                        className={cn(
+                          "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
+                          intakeData.type === 'online' 
+                            ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
+                            : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
+                        )}
+                      >
+                        <Video className="h-4 w-4" /> REUNIÃO ONLINE
+                      </button>
+                      <button 
+                        onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
+                        className={cn(
+                          "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
+                          intakeData.type === 'presencial' 
+                            ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
+                            : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
+                        )}
+                      >
+                        <MapPin className="h-4 w-4" /> PRESENCIAL
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data</Label>
-                  <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                  <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data</Label>
+                      <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
+                      <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
+                    </div>
+                  </div>
 
-              {intakeData.type === 'presencial' && (
-                <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Local do Atendimento</Label>
-                  <Select value={intakeData.locationType} onValueChange={(v) => setIntakeData({...intakeData, locationType: v})}>
-                    <SelectTrigger className="glass h-12 text-white font-bold uppercase text-[10px] rounded-xl border-white/10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="sede">🏢 SEDE RGMJ (OFICIAL)</SelectItem>
-                      <SelectItem value="externo">📍 ENDEREÇO EXTERNO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  {intakeData.locationType === 'externo' && (
-                    <div className="relative mt-2">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                      <Input 
-                        placeholder="BUSCAR ENDEREÇO..." 
-                        className="glass h-12 pl-12 text-white text-xs font-bold uppercase rounded-xl border-white/10"
-                        value={locationSearch}
-                        onChange={(e) => setLocationSearch(e.target.value)}
-                      />
-                      {isSearchingLocation && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                  {intakeData.type === 'presencial' && (
+                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Local do Atendimento</Label>
+                      <Select value={intakeData.locationType} onValueChange={(v) => setIntakeData({...intakeData, locationType: v})}>
+                        <SelectTrigger className="glass h-12 text-white font-bold uppercase text-[10px] rounded-xl border-white/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] text-white">
+                          <SelectItem value="sede">🏢 SEDE RGMJ (OFICIAL)</SelectItem>
+                          <SelectItem value="externo">📍 ENDEREÇO EXTERNO</SelectItem>
+                        </SelectContent>
+                      </Select>
                       
-                      {locationResults.length > 0 && (
-                        <div className="absolute z-[100] w-full mt-2 bg-[#0d121f] border border-primary/20 rounded-xl overflow-hidden shadow-2xl">
-                          {locationResults.map((place, i) => (
-                            <button key={i} onClick={() => handleSelectLocation(place)} className="w-full p-4 text-left hover:bg-primary/10 border-b border-white/5 last:border-0 transition-all">
-                              <p className="text-[10px] font-bold text-white uppercase leading-tight">{place.display_name}</p>
-                            </button>
-                          ))}
+                      {intakeData.locationType === 'externo' && (
+                        <div className="relative mt-2">
+                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                          <Input 
+                            placeholder="BUSCAR ENDEREÇO..." 
+                            className="glass h-12 pl-12 text-white text-xs font-bold uppercase rounded-xl border-white/10"
+                            value={locationSearch}
+                            onChange={(e) => setLocationSearch(e.target.value)}
+                          />
+                          {isSearchingLocation && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                          
+                          {locationResults.length > 0 && (
+                            <div className="absolute z-[100] w-full mt-2 bg-[#0d121f] border border-primary/20 rounded-xl overflow-hidden shadow-2xl">
+                              {locationResults.map((place, i) => (
+                                <button key={i} onClick={() => handleSelectLocation(place)} className="w-full p-4 text-left hover:bg-primary/10 border-b border-white/5 last:border-0 transition-all">
+                                  <p className="text-[10px] font-bold text-white uppercase leading-tight">{place.display_name}</p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Observações Táticas</Label>
+                    <Textarea 
+                      placeholder="INSTRUÇÕES PARA O RITO..."
+                      className="glass min-h-[100px] text-white text-[11px] uppercase font-bold border-white/10 focus:ring-primary/50 resize-none p-4 rounded-xl"
+                      value={intakeData.observations}
+                      onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
+                    />
+                  </div>
                 </div>
-              )}
+              </ScrollArea>
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Observações Táticas</Label>
-                <Textarea 
-                  placeholder="INSTRUÇÕES PARA O RITO..."
-                  className="glass min-h-[100px] text-white text-[11px] uppercase font-bold border-white/10 focus:ring-primary/50 resize-none p-4 rounded-xl"
-                  value={intakeData.observations}
-                  onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
-                />
+              <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+                <button 
+                  onClick={() => setIsSchedulingIntake(false)} 
+                  className="text-muted-foreground font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors"
+                >
+                  CANCELAR
+                </button>
+                <Button 
+                  onClick={handleScheduleIntake} 
+                  className="gold-gradient text-black font-black h-14 px-10 rounded-xl uppercase text-[11px] tracking-widest shadow-2xl hover:scale-[1.02] transition-all"
+                >
+                  CONFIRMAR AGENDA
+                </Button>
               </div>
+            </>
+          ) : (
+            <div className="p-12 flex flex-col items-center text-center space-y-8 animate-in zoom-in-95 duration-500">
+              <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white uppercase tracking-tight">Atendimento Agendado</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">O rito foi sincronizado com a pauta estratégica.</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <Button 
+                  onClick={() => handleShareIntake('whatsapp')}
+                  className="h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl"
+                >
+                  <MessageCircle className="h-4 w-4" /> ENVIAR WHATSAPP
+                </Button>
+                <Button 
+                  onClick={() => handleShareIntake('email')}
+                  variant="outline"
+                  className="h-14 glass border-white/10 text-white font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl"
+                >
+                  <Mail className="h-4 w-4" /> NOTIFICAR POR E-MAIL
+                </Button>
+              </div>
+              
+              <button 
+                onClick={() => setIsSchedulingIntake(false)}
+                className="text-[9px] font-black text-muted-foreground uppercase tracking-widest hover:text-white transition-colors pt-4"
+              >
+                FECHAR E RETORNAR AO FUNIL
+              </button>
             </div>
-          </ScrollArea>
-
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <button 
-              onClick={() => setIsSchedulingIntake(false)} 
-              className="text-muted-foreground font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors"
-            >
-              CANCELAR
-            </button>
-            <Button 
-              onClick={handleScheduleIntake} 
-              className="gold-gradient text-black font-black h-14 px-10 rounded-xl uppercase text-[11px] tracking-widest shadow-2xl hover:scale-[1.02] transition-all"
-            >
-              CONFIRMAR AGENDA
-            </Button>
-          </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 
