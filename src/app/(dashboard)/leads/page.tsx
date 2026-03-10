@@ -108,7 +108,7 @@ const DOSSIER_TABS = ["overview", "entrevistas", "burocracia", "revisao"]
 
 export default function LeadsPage() {
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const { toast } = useToast()
 
   const leadsQuery = useMemoFirebase(() => {
@@ -1048,7 +1048,7 @@ export default function LeadsPage() {
 
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
-          <div className="p-5 bg-[#0a0f1e] border-b border-white/5">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-lg uppercase tracking-widest flex items-center gap-3">
                 <CalendarIcon className="h-5 w-5 text-amber-500" /> Agendar Atendimento
@@ -1056,44 +1056,90 @@ export default function LeadsPage() {
             </DialogHeader>
           </div>
           
-          <ScrollArea className="max-h-[50vh]">
-            <div className="p-6 space-y-5 bg-[#0a0f1e]/50">
-              <div className="space-y-2.5">
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
+              <div className="space-y-3">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modalidade</Label>
                 <div className="grid grid-cols-2 gap-3">
-                  <Button 
+                  <button 
                     onClick={() => setIntakeData({...intakeData, type: 'online'})}
-                    variant={intakeData.type === 'online' ? 'secondary' : 'outline'}
-                    className={cn("h-11 font-black uppercase text-[9px] tracking-widest gap-2 rounded-lg", intakeData.type === 'online' ? 'bg-primary text-background' : 'glass border-white/10')}
+                    className={cn(
+                      "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
+                      intakeData.type === 'online' 
+                        ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
+                        : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
+                    )}
                   >
-                    <Video className="h-3.5 w-3.5" /> REUNIÃO ONLINE
-                  </Button>
-                  <Button 
+                    <Video className="h-4 w-4" /> REUNIÃO ONLINE
+                  </button>
+                  <button 
                     onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
-                    variant={intakeData.type === 'presencial' ? 'secondary' : 'outline'}
-                    className={cn("h-11 font-black uppercase text-[9px] tracking-widest gap-2 rounded-lg", intakeData.type === 'presencial' ? 'bg-primary text-background' : 'glass border-white/10')}
+                    className={cn(
+                      "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
+                      intakeData.type === 'presencial' 
+                        ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
+                        : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
+                    )}
                   >
-                    <MapPin className="h-3.5 w-3.5" /> PRESENCIAL
-                  </Button>
+                    <MapPin className="h-4 w-4" /> PRESENCIAL
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data</Label>
-                  <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-10 text-white font-bold border-white/20 text-xs" />
+                  <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                  <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-10 text-white font-bold border-white/20 text-xs" />
+                  <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
                 </div>
               </div>
 
-              <div className="space-y-2.5">
+              {intakeData.type === 'presencial' && (
+                <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Local do Atendimento</Label>
+                  <Select value={intakeData.locationType} onValueChange={(v) => setIntakeData({...intakeData, locationType: v})}>
+                    <SelectTrigger className="glass h-12 text-white font-bold uppercase text-[10px] rounded-xl border-white/10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="sede">🏢 SEDE RGMJ (OFICIAL)</SelectItem>
+                      <SelectItem value="externo">📍 ENDEREÇO EXTERNO</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {intakeData.locationType === 'externo' && (
+                    <div className="relative mt-2">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                      <Input 
+                        placeholder="BUSCAR ENDEREÇO..." 
+                        className="glass h-12 pl-12 text-white text-xs font-bold uppercase rounded-xl border-white/10"
+                        value={locationSearch}
+                        onChange={(e) => setLocationSearch(e.target.value)}
+                      />
+                      {isSearchingLocation && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                      
+                      {locationResults.length > 0 && (
+                        <div className="absolute z-[100] w-full mt-2 bg-[#0d121f] border border-primary/20 rounded-xl overflow-hidden shadow-2xl">
+                          {locationResults.map((place, i) => (
+                            <button key={i} onClick={() => handleSelectLocation(place)} className="w-full p-4 text-left hover:bg-primary/10 border-b border-white/5 last:border-0 transition-all">
+                              <p className="text-[10px] font-bold text-white uppercase leading-tight">{place.display_name}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Observações Táticas</Label>
                 <Textarea 
-                  placeholder="Instruções para o rito..."
-                  className="glass min-h-[80px] text-white text-[10px] uppercase font-bold border-white/20 focus:ring-primary/50 resize-none p-3 rounded-xl"
+                  placeholder="INSTRUÇÕES PARA O RITO..."
+                  className="glass min-h-[100px] text-white text-[11px] uppercase font-bold border-white/10 focus:ring-primary/50 resize-none p-4 rounded-xl"
                   value={intakeData.observations}
                   onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
                 />
@@ -1101,9 +1147,17 @@ export default function LeadsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-5 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground font-black uppercase text-[9px] tracking-widest">CANCELAR</Button>
-            <Button onClick={handleScheduleIntake} className="gold-gradient text-black font-black h-11 px-6 rounded-lg uppercase text-[9px] tracking-widest shadow-xl">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <button 
+              onClick={() => setIsSchedulingIntake(false)} 
+              className="text-muted-foreground font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors"
+            >
+              CANCELAR
+            </button>
+            <Button 
+              onClick={handleScheduleIntake} 
+              className="gold-gradient text-black font-black h-14 px-10 rounded-xl uppercase text-[11px] tracking-widest shadow-2xl hover:scale-[1.02] transition-all"
+            >
               CONFIRMAR AGENDA
             </Button>
           </DialogFooter>
