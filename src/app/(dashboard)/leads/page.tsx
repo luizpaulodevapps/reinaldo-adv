@@ -50,7 +50,9 @@ import {
   MoreVertical,
   X,
   Share2,
-  ExternalLink
+  ExternalLink,
+  BookOpen,
+  ClipboardList
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -98,6 +100,7 @@ import { generateCaseSummary, type GenerateCaseSummaryOutput } from "@/ai/flows/
 import { aiAnalyzeFullInterview, type AnalyzeInterviewOutput } from "@/ai/flows/ai-analyze-full-interview"
 import { motion, AnimatePresence } from "framer-motion"
 import { Textarea } from "@/components/ui/textarea"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -188,7 +191,7 @@ export default function LeadsPage() {
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
-  // Query de Entrevistas Concluídas para o Lead Ativo - ESTABILIZADA
+  // Query de Entrevistas Concluídas para o Lead Ativo
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id
     if (!user || !db || !leadId) return null
@@ -566,6 +569,17 @@ export default function LeadsPage() {
   const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
   const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
+  const getDrawerWidthClass = () => {
+    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
+    switch (pref) {
+      case "padrão": return "sm:max-w-lg"
+      case "largo": return "sm:max-w-2xl"
+      case "extra-largo": return "sm:max-w-4xl"
+      case "full": return "sm:max-w-full"
+      default: return "sm:max-w-4xl"
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -819,11 +833,11 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="w-full space-y-8 animate-in fade-in duration-700">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2.5 border-b border-white/5 pb-2.5">
-                          <PlusCircle className="h-3.5 w-3.5 text-primary" />
-                          <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3>
+                    <TabsContent value="entrevistas" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><PlusCircle className="h-4 w-4 text-primary" /></div>
+                          <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           {templates?.map(t => (
@@ -831,74 +845,88 @@ export default function LeadsPage() {
                               key={t.id} 
                               onClick={() => handleStartInterview(t)} 
                               variant="outline" 
-                              className="glass border-primary/15 text-primary font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:bg-primary hover:text-background transition-all shadow-lg border-2"
+                              className="glass border-white/10 text-white font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-lg group border-2"
                             >
-                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Zap className="h-4 w-4" /></div>
-                              <span className="truncate flex-1 text-left leading-tight">{t.title}</span>
+                              <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-all"><Zap className="h-4 w-4 text-primary" /></div>
+                              <span className="truncate flex-1 text-left leading-snug tracking-tight uppercase">{t.title}</span>
                             </Button>
                           ))}
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-4">
-                        <div className="flex items-center gap-2.5 border-b border-white/5 pb-2.5">
-                          <FileSearch className="h-3.5 w-3.5 text-emerald-500" />
-                          <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">
-                            Entrevistas Concluídas {(leadInterviews?.length || 0) > 0 && `(${leadInterviews?.length})`}
-                          </h3>
+                      <div className="space-y-6 pt-4">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center"><BookOpen className="h-4 w-4 text-emerald-500" /></div>
+                            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">
+                              Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}
+                            </h3>
+                          </div>
                         </div>
                         
                         {isLoadingInterviews ? (
-                          <div className="py-10 flex flex-col items-center justify-center opacity-40 gap-3">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                            <p className="text-[9px] font-black uppercase tracking-widest">Auditando Dossiês...</p>
+                          <div className="py-20 flex flex-col items-center justify-center opacity-40 gap-4 glass rounded-3xl border border-white/5">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Auditando Registros RGMJ...</p>
                           </div>
                         ) : leadInterviews && leadInterviews.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leadInterviews.map((int, idx) => (
-                              <Card key={int.id || idx} className="glass border-white/5 hover-gold transition-all p-6 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-xl">
-                                <div className="flex justify-between items-start mb-4">
-                                  <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/20 text-emerald-500 bg-emerald-500/5 px-3 h-6">
-                                    CONCLUÍDA
-                                  </Badge>
-                                  <div className="text-[9px] font-mono font-bold text-muted-foreground uppercase opacity-40 flex items-center gap-2">
-                                    <Clock className="h-3 w-3" />
-                                    {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
+                              <Card key={int.id || idx} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-2xl relative overflow-hidden">
+                                {int.aiAnalysis && <div className="absolute top-0 right-0 p-4"><Sparkles className="h-4 w-4 text-primary animate-pulse" /></div>}
+                                <div className="p-6 space-y-6 flex-1">
+                                  <div className="flex justify-between items-start">
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/30 text-emerald-500 bg-emerald-500/5 px-2.5 h-6 rounded-md tracking-widest">
+                                      CONCLUÍDO
+                                    </Badge>
+                                    <div className="text-[9px] font-mono font-bold text-muted-foreground uppercase opacity-40 flex items-center gap-2">
+                                      <Clock className="h-3 w-3" />
+                                      {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <h4 className="text-sm font-bold text-white uppercase tracking-tight line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+                                      {int.interviewType}
+                                    </h4>
+                                    <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-40">Protocolo Técnico RGMJ</p>
+                                  </div>
+
+                                  <div className="flex items-center gap-2.5 pt-4 border-t border-white/5">
+                                    <Avatar className="h-6 w-6 border border-white/10">
+                                      <AvatarFallback className="bg-secondary text-[8px] font-black text-primary uppercase">{int.interviewerName?.substring(0, 2)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Dr(a). {int.interviewerName || "MEMBRO RGMJ"}</span>
                                   </div>
                                 </div>
-                                <h4 className="text-base font-bold text-white uppercase tracking-tight mb-6 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
-                                  {int.interviewType}
-                                </h4>
-                                <div className="space-y-2 mt-auto">
-                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-black uppercase opacity-60 mb-2">
-                                    <User className="h-3 w-3" /> Dr(a). {int.interviewerName || "RGMJ"}
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <Button 
-                                      variant="outline"
-                                      onClick={() => {
-                                        setViewingInterview(int);
-                                        setInterviewAnalysis(int.aiAnalysis || null);
-                                      }}
-                                      className="h-10 glass border-white/10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg"
-                                    >
-                                      VER DOSSIÊ
-                                    </Button>
-                                    <Button 
-                                      onClick={() => handleRunInterviewAnalysis(int)}
-                                      className="h-10 gold-gradient text-background font-black uppercase text-[9px] tracking-widest rounded-lg shadow-lg flex items-center gap-2"
-                                    >
-                                      <Brain className="h-3.5 w-3.5" /> IA
-                                    </Button>
-                                  </div>
+
+                                <div className="p-4 bg-white/[0.02] border-t border-white/5 grid grid-cols-2 gap-2">
+                                  <Button 
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setViewingInterview(int);
+                                      setInterviewAnalysis(int.aiAnalysis || null);
+                                    }}
+                                    className="h-10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-white/5 gap-2"
+                                  >
+                                    <FileSearch className="h-3.5 w-3.5" /> DOSSIÊ
+                                  </Button>
+                                  <Button 
+                                    onClick={() => handleRunInterviewAnalysis(int)}
+                                    className="h-10 glass border-primary/20 text-primary font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-primary hover:text-background gap-2 shadow-lg"
+                                  >
+                                    <Brain className="h-3.5 w-3.5" /> ANÁLISE IA
+                                  </Button>
                                 </div>
                               </Card>
                             ))}
                           </div>
                         ) : (
-                          <div className="py-20 flex flex-col items-center justify-center opacity-20 space-y-4 glass rounded-2xl border-dashed border-2 border-white/5">
-                            <FileSearch className="h-12 w-12" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Nenhuma captura realizada</p>
+                          <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-6 glass rounded-[2.5rem] border-dashed border-2 border-white/5 bg-white/[0.01]">
+                            <div className="w-20 h-20 rounded-full border border-white/10 flex items-center justify-center">
+                              <ClipboardList className="h-10 w-10 text-muted-foreground" />
+                            </div>
+                            <p className="text-[11px] font-black uppercase tracking-[0.5em]">Nenhuma captura realizada para este lead</p>
                           </div>
                         )}
                       </div>
