@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
@@ -136,7 +135,6 @@ export default function LeadsPage() {
   const [isEditModeOpen, setIsEditModeOpen] = useState(false)
   const [isConversionOpen, setIsConversionOpen] = useState(false)
   const [activeDossierTab, setActiveDossierTab] = useState("overview")
-  const [isSyncingDrive, setIsSyncingDrive] = useState(false)
   
   const [isInterviewDialogOpen, setIsInterviewDialogOpen] = useState(false)
   const [executingTemplate, setExecutingTemplate] = useState<any>(null)
@@ -154,12 +152,7 @@ export default function LeadsPage() {
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", meetingLink: "", accessCode: "", location: "" })
 
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
-  const [intakeSuccess, setIntakeSuccess] = useState(false)
   const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "" })
-
-  const [locationSearch, setLocationSearch] = useState("")
-  const [locationResults, setLocationResults] = useState<any[]>([])
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false)
 
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -167,10 +160,15 @@ export default function LeadsPage() {
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
+  // Query de entrevistas do Lead específico - Usando ID estável
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id
     if (!user || !db || !leadId) return null
-    return query(collection(db!, "interviews"), where("clientId", "==", leadId), orderBy("createdAt", "desc"))
+    return query(
+      collection(db!, "interviews"), 
+      where("clientId", "==", leadId), 
+      orderBy("createdAt", "desc")
+    )
   }, [db, user, activeLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
 
@@ -189,17 +187,15 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (currentTabIndex < DOSSIER_TABS.length - 1) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
+  const handleNextTab = () => { if (canGoNext) setActiveTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (canGoBack) setActiveTab(DOSSIER_TABS[currentTabIndex - 1]) }
+
+  const setActiveTab = (tab: string) => setActiveDossierTab(tab)
 
   useEffect(() => {
     if (activeLead) {
-      if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("captura")
-      else if (activeLead.status === 'burocracia' && activeDossierTab === 'overview') setActiveDossierTab("burocracia")
-      else if (activeLead.status === 'distribuicao' && activeDossierTab === 'overview') setActiveDossierTab("revisao")
       setStrategicSummary(null)
       setIsSchedulingHearing(false)
-      setIntakeSuccess(false)
       setIntakeData({ 
         date: activeLead.scheduledDate || "", 
         time: activeLead.scheduledTime || "", 
@@ -208,46 +204,23 @@ export default function LeadsPage() {
         customAddress: activeLead.customAddress || "", 
         observations: activeLead.intakeObservations || "" 
       })
-      setLocationSearch(activeLead.customAddress || "")
     }
   }, [activeLead?.id])
 
-  const handleMapSearch = useCallback(async (query: string) => {
-    if (!query || query.length < 3) { setLocationResults([]); return; }
-    setIsSearchingLocation(true)
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=br`)
-      const data = await response.json()
-      setLocationResults(data)
-    } catch (e) { console.error(e) } finally { setIsSearchingLocation(false) }
-  }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(() => { if (locationSearch && locationSearch !== intakeData.customAddress) handleMapSearch(locationSearch) }, 800)
-    return () => clearTimeout(timer)
-  }, [locationSearch, intakeData.customAddress, handleMapSearch])
-
-  const handleSelectLocation = (place: any) => {
-    setIntakeData(prev => ({ ...prev, customAddress: place.display_name }))
-    setLocationSearch(place.display_name)
-    setLocationResults([])
+  const handleOpenLead = (lead: any) => { 
+    setSelectedLead(lead)
+    setIsSheetOpen(true)
+    setActiveDossierTab("overview")
   }
-
-  const handleOpenLead = (lead: any) => { setSelectedLead(lead); setIsSheetOpen(true); }
 
   const handleScheduleIntake = async () => {
     if (!db || !activeLead || !intakeData.date || !intakeData.time) return
-    const meetLink = intakeData.type === 'online' ? `https://meet.google.com/rgmj-${Math.random().toString(36).substring(7)}` : "";
     const finalLocation = intakeData.type === 'online' ? 'Virtual RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
     const payload = { 
       scheduledDate: intakeData.date, 
       scheduledTime: intakeData.time, 
       meetingType: intakeData.type, 
-      locationType: intakeData.locationType, 
-      customAddress: intakeData.customAddress, 
       meetingLocation: finalLocation, 
-      meetingLink: meetLink, 
-      intakeObservations: intakeData.observations, 
       updatedAt: serverTimestamp() 
     }
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
@@ -257,13 +230,11 @@ export default function LeadsPage() {
       startDateTime: `${intakeData.date}T${intakeData.time}:00`, 
       clientId: activeLead.id, 
       clientName: activeLead.name, 
-      meetingType: intakeData.type, 
       location: finalLocation, 
-      meetingLink: meetLink, 
-      observations: intakeData.observations, 
       status: "Agendado", 
       createdAt: serverTimestamp() 
     })
+    setIsSchedulingIntake(false)
     toast({ title: "Atendimento Agendado" })
   }
 
@@ -294,6 +265,7 @@ export default function LeadsPage() {
     
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
+    setActiveDossierTab("dossies")
     toast({ title: "Protocolo Concluído" })
   }
 
@@ -327,27 +299,12 @@ export default function LeadsPage() {
       })
       setStrategicSummary(result)
       toast({ title: "DNA Consolidado" })
-    } catch (e) { 
-      console.error(e)
-      toast({ variant: "destructive", title: "Erro IA" }) 
-    } finally { setIsGeneratingSummary(false) }
+    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }) } finally { setIsGeneratingSummary(false) }
   }
 
   const handleConvertProcess = async (data: any) => {
     if (!db || !activeLead) return
     const processRef = await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
-    if (isSchedulingHearing && hearingData.date) {
-      addDocumentNonBlocking(collection(db!, "hearings"), { 
-        title: `Aud ${hearingData.type}: ${activeLead.name}`, 
-        type: hearingData.type, 
-        startDateTime: `${hearingData.date}T${hearingData.time}:00`, 
-        processId: (processRef as any).id, 
-        processNumber: data.processNumber, 
-        clientName: activeLead.name, 
-        location: hearingData.type === 'Virtual' ? 'Virtual' : (hearingData.location || activeLead.courtAddress), 
-        createdAt: serverTimestamp() 
-      })
-    }
     updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
     setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
   }
@@ -356,13 +313,7 @@ export default function LeadsPage() {
   const handleDragOver = (e: React.DragEvent) => e.preventDefault()
   const handleDrop = async (status: string) => {
     if (!draggedLeadId || !db) return
-    const lead = leads.find(l => l.id === draggedLeadId)
-    if (!lead) return
-    if (status === 'burocracia' && (leadInterviews?.length || 0) === 0) { 
-      toast({ variant: "destructive", title: "Rito Violado", description: "Entrevista obrigatória antes da burocracia." }); 
-      setDraggedLeadId(null); return; 
-    }
-    updateDocumentNonBlocking(doc(db, "leads", lead.id), { status, updatedAt: serverTimestamp() })
+    updateDocumentNonBlocking(doc(db, "leads", draggedLeadId), { status, updatedAt: serverTimestamp() })
     setDraggedLeadId(null)
   }
 
@@ -421,7 +372,7 @@ export default function LeadsPage() {
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                               <div className="flex gap-1.5">
                                 {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase">CPF OK</Badge>}
-                                {(lead.interviewsCount > 0 || lead.status !== 'novo') && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
+                                {(leadInterviews?.filter(i => i.clientId === lead.id).length || 0) > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
                               </div>
                               <ArrowRight className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-all" />
                             </div>
@@ -524,7 +475,7 @@ export default function LeadsPage() {
                       <div className="space-y-6">
                         <div className="flex items-center justify-between border-b border-white/5 pb-3">
                           <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">
-                            Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}
+                            Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews.length}</Badge>}
                           </h3>
                         </div>
                         {isLoadingInterviews ? (
@@ -608,6 +559,40 @@ export default function LeadsPage() {
       <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none"><DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle></DialogHeader><div className="flex-1 min-h-0">{activeLead && (<ProcessForm initialData={{ clientName: activeLead.name, clientId: activeLead.id, defendantName: activeLead.defendantName, caseType: activeLead.type, court: activeLead.court, vara: activeLead.vara, processNumber: activeLead.processNumber || "", responsibleStaffId: user?.uid }} onSubmit={handleConvertProcess} onCancel={() => setIsConversionOpen(false)} />)}</div></DialogContent></Dialog>
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={(data) => { addDocumentNonBlocking(collection(db!, "leads"), { ...data, assignedStaffId: user?.uid, status: "novo", driveStatus: "pendente", createdAt: serverTimestamp(), updatedAt: serverTimestamp() }); setIsNewEntryOpen(false); toast({ title: "Atendimento Iniciado" }) }} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle></SheetHeader><div className="flex-1 min-h-0">{activeLead && (<LeadForm existingLeads={[]} initialData={activeLead} lockMode={true} onSubmit={async (data) => { await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() }); setIsEditModeOpen(false); toast({ title: "Qualificação Atualizada" }) }} onSelectExisting={() => {}} onCancel={() => setIsEditModeOpen(false)} />)}</div></SheetContent></Sheet>
+      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <Clock className="h-6 w-6 text-amber-500" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
+                <Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
+                <Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
+              <Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}>
+                <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#0d121f] text-white">
+                  <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
+                  <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
