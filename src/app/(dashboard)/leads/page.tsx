@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
@@ -67,7 +66,7 @@ import {
   Dialog, 
   DialogContent,
   DialogHeader,
-  DialogTitle,
+  DialogTitle, 
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog"
@@ -118,23 +117,13 @@ export default function LeadsPage() {
 
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(
-      collection(db!, "leads"), 
-      orderBy("updatedAt", "desc"), 
-      limit(100)
-    )
+    return query(collection(db!, "leads"), orderBy("updatedAt", "desc"), limit(100))
   }, [db, user])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
-  
-  const leads = useMemo(() => {
-    if (!leadsData) return []
-    return leadsData.filter(l => l.status !== 'arquivado')
-  }, [leadsData])
+  const leads = useMemo(() => (leadsData || []).filter(l => l.status !== 'arquivado'), [leadsData])
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
-  
-  // Sincroniza o Lead selecionado com a versão mais recente do banco
   const activeLead = useMemo(() => {
     if (!selectedLead || !leads) return selectedLead
     return leads.find(l => l.id === selectedLead.id) || selectedLead
@@ -160,46 +149,26 @@ export default function LeadsPage() {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
   const [isSchedulingHearing, setIsSchedulingHearing] = useState(false)
-  const [hearingData, setHearingData] = useState({
-    type: "UNA",
-    date: "",
-    time: "",
-    meetingLink: "",
-    accessCode: "",
-    location: ""
-  })
+  const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", meetingLink: "", accessCode: "", location: "" })
 
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeSuccess, setIntakeSuccess] = useState(false)
-  const [intakeData, setIntakeData] = useState({
-    date: "",
-    time: "",
-    type: "online",
-    locationType: "sede", 
-    customAddress: "",
-    observations: ""
-  })
+  const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "" })
 
   const [locationSearch, setLocationSearch] = useState("")
   const [locationResults, setLocationResults] = useState<any[]>([])
   const [isSearchingLocation, setIsSearchingLocation] = useState(false)
 
-  // Query de Templates de Checklist
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "checklists"), orderBy("title", "asc"))
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
-  // Query de Entrevistas Concluídas para o Lead Ativo
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id
     if (!user || !db || !leadId) return null
-    return query(
-      collection(db!, "interviews"), 
-      where("clientId", "==", leadId),
-      orderBy("createdAt", "desc")
-    )
+    return query(collection(db!, "interviews"), where("clientId", "==", leadId), orderBy("createdAt", "desc"))
   }, [db, user, activeLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
 
@@ -208,508 +177,179 @@ export default function LeadsPage() {
       if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("entrevistas")
       else if (activeLead.status === 'burocracia' && activeDossierTab === 'overview') setActiveDossierTab("burocracia")
       else if (activeLead.status === 'distribuicao' && activeDossierTab === 'overview') setActiveDossierTab("revisao")
-      
       setStrategicSummary(null)
       setIsSchedulingHearing(false)
       setIntakeSuccess(false)
-      setHearingData({ type: "UNA", date: "", time: "", meetingLink: "", accessCode: "", location: "" })
-      setIntakeData({
-        date: activeLead.scheduledDate || "",
-        time: activeLead.scheduledTime || "",
-        type: activeLead.meetingType || "online",
-        locationType: activeLead.locationType || "sede",
-        customAddress: activeLead.customAddress || "",
-        observations: activeLead.intakeObservations || ""
-      })
+      setIntakeData({ date: activeLead.scheduledDate || "", time: activeLead.scheduledTime || "", type: activeLead.meetingType || "online", locationType: activeLead.locationType || "sede", customAddress: activeLead.customAddress || "", observations: activeLead.intakeObservations || "" })
       setLocationSearch(activeLead.customAddress || "")
     }
   }, [activeLead?.id])
 
   const handleMapSearch = useCallback(async (query: string) => {
-    if (!query || query.length < 3) {
-      setLocationResults([])
-      return
-    }
+    if (!query || query.length < 3) { setLocationResults([]); return; }
     setIsSearchingLocation(true)
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=br`)
       const data = await response.json()
       setLocationResults(data)
-    } catch (error) {
-      console.error("Erro ao buscar mapas:", error)
-    } finally {
-      setIsSearchingLocation(false)
-    }
+    } catch (e) { console.error(e) } finally { setIsSearchingLocation(false) }
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (locationSearch && locationSearch !== intakeData.customAddress) {
-        handleMapSearch(locationSearch)
-      }
-    }, 800)
+    const timer = setTimeout(() => { if (locationSearch && locationSearch !== intakeData.customAddress) handleMapSearch(locationSearch) }, 800)
     return () => clearTimeout(timer)
   }, [locationSearch, intakeData.customAddress, handleMapSearch])
 
   const handleSelectLocation = (place: any) => {
-    const address = place.display_name
-    setIntakeData(prev => ({ ...prev, customAddress: address }))
-    setLocationSearch(address)
+    setIntakeData(prev => ({ ...prev, customAddress: place.display_name }))
+    setLocationSearch(place.display_name)
     setLocationResults([])
   }
 
   const handleGenerateStrategicSummary = async () => {
     if (!activeLead) return
     setIsGeneratingSummary(true)
-    
     const interviewContext = (leadInterviews || []).map(int => {
-      const responses = Object.entries(int.responses || {})
-        .map(([q, a]) => `${q}: ${a}`)
-        .join("\n")
+      const responses = Object.entries(int.responses || {}).map(([q, a]) => `${q}: ${a}`).join("\n")
       return `ENTREVISTA (${int.interviewType}):\n${responses}`
     }).join("\n\n")
-
     try {
-      const result = await generateCaseSummary({
-        caseId: activeLead.id,
-        clientName: activeLead.name,
-        caseTitle: activeLead.demandTitle || "Demanda Estratégica",
-        caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas técnicas.",
-        currentStatus: "Fase de Triagem e Qualificação",
-        lastEvents: ["Entrevista Realizada", "Dados Capturados"],
-        nextDeadlines: ["Protocolo Inicial", "Saneamento de Burocracia"],
-        relatedParties: [activeLead.defendantName || "Polo Passivo Pendente"],
-        financialStatus: "Aguardando definição de valor tático."
-      })
+      const result = await generateCaseSummary({ caseId: activeLead.id, clientName: activeLead.name, caseTitle: activeLead.demandTitle || "Demanda Estratégica", caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas.", currentStatus: "Triagem", lastEvents: ["Entrevista"], nextDeadlines: ["Protocolo"], relatedParties: [activeLead.defendantName || "Réu"], financialStatus: "" })
       setStrategicSummary(result)
-      toast({ title: "DNA Jurídico Consolidado" })
-    } catch (error) {
-      console.error("Erro GenAI:", error);
-      toast({ variant: "destructive", title: "Falha na Consolidação IA", description: "O motor de IA falhou. Verifique a pauta." })
-    } finally {
-      setIsGeneratingSummary(false)
-    }
+      toast({ title: "DNA Consolidado" })
+    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }) } finally { setIsGeneratingSummary(false) }
   }
 
-  const handleOpenLead = (lead: any) => {
-    setSelectedLead(lead)
-    setIsSheetOpen(true)
-  }
+  const handleOpenLead = (lead: any) => { setSelectedLead(lead); setIsSheetOpen(true); }
 
   const handleScheduleIntake = async () => {
-    if (!db || !activeLead || !intakeData.date || !intakeData.time) {
-      toast({ variant: "destructive", title: "Dados Incompletos", description: "Defina data e hora para o atendimento." })
-      return
-    }
-
-    const meetLink = intakeData.type === 'online' 
-      ? `https://meet.google.com/rgmj-atend-${Math.random().toString(36).substring(7)}` 
-      : "";
-
-    const finalLocation = intakeData.type === 'online' 
-      ? 'Virtual RGMJ' 
-      : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
-
-    const payload = {
-      scheduledDate: intakeData.date,
-      scheduledTime: intakeData.time,
-      meetingType: intakeData.type,
-      locationType: intakeData.locationType,
-      customAddress: intakeData.customAddress,
-      meetingLocation: finalLocation,
-      meetingLink: meetLink,
-      intakeObservations: intakeData.observations,
-      updatedAt: serverTimestamp()
-    }
-
+    if (!db || !activeLead || !intakeData.date || !intakeData.time) return
+    const meetLink = intakeData.type === 'online' ? `https://meet.google.com/rgmj-${Math.random().toString(36).substring(7)}` : "";
+    const finalLocation = intakeData.type === 'online' ? 'Virtual RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
+    const payload = { scheduledDate: intakeData.date, scheduledTime: intakeData.time, meetingType: intakeData.type, locationType: intakeData.locationType, customAddress: intakeData.customAddress, meetingLocation: finalLocation, meetingLink: meetLink, intakeObservations: intakeData.observations, updatedAt: serverTimestamp() }
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
-
-    const appointmentPayload = {
-      title: `Atendimento: ${activeLead.name}`,
-      type: "Atendimento",
-      startDateTime: `${intakeData.date}T${intakeData.time}:00`,
-      clientId: activeLead.id,
-      clientName: activeLead.name,
-      meetingType: intakeData.type,
-      location: finalLocation,
-      meetingLink: meetLink,
-      observations: intakeData.observations,
-      status: "Agendado",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    }
-    addDocumentNonBlocking(collection(db, "appointments"), appointmentPayload)
-
-    toast({ 
-      title: "Atendimento Agendado", 
-      description: "O ato foi sincronizado com a pauta estratégica." 
-    })
+    addDocumentNonBlocking(collection(db, "appointments"), { title: `Atendimento: ${activeLead.name}`, type: "Atendimento", startDateTime: `${intakeData.date}T${intakeData.time}:00`, clientId: activeLead.id, clientName: activeLead.name, meetingType: intakeData.type, location: finalLocation, meetingLink: meetLink, observations: intakeData.observations, status: "Agendado", createdAt: serverTimestamp() })
+    toast({ title: "Atendimento Agendado" })
   }
 
   const handleShareIntake = (method: 'whatsapp' | 'email') => {
     if (!activeLead) return
-    const date = new Date(activeLead.scheduledDate).toLocaleDateString('pt-BR')
-    const time = activeLead.scheduledTime
-    const location = activeLead.meetingLocation
-    const link = activeLead.meetingLink
-    let message = `Olá ${activeLead.name},\n\nConfirmamos seu agendamento com a banca RGMJ Advogados.\n\n📅 Data: ${date}\n⏰ Horário: ${time}\n📍 Local: ${location}`
-    if (link) message += `\n🔗 Link da Reunião: ${link}`
-    message += `\n\nAtenciosamente,\nEquipe RGMJ.`
-
-    if (method === 'whatsapp') {
-      const phone = activeLead.phone?.replace(/\D/g, '')
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank")
-    } else {
-      const subject = encodeURIComponent("Confirmação de Agendamento - RGMJ Advogados")
-      window.open(`mailto:${activeLead.email}?subject=${subject}&body=${encodeURIComponent(message)}`, "_blank")
-    }
+    const message = `Olá ${activeLead.name}, confirmamos seu agendamento para ${new Date(activeLead.scheduledDate).toLocaleDateString()} às ${activeLead.scheduledTime} em ${activeLead.meetingLocation}. ${activeLead.meetingLink ? '\nLink: ' + activeLead.meetingLink : ''}`
+    if (method === 'whatsapp') window.open(`https://wa.me/${activeLead.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, "_blank")
+    else window.open(`mailto:${activeLead.email}?subject=Confirmação&body=${encodeURIComponent(message)}`, "_blank")
   }
 
   const handleSyncDrive = async () => {
     if (!activeLead || !db) return
     setIsSyncingDrive(true)
     setTimeout(async () => {
-      let nextStatus = "pasta_lead"
-      if (activeLead.status === "distribuicao" || activeLead.status === "burocracia") nextStatus = "pasta_cliente"
-      await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
-        driveStatus: nextStatus,
-        driveFolderId: "DRIVE_" + Math.random().toString(36).substring(7),
-        updatedAt: serverTimestamp()
-      })
-      setIsSyncingDrive(false)
-      toast({ title: "Drive Sincronizado" })
+      await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { driveStatus: (activeLead.status === "distribuicao" ? "pasta_cliente" : "pasta_lead"), driveFolderId: "DRV_" + Math.random().toString(36).substring(7), updatedAt: serverTimestamp() })
+      setIsSyncingDrive(false); toast({ title: "Drive OK" })
     }, 1000)
   }
 
-  const handleStartInterview = (t: any) => {
-    setExecutingTemplate(t)
-    setIsInterviewDialogOpen(true)
-  }
+  const handleStartInterview = (t: any) => { setExecutingTemplate(t); setIsInterviewDialogOpen(true); }
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !activeLead || !user) return
-    const interviewData = {
-      clientId: activeLead.id,
-      clientName: activeLead.name,
-      templateId: executingTemplate.id,
-      interviewType: executingTemplate.title,
-      responses: payload.responses,
-      templateSnapshot: payload.templateSnapshot,
-      interviewerId: user.uid,
-      interviewerName: user.displayName || "Advogado RGMJ",
-      status: "Concluída",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }
-    
-    // Protocolo da Entrevista no Firestore
-    await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
-    
-    // Atualização de Status do Lead
-    if (activeLead.status === 'novo' || !activeLead.status) {
-      updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
-        status: "atendimento",
-        updatedAt: serverTimestamp()
-      })
-    }
-    
-    setIsInterviewDialogOpen(false)
-    setExecutingTemplate(null)
-    toast({ title: "DNA Jurídico Protocolado", description: "Os dados foram injetados no dossiê técnico." })
+    await addDocumentNonBlocking(collection(db!, "interviews"), { clientId: activeLead.id, clientName: activeLead.name, templateId: executingTemplate.id, interviewType: executingTemplate.title, responses: payload.responses, templateSnapshot: payload.templateSnapshot, interviewerId: user.uid, interviewerName: user.displayName, status: "Concluída", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+    if (activeLead.status === 'novo') updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "atendimento", updatedAt: serverTimestamp() })
+    setIsInterviewDialogOpen(false); setExecutingTemplate(null); toast({ title: "Protocolo Concluído" })
   }
 
   const handleRunInterviewAnalysis = async (interview: any) => {
-    setIsAiAnalyzing(true)
-    setInterviewAnalysis(null)
+    setIsAiAnalyzing(true); setInterviewAnalysis(null)
     try {
-      const result = await aiAnalyzeFullInterview({
-        clientName: activeLead.name,
-        interviewType: interview.interviewType,
-        responses: interview.responses
-      })
+      const result = await aiAnalyzeFullInterview({ clientName: activeLead.name, interviewType: interview.interviewType, responses: interview.responses })
       setInterviewAnalysis(result)
-      if (db) {
-        updateDocumentNonBlocking(doc(db, "interviews", interview.id), {
-          aiAnalysis: result,
-          updatedAt: serverTimestamp()
-        })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro na análise IA" })
-    } finally {
-      setIsAiAnalyzing(false)
-    }
+      if (db) updateDocumentNonBlocking(doc(db, "interviews", interview.id), { aiAnalysis: result, updatedAt: serverTimestamp() })
+    } catch (e) { toast({ variant: "destructive", title: "Erro Análise" }) } finally { setIsAiAnalyzing(false) }
   }
 
   const handlePromoteSummary = async () => {
     if (!db || !activeLead || !interviewAnalysis) return
-    await updateDocumentNonBlocking(doc(db, "leads", activeLead.id), {
-      aiSummary: interviewAnalysis.summary,
-      updatedAt: serverTimestamp()
-    })
-    toast({ title: "Sintese Promovida", description: "O resumo da IA agora é o oficial do Lead." })
+    updateDocumentNonBlocking(doc(db, "leads", activeLead.id), { aiSummary: interviewAnalysis.summary, updatedAt: serverTimestamp() })
+    toast({ title: "Sintese Promovida" })
   }
 
   const handleConvertProcess = async (data: any) => {
     if (!db || !activeLead) return
-    const processPayload = {
-      ...data,
-      leadId: activeLead.id,
-      status: "Em Andamento",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+    const processRef = await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
+    if (isSchedulingHearing && hearingData.date) {
+      addDocumentNonBlocking(collection(db!, "hearings"), { title: `Aud ${hearingData.type}: ${activeLead.name}`, type: hearingData.type, startDateTime: `${hearingData.date}T${hearingData.time}:00`, processId: (processRef as any).id, processNumber: data.processNumber, clientName: activeLead.name, location: hearingData.type === 'Virtual' ? 'Virtual' : (hearingData.location || activeLead.courtAddress), createdAt: serverTimestamp() })
     }
-    const processRef = await addDocumentNonBlocking(collection(db!, "processes"), processPayload)
-    
-    if (isSchedulingHearing && hearingData.date && hearingData.time) {
-      const hearingPayload = {
-        title: `Audiência ${hearingData.type}: ${activeLead.name}`,
-        type: hearingData.type,
-        startDateTime: `${hearingData.date}T${hearingData.time}:00`,
-        processId: (processRef as any).id,
-        processNumber: processPayload.processNumber,
-        clientName: activeLead.name,
-        clientId: activeLead.id,
-        location: hearingData.type === 'Virtual' ? 'SALA VIRTUAL RGMJ' : (hearingData.location || activeLead.courtAddress || 'Fórum'),
-        meetingLink: hearingData.meetingLink,
-        accessCode: hearingData.accessCode,
-        hearingType: hearingData.type === 'Virtual' ? 'Virtual' : 'Física',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }
-      await addDocumentNonBlocking(collection(db!, "hearings"), hearingPayload)
-    }
-
-    updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
-      status: "arquivado",
-      convertedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
-    setIsConversionOpen(false)
-    setIsSheetOpen(false)
-    toast({ title: "Processo Protocolado e Agenda Sincronizada" })
+    updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
+    setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
   }
 
-  const handleDragStart = (leadId: string) => {
-    setDraggedLeadId(leadId)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = async (targetStatus: string) => {
+  const handleDragStart = (id: string) => setDraggedLeadId(id)
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault()
+  const handleDrop = async (status: string) => {
     if (!draggedLeadId || !db) return
     const lead = leads.find(l => l.id === draggedLeadId)
     if (!lead) return
-
-    if (targetStatus === 'burocracia') {
-      const interviewsSnap = await getDocs(query(collection(db, "interviews"), where("clientId", "==", lead.id)))
-      if (interviewsSnap.empty) {
-        toast({
-          variant: "destructive",
-          title: "Bloqueio de Rito",
-          description: "É obrigatório realizar ao menos uma entrevista técnica antes da burocracia."
-        })
-        setDraggedLeadId(null)
-        return
-      }
-    }
-
-    if (targetStatus === 'distribuicao') {
-      const hasCpf = !!(lead.cpf || lead.documentNumber)
-      const hasAddress = !!lead.address
-      const hasDefendant = !!lead.defendantName
-      if (!hasCpf || !hasAddress || !hasDefendant) {
-        toast({
-          variant: "destructive",
-          title: "Bloqueio de Distribuição",
-          description: "Dados incompletos: Nome, CPF, Endereço e Réu são obrigatórios."
-        })
-        setDraggedLeadId(null)
-        return
-      }
-    }
-
-    if (lead.status !== targetStatus) {
-      await updateDocumentNonBlocking(doc(db, "leads", lead.id), {
-        status: targetStatus,
-        updatedAt: serverTimestamp()
-      })
-      toast({
-        title: "Movimentação Concluída",
-        description: `${lead.name} avançou para a etapa de ${targetStatus.toUpperCase()}.`
-      })
-    }
+    if (status === 'burocracia' && (leadInterviews?.length || 0) === 0) { toast({ variant: "destructive", title: "Rito Violado", description: "Entrevista obrigatória antes da burocracia." }); setDraggedLeadId(null); return; }
+    updateDocumentNonBlocking(doc(db, "leads", lead.id), { status, updatedAt: serverTimestamp() })
     setDraggedLeadId(null)
   }
 
-  const handleArchiveLead = (leadId: string) => {
-    if (!db) return
-    if (!confirm("Confirmar o arquivamento deste lead?")) return
-    updateDocumentNonBlocking(doc(db, "leads", leadId), {
-      status: "arquivado",
-      updatedAt: serverTimestamp()
-    })
-    toast({ title: "Lead Arquivado" })
-  }
-
-  const handleDeleteLead = (leadId: string) => {
-    if (!db) return
-    if (!confirm("Deseja EXCLUIR PERMANENTEMENTE este lead?")) return
-    deleteDocumentNonBlocking(doc(db, "leads", leadId))
-    toast({ variant: "destructive", title: "Lead Removido" })
-    setIsSheetOpen(false)
-  }
+  const handleDeleteLead = (id: string) => { if (!db || !confirm("Excluir Lead?")) return; deleteDocumentNonBlocking(doc(db, "leads", id)); toast({ title: "Lead Removido" }); setIsSheetOpen(false); }
 
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
-  const canGoBack = currentTabIndex > 0
-  const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
-
-  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
-
-  const getDrawerWidthClass = () => {
-    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
-    switch (pref) {
-      case "padrão": return "sm:max-w-lg"
-      case "largo": return "sm:max-w-2xl"
-      case "extra-largo": return "sm:max-w-4xl"
-      case "full": return "sm:max-w-full"
-      default: return "sm:max-w-4xl"
-    }
-  }
+  const handleNextTab = () => { if (currentTabIndex < 3) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 mb-2">
-            <LayoutGrid className="h-3 w-3" />
-            <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
-            <ChevronRight className="h-2 w-2" />
-            <span className="text-white">FUNIL DE LEADS</span>
+            <LayoutGrid className="h-3 w-3" /><Link href="/">INÍCIO</Link><ChevronRight className="h-2 w-2" /><span className="text-white">FUNIL DE LEADS</span>
           </div>
           <h1 className="text-2xl font-bold text-white uppercase tracking-tight">Triagem de Oportunidades</h1>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] mt-1 opacity-60">Arraste para mover • Respeite os ritos técnicos.</p>
         </div>
-        <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-black font-black gap-3 px-6 h-11 rounded-xl text-xs tracking-widest shadow-xl hover:scale-105 transition-all">
-          <PlusCircle className="h-4 w-4" /> NOVO ATENDIMENTO ESTRATÉGICO
+        <Button onClick={() => setIsNewEntryOpen(true)} className="gold-gradient text-black font-black gap-3 px-6 h-11 rounded-xl text-xs tracking-widest shadow-xl">
+          <PlusCircle className="h-4 w-4" /> NOVO ATENDIMENTO
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center justify-center space-y-6">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sincronizando Banco de Dados RGMJ...</span>
-        </div>
+        <div className="py-20 flex flex-col items-center justify-center space-y-6"><Loader2 className="h-10 w-10 animate-spin text-primary" /><span className="text-xs font-bold uppercase tracking-widest">Auditando Banco...</span></div>
       ) : (
         <div className="flex gap-6 overflow-x-auto pb-12 scrollbar-hide min-h-[700px]">
           {columns.map((col) => {
             const leadsInCol = leads.filter(l => (l.status || "novo") === col.id)
             return (
-              <div 
-                key={col.id} 
-                className="min-w-[340px] flex-1 flex flex-col"
-                onDragOver={handleDragOver}
-                onDrop={() => handleDrop(col.id)}
-              >
+              <div key={col.id} className="min-w-[340px] flex-1 flex flex-col" onDragOver={handleDragOver} onDrop={() => handleDrop(col.id)}>
                 <div className="flex items-center justify-between mb-4 px-4 bg-white/[0.02] py-2.5 rounded-xl border border-white/5 shadow-inner">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("w-2 h-2 rounded-full", col.color.replace('text-', 'bg-'))} />
-                    <h3 className={cn("font-black text-[10px] tracking-[0.25em] uppercase", col.color)}>{col.title}</h3>
-                  </div>
+                  <div className="flex items-center gap-3"><div className={cn("w-2 h-2 rounded-full", col.color.replace('text-', 'bg-'))} /><h3 className={cn("font-black text-[10px] tracking-[0.25em] uppercase", col.color)}>{col.title}</h3></div>
                   <Badge variant="secondary" className="bg-white/5 text-[10px] border-white/5 font-black h-6 px-2.5 rounded-lg">{leadsInCol.length}</Badge>
                 </div>
-
-                <div className={cn(
-                  "space-y-4 flex-1 bg-white/[0.01] rounded-2xl p-3 border border-white/5 transition-all duration-300",
-                  draggedLeadId && "ring-1 ring-primary/20 bg-primary/[0.01]"
-                )}>
+                <div className={cn("space-y-4 flex-1 bg-white/[0.01] rounded-2xl p-3 border border-white/5 transition-all", draggedLeadId && "ring-1 ring-primary/20")}>
                   <AnimatePresence>
                     {leadsInCol.map((lead) => (
-                      <motion.div
-                        key={lead.id}
-                        layoutId={lead.id}
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        draggable
-                        onDragStart={() => handleDragStart(lead.id)}
-                        className="relative"
-                      >
-                        <Card 
-                          className={cn(
-                            "glass hover-gold transition-all cursor-grab active:cursor-grabbing group border-white/5 shadow-lg rounded-xl overflow-hidden",
-                            draggedLeadId === lead.id && "opacity-50 grayscale scale-95"
-                          )} 
-                          onClick={() => handleOpenLead(lead)}
-                        >
+                      <motion.div key={lead.id} layoutId={lead.id} draggable onDragStart={() => handleDragStart(lead.id)}>
+                        <Card className={cn("glass hover-gold transition-all cursor-grab active:cursor-grabbing border-white/5 shadow-lg rounded-xl overflow-hidden", draggedLeadId === lead.id && "opacity-50")} onClick={() => handleOpenLead(lead)}>
                           <CardContent className="p-4 space-y-4">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 flex-1 min-w-0">
-                                <div className="font-bold text-sm text-white group-hover:text-primary transition-colors uppercase tracking-tight leading-snug truncate">{lead.name}</div>
-                                <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                {lead.meetingType === 'online' && <Video className="h-3.5 w-3.5 text-primary shrink-0 opacity-60" />}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <button className="h-7 w-7 rounded-lg flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white w-44 p-1.5 rounded-xl shadow-2xl">
-                                    <DropdownMenuItem onClick={() => handleOpenLead(lead)} className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg h-9">
-                                      <Edit3 className="h-3.5 w-3.5" /> Ver Dossiê
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleArchiveLead(lead.id)} className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg h-9 text-amber-500">
-                                      <Archive className="h-3.5 w-3.5" /> Arquivar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg h-9 text-rose-500">
-                                      <Trash2 className="h-3.5 w-3.5" /> Excluir
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                                <GripVertical className="h-3.5 w-3.5 text-white/10 group-hover:text-primary/40 transition-colors" />
-                              </div>
+                              <div className="space-y-1 flex-1 min-w-0"><div className="font-bold text-sm text-white group-hover:text-primary uppercase truncate">{lead.name}</div><span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span></div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="h-7 w-7 text-white/20 hover:text-white"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white w-44"><DropdownMenuItem onClick={() => handleOpenLead(lead)}>Ver Dossiê</DropdownMenuItem><DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="text-rose-500">Excluir</DropdownMenuItem></DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                            
-                            <div className="space-y-2.5">
-                              {lead.scheduledDate && (
-                                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10 w-fit">
-                                  <Clock className="h-3 w-3 text-amber-500" />
-                                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
-                                    {new Date(lead.scheduledDate).toLocaleDateString('pt-BR')} {lead.scheduledTime}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground font-bold uppercase tracking-widest px-0.5">
-                                <Building className="h-3 w-3 opacity-40 shrink-0" /> <span className="truncate">{lead.defendantName || "RÉU PENDENTE"}</span>
-                              </div>
-                            </div>
-
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                               <div className="flex gap-1.5">
-                                {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 font-black uppercase px-1.5 py-0">CPF OK</Badge>}
-                                {(lead.interviewsCount > 0 || lead.status === 'atendimento') && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 font-black uppercase px-1.5 py-0">DNA CAPTURADO</Badge>}
+                                {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase">CPF OK</Badge>}
+                                {(lead.interviewsCount > 0 || lead.status !== 'novo') && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
                               </div>
-                              <div className="flex items-center gap-1.5 text-primary font-black text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-                                ABRIR <ArrowRight className="h-3 w-3" />
-                              </div>
+                              <ArrowRight className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-all" />
                             </div>
                           </CardContent>
                         </Card>
                       </motion.div>
                     ))}
                   </AnimatePresence>
-                  
-                  {leadsInCol.length === 0 && (
-                    <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl opacity-20 space-y-3">
-                      <LayoutGrid className="h-6 w-6" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.4em]">Vazio</span>
-                    </div>
-                  )}
                 </div>
               </div>
             )
@@ -718,58 +358,34 @@ export default function LeadsPage() {
       )}
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
+        <SheetContent className={cn("glass border-white/10 p-0 bg-[#05070a] shadow-2xl flex flex-col h-full", getDrawerWidthClass())}>
           {activeLead && (
             <div className="flex flex-col h-full">
               <SheetHeader className="p-6 border-b border-white/5 bg-[#0a0f1e] z-10 flex-none shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-5">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
-                      <Fingerprint className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <SheetTitle className="text-lg font-bold uppercase tracking-tight text-white">{activeLead.name}</SheetTitle>
-                      <SheetDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.25em] flex items-center gap-2" asChild>
-                        <span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> 
-                          DOSSIÊ ESTRATÉGICO • ID {activeLead.id.substring(0, 12).toUpperCase()}
-                        </span>
-                      </SheetDescription>
-                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><Fingerprint className="h-5 w-5 text-primary" /></div>
+                    <div className="space-y-0.5"><SheetTitle className="text-lg font-bold uppercase text-white">{activeLead.name}</SheetTitle><SheetDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2"><span>ID {activeLead.id.toUpperCase()}</span></SheetDescription></div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => handleDeleteLead(activeLead.id)} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-rose-500/10 hover:text-rose-500 text-rose-400">
-                      <Trash2 className="h-3.5 w-3.5" /> EXCLUIR
-                    </Button>
-                    <Button onClick={handleSyncDrive} disabled={isSyncingDrive} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
-                      {isSyncingDrive ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <CloudLightning className="h-3.5 w-3.5 text-amber-500" />} SINC. DRIVE
-                    </Button>
-                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
-                      <UserCog className="h-3.5 w-3.5 text-primary" /> EDITAR
-                    </Button>
-                    <Button onClick={() => setIsSheetOpen(false)} variant="ghost" className="h-9 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 text-muted-foreground hover:text-white">
-                      <X className="h-3.5 w-3.5" /> FECHAR
-                    </Button>
+                    <Button onClick={() => handleDeleteLead(activeLead.id)} variant="outline" className="h-9 text-[9px] font-black uppercase px-4 rounded-lg text-rose-400 border-white/10"><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-9 text-[9px] font-black uppercase px-4 rounded-lg text-primary border-white/10">EDITAR</Button>
+                    <Button onClick={() => setIsSheetOpen(false)} variant="ghost" className="h-9 text-[9px] font-black uppercase text-muted-foreground hover:text-white"><X className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
               </SheetHeader>
               
-              <div className="p-4 bg-[#0a0f1e]/60 border-b border-white/5 flex-none overflow-x-auto scrollbar-hide">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 min-w-[800px]">
+              <div className="p-4 bg-[#0a0f1e]/60 border-b border-white/5 flex-none">
+                <div className="grid grid-cols-4 gap-3">
                   {[
-                    { label: "Status Operacional", value: activeLead.status?.toUpperCase() || "NOVO", icon: Zap, color: "text-primary" },
-                    { label: "Réu Principal", value: activeLead.defendantName || "NÃO INFORMADO", icon: Building, color: "text-muted-foreground" },
-                    { label: "Canal WhatsApp", value: activeLead.phone, icon: Phone, color: "text-emerald-500" },
-                    { label: "Jurisdição", value: activeLead.city ? `${activeLead.city}-${activeLead.state}` : "N/A", icon: MapPin, color: "text-muted-foreground" },
+                    { label: "Status", value: activeLead.status?.toUpperCase() || "NOVO", icon: Zap, color: "text-primary" },
+                    { label: "Réu", value: activeLead.defendantName || "---", icon: Building, color: "text-muted-foreground" },
+                    { label: "Canal", value: activeLead.phone, icon: Phone, color: "text-emerald-500" },
+                    { label: "Jurisdição", value: activeLead.city || "---", icon: MapPin, color: "text-muted-foreground" },
                   ].map((item, i) => (
-                    <div key={i} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-3.5 shadow-lg">
-                      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center bg-black/20 border border-white/5", item.color)}>
-                        <item.icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-0.5 opacity-50">{item.label}</p>
-                        <p className="text-xs font-bold text-white uppercase truncate tracking-tight">{item.value}</p>
-                      </div>
+                    <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-black/20 border border-white/5", item.color)}><item.icon className="h-4 w-4" /></div>
+                      <div className="min-w-0"><p className="text-[8px] font-black text-muted-foreground uppercase opacity-50">{item.label}</p><p className="text-[10px] font-bold text-white uppercase truncate">{item.value}</p></div>
                     </div>
                   ))}
                 </div>
@@ -777,157 +393,61 @@ export default function LeadsPage() {
 
               <ScrollArea className="flex-1 bg-[#05070a]">
                 <div className="p-6 space-y-6 w-full max-w-[1400px] mx-auto pb-32">
-                  <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-6">
-                    <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-8 flex-none overflow-x-auto scrollbar-hide">
-                      {[
-                        { id: "overview", label: "VISÃO GERAL" },
-                        { id: "entrevistas", label: "ENTREVISTAS" },
-                        { id: "burocracia", label: "BUROCRACIA" },
-                        { id: "revisao", label: "REVISÃO" }
-                      ].map(tab => (
-                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
-                          {tab.label} {tab.id === 'entrevistas' && leadInterviews && leadInterviews.length > 0 && `(${leadInterviews.length})`}
-                        </TabsTrigger>
+                  <Tabs value={activeDossierTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-8">
+                      {["overview", "entrevistas", "burocracia", "revisao"].map(tab => (
+                        <TabsTrigger key={tab} value={tab} className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">{tab.toUpperCase()} {tab === 'entrevistas' && leadInterviews && leadInterviews.length > 0 && `(${leadInterviews.length})`}</TabsTrigger>
                       ))}
                     </TabsList>
 
-                    <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-500 outline-none w-full">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card 
-                          className="glass border-white/5 p-6 rounded-2xl shadow-xl bg-white/[0.01] relative overflow-hidden group cursor-pointer hover:border-amber-500/30 transition-all"
-                          onClick={() => setIsSchedulingIntake(true)}
-                        >
-                          <div className="absolute top-0 right-0 p-6 opacity-5"><Clock className="h-16 w-16" /></div>
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2.5"><Clock className="h-4 w-4" /> Cronograma</h4>
-                            {activeLead.scheduledDate && (
-                              <div className="flex gap-2">
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10 rounded-lg" onClick={(e) => { e.stopPropagation(); handleShareIntake('whatsapp'); }}>
-                                  <MessageCircle className="h-4 w-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10 rounded-lg" onClick={(e) => { e.stopPropagation(); handleShareIntake('email'); }}>
-                                  <Mail className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-lg font-bold text-white uppercase tracking-tighter">
-                              {activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString('pt-BR')} às ${activeLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
-                            </p>
-                            <Badge variant="outline" className="text-[10px] font-black text-muted-foreground border-white/10 px-3 py-1 rounded-lg uppercase tracking-widest bg-white/[0.02]">
-                              {activeLead.meetingType === 'online' ? '🖥️ VIRTUAL RGMJ' : `🏢 PRESENCIAL: ${activeLead.meetingLocation || 'LOCAL A DEFINIR'}`}
-                            </Badge>
-                            {activeLead.meetingLink && (
-                              <p className="text-[10px] text-primary font-mono font-bold truncate mt-2 opacity-60">LINK: {activeLead.meetingLink}</p>
-                            )}
-                          </div>
+                    <TabsContent value="overview" className="animate-in fade-in duration-500 outline-none w-full">
+                      <div className="grid grid-cols-2 gap-6">
+                        <Card className="glass border-white/5 p-6 rounded-2xl shadow-xl bg-white/[0.01] relative overflow-hidden group cursor-pointer hover:border-amber-500/30 transition-all" onClick={() => setIsSchedulingIntake(true)}>
+                          <div className="flex items-center justify-between mb-4"><h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-4 w-4" /> Cronograma</h4></div>
+                          <div className="space-y-3"><p className="text-lg font-bold text-white uppercase tracking-tighter">{activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : "AGUARDANDO"}</p><Badge variant="outline" className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{activeLead.meetingLocation || "LOCAL A DEFINIR"}</Badge></div>
                         </Card>
                         <Card className="glass border-primary/15 p-6 rounded-2xl shadow-xl bg-primary/5 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-16 w-16" /></div>
-                          <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2.5 mb-4"><Brain className="h-4 w-4" /> Síntese Estratégica</h4>
-                          <p className="text-sm text-white/80 leading-relaxed italic text-justify font-medium">
-                            {activeLead.aiSummary || "Aguardando entrevistas técnicas para consolidar fatos."}
-                          </p>
+                          <h4 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2 mb-4"><Brain className="h-4 w-4" /> Síntese Estratégica</h4>
+                          <p className="text-sm text-white/80 leading-relaxed italic font-medium">{activeLead.aiSummary || "Aguardando capturas técnicas."}</p>
                         </Card>
                       </div>
                     </TabsContent>
 
                     <TabsContent value="entrevistas" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
                       <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><PlusCircle className="h-4 w-4 text-primary" /></div>
-                          <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-3"><h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3></div>
+                        <div className="grid grid-cols-4 gap-4">
                           {templates?.map(t => (
-                            <Button 
-                              key={t.id} 
-                              onClick={() => handleStartInterview(t)} 
-                              variant="outline" 
-                              className="glass border-white/10 text-white font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-lg group border-2"
-                            >
-                              <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-all"><Zap className="h-4 w-4 text-primary" /></div>
-                              <span className="truncate flex-1 text-left leading-snug tracking-tight uppercase">{t.title}</span>
+                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-white/10 text-white font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:border-primary/40 hover:bg-primary/5 transition-all group border-2">
+                              <Zap className="h-4 w-4 text-primary shrink-0" /><span className="truncate flex-1 text-left tracking-tight">{t.title}</span>
                             </Button>
                           ))}
                         </div>
                       </div>
 
                       <div className="space-y-6 pt-4">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center"><BookOpen className="h-4 w-4 text-emerald-500" /></div>
-                            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">
-                              Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}
-                            </h3>
-                          </div>
-                        </div>
-                        
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3"><h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}</h3></div>
                         {isLoadingInterviews ? (
-                          <div className="py-20 flex flex-col items-center justify-center opacity-40 gap-4 glass rounded-3xl border border-white/5">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Auditando Registros RGMJ...</p>
-                          </div>
+                          <div className="py-20 flex flex-col items-center justify-center opacity-40 gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-[10px] font-black uppercase tracking-[0.4em]">Auditando...</p></div>
                         ) : leadInterviews && leadInterviews.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {leadInterviews.map((int, idx) => (
-                              <Card key={int.id || idx} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-2xl relative overflow-hidden">
+                          <div className="grid grid-cols-3 gap-6">
+                            {leadInterviews.map((int) => (
+                              <Card key={int.id} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col group shadow-2xl relative overflow-hidden">
                                 {int.aiAnalysis && <div className="absolute top-0 right-0 p-4"><Sparkles className="h-4 w-4 text-primary animate-pulse" /></div>}
                                 <div className="p-6 space-y-6 flex-1">
-                                  <div className="flex justify-between items-start">
-                                    <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/30 text-emerald-500 bg-emerald-500/5 px-2.5 h-6 rounded-md tracking-widest">
-                                      CONCLUÍDO
-                                    </Badge>
-                                    <div className="text-[9px] font-mono font-bold text-muted-foreground uppercase opacity-40 flex items-center gap-2">
-                                      <Clock className="h-3 w-3" />
-                                      {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="space-y-2">
-                                    <h4 className="text-sm font-bold text-white uppercase tracking-tight line-clamp-2 group-hover:text-primary transition-colors leading-snug">
-                                      {int.interviewType}
-                                    </h4>
-                                    <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-40">Protocolo Técnico RGMJ</p>
-                                  </div>
-
-                                  <div className="flex items-center gap-2.5 pt-4 border-t border-white/5">
-                                    <Avatar className="h-6 w-6 border border-white/10">
-                                      <AvatarFallback className="bg-secondary text-[8px] font-black text-primary uppercase">{int.interviewerName?.substring(0, 2)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Dr(a). {int.interviewerName || "MEMBRO RGMJ"}</span>
-                                  </div>
+                                  <div className="flex justify-between items-start"><Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/30 text-emerald-500 h-6">CONCLUÍDO</Badge><span className="text-[9px] font-mono text-muted-foreground uppercase opacity-40">{int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString() : '---'}</span></div>
+                                  <h4 className="text-sm font-bold text-white uppercase tracking-tight line-clamp-2 leading-snug">{int.interviewType}</h4>
+                                  <div className="flex items-center gap-2.5 pt-4 border-t border-white/5"><Avatar className="h-6 w-6 border border-white/10"><AvatarFallback className="bg-secondary text-[8px] font-black text-primary">{int.interviewerName?.substring(0, 2)}</AvatarFallback></Avatar><span className="text-[9px] font-black text-muted-foreground uppercase">Dr(a). {int.interviewerName}</span></div>
                                 </div>
-
                                 <div className="p-4 bg-white/[0.02] border-t border-white/5 grid grid-cols-2 gap-2">
-                                  <Button 
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setViewingInterview(int);
-                                      setInterviewAnalysis(int.aiAnalysis || null);
-                                    }}
-                                    className="h-10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-white/5 gap-2"
-                                  >
-                                    <FileSearch className="h-3.5 w-3.5" /> DOSSIÊ
-                                  </Button>
-                                  <Button 
-                                    onClick={() => handleRunInterviewAnalysis(int)}
-                                    className="h-10 glass border-primary/20 text-primary font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-primary hover:text-background gap-2 shadow-lg"
-                                  >
-                                    <Brain className="h-3.5 w-3.5" /> ANÁLISE IA
-                                  </Button>
+                                  <Button variant="ghost" onClick={() => { setViewingInterview(int); setInterviewAnalysis(int.aiAnalysis || null); }} className="h-10 text-white font-black uppercase text-[9px] rounded-lg hover:bg-white/5 gap-2"><FileSearch className="h-3.5 w-3.5" /> DOSSIÊ</Button>
+                                  <Button onClick={() => handleRunInterviewAnalysis(int)} className="h-10 glass border-primary/20 text-primary font-black uppercase text-[9px] rounded-lg hover:bg-primary hover:text-background gap-2 shadow-lg"><Brain className="h-3.5 w-3.5" /> ANALISAR IA</Button>
                                 </div>
                               </Card>
                             ))}
                           </div>
                         ) : (
-                          <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-6 glass rounded-[2.5rem] border-dashed border-2 border-white/5 bg-white/[0.01]">
-                            <div className="w-20 h-20 rounded-full border border-white/10 flex items-center justify-center">
-                              <ClipboardList className="h-10 w-10 text-muted-foreground" />
-                            </div>
-                            <p className="text-[11px] font-black uppercase tracking-[0.5em]">Nenhuma captura realizada para este lead</p>
-                          </div>
+                          <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-6 glass rounded-[2.5rem] border-dashed border-2 border-white/5 bg-white/[0.01]"><ClipboardList className="h-10 w-10 text-muted-foreground" /><p className="text-[11px] font-black uppercase tracking-[0.5em]">Nenhuma captura realizada</p></div>
                         )}
                       </div>
                     </TabsContent>
@@ -937,96 +457,15 @@ export default function LeadsPage() {
                     </TabsContent>
 
                     <TabsContent value="revisao" className="space-y-6 animate-in fade-in duration-700 w-full">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-white/5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-lg">
-                            <ShieldCheck className="h-6 w-6 text-emerald-500" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-white uppercase tracking-widest leading-none">Auditoria de Protocolo</h3>
-                            <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] mt-1.5 opacity-50">Validação final de DNA Jurídico RGMJ.</p>
-                          </div>
-                        </div>
-                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-11 px-6 glass border-primary/20 text-primary font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg hover:bg-primary/5 transition-all">
-                          {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Brain className="h-4 w-4" />} CONSOLIDAR IA
+                      <div className="flex items-center justify-between pb-6 border-b border-white/5">
+                        <div className="flex items-center gap-4"><div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20"><ShieldCheck className="h-6 w-6 text-emerald-500" /></div><div><h3 className="text-lg font-bold text-white uppercase tracking-widest">Auditoria de Protocolo</h3><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-1.5 opacity-50">Validação final de DNA Jurídico.</p></div></div>
+                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-11 px-6 glass border-primary/20 text-primary font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">
+                          {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />} CONSOLIDAR IA
                         </Button>
                       </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {[
-                          { title: "Polo Ativo (Autor)", icon: User, data: [
-                            { label: "Nome Civil", value: activeLead.name },
-                            { label: "CPF/CNPJ", value: activeLead.cpf || activeLead.documentNumber || "NÃO INFORMADO" },
-                            { label: "WhatsApp", value: activeLead.phone },
-                            { label: "Endereço", value: activeLead.address ? `${activeLead.address}, ${activeLead.city}` : "PENDENTE" },
-                          ]},
-                          { title: "Polo Passivo (Réu)", icon: Building, data: [
-                            { label: "Razão Social", value: activeLead.defendantName || "NÃO INFORMADO" },
-                            { label: "Documento", value: activeLead.defendantDocument || "NÃO INFORMADO" },
-                            { label: "Endereço", value: activeLead.defendantAddress || "NÃO MAPEADO" },
-                          ]},
-                          { title: "Logística", icon: Gavel, data: [
-                            { label: "Tribunal", value: activeLead.court || "NÃO MAPEADO" },
-                            { label: "Vara", value: activeLead.vara || "NÃO MAPEADA" },
-                            { label: "Endereço Juízo", value: activeLead.courtAddress || "PENDENTE" },
-                          ]}
-                        ].map((section, idx) => (
-                          <Card key={idx} className="glass border-white/5 p-6 rounded-2xl space-y-5 shadow-xl bg-white/[0.01]">
-                            <div className="flex items-center gap-3.5 border-b border-white/5 pb-3.5">
-                              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><section.icon className="h-3.5 w-3.5 text-primary" /></div>
-                              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">{section.title}</span>
-                            </div>
-                            <div className="space-y-4">
-                              {section.data.map(item => (
-                                <div key={item.label}>
-                                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-0.5 opacity-40">{item.label}</p>
-                                  <p className="text-xs font-bold text-white uppercase tracking-tight">{item.value}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-
-                      {strategicSummary && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-in slide-in-from-bottom-2 duration-700">
-                          {[
-                            { t: "Fatos", v: strategicSummary.keyFacts, c: "text-primary", icon: Brain, bg: "bg-primary/5" },
-                            { t: "Riscos", v: strategicSummary.risksAndChallenges, c: "text-rose-500", icon: ShieldAlert, bg: "bg-rose-500/5" },
-                            { t: "Tese", v: strategicSummary.strategicAnalysis, icon: Zap, c: "text-emerald-500", bg: "bg-emerald-500/5" }
-                          ].map(s => (
-                            <div key={s.t} className={cn("p-6 rounded-2xl border border-white/5 space-y-4 shadow-xl relative overflow-hidden", s.bg)}>
-                              <div className="flex items-center gap-2.5">
-                                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-black/40 border border-white/5", s.c)}>
-                                  <s.icon className="h-4 w-4" />
-                                </div>
-                                <h5 className={cn("text-[9px] font-black uppercase tracking-[0.25em]", s.c)}>{s.t}</h5>
-                              </div>
-                              <p className="text-xs text-white/80 leading-relaxed text-justify font-medium">{s.v}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="p-6 rounded-3xl bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-6 w-full shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-6 opacity-5"><FileCheck className="h-16 w-16 text-purple-500" /></div>
-                        <div className="flex-1 space-y-3 w-full relative z-10">
-                          <Label className="text-[10px] font-black text-purple-400 uppercase tracking-[0.25em] flex items-center gap-2.5">
-                            <FileCheck className="h-4 w-4" /> PROTOCOLO CNJ *
-                          </Label>
-                          <Input 
-                            placeholder="0000000-00.0000.0.00.0000" 
-                            className="bg-black/60 border-purple-500/30 h-14 text-white font-mono text-lg font-black w-full tracking-[0.15em] rounded-xl px-6" 
-                            value={activeLead.processNumber || ""} 
-                            onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} 
-                          />
-                        </div>
-                        <Button 
-                          onClick={() => setIsConversionOpen(true)} 
-                          className="gold-gradient text-black font-black h-14 px-8 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-[1.02] transition-all relative z-10"
-                        >
-                          PROTOCOLAR E CONVERTER
-                        </Button>
+                      <div className="p-6 rounded-3xl bg-purple-500/5 border border-purple-500/20 flex items-end gap-6 w-full shadow-xl relative overflow-hidden">
+                        <div className="flex-1 space-y-3 w-full"><Label className="text-[10px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-2.5"><FileCheck className="h-4 w-4" /> PROTOCOLO CNJ *</Label><Input placeholder="0000000-00.0000.0.00.0000" className="bg-black/60 border-purple-500/30 h-14 text-white font-mono text-lg font-black w-full tracking-widest" value={activeLead.processNumber || ""} onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} /></div>
+                        <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-black font-black h-14 px-8 rounded-xl uppercase text-xs tracking-widest shadow-xl">PROTOCOLAR E CONVERTER</Button>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -1034,41 +473,9 @@ export default function LeadsPage() {
               </ScrollArea>
 
               <div className="flex-none p-4 border-t border-white/5 bg-[#0a0f1e] flex items-center justify-between z-20 shadow-2xl">
-                <Button 
-                  variant="ghost" 
-                  onClick={handlePrevTab} 
-                  disabled={!canGoBack}
-                  className="text-muted-foreground uppercase font-black text-[9px] tracking-widest gap-2.5 px-6 h-10 hover:text-white transition-all"
-                >
-                  <ArrowLeft className="h-4 w-4" /> ANTERIOR
-                </Button>
-
-                <div className="hidden md:flex gap-3">
-                  {DOSSIER_TABS.map((tab, i) => (
-                    <div 
-                      key={tab} 
-                      className={cn(
-                        "w-2.5 h-2.5 rounded-full transition-all duration-500",
-                        activeDossierTab === tab ? "bg-primary shadow-[0_0_8px_rgba(245,208,48,0.5)] scale-125" : i < currentTabIndex ? "bg-emerald-500" : "bg-white/10"
-                      )} 
-                    />
-                  ))}
-                </div>
-
-                {canGoNext ? (
-                  <Button 
-                    onClick={handleNextTab} 
-                    className="gold-gradient text-black font-black h-10 px-8 rounded-lg uppercase text-[9px] tracking-widest gap-2.5 shadow-lg hover:scale-102 transition-all"
-                  >
-                    PRÓXIMO RITO <ArrowRight className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <div className="px-6 h-10 flex items-center bg-white/5 rounded-lg border border-white/5">
-                    <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4" /> FASE FINAL
-                    </span>
-                  </div>
-                )}
+                <Button variant="ghost" onClick={handlePrevTab} disabled={!canGoBack} className="text-muted-foreground uppercase font-black text-[9px] tracking-widest gap-2.5 px-6 h-10 hover:text-white"><ArrowLeft className="h-4 w-4" /> ANTERIOR</Button>
+                <div className="hidden md:flex gap-3">{DOSSIER_TABS.map((tab, i) => (<div key={tab} className={cn("w-2.5 h-2.5 rounded-full transition-all duration-500", activeDossierTab === tab ? "bg-primary shadow-[0_0_8px_rgba(245,208,48,0.5)] scale-125" : i < currentTabIndex ? "bg-emerald-500" : "bg-white/10")} />))}</div>
+                {canGoNext ? <Button onClick={handleNextTab} className="gold-gradient text-black font-black h-10 px-8 rounded-lg uppercase text-[9px] tracking-widest gap-2.5 shadow-lg">PRÓXIMO RITO <ArrowRight className="h-4 w-4" /></Button> : <div className="px-6 h-10 flex items-center bg-white/5 rounded-lg border border-white/5"><span className="text-[9px] font-black text-primary/60 uppercase tracking-widest flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> FASE FINAL</span></div>}
               </div>
             </div>
           )}
@@ -1077,346 +484,29 @@ export default function LeadsPage() {
 
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <div className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
-                <FileSearch className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle>
-                <DialogDescription className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> DOSSIÊ TÉCNICO • DR(A). {viewingInterview?.interviewerName}
-                </DialogDescription>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => handleRunInterviewAnalysis(viewingInterview)} 
-                disabled={isAiAnalyzing}
-                className="h-10 px-5 gold-gradient text-background font-black uppercase text-[9px] gap-2.5 rounded-lg shadow-lg hover:scale-105 transition-all"
-              >
-                {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA
-              </Button>
-            </div>
+          <div className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl">
+            <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><FileSearch className="h-5 w-5 text-primary" /></div><div><DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle><DialogDescription className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription></div></div>
+            <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-10 px-5 gold-gradient text-background font-black uppercase text-[9px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
           </div>
-
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">
-              <div className="px-5 bg-black/20 border-b border-white/5 flex-none">
-                <TabsList className="bg-transparent h-10 gap-6 p-0">
-                  <TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest">
-                    Transcrição
-                  </TabsTrigger>
-                  <TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest">
-                    Análise IA
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
+              <div className="px-5 bg-black/20 border-b border-white/5 flex-none"><TabsList className="bg-transparent h-10 gap-6 p-0"><TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full tracking-widest">Transcrição</TabsTrigger><TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full tracking-widest">Análise IA</TabsTrigger></TabsList></div>
               <div className="flex-1 overflow-hidden p-5">
-                <TabsContent value="transcricao" className="h-full mt-0">
-                  <ScrollArea className="h-full pr-4">
-                    <div className="space-y-5 max-w-3xl mx-auto pb-10">
-                      {viewingInterview && (viewingInterview.templateSnapshot || Object.keys(viewingInterview.responses)).map((item: any, i: number) => {
-                        const label = typeof item === 'string' ? item : item.label
-                        const answer = viewingInterview.responses[label]
-                        if (!answer) return null
-                        
-                        return (
-                          <div key={i} className="space-y-1.5">
-                            <h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5>
-                            <p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">
-                              {String(answer)}
-                            </p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="analise" className="h-full mt-0">
-                  {isAiAnalyzing ? (
-                    <div className="h-full flex flex-col items-center justify-center space-y-4">
-                      <Brain className="h-12 w-12 text-primary animate-pulse" />
-                      <p className="text-[10px] font-bold text-white uppercase tracking-widest">Processando Inteligência...</p>
-                    </div>
-                  ) : interviewAnalysis ? (
-                    <ScrollArea className="h-full pr-4">
-                      <div className="space-y-6 max-w-4xl mx-auto pb-10">
-                        <Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg">
-                          <div className="flex items-center justify-between mb-3">
-                            <h5 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Resumo Executivo</h5>
-                            <Button onClick={handlePromoteSummary} variant="outline" className="h-7 border-primary/20 text-primary text-[8px] font-black uppercase rounded-full hover:bg-primary hover:text-background">
-                              PROMOVER A SÍNTESE DO LEAD
-                            </Button>
-                          </div>
-                          <p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p>
-                        </Card>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Card className="glass border-rose-500/20 bg-rose-500/5 p-5 rounded-2xl">
-                            <h5 className="text-[10px] font-black text-rose-500 uppercase mb-3">Teses & Riscos</h5>
-                            <p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.legalAnalysis}</p>
-                          </Card>
-                          <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl">
-                            <h5 className="text-[10px] font-black text-emerald-500 uppercase mb-3">Recomendações</h5>
-                            <p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.recommendations}</p>
-                          </Card>
-                        </div>
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3">
-                      <Sparkles className="h-10 w-10" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">Aguardando Comando</p>
-                    </div>
-                  )}
-                </TabsContent>
+                <TabsContent value="transcricao" className="h-full mt-0"><ScrollArea className="h-full pr-4"><div className="space-y-5 max-w-3xl mx-auto pb-10">{(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => {
+                  const label = typeof item === 'string' ? item : item.label; const answer = viewingInterview?.responses?.[label]; if (!answer) return null;
+                  return (<div key={i} className="space-y-1.5"><h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5><p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">{String(answer)}</p></div>)
+                })}</div></ScrollArea></TabsContent>
+                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-4"><Brain className="h-12 w-12 text-primary animate-pulse" /><p className="text-[10px] font-bold text-white uppercase tracking-widest">Processando...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full pr-4"><div className="space-y-6 max-w-4xl mx-auto pb-10"><Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg"><div className="flex items-center justify-between mb-3"><h5 className="text-[10px] font-black text-primary uppercase tracking-widest">Resumo Executivo</h5><Button onClick={handlePromoteSummary} variant="outline" className="h-7 border-primary/20 text-primary text-[8px] font-black uppercase rounded-full">PROMOVER À SÍNTESE</Button></div><p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-2 gap-4"><Card className="glass border-rose-500/20 bg-rose-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-rose-500 uppercase mb-3">Teses & Riscos</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-emerald-500 uppercase mb-3">Recomendações</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3"><Sparkles className="h-10 w-10" /><p className="text-[10px] font-black uppercase tracking-widest">Aguardando Comando</p></div>)}</TabsContent>
               </div>
             </Tabs>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isSchedulingIntake} onOpenChange={(open) => {
-        setIsSchedulingIntake(open);
-        if (!open) setIntakeSuccess(false);
-      }}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-2xl">
-          {!intakeSuccess ? (
-            <>
-              <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
-                <DialogHeader>
-                  <DialogTitle className="text-white font-headline text-lg uppercase tracking-widest flex items-center gap-3">
-                    <CalendarIcon className="h-5 w-5 text-amber-500" /> Agendar Atendimento
-                  </DialogTitle>
-                </DialogHeader>
-              </div>
-              
-              <ScrollArea className="max-h-[60vh]">
-                <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modalidade</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button 
-                        onClick={() => setIntakeData({...intakeData, type: 'online'})}
-                        className={cn(
-                          "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
-                          intakeData.type === 'online' 
-                            ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
-                            : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
-                        )}
-                      >
-                        <Video className="h-4 w-4" /> REUNIÃO ONLINE
-                      </button>
-                      <button 
-                        onClick={() => setIntakeData({...intakeData, type: 'presencial'})}
-                        className={cn(
-                          "h-14 flex items-center justify-center gap-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest",
-                          intakeData.type === 'presencial' 
-                            ? "bg-primary text-background border-primary shadow-[0_0_15px_rgba(245,208,48,0.3)]" 
-                            : "bg-white/[0.02] border-white/5 text-white hover:border-white/20"
-                        )}
-                      >
-                        <MapPin className="h-4 w-4" /> PRESENCIAL
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data</Label>
-                      <Input type="date" value={intakeData.date} onChange={(e) => setIntakeData({...intakeData, date: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                      <Input type="time" value={intakeData.time} onChange={(e) => setIntakeData({...intakeData, time: e.target.value})} className="glass h-12 text-white font-bold border-white/10 text-xs rounded-xl" />
-                    </div>
-                  </div>
-
-                  {intakeData.type === 'presencial' && (
-                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Local do Atendimento</Label>
-                      <Select value={intakeData.locationType} onValueChange={(v) => setIntakeData({...intakeData, locationType: v})}>
-                        <SelectTrigger className="glass h-12 text-white font-bold uppercase text-[10px] rounded-xl border-white/10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#0d121f] text-white">
-                          <SelectItem value="sede">🏢 SEDE RGMJ (OFICIAL)</SelectItem>
-                          <SelectItem value="externo">📍 ENDEREÇO EXTERNO</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      {intakeData.locationType === 'externo' && (
-                        <div className="relative mt-2">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                          <Input 
-                            placeholder="BUSCAR ENDEREÇO..." 
-                            className="glass h-12 pl-12 text-white text-xs font-bold uppercase rounded-xl border-white/10"
-                            value={locationSearch}
-                            onChange={(e) => setLocationSearch(e.target.value)}
-                          />
-                          {isSearchingLocation && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
-                          
-                          {locationResults.length > 0 && (
-                            <div className="absolute z-[100] w-full mt-2 bg-[#0d121f] border border-primary/20 rounded-xl overflow-hidden shadow-2xl">
-                              {locationResults.map((place, i) => (
-                                <button key={i} onClick={() => handleSelectLocation(place)} className="w-full p-4 text-left hover:bg-primary/10 border-b border-white/5 last:border-0 transition-all">
-                                  <p className="text-[10px] font-bold text-white uppercase leading-tight">{place.display_name}</p>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Observações Táticas</Label>
-                    <Textarea 
-                      placeholder="INSTRUÇÕES PARA O RITO..."
-                      className="glass min-h-[100px] text-white text-[11px] uppercase font-bold border-white/10 focus:ring-primary/50 resize-none p-4 rounded-xl"
-                      value={intakeData.observations}
-                      onChange={(e) => setIntakeData({...intakeData, observations: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </ScrollArea>
-
-              <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-                <button 
-                  onClick={() => setIsSchedulingIntake(false)} 
-                  className="text-muted-foreground font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors"
-                >
-                  CANCELAR
-                </button>
-                <Button 
-                  onClick={handleScheduleIntake} 
-                  className="gold-gradient text-black font-black h-14 px-10 rounded-xl uppercase text-[11px] tracking-widest shadow-2xl hover:scale-[1.02] transition-all"
-                >
-                  CONFIRMAR AGENDA
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="p-12 flex flex-col items-center text-center space-y-8 animate-in zoom-in-95 duration-500">
-              <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white uppercase tracking-tight">Atendimento Agendado</h3>
-                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">O rito foi sincronizado com a pauta estratégica.</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <Button 
-                  onClick={() => handleShareIntake('whatsapp')}
-                  className="h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl"
-                >
-                  <MessageCircle className="h-4 w-4" /> ENVIAR WHATSAPP
-                </Button>
-                <Button 
-                  onClick={() => handleShareIntake('email')}
-                  variant="outline"
-                  className="h-14 glass border-white/10 text-white font-black uppercase text-[10px] tracking-widest gap-3 rounded-xl"
-                >
-                  <Mail className="h-4 w-4" /> NOTIFICAR POR E-MAIL
-                </Button>
-              </div>
-              
-              <button 
-                onClick={() => setIsSchedulingIntake(false)}
-                className="text-[9px] font-black text-muted-foreground uppercase tracking-widest hover:text-white transition-colors pt-4"
-              >
-                FECHAR E RETORNAR AO FUNIL
-              </button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5">
-            <DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle>
-          </DialogHeader>
-          {executingTemplate && (
-            <DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none">
-            <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-0">
-            {activeLead && (
-              <ProcessForm 
-                initialData={{
-                  clientName: activeLead.name,
-                  clientId: activeLead.id,
-                  defendantName: activeLead.defendantName,
-                  caseType: activeLead.type,
-                  court: activeLead.court,
-                  vara: activeLead.vara,
-                  processNumber: activeLead.processNumber || "",
-                  responsibleStaffId: user?.uid
-                }}
-                onSubmit={handleConvertProcess}
-                onCancel={() => setIsConversionOpen(false)}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
-        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full">
-          <SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none">
-            <SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento RGMJ</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 min-h-0">
-            <LeadForm 
-              existingLeads={leads} 
-              onSubmit={(data) => {
-                addDocumentNonBlocking(collection(db!, "leads"), { ...data, assignedStaffId: user?.uid, status: "novo", driveStatus: "pendente", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
-                setIsNewEntryOpen(false)
-                toast({ title: "Atendimento Iniciado" })
-              }} 
-              onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} 
-              onCancel={() => setIsNewEntryOpen(false)}
-              defaultResponsibleLawyer={user?.displayName || ""}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
-        <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full">
-          <SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none">
-            <SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 min-h-0">
-            {activeLead && (
-              <LeadForm 
-                existingLeads={[]}
-                initialData={activeLead}
-                lockMode={true}
-                onSubmit={async (data) => {
-                  await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() })
-                  setIsEditModeOpen(false)
-                  toast({ title: "Qualificação Atualizada" })
-                }}
-                onSelectExisting={() => {}}
-                onCancel={() => setIsEditModeOpen(false)}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5"><DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle></DialogHeader>{executingTemplate && (<DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />)}</DialogContent></Dialog>
+      <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none"><DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle></DialogHeader><div className="flex-1 min-h-0">{activeLead && (<ProcessForm initialData={{ clientName: activeLead.name, clientId: activeLead.id, defendantName: activeLead.defendantName, caseType: activeLead.type, court: activeLead.court, vara: activeLead.vara, processNumber: activeLead.processNumber || "", responsibleStaffId: user?.uid }} onSubmit={handleConvertProcess} onCancel={() => setIsConversionOpen(false)} />)}</div></DialogContent></Dialog>
+      <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={(data) => { addDocumentNonBlocking(collection(db!, "leads"), { ...data, assignedStaffId: user?.uid, status: "novo", driveStatus: "pendente", createdAt: serverTimestamp(), updatedAt: serverTimestamp() }); setIsNewEntryOpen(false); toast({ title: "Atendimento Iniciado" }) }} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
+      <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle></SheetHeader><div className="flex-1 min-h-0">{activeLead && (<LeadForm existingLeads={[]} initialData={activeLead} lockMode={true} onSubmit={async (data) => { await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() }); setIsEditModeOpen(false); toast({ title: "Qualificação Atualizada" }) }} onSelectExisting={() => {}} onCancel={() => setIsEditModeOpen(false)} />)}</div></SheetContent></Sheet>
     </div>
   )
 }
