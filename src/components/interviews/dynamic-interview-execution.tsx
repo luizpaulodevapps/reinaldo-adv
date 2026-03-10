@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
+import { useUser } from "@/firebase"
 
 interface DynamicInterviewProps {
   template: any
@@ -32,6 +33,7 @@ interface DynamicInterviewProps {
 }
 
 export function DynamicInterviewExecution({ template, onSubmit, onCancel }: DynamicInterviewProps) {
+  const { user } = useUser()
   const [responses, setResponses] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
