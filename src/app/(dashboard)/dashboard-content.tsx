@@ -1,3 +1,4 @@
+
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,15 +43,22 @@ export function DashboardContent() {
   const { data: financial } = useCollection(financialQuery)
 
   const stats = useMemo(() => {
+    // Filtra apenas leads ativos (não arquivados)
+    const activeLeads = (leads || []).filter(l => l.status !== 'arquivado').length
+    
+    // Filtra apenas processos ativos
+    const activeCases = (cases || []).filter(c => c.status !== 'Arquivado').length
+
+    // Soma repasses pendentes reais
     const totalRepasses = (financial || [])
-      .filter(f => f.type === 'Repasse' && f.status === 'Pendente')
+      .filter(f => f.type?.includes('Entrada') && f.category?.includes('Acordo') && f.status === 'Pendente')
       .reduce((acc, f) => acc + (Number(f.value) || 0), 0)
 
     return [
-      { label: "LEADS", value: leads?.length || 0, icon: Zap, color: "text-amber-500", bg: "bg-amber-500/5" },
-      { label: "DOSSIÊS ATIVOS", value: cases?.length || 0, icon: Scale, color: "text-primary", bg: "bg-primary/5" },
-      { label: "PRAZOS ABERTOS", value: deadlines?.length || 0, icon: Clock, color: "text-destructive", bg: "bg-destructive/5" },
-      { label: "REPASSES", value: totalRepasses > 0 ? `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : "R$ 0", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/5" },
+      { label: "TRIAGEM ATIVA", value: activeLeads, icon: Zap, color: "text-amber-500", bg: "bg-amber-500/5" },
+      { label: "PROCESSOS ATIVOS", value: activeCases, icon: Scale, color: "text-primary", bg: "bg-primary/5" },
+      { label: "PRAZOS ABERTOS", value: deadlines?.length || 0, icon: Clock, color: "text-rose-500", bg: "bg-rose-500/5" },
+      { label: "REPASSES ACORDO", value: totalRepasses > 0 ? `R$ ${totalRepasses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : "R$ 0", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/5" },
     ]
   }, [leads, cases, deadlines, financial])
 
@@ -58,12 +66,12 @@ export function DashboardContent() {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center space-y-4 text-white font-sans">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase tracking-widest opacity-40">Sincronizando Ecossistema...</p>
+        <p className="text-xs font-bold uppercase tracking-widest opacity-40">Sincronizando Ecossistema RGMJ...</p>
       </div>
     )
   }
 
-  const displayName = profile?.name || user?.displayName || "REINALDO GONÇALVES"
+  const displayName = profile?.name || user?.displayName || "MEMBRO RGMJ"
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
@@ -80,7 +88,7 @@ export function DashboardContent() {
           <Button variant="outline" className="flex-1 md:flex-none glass border-white/10 text-xs font-bold uppercase h-11 px-6" asChild>
             <Link href="/leads"><Zap className="mr-2 h-4 w-4 text-amber-500" /> Triagem</Link>
           </Button>
-          <Button className="flex-1 md:flex-none gold-gradient font-bold text-xs uppercase h-11 px-8 rounded-lg shadow-xl" asChild>
+          <Button className="flex-1 md:flex-none gold-gradient text-background font-bold text-xs uppercase h-11 px-8 rounded-lg shadow-xl" asChild>
             <Link href="/cases"><Plus className="mr-2 h-4 w-4" /> Novo Processo</Link>
           </Button>
         </div>
@@ -90,12 +98,12 @@ export function DashboardContent() {
         {stats.map((stat, i) => (
           <Card key={i} className={cn("glass border-white/5 shadow-xl hover-gold transition-all group relative overflow-hidden", stat.bg)}>
             <CardHeader className="p-5 pb-2">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <stat.icon className={cn("h-4 w-4", stat.color)} /> {stat.label}
+              <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <stat.icon className={cn("h-3.5 w-3.5", stat.color)} /> {stat.label}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 pt-0">
-              <div className="text-3xl font-bold text-white tracking-tight">{stat.value}</div>
+              <div className="text-3xl font-black text-white tracking-tighter">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
@@ -118,7 +126,7 @@ export function DashboardContent() {
                   <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group">
                     <div className="flex gap-4 items-center">
                       <div className="flex flex-col items-center justify-center bg-secondary/50 h-12 w-16 rounded-lg border border-white/5">
-                        <span className="text-xs font-bold text-primary uppercase leading-none">
+                        <span className="text-[10px] font-black text-primary uppercase leading-none">
                           {hearing.startDateTime ? new Date(hearing.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
                         </span>
                       </div>
@@ -133,28 +141,28 @@ export function DashboardContent() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 opacity-20 space-y-3">
-                <Gavel className="h-10 w-10" />
-                <p className="text-xs font-bold uppercase tracking-widest">Pauta Judiciária Limpa</p>
+                <Gavel className="h-10 w-10 text-muted-foreground" />
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pauta Judiciária Limpa</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         <div className="space-y-6">
-          <Card className="glass border-destructive/20 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-destructive/50" />
+          <Card className="glass border-rose-500/20 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-rose-500/50" />
             <CardHeader className="p-6 pb-2">
               <CardTitle className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-destructive" /> Radar de Riscos
+                <AlertCircle className="h-5 w-5 text-rose-500" /> Radar de Riscos
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 pt-0 space-y-4">
               <div className="space-y-3">
                 {deadlines && deadlines.length > 0 ? (
                   deadlines.slice(0, 3).map((d, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-destructive/5 border border-destructive/10 group hover:border-destructive/30 transition-all">
+                    <div key={i} className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 group hover:border-rose-500/30 transition-all">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] font-black text-destructive uppercase tracking-widest">URGENTE</span>
+                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">URGENTE</span>
                         <span className="text-[10px] font-mono text-white/40">{d.dueDate}</span>
                       </div>
                       <p className="text-white text-xs font-bold truncate uppercase">{d.title}</p>
@@ -185,7 +193,7 @@ export function DashboardContent() {
               <Button asChild variant="outline" className="glass border-white/5 h-16 rounded-xl hover:border-primary/30 group transition-all text-white p-0">
                 <Link href="/drafting" className="flex flex-col items-center justify-center w-full h-full gap-1">
                   <FileText className="h-5 w-5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Minuta IA</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Minutas</span>
                 </Link>
               </Button>
             </div>

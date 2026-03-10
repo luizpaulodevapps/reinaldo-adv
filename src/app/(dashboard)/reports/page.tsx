@@ -9,6 +9,8 @@ import { collection, query } from "firebase/firestore"
 import { useMemo } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export default function ReportsPage() {
   const db = useFirestore()
@@ -29,30 +31,67 @@ export default function ReportsPage() {
   const isLoading = loadingCases || loadingClients || loadingFinancial
 
   const performanceData = useMemo(() => {
-    return [
-      { month: "Jan", processos: 5, faturamento: 12000 },
-      { month: "Fev", processos: 8, faturamento: 15000 },
-      { month: "Mar", processos: 12, faturamento: 22000 },
-      { month: "Abr", processos: 15, faturamento: 28000 },
-      { month: "Mai", processos: 20, faturamento: 35000 },
-      { month: "Jun", processos: (cases?.length || 0), faturamento: (financial?.reduce((acc, f) => acc + (f.value || 0), 0) || 0) / 10 },
-    ]
+    if (!cases || !financial) return []
+
+    // Calcula os últimos 6 meses dinamicamente
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const date = subMonths(new Date(), 5 - i)
+      return {
+        start: startOfMonth(date),
+        end: endOfMonth(date),
+        label: format(date, "MMM", { locale: ptBR }).toUpperCase()
+      }
+    })
+
+    return months.map(m => {
+      const processesCount = cases.filter(c => {
+        const createdAt = c.createdAt?.toDate ? c.createdAt.toDate() : null
+        return createdAt && isWithinInterval(createdAt, { start: m.start, end: m.end })
+      }).length
+
+      const revenue = financial
+        .filter(f => {
+          const dueDate = f.dueDate ? parseISO(f.dueDate) : null
+          return f.type?.includes('Entrada') && dueDate && isWithinInterval(dueDate, { start: m.start, end: m.end })
+        })
+        .reduce((acc, f) => acc + (Number(f.value) || 0), 0)
+
+      return {
+        month: m.label,
+        processos: processesCount,
+        faturamento: revenue
+      }
+    })
   }, [cases, financial])
 
   const areaData = useMemo(() => {
     const counts: Record<string, number> = {}
-    cases?.forEach(c => {
-      const type = c.caseType || "Outros"
+    if (!cases || cases.length === 0) return []
+
+    cases.forEach(c => {
+      const type = c.caseType || "Geral"
       counts[type] = (counts[type] || 0) + 1
     })
     
-    const colors = ["#F5D030", "#D4AF37", "#1e293b", "#475569", "#64748b"]
+    const colors = ["#F5D030", "#D4AF37", "#1e293b", "#475569", "#64748b", "#fbbf24", "#a855f7"]
     return Object.entries(counts).map(([name, value], i) => ({
-      name,
+      name: name.toUpperCase(),
       value,
       color: colors[i % colors.length]
     }))
   }, [cases])
+
+  const totals = useMemo(() => {
+    const openDeadlines = (deadlines || []).filter(d => d.status === "Aberto").length
+    const growth = "0%" // Logica de crescimento pode ser implementada comparando meses
+    
+    return {
+      growth,
+      clients: clients?.length || 0,
+      cases: cases?.length || 0,
+      deadlines: openDeadlines
+    }
+  }, [clients, cases, deadlines])
 
   if (isLoading) {
     return (
@@ -85,10 +124,10 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Crescimento Global", value: "+15%", icon: TrendingUp, color: "text-emerald-500" },
-          { label: "Base de Clientes", value: clients?.length || 0, icon: Users, color: "text-primary" },
-          { label: "Dossiês Estratégicos", value: cases?.length || 0, icon: Scale, color: "text-info" },
-          { label: "Prazos Críticos", value: deadlines?.filter(d => d.status === "Aberto").length || 0, icon: AlertCircle, color: "text-destructive" },
+          { label: "Performance Mês", value: totals.growth, icon: TrendingUp, color: "text-emerald-500" },
+          { label: "Base de Clientes", value: totals.clients, icon: Users, color: "text-primary" },
+          { label: "Processos Ativos", value: totals.cases, icon: Scale, color: "text-blue-400" },
+          { label: "Prazos Críticos", value: totals.deadlines, icon: AlertCircle, color: "text-rose-500" },
         ].map((stat, i) => (
           <Card key={i} className="glass border-white/5 hover-gold transition-all">
             <CardContent className="p-6 flex items-center justify-between">
@@ -96,7 +135,7 @@ export default function ReportsPage() {
                 <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{stat.label}</p>
                 <p className="text-2xl font-black mt-1 text-white tracking-tighter">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-xl bg-secondary/50 ${stat.color}`}>
+              <div className={cn("p-3 rounded-xl bg-white/5", stat.color)}>
                 <stat.icon className="h-5 w-5" />
               </div>
             </CardContent>
@@ -107,27 +146,32 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="glass border-primary/20 shadow-2xl">
           <CardHeader className="border-b border-white/5">
-            <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Evolução de Performance</CardTitle>
+            <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Evolução Financeira (R$)</CardTitle>
           </CardHeader>
           <CardContent className="h-[350px] p-8">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "#020617", border: "1px solid #1e293b", borderRadius: "8px" }}
-                  itemStyle={{ color: "#F5D030", fontWeight: 'bold', fontSize: '10px' }}
-                />
-                <Bar dataKey="faturamento" fill="#F5D030" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {performanceData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: "#020617", border: "1px solid #1e293b", borderRadius: "8px" }}
+                    itemStyle={{ color: "#F5D030", fontWeight: 'bold', fontSize: '10px' }}
+                    formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`}
+                  />
+                  <Bar dataKey="faturamento" fill="#F5D030" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center opacity-20"><p className="text-[10px] font-black uppercase tracking-widest">Sem histórico financeiro</p></div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="glass border-primary/20 shadow-2xl">
           <CardHeader className="border-b border-white/5">
-            <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Distribuição Jurídica</CardTitle>
+            <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Distribuição por Área</CardTitle>
           </CardHeader>
           <CardContent className="h-[350px] flex items-center justify-center p-8">
             {areaData.length > 0 ? (
