@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -19,7 +20,8 @@ import {
   Zap,
   Trash2,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  ArrowRight
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
@@ -34,7 +36,9 @@ import {
   eachDayOfInterval, 
   isSameMonth, 
   addMonths, 
-  subMonths 
+  subMonths,
+  isAfter,
+  startOfDay
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -47,6 +51,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function AgendaPage() {
+  const [viewMode, setViewMode] = useState<'calendar' | 'upcoming'>('calendar')
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
@@ -94,8 +99,15 @@ export default function AgendaPage() {
   const parseDate = (dateValue: any) => {
     if (!dateValue) return null
     if (dateValue instanceof Timestamp) return dateValue.toDate()
-    if (typeof dateValue === 'string') return parseISO(dateValue)
+    if (typeof dateValue === 'string') {
+      try {
+        return parseISO(dateValue)
+      } catch (e) {
+        return new Date(dateValue)
+      }
+    }
     if (dateValue?.toDate) return dateValue.toDate()
+    if (dateValue?.seconds) return new Date(dateValue.seconds * 1000)
     return new Date(dateValue)
   }
 
@@ -105,30 +117,25 @@ export default function AgendaPage() {
     return eachDayOfInterval({ start, end })
   }, [currentMonth])
 
+  const allEvents = useMemo(() => {
+    const h = (hearings || []).map(h => ({ ...h, eventType: 'audiencia', collection: 'hearings', date: parseDate(h.startDateTime) }))
+    const d = (deadlines || []).map(d => ({ ...d, eventType: 'prazo', collection: 'deadlines', date: parseDate(d.dueDate) }))
+    const a = (appointments || []).map(a => ({ ...a, eventType: 'atendimento', collection: 'appointments', date: parseDate(a.startDateTime) }))
+    return [...h, ...d, ...a]
+  }, [hearings, deadlines, appointments])
+
   const selectedDayEvents = useMemo(() => {
-    const dayHearings = (hearings || []).filter(h => {
-      const hDate = parseDate(h.startDateTime)
-      return hDate && isSameDay(hDate, selectedDate)
-    }).map(h => ({ ...h, eventType: 'audiencia', collection: 'hearings' }))
+    return allEvents
+      .filter(e => e.date && isSameDay(e.date, selectedDate))
+      .sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0))
+  }, [selectedDate, allEvents])
 
-    const dayDeadlines = (deadlines || []).filter(d => {
-      const dDate = parseDate(d.dueDate)
-      return dDate && isSameDay(dDate, selectedDate)
-    }).map(d => ({ ...d, eventType: 'prazo', collection: 'deadlines' }))
-
-    const dayAppointments = (appointments || []).filter(a => {
-      const aDate = parseDate(a.startDateTime)
-      return aDate && isSameDay(aDate, selectedDate)
-    }).map(a => ({ ...a, eventType: 'atendimento', collection: 'appointments' }))
-
-    return [...dayHearings, ...dayDeadlines, ...dayAppointments].sort((a, b) => {
-      const dateA = parseDate(a.startDateTime || a.dueDate)
-      const dateB = parseDate(b.startDateTime || b.dueDate)
-      const timeA = dateA?.getTime() || 0
-      const timeB = dateB?.getTime() || 0
-      return timeA - timeB
-    })
-  }, [selectedDate, hearings, deadlines, appointments])
+  const upcomingEvents = useMemo(() => {
+    const today = startOfDay(new Date())
+    return allEvents
+      .filter(e => e.date && (isSameDay(e.date, today) || isAfter(e.date, today)))
+      .sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0))
+  }, [allEvents])
 
   const hasEventsOnDay = (day: Date) => {
     const hasHearing = (hearings || []).some(h => {
@@ -231,143 +238,219 @@ export default function AgendaPage() {
       </div>
 
       <div className="flex items-center gap-3 pb-2">
-        <Button className="gold-gradient text-background font-black gap-2 text-[10px] uppercase tracking-[0.2em] h-10 px-6 rounded-lg shadow-lg">
+        <Button 
+          onClick={() => setViewMode('calendar')}
+          className={cn(
+            "font-black gap-2 text-[10px] uppercase tracking-[0.2em] h-10 px-6 rounded-lg transition-all",
+            viewMode === 'calendar' ? "gold-gradient text-background shadow-lg" : "glass border-primary/20 text-primary hover:bg-primary/5"
+          )}
+        >
           <CalendarIcon className="h-3.5 w-3.5" /> Calendário Mensal
         </Button>
-        <Button variant="ghost" className="text-muted-foreground hover:text-white font-black gap-2 text-[10px] uppercase tracking-[0.2em] h-10 px-6">
+        <Button 
+          onClick={() => setViewMode('upcoming')}
+          className={cn(
+            "font-black gap-2 text-[10px] uppercase tracking-[0.2em] h-10 px-6 rounded-lg transition-all border",
+            viewMode === 'upcoming' ? "gold-gradient text-background shadow-lg border-0" : "glass border-primary/40 text-primary hover:bg-primary/5"
+          )}
+        >
           <Clock className="h-3.5 w-3.5" /> Próximos Atos
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <div className="xl:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black uppercase tracking-tighter text-white">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </h2>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button variant="secondary" className="h-8 px-4 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/5" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+      {viewMode === 'calendar' ? (
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="xl:col-span-3 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black uppercase tracking-tighter text-white">
+                {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+              </h2>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <Button variant="secondary" className="h-8 px-4 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/5" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="glass rounded-2xl overflow-hidden border-white/5 shadow-xl bg-white/[0.01]">
+              <div className="grid grid-cols-7 border-b border-white/5 bg-white/[0.03]">
+                {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map(day => (
+                  <div key={day} className="py-3 text-center text-[9px] font-black text-muted-foreground tracking-[0.2em] border-r border-white/5 last:border-r-0 uppercase">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7">
+                {calendarDays.map((day, i) => {
+                  const { hasHearing, hasDeadline, hasAppointment } = hasEventsOnDay(day)
+                  const isSelected = isSameDay(day, selectedDate)
+                  const isCurrentMonth = isSameMonth(day, currentMonth)
+
+                  return (
+                    <div 
+                      key={i}
+                      onClick={() => setSelectedDate(day)}
+                      className={cn(
+                        "min-h-[100px] p-3 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-primary/5 group relative",
+                        !isCurrentMonth && "opacity-10 pointer-events-none",
+                        isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/30"
+                      )}
+                    >
+                      <span className={cn("text-xs font-black transition-colors", isSelected ? "text-primary scale-110 inline-block" : "text-muted-foreground group-hover:text-white")}>
+                        {format(day, "d")}
+                      </span>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {hasHearing && <div className="h-1.5 w-1.5 rounded-full bg-destructive shadow-[0_0_5px_rgba(239,68,68,0.6)]" />}
+                        {hasDeadline && <div className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(245,208,48,0.6)]" />}
+                        {hasAppointment && <div className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.6)]" />}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
-          <div className="glass rounded-2xl overflow-hidden border-white/5 shadow-xl bg-white/[0.01]">
-            <div className="grid grid-cols-7 border-b border-white/5 bg-white/[0.03]">
-              {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map(day => (
-                <div key={day} className="py-3 text-center text-[9px] font-black text-muted-foreground tracking-[0.2em] border-r border-white/5 last:border-r-0 uppercase">
-                  {day}
-                </div>
-              ))}
-            </div>
+          <div className="xl:col-span-1">
+            <div className="sticky top-24 space-y-4">
+              <div className="pb-2 border-b border-white/5">
+                <h3 className="text-primary font-black uppercase tracking-[0.2em] text-[10px]">
+                  {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                </h3>
+              </div>
 
-            <div className="grid grid-cols-7">
-              {calendarDays.map((day, i) => {
-                const { hasHearing, hasDeadline, hasAppointment } = hasEventsOnDay(day)
-                const isSelected = isSameDay(day, selectedDate)
-                const isCurrentMonth = isSameMonth(day, currentMonth)
-
-                return (
-                  <div 
-                    key={i}
-                    onClick={() => setSelectedDate(day)}
-                    className={cn(
-                      "min-h-[100px] p-3 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-primary/5 group relative",
-                      !isCurrentMonth && "opacity-10 pointer-events-none",
-                      isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/30"
-                    )}
-                  >
-                    <span className={cn("text-xs font-black transition-colors", isSelected ? "text-primary scale-110 inline-block" : "text-muted-foreground group-hover:text-white")}>
-                      {format(day, "d")}
-                    </span>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {hasHearing && <div className="h-1.5 w-1.5 rounded-full bg-destructive shadow-[0_0_5px_rgba(239,68,68,0.6)]" />}
-                      {hasDeadline && <div className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(245,208,48,0.6)]" />}
-                      {hasAppointment && <div className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.6)]" />}
-                    </div>
+              <div className="space-y-3 min-h-[400px] flex flex-col">
+                {isLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Auditando...</span>
                   </div>
-                )
-              })}
+                ) : selectedDayEvents.length > 0 ? (
+                  selectedDayEvents.map((event, idx) => (
+                    <Card key={idx} onClick={() => handleOpenEvent(event)} className="glass border-l-4 border-l-primary/50 hover-gold cursor-pointer transition-all shadow-lg rounded-xl overflow-hidden bg-white/[0.02]">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Badge 
+                            variant={event.eventType === 'audiencia' ? 'destructive' : event.eventType === 'atendimento' ? 'secondary' : 'outline'}
+                            className={cn(
+                              "text-[8px] font-black uppercase tracking-widest px-2 py-0.5",
+                              event.eventType === 'atendimento' && "bg-amber-500 text-background border-0"
+                            )}
+                          >
+                            {event.eventType === 'atendimento' ? 'Atendimento' : event.hearingType === 'Virtual' ? 'Aud. Virtual' : event.eventType === 'audiencia' ? 'Aud. Física' : 'Prazo'}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground font-mono font-bold flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" /> {event.date ? format(event.date, "HH:mm") : "--:--"}
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-bold text-sm text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{event.title}</h4>
+                          <p className="text-[9px] text-muted-foreground mt-1.5 flex items-center gap-1.5 font-black uppercase tracking-[0.1em]">
+                            {event.eventType === 'atendimento' ? <Zap className="h-3 w-3 text-amber-500" /> : <Scale className="h-3 w-3 text-primary" />}
+                            {event.eventType === 'atendimento' ? `Lead: ${event.clientName || 'N/A'}` : `Proc: ${event.processNumber || event.processId || "N/A"}`}
+                          </p>
+                        </div>
+
+                        {(event.hearingType === 'Virtual' || event.meetingType === 'online') ? (
+                          <div className="pt-2 border-t border-white/5">
+                            <div className="text-[9px] text-emerald-500 flex items-center gap-1.5 font-black uppercase tracking-[0.15em]">
+                              <Video className="h-3.5 w-3.5" /> Sala Liberada
+                            </div>
+                          </div>
+                        ) : (
+                          event.location && (
+                            <div className="text-[9px] text-muted-foreground flex items-start gap-2 font-bold uppercase tracking-widest pt-2 border-t border-white/5">
+                              <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> 
+                              <span className="leading-tight truncate">{event.location}</span>
+                            </div>
+                          )
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-20 space-y-4">
+                    <CalendarIcon className="h-12 w-12 text-muted-foreground" />
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em]">Pauta limpa</p>
+                  </div>
+                )}
+              </div>
+
+              <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-2 py-6 rounded-xl shadow-xl uppercase text-[10px] tracking-[0.2em] hover:scale-[1.02] transition-all">
+                Agendar Ato
+              </Button>
             </div>
           </div>
         </div>
-
-        <div className="xl:col-span-1">
-          <div className="sticky top-24 space-y-4">
-            <div className="pb-2 border-b border-white/5">
-              <h3 className="text-primary font-black uppercase tracking-[0.2em] text-[10px]">
-                {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-              </h3>
+      ) : (
+        <div className="space-y-6 max-w-5xl">
+          {isLoading ? (
+            <div className="py-32 flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Compilando Pauta RGMJ...</span>
             </div>
-
-            <div className="space-y-3 min-h-[400px] flex flex-col">
-              {isLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Auditando...</span>
-                </div>
-              ) : selectedDayEvents.length > 0 ? (
-                selectedDayEvents.map((event, idx) => (
-                  <Card key={idx} onClick={() => handleOpenEvent(event)} className="glass border-l-4 border-l-primary/50 hover-gold cursor-pointer transition-all shadow-lg rounded-xl overflow-hidden bg-white/[0.02]">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
+          ) : upcomingEvents.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {upcomingEvents.map((event, idx) => (
+                <Card key={idx} onClick={() => handleOpenEvent(event)} className="glass border-white/5 hover-gold cursor-pointer transition-all shadow-xl rounded-2xl overflow-hidden group">
+                  <CardContent className="p-0 flex flex-col md:flex-row">
+                    <div className="p-6 md:w-40 flex flex-col items-center justify-center bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/5 group-hover:bg-primary/5 transition-all">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase mb-1">{event.date ? format(event.date, "MMM", { locale: ptBR }).toUpperCase() : "---"}</span>
+                      <span className="text-3xl font-black text-white">{event.date ? format(event.date, "dd") : "--"}</span>
+                      <span className="text-[10px] font-mono font-bold text-primary mt-2">{event.date ? format(event.date, "HH:mm") : "--:--"}</span>
+                    </div>
+                    
+                    <div className="flex-1 p-6 flex flex-col justify-center space-y-3">
+                      <div className="flex items-center gap-3">
                         <Badge 
                           variant={event.eventType === 'audiencia' ? 'destructive' : event.eventType === 'atendimento' ? 'secondary' : 'outline'}
                           className={cn(
-                            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5",
+                            "text-[8px] font-black uppercase tracking-widest px-3 py-1",
                             event.eventType === 'atendimento' && "bg-amber-500 text-background border-0"
                           )}
                         >
-                          {event.eventType === 'atendimento' ? 'Atendimento' : event.hearingType === 'Virtual' ? 'Aud. Virtual' : event.eventType === 'audiencia' ? 'Aud. Física' : 'Prazo'}
+                          {event.eventType === 'atendimento' ? 'ATENDIMENTO' : event.eventType === 'audiencia' ? 'AUDIÊNCIA' : 'PRAZO JUDICIAL'}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground font-mono font-bold flex items-center gap-1.5">
-                          <Clock className="h-3 w-3" /> {event.startDateTime ? format(parseDate(event.startDateTime)!, "HH:mm") : event.dueDate || "--:--"}
-                        </span>
+                        {event.hearingType === 'Virtual' && <Badge variant="outline" className="text-[8px] border-emerald-500/30 text-emerald-500 uppercase font-black">VIRTUAL</Badge>}
                       </div>
-                      
-                      <div>
-                        <h4 className="font-bold text-sm text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{event.title}</h4>
-                        <p className="text-[9px] text-muted-foreground mt-1.5 flex items-center gap-1.5 font-black uppercase tracking-[0.1em]">
-                          {event.eventType === 'atendimento' ? <Zap className="h-3 w-3 text-amber-500" /> : <Scale className="h-3 w-3 text-primary" />}
-                          {event.eventType === 'atendimento' ? `Lead: ${event.clientName}` : `Proc: ${event.processNumber || event.processId || "N/A"}`}
+                      <h4 className="text-lg font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">{event.title}</h4>
+                      <div className="flex flex-wrap items-center gap-6">
+                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-2">
+                          <Scale className="h-3.5 w-3.5 text-primary/50" /> {event.processNumber || event.clientName || "N/A"}
                         </p>
+                        {event.location && (
+                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5 text-primary/50" /> {event.location}
+                          </p>
+                        )}
                       </div>
+                    </div>
 
-                      {(event.hearingType === 'Virtual' || event.meetingType === 'online') ? (
-                        <div className="pt-2 border-t border-white/5">
-                          <div className="text-[9px] text-emerald-500 flex items-center gap-1.5 font-black uppercase tracking-[0.15em]">
-                            <Video className="h-3.5 w-3.5" /> Sala Liberada
-                          </div>
-                        </div>
-                      ) : (
-                        event.location && (
-                          <div className="text-[9px] text-muted-foreground flex items-start gap-2 font-bold uppercase tracking-widest pt-2 border-t border-white/5">
-                            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> 
-                            <span className="leading-tight truncate">{event.location}</span>
-                          </div>
-                        )
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-20 space-y-4">
-                  <CalendarIcon className="h-12 w-12 text-muted-foreground" />
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em]">Pauta limpa</p>
-                </div>
-              )}
+                    <div className="p-6 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 opacity-0 group-hover:opacity-100 transition-all">
+                      <ArrowRight className="h-6 w-6 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-
-            <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-2 py-6 rounded-xl shadow-xl uppercase text-[10px] tracking-[0.2em] hover:scale-[1.02] transition-all">
-              Agendar Ato
-            </Button>
-          </div>
+          ) : (
+            <div className="py-40 flex flex-col items-center justify-center space-y-6 glass border-dashed border-2 border-white/5 rounded-[2rem] opacity-20">
+              <Clock className="h-20 w-20 text-muted-foreground" />
+              <p className="text-sm font-black uppercase tracking-[0.4em]">Nenhum ato futuro no radar</p>
+            </div>
+          )}
+          
+          <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-xs tracking-[0.2em] hover:scale-[1.01] transition-all">
+            <Plus className="h-5 w-5" /> Injetar Novo Ato na Pauta
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* DIÁLOGO DE DETALHES */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -389,7 +472,7 @@ export default function AgendaPage() {
                 <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Cronograma</p>
                 <div className="flex items-center gap-2 text-white font-bold text-xs">
                   <Clock className="h-3.5 w-3.5 text-primary" />
-                  {selectedEvent?.startDateTime ? format(parseDate(selectedEvent.startDateTime)!, "dd/MM/yyyy HH:mm") : selectedEvent?.dueDate}
+                  {selectedEvent?.date ? format(selectedEvent.date, "dd/MM/yyyy HH:mm") : "---"}
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
