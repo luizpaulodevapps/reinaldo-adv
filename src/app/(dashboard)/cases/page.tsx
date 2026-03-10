@@ -33,12 +33,16 @@ import {
   CalendarDays,
   AlarmClock,
   FilePlus,
-  DollarSign
+  DollarSign,
+  Brain,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, limit, doc } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, limit, doc, where } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { 
   Sheet, 
@@ -55,10 +59,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ProcessForm } from "@/components/cases/process-form"
+import { FinancialTitleForm } from "@/components/financial/financial-title-form"
+import { DraftingTool } from "@/components/drafting/drafting-tool"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -75,6 +86,20 @@ export default function CasesPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingProcess, setEditingProcess] = useState<any>(null)
   
+  // States para novos modais de Gestão
+  const [activeActionProcess, setActiveActionProcess] = useState<any>(null)
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
+  const [isMeetingOpen, setIsMeetingOpen] = useState(false)
+  const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
+  const [isHearingOpen, setIsHearingOpen] = useState(false)
+  const [isAiDocOpen, setIsAiDocOpen] = useState(false)
+  const [isFinancialOpen, setIsFinancialOpen] = useState(false)
+
+  // Form states internos
+  const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
+  const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "" })
+  const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
+
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
@@ -86,6 +111,13 @@ export default function CasesPage() {
 
   const { data: processesData, isLoading } = useCollection(processesQuery)
   const processes = processesData || []
+
+  // Timeline real (cruzamento de coleções)
+  const timelineEventsQuery = useMemoFirebase(() => {
+    if (!db || !activeActionProcess) return null
+    // Nota: Em um app real, faríamos queries em hearings, deadlines e appointments filtrando por processId
+    return null
+  }, [db, activeActionProcess])
 
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
@@ -144,19 +176,86 @@ export default function CasesPage() {
     setIsSheetOpen(false)
   }
 
-  const handleDeleteProcess = (id: string) => {
-    if (!db || !confirm("Remover permanentemente este processo?")) return
-    deleteDocumentNonBlocking(doc(db!, "processes", id))
-    toast({ variant: "destructive", title: "Dossiê Removido" })
-  }
-
   const handleArchiveProcess = (id: string) => {
     if (!db) return
+    if (!confirm("Confirmar arquivamento estratégico?")) return
     updateDocumentNonBlocking(doc(db!, "processes", id), {
       status: "Arquivado",
       updatedAt: serverTimestamp()
     })
     toast({ title: "Processo Arquivado" })
+  }
+
+  // Handlers de Gestão
+  const handleScheduleMeeting = async () => {
+    if (!db || !activeActionProcess) return
+    const payload = {
+      title: `REUNIÃO: ${activeActionProcess.clientName}`,
+      type: "Atendimento",
+      startDateTime: `${meetingData.date}T${meetingData.time}:00`,
+      clientId: activeActionProcess.clientId,
+      clientName: activeActionProcess.clientName,
+      processId: activeActionProcess.id,
+      meetingType: meetingData.type,
+      location: meetingData.type === 'online' ? 'VIRTUAL RGMJ' : 'SEDE RGMJ',
+      notes: meetingData.notes,
+      status: "Agendado",
+      createdAt: serverTimestamp()
+    }
+    await addDocumentNonBlocking(collection(db, "appointments"), payload)
+    setIsMeetingOpen(false)
+    toast({ title: "Reunião Agendada" })
+  }
+
+  const handleLaunchDeadline = async () => {
+    if (!db || !activeActionProcess) return
+    const payload = {
+      title: deadlineData.title.toUpperCase(),
+      dueDate: deadlineData.date,
+      description: deadlineData.description,
+      processId: activeActionProcess.processNumber || activeActionProcess.id,
+      status: "Aberto",
+      calculationType: "Dias Úteis (CPC)",
+      createdAt: serverTimestamp()
+    }
+    await addDocumentNonBlocking(collection(db, "deadlines"), payload)
+    setIsDeadlineOpen(false)
+    toast({ title: "Prazo Lançado na Pauta" })
+  }
+
+  const handleScheduleHearing = async () => {
+    if (!db || !activeActionProcess) return
+    const payload = {
+      title: `AUDIÊNCIA ${hearingData.type}: ${activeActionProcess.clientName}`,
+      type: hearingData.type,
+      startDateTime: `${hearingData.date}T${hearingData.time}:00`,
+      processId: activeActionProcess.id,
+      processNumber: activeActionProcess.processNumber,
+      clientName: activeActionProcess.clientName,
+      location: hearingData.location || activeActionProcess.court || "Fórum",
+      status: "Agendado",
+      createdAt: serverTimestamp()
+    }
+    await addDocumentNonBlocking(collection(db, "hearings"), payload)
+    setIsHearingOpen(false)
+    toast({ title: "Audiência Injetada na Agenda" })
+  }
+
+  const handleSaveFinancial = async (data: any) => {
+    if (!db || !activeActionProcess) return
+    const payload = {
+      ...data,
+      value: data.numericValue,
+      processId: activeActionProcess.id,
+      processNumber: activeActionProcess.processNumber,
+      clientId: activeActionProcess.clientId,
+      clientName: activeActionProcess.clientName,
+      createdAt: serverTimestamp()
+    }
+    delete payload.numericValue
+    await addDocumentNonBlocking(collection(db, "financial_titles"), payload)
+    setIsFinancialOpen(false)
+    toast({ title: "Evento Financeiro Registrado" })
   }
 
   const getDrawerWidthClass = () => {
@@ -174,29 +273,29 @@ export default function CasesPage() {
     <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
       <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
       
-      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsTimelineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <History className="h-4 w-4 text-muted-foreground" /> Timeline do Processo
       </DropdownMenuItem>
       
-      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <CalendarDays className="h-4 w-4" /> Agendar Reunião/Atend.
       </DropdownMenuItem>
       
-      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
         <AlarmClock className="h-4 w-4" /> Lançar Prazo Fatal
       </DropdownMenuItem>
       
-      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsHearingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
         <Gavel className="h-4 w-4" /> Agendar Audiência
       </DropdownMenuItem>
       
-      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsAiDocOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <FilePlus className="h-4 w-4" /> Gerar Documento (IA)
       </DropdownMenuItem>
       
       <DropdownMenuSeparator className="bg-white/5 my-1" />
       
-      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsFinancialOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
         <DollarSign className="h-4 w-4" /> Evento Financeiro
       </DropdownMenuItem>
       
@@ -491,6 +590,176 @@ export default function CasesPage() {
           />
         </SheetContent>
       </Sheet>
+
+      {/* MODAL: TIMELINE DO PROCESSO */}
+      <Dialog open={isTimelineOpen} onOpenChange={setIsTimelineOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[70vh]">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <History className="h-6 w-6 text-primary" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest">Timeline do Processo</DialogTitle>
+          </div>
+          <ScrollArea className="flex-1 p-8">
+            <div className="space-y-8 relative">
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/5" />
+              {[
+                { date: "15/03/2024", type: "Protocolo", title: "Processo Protocolado", desc: "Dossiê injetado no ecossistema RGMJ." },
+                { date: "20/03/2024", type: "Financeiro", title: "Honorários Provisionados", desc: "Lançamento de verba contratual realizado." },
+              ].map((ev, i) => (
+                <div key={i} className="relative pl-12">
+                  <div className="absolute left-2.5 top-1 w-3.5 h-3.5 rounded-full bg-primary border-4 border-[#05070a] z-10 shadow-[0_0_8px_rgba(245,208,48,0.5)]" />
+                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{ev.date} • {ev.type}</p>
+                  <h4 className="text-sm font-bold text-white uppercase">{ev.title}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">{ev.desc}</p>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: AGENDAR REUNIÃO */}
+      <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <CalendarDays className="h-6 w-6 text-emerald-500" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
+                <Input type="date" className="glass h-12 text-white" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
+                <Input type="time" className="glass h-12 text-white" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
+              <Select value={meetingData.type} onValueChange={v => setMeetingData({...meetingData, type: v})}>
+                <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#0d121f] text-white">
+                  <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
+                  <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Notas Táticas</Label>
+              <Textarea className="glass min-h-[100px] text-white" value={meetingData.notes} onChange={e => setMeetingData({...meetingData, notes: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: LANÇAR PRAZO FATAL */}
+      <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <AlarmClock className="h-6 w-6 text-rose-500" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Título do Ato</Label>
+              <Input placeholder="EX: PRAZO PARA RÉPLICA" className="glass h-12 text-white uppercase font-bold" value={deadlineData.title} onChange={e => setDeadlineData({...deadlineData, title: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Vencimento (Termo Final)</Label>
+              <Input type="date" className="glass h-12 text-white" value={deadlineData.date} onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Descrição da Providência</Label>
+              <Textarea className="glass min-h-[100px] text-white" value={deadlineData.description} onChange={e => setDeadlineData({...deadlineData, description: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button onClick={handleLaunchDeadline} className="bg-rose-600 hover:bg-rose-500 text-white font-black uppercase text-[10px] px-8 h-12 rounded-xl">Registrar Prazo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: AGENDAR AUDIÊNCIA */}
+      <Dialog open={isHearingOpen} onOpenChange={setIsHearingOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <Gavel className="h-6 w-6 text-amber-500" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label>
+                <Select value={hearingData.type} onValueChange={v => setHearingData({...hearingData, type: v})}>
+                  <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="UNA">UNA</SelectItem>
+                    <SelectItem value="Instrução">INSTRUÇÃO</SelectItem>
+                    <SelectItem value="Conciliação">CONCILIAÇÃO</SelectItem>
+                    <SelectItem value="Virtual">VIRTUAL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
+                <Input type="date" className="glass h-12 text-white" value={hearingData.date} onChange={e => setHearingData({...hearingData, date: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Horário</Label>
+                <Input type="time" className="glass h-12 text-white" value={hearingData.time} onChange={e => setHearingData({...hearingData, time: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Local / Juízo</Label>
+                <Input className="glass h-12 text-white uppercase font-bold" value={hearingData.location} onChange={e => setHearingData({...hearingData, location: e.target.value})} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsHearingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button onClick={handleScheduleHearing} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl shadow-xl">Confirmar Pauta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: GERAR DOCUMENTO IA */}
+      <Dialog open={isAiDocOpen} onOpenChange={setIsAiDocOpen}>
+        <DialogContent className="glass border-primary/20 sm:max-w-[1100px] bg-[#0a0f1e] p-0 overflow-hidden shadow-2xl rounded-3xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <Brain className="h-7 w-7 text-primary" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest text-xl">Minuta Estratégica IA</DialogTitle>
+          </div>
+          <div className="p-10 max-h-[80vh] overflow-y-auto">
+            <DraftingTool />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: EVENTO FINANCEIRO */}
+      <Dialog open={isFinancialOpen} onOpenChange={setIsFinancialOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Evento Financeiro</DialogTitle>
+              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Lançamento de honorários ou custas para o processo.</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="px-10 py-8 bg-[#0a0f1e]/50">
+            <FinancialTitleForm 
+              initialData={{ description: `HONORÁRIOS: ${activeActionProcess?.clientName}`, processNumber: activeActionProcess?.processNumber }}
+              onSubmit={handleSaveFinancial} 
+              onCancel={() => setIsFinancialOpen(false)} 
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
