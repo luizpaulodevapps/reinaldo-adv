@@ -114,9 +114,17 @@ export function SidebarNav() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#02040a] font-sans">
-      <SidebarHeader className={cn("py-8 transition-all duration-300", isCollapsed ? "px-2" : "px-6")}>
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-2xl shadow-primary/5">
+      <SidebarHeader className={cn("py-8 transition-all duration-300 flex items-center", isCollapsed ? "px-0 justify-center" : "px-6")}>
+        <div className={cn(
+          "flex items-center gap-4 transition-all",
+          isCollapsed ? "justify-center" : ""
+        )}>
+          <div className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-500",
+            isCollapsed 
+              ? "bg-primary/10 border-primary/40 shadow-[0_0_15px_rgba(245,208,48,0.2)]" 
+              : "bg-primary/10 border-primary/20 shadow-2xl shadow-primary/5"
+          )}>
             <Scale className="h-5 w-5 text-primary" />
           </div>
           {!isCollapsed && (
@@ -128,16 +136,16 @@ export function SidebarNav() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3">
+      <SidebarContent className={cn("px-3 space-y-2", isCollapsed && "px-0")}>
         {menuGroups.map((group, idx) => (
-          <SidebarGroup key={idx} className="py-2">
+          <SidebarGroup key={idx} className="py-1">
             {!isCollapsed && (
               <SidebarGroupLabel className="text-[9px] font-black text-white/20 tracking-[0.4em] uppercase px-3 mb-2">
                 {group.title}
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
+              <SidebarMenu className="gap-1.5">
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
                   const isActive = pathname === item.href
@@ -150,10 +158,10 @@ export function SidebarNav() {
                         tooltip={item.name}
                         className={cn(
                           "relative flex items-center transition-all duration-200 h-10 rounded-xl",
-                          isCollapsed ? "justify-center px-0" : "gap-4 px-4",
+                          isCollapsed ? "justify-center px-0 w-10 mx-auto" : "gap-4 px-4",
                           isActive 
-                            ? "bg-primary/10 text-primary border border-primary/20 shadow-inner" 
-                            : "text-white/40 hover:text-white hover:bg-white/[0.05]"
+                            ? "bg-primary/10 text-primary border border-primary/40 shadow-[0_0_15px_rgba(245,208,48,0.1)]" 
+                            : "text-white/40 hover:text-white hover:bg-white/[0.05] border border-transparent"
                         )}
                       >
                         <Link href={item.href}>
@@ -177,17 +185,22 @@ export function SidebarNav() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className={cn("p-3 bg-black/20 mt-auto border-t border-white/5 transition-all duration-300", isCollapsed ? "items-center" : "")}>
+      <SidebarFooter className={cn(
+        "p-3 bg-black/20 mt-auto border-t border-white/5 transition-all duration-300 flex flex-col", 
+        isCollapsed ? "items-center px-0 py-4" : "px-3 py-3"
+      )}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton 
-              size="lg" 
+            <button 
               className={cn(
-                "w-full flex items-center rounded-2xl hover:bg-white/5 transition-all outline-none border border-transparent",
-                isCollapsed ? "justify-center px-0 h-12" : "gap-4 px-3 py-3"
+                "w-full flex items-center rounded-2xl hover:bg-white/5 transition-all outline-none border border-transparent group",
+                isCollapsed ? "justify-center h-12" : "gap-4 px-3 py-3"
               )}
             >
-              <Avatar className="h-9 w-9 shrink-0 border border-primary/20 shadow-xl">
+              <Avatar className={cn(
+                "shrink-0 border transition-all",
+                isCollapsed ? "h-10 w-10 border-primary/20" : "h-9 w-9 border-white/10"
+              )}>
                 <AvatarFallback className="bg-secondary text-white text-[10px] font-black uppercase">
                   {displayName.substring(0, 2)}
                 </AvatarFallback>
@@ -198,7 +211,7 @@ export function SidebarNav() {
                   <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5">{userRoleDisplay}</span>
                 </div>
               )}
-            </SidebarMenuButton>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isCollapsed ? "center" : "end"} side={isCollapsed ? "right" : "bottom"} className="w-64 bg-[#0d1117] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
             <DropdownMenuItem asChild className="rounded-xl h-11 px-4 mb-1">
