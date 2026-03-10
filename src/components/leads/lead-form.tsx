@@ -239,44 +239,44 @@ export function LeadForm({
   const SectionTitle = ({ children, icon: Icon }: { children: React.ReactNode, icon: any }) => (
     <div className="flex items-center gap-2 mb-3 pb-1 border-b border-white/5">
       <Icon className="h-3.5 w-3.5 text-primary" />
-      <h4 className="text-[11px] font-black text-white uppercase tracking-widest">{children}</h4>
+      <h4 className="text-[10px] font-black text-white uppercase tracking-widest">{children}</h4>
     </div>
   )
 
-  const inputClass = "bg-black/40 border-white/10 h-10 text-sm text-white uppercase font-bold focus:ring-primary/50"
+  const inputClass = "bg-black/40 border-white/10 h-10 text-xs text-white uppercase font-bold focus:ring-primary/50"
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans overflow-hidden">
       <div className="px-6 pt-4 pb-1 flex-none bg-[#0a0f1e]/50 border-b border-white/5">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-[#1a1f2e] w-full p-1 h-12 rounded-lg gap-1">
-            <TabsTrigger value="autor" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <User className="h-4 w-4" /> POLO ATIVO
+          <TabsList className="bg-[#1a1f2e] w-full p-1 h-10 rounded-lg gap-1">
+            <TabsTrigger value="autor" className="flex-1 text-[9px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
+              <User className="h-3.5 w-3.5" /> POLO ATIVO
             </TabsTrigger>
-            <TabsTrigger value="reu" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <Building className="h-4 w-4" /> POLO PASSIVO
+            <TabsTrigger value="reu" className="flex-1 text-[9px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
+              <Building className="h-3.5 w-3.5" /> POLO PASSIVO
             </TabsTrigger>
-            <TabsTrigger value="demanda" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <Scale className="h-4 w-4" /> DEMANDA
+            <TabsTrigger value="demanda" className="flex-1 text-[9px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
+              <Scale className="h-3.5 w-3.5" /> DEMANDA
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <ScrollArea className="flex-1 bg-[#0a0f1e]/20">
-        <div className="px-6 py-6 max-w-4xl mx-auto space-y-8 pb-32">
+        <div className="px-6 py-6 max-w-4xl mx-auto space-y-6 pb-32">
           
           {activeTab === "autor" && (
-            <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="space-y-6 animate-in fade-in duration-500">
               <div className="space-y-4">
                 <SectionTitle icon={Fingerprint}>Identificação do Autor</SectionTitle>
                 <div className="space-y-1.5 relative" ref={searchRef}>
-                  <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Nome do Cliente *</Label>
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nome do Cliente *</Label>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="PESQUISAR OU INSERIR NOME..." 
-                      className={cn(inputClass, "h-12 text-sm pl-12", lockMode && "opacity-60")} 
+                      className={cn(inputClass, "h-11 pl-12", lockMode && "opacity-60")} 
                       value={formData.name || searchTerm} 
                       onChange={(e) => {
                         setSearchTerm(e.target.value)
@@ -288,7 +288,6 @@ export function LeadForm({
                     />
                   </div>
 
-                  {/* Dropdown de Resultados de Pesquisa */}
                   {isSearchOpen && searchTerm.length >= 2 && !lockMode && (
                     <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
                       <div className="max-h-[300px] overflow-y-auto">
@@ -298,18 +297,18 @@ export function LeadForm({
                               type="button" 
                               key={l.id} 
                               onClick={() => onSelectExisting(l)} 
-                              className="w-full p-5 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group"
+                              className="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group"
                             >
                               <div>
                                 <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{l.name}</p>
-                                <p className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{l.documentNumber || l.cpf || l.phone}</p>
+                                <p className="text-[9px] font-mono text-muted-foreground font-bold mt-1">{l.documentNumber || l.cpf || l.phone}</p>
                               </div>
-                              <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
+                              <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
                             </button>
                           ))
                         ) : (
-                          <div className="p-10 text-center opacity-40">
-                            <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest">Nenhum registro encontrado</p>
+                          <div className="p-8 text-center opacity-40">
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum registro encontrado</p>
                           </div>
                         )}
                       </div>
@@ -319,7 +318,7 @@ export function LeadForm({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black uppercase text-muted-foreground">WhatsApp Direct *</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">WhatsApp Direct *</Label>
                     <Input 
                       className={inputClass} 
                       value={formData.phone} 
@@ -328,7 +327,7 @@ export function LeadForm({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black uppercase text-muted-foreground">E-mail Principal</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">E-mail Principal</Label>
                     <Input className={cn(inputClass, "lowercase")} value={formData.email} onChange={(e) => handleInputChange("email", e.target.value.toLowerCase())} />
                   </div>
                 </div>
@@ -338,7 +337,7 @@ export function LeadForm({
                 <SectionTitle icon={FileText}>Qualificação Técnica</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">CPF / CNPJ</Label>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">CPF / CNPJ</Label>
                     <Input 
                       className={cn(inputClass, "font-mono")} 
                       value={formData.cpf} 
@@ -347,18 +346,18 @@ export function LeadForm({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">RG / Órgão</Label>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">RG / Órgão</Label>
                     <Input className={inputClass} value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Profissão Atual</Label>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">Profissão Atual</Label>
                     <Input className={inputClass} value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">CEP</Label>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">CEP</Label>
                     <div className="relative">
                       <Input 
                         className={cn(inputClass, "font-mono")} 
@@ -371,11 +370,11 @@ export function LeadForm({
                     </div>
                   </div>
                   <div className="md:col-span-2 space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Logradouro</Label>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">Logradouro</Label>
                     <Input className={inputClass} value={formData.address} onChange={(e) => handleInputChange("address", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Nº</Label>
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase">Nº</Label>
                     <Input className={inputClass} value={formData.number} onChange={(e) => handleInputChange("number", e.target.value)} />
                   </div>
                 </div>
@@ -384,17 +383,17 @@ export function LeadForm({
           )}
 
           {activeTab === "reu" && (
-            <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="space-y-6 animate-in fade-in duration-500">
               <SectionTitle icon={Building}>Qualificação do Réu</SectionTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Razão Social / Nome *</Label>
-                  <Input className={cn(inputClass, "h-12")} value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Razão Social / Nome *</Label>
+                  <Input className={cn(inputClass)} value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">CNPJ / CPF</Label>
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">CNPJ / CPF</Label>
                   <Input 
-                    className={cn(inputClass, "h-12 font-mono")} 
+                    className={cn(inputClass, "font-mono")} 
                     value={formData.defendantDocument} 
                     onChange={(e) => handleInputChange("defendantDocument", maskCPFOrCNPJ(e.target.value))} 
                     placeholder="00.000.000/0000-00"
@@ -404,7 +403,7 @@ export function LeadForm({
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t border-white/5 pt-6">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">CEP Sede</Label>
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">CEP Sede</Label>
                   <div className="relative">
                     <Input 
                       className={cn(inputClass, "font-mono")} 
@@ -417,11 +416,11 @@ export function LeadForm({
                   </div>
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Logradouro para Citação</Label>
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Logradouro</Label>
                   <Input className={inputClass} value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Nº</Label>
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Nº</Label>
                   <Input className={inputClass} value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} />
                 </div>
               </div>
@@ -429,15 +428,15 @@ export function LeadForm({
           )}
 
           {activeTab === "demanda" && (
-            <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="space-y-6 animate-in fade-in duration-500">
               <SectionTitle icon={Gavel}>Logística Judiciária</SectionTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5 relative" ref={courtSearchRef}>
-                  <Label className="text-[11px] font-black text-primary uppercase tracking-widest">Órgão / Tribunal</Label>
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Órgão / Tribunal</Label>
                   <div className="relative">
                     <Input 
                       placeholder="PESQUISAR FÓRUM..." 
-                      className={cn(inputClass, "h-12")} 
+                      className={cn(inputClass)} 
                       value={courtSearchTerm || formData.court} 
                       onChange={(e) => {
                         setCourtSearchTerm(e.target.value)
@@ -448,7 +447,6 @@ export function LeadForm({
                     />
                   </div>
 
-                  {/* Dropdown de Tribunais */}
                   {isCourtSearchOpen && courtSearchTerm.length >= 2 && (
                     <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
                       <div className="max-h-[250px] overflow-y-auto">
@@ -457,30 +455,30 @@ export function LeadForm({
                             <button type="button" key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 text-left">
                               <div>
                                 <p className="text-xs font-black text-white uppercase">{c.name}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase mt-1">{c.city} - {c.state}</p>
+                                <p className="text-[9px] text-muted-foreground uppercase mt-1">{c.city} - {c.state}</p>
                               </div>
                               <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary">MAPEAR</Badge>
                             </button>
                           ))
                         ) : (
-                          <div className="p-10 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado</p></div>
+                          <div className="p-8 text-center opacity-40"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado</p></div>
                         )}
                       </div>
                     </div>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-primary uppercase tracking-widest">Vara / Unidade</Label>
-                  <Input className={cn(inputClass, "h-12")} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} placeholder="EX: 45ª VARA DO TRABALHO" />
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Vara / Unidade</Label>
+                  <Input className={cn(inputClass)} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} placeholder="EX: 45ª VARA DO TRABALHO" />
                 </div>
               </div>
               <div className="space-y-2 border-t border-white/5 pt-6">
-                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Fatos & Objeto da Ação</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Fatos & Objeto da Ação</Label>
                 <textarea 
-                  className="w-full bg-black/40 border border-white/10 min-h-[150px] text-white text-sm uppercase font-bold resize-none p-5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all" 
+                  className="w-full bg-black/40 border border-white/10 min-h-[120px] text-white text-xs uppercase font-bold resize-none p-4 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all" 
                   value={formData.notes} 
                   onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} 
-                  placeholder="RELATE OS FATOS PRINCIPAIS PARA A IA ANALISAR..."
+                  placeholder="RELATE OS FATOS PRINCIPAIS..."
                 />
               </div>
             </div>
@@ -490,9 +488,9 @@ export function LeadForm({
       </ScrollArea>
 
       <div className="p-6 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between shadow-2xl z-30 flex-none">
-        <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[11px] tracking-widest px-8 h-12 hover:text-white" onClick={onCancel}>ABORTAR ATO</Button>
-        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-14 text-[12px] uppercase tracking-widest shadow-xl rounded-xl px-12 flex items-center gap-3 hover:scale-[1.02] transition-transform">
-          <ShieldCheck className="h-5 w-5" /> SALVAR CADASTRO ESTRATÉGICO
+        <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[9px] tracking-widest px-6 h-10 hover:text-white" onClick={onCancel}>ABORTAR</Button>
+        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-12 text-[10px] uppercase tracking-widest shadow-xl rounded-xl px-10 flex items-center gap-3 hover:scale-[1.02] transition-transform">
+          <ShieldCheck className="h-4 w-4" /> SALVAR CADASTRO
         </Button>
       </div>
     </div>
