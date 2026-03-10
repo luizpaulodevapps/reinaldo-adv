@@ -28,13 +28,15 @@ import {
   Unlock,
   Library,
   Navigation,
-  ShieldCheck
+  ShieldCheck,
+  UserPlus,
+  CheckCircle2
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { cn, maskPhone, maskCEP, maskCPFOrCNPJ } from "@/lib/utils"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
+import { collection, query, orderBy } from "firebase/firestore"
 
 interface Lead {
   id: string
@@ -75,9 +77,7 @@ export function LeadForm({
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [courtSearchTerm, setCourtSearchTerm] = useState("")
   const [isCourtSearchOpen, setIsCourtSearchOpen] = useState(false)
-  const [isManualAddressEntry, setIsManualAddressEntry] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
-  const [isSavingToDatabase, setIsSavingToDatabase] = useState(false)
 
   const searchRef = useRef<HTMLDivElement>(null)
   const courtSearchRef = useRef<HTMLDivElement>(null)
@@ -130,11 +130,35 @@ export function LeadForm({
     value: ""
   })
 
+  // Listener para fechar dropdowns ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false)
+      }
+      if (courtSearchRef.current && !courtSearchRef.current.contains(event.target as Node)) {
+        setIsCourtSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   const courtsQuery = useMemoFirebase(() => {
     if (!db) return null
     return query(collection(db, "courts"), orderBy("name", "asc"))
   }, [db])
   const { data: dbCourts } = useCollection(courtsQuery)
+
+  const filteredResults = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 2) return []
+    return (existingLeads || []).filter(l => 
+      l.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      l.phone?.includes(searchTerm) ||
+      l.cpf?.includes(searchTerm) ||
+      l.documentNumber?.includes(searchTerm)
+    )
+  }, [existingLeads, searchTerm])
 
   const filteredCourts = useMemo(() => {
     if (!courtSearchTerm || courtSearchTerm.length < 2) return []
@@ -150,7 +174,6 @@ export function LeadForm({
       setSearchTerm(initialData.name || "")
       if (initialData.court) {
         setCourtSearchTerm(initialData.court)
-        setIsManualAddressEntry(false)
       }
     }
   }, [initialData])
@@ -198,7 +221,6 @@ export function LeadForm({
     }))
     setCourtSearchTerm(court.name)
     setIsCourtSearchOpen(false)
-    setIsManualAddressEntry(false)
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -208,7 +230,7 @@ export function LeadForm({
   const handleSubmit = () => {
     const finalName = formData.name || searchTerm
     if (!finalName?.trim() || !formData.phone?.trim()) {
-      toast({ variant: "destructive", title: "Erro", description: "Nome e WhatsApp obrigatórios." })
+      toast({ variant: "destructive", title: "Erro", description: "Nome e WhatsApp são pilares obrigatórios." })
       return
     }
     onSubmit({ ...formData, name: finalName })
@@ -229,10 +251,10 @@ export function LeadForm({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-[#1a1f2e] w-full p-1 h-12 rounded-lg gap-1">
             <TabsTrigger value="autor" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <User className="h-4 w-4" /> AUTOR
+              <User className="h-4 w-4" /> POLO ATIVO
             </TabsTrigger>
             <TabsTrigger value="reu" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
-              <Building className="h-4 w-4" /> RÉU
+              <Building className="h-4 w-4" /> POLO PASSIVO
             </TabsTrigger>
             <TabsTrigger value="demanda" className="flex-1 text-[10px] uppercase font-black data-[state=active]:bg-primary data-[state=active]:text-background rounded-md gap-2 h-full transition-all">
               <Scale className="h-4 w-4" /> DEMANDA
@@ -242,30 +264,62 @@ export function LeadForm({
       </div>
 
       <ScrollArea className="flex-1 bg-[#0a0f1e]/20">
-        <div className="px-6 py-6 max-w-4xl mx-auto space-y-8 pb-24">
+        <div className="px-6 py-6 max-w-4xl mx-auto space-y-8 pb-32">
           
           {activeTab === "autor" && (
             <div className="space-y-8 animate-in fade-in duration-500">
               <div className="space-y-4">
-                <SectionTitle icon={Fingerprint}>Dados Pessoais</SectionTitle>
-                <div className="space-y-1.5" ref={searchRef}>
+                <SectionTitle icon={Fingerprint}>Identificação do Autor</SectionTitle>
+                <div className="space-y-1.5 relative" ref={searchRef}>
                   <Label className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Nome do Cliente *</Label>
-                  <div className="relative" onClick={() => !lockMode && setIsSearchOpen(true)}>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="PESQUISAR OU INSERIR NOME..." 
-                      className={cn(inputClass, "h-12 text-sm", lockMode && "opacity-60")} 
+                      className={cn(inputClass, "h-12 text-sm pl-12", lockMode && "opacity-60")} 
                       value={formData.name || searchTerm} 
                       onChange={(e) => {
                         setSearchTerm(e.target.value)
+                        setIsSearchOpen(true)
                         if (formData.name) handleInputChange("name", "")
                       }}
-                      readOnly={!isSearchOpen && !lockMode} 
+                      onFocus={() => !lockMode && setIsSearchOpen(true)}
+                      disabled={lockMode}
                     />
                   </div>
+
+                  {/* Dropdown de Resultados de Pesquisa */}
+                  {isSearchOpen && searchTerm.length >= 2 && !lockMode && (
+                    <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {filteredResults.length > 0 ? (
+                          filteredResults.map(l => (
+                            <button 
+                              type="button" 
+                              key={l.id} 
+                              onClick={() => onSelectExisting(l)} 
+                              className="w-full p-5 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group"
+                            >
+                              <div>
+                                <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{l.name}</p>
+                                <p className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{l.documentNumber || l.cpf || l.phone}</p>
+                              </div>
+                              <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-10 text-center opacity-40">
+                            <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest">Nenhum registro encontrado</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black uppercase text-muted-foreground">WhatsApp *</Label>
+                    <Label className="text-[11px] font-black uppercase text-muted-foreground">WhatsApp Direct *</Label>
                     <Input 
                       className={inputClass} 
                       value={formData.phone} 
@@ -274,14 +328,14 @@ export function LeadForm({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black uppercase text-muted-foreground">E-mail</Label>
-                    <Input className={cn(inputClass, "lowercase")} value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} />
+                    <Label className="text-[11px] font-black uppercase text-muted-foreground">E-mail Principal</Label>
+                    <Input className={cn(inputClass, "lowercase")} value={formData.email} onChange={(e) => handleInputChange("email", e.target.value.toLowerCase())} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <SectionTitle icon={FileText}>Qualificação</SectionTitle>
+                <SectionTitle icon={FileText}>Qualificação Técnica</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-black text-muted-foreground uppercase">CPF / CNPJ</Label>
@@ -293,11 +347,11 @@ export function LeadForm({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">RG</Label>
-                    <Input className={inputClass} value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value)} />
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">RG / Órgão</Label>
+                    <Input className={inputClass} value={formData.rg} onChange={(e) => handleInputChange("rg", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Profissão</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Profissão Atual</Label>
                     <Input className={inputClass} value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
                   </div>
                 </div>
@@ -317,7 +371,7 @@ export function LeadForm({
                     </div>
                   </div>
                   <div className="md:col-span-2 space-y-1.5">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Endereço</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Logradouro</Label>
                     <Input className={inputClass} value={formData.address} onChange={(e) => handleInputChange("address", e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-1.5">
@@ -331,10 +385,10 @@ export function LeadForm({
 
           {activeTab === "reu" && (
             <div className="space-y-8 animate-in fade-in duration-500">
-              <SectionTitle icon={Building}>Dados do Réu</SectionTitle>
+              <SectionTitle icon={Building}>Qualificação do Réu</SectionTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Nome do Réu *</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Razão Social / Nome *</Label>
                   <Input className={cn(inputClass, "h-12")} value={formData.defendantName} onChange={(e) => handleInputChange("defendantName", e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
@@ -348,9 +402,9 @@ export function LeadForm({
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t border-white/5 pt-6">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">CEP</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">CEP Sede</Label>
                   <div className="relative">
                     <Input 
                       className={cn(inputClass, "font-mono")} 
@@ -363,7 +417,7 @@ export function LeadForm({
                   </div>
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Endereço Réu</Label>
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Logradouro para Citação</Label>
                   <Input className={inputClass} value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
@@ -378,18 +432,56 @@ export function LeadForm({
             <div className="space-y-8 animate-in fade-in duration-500">
               <SectionTitle icon={Gavel}>Logística Judiciária</SectionTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5" ref={courtSearchRef}>
-                  <Label className="text-[11px] font-black text-primary uppercase">Órgão / Fórum</Label>
-                  <Input placeholder="BUSCAR FÓRUM..." className={cn(inputClass, "h-12")} value={courtSearchTerm || formData.court} onChange={(e) => setCourtSearchTerm(e.target.value)} />
+                <div className="space-y-1.5 relative" ref={courtSearchRef}>
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-widest">Órgão / Tribunal</Label>
+                  <div className="relative">
+                    <Input 
+                      placeholder="PESQUISAR FÓRUM..." 
+                      className={cn(inputClass, "h-12")} 
+                      value={courtSearchTerm || formData.court} 
+                      onChange={(e) => {
+                        setCourtSearchTerm(e.target.value)
+                        setIsCourtSearchOpen(true)
+                        if (formData.court) handleInputChange("court", "")
+                      }}
+                      onFocus={() => setIsCourtSearchOpen(true)}
+                    />
+                  </div>
+
+                  {/* Dropdown de Tribunais */}
+                  {isCourtSearchOpen && courtSearchTerm.length >= 2 && (
+                    <div className="absolute z-50 w-full mt-2 bg-[#0a0f1e] border border-primary/20 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
+                      <div className="max-h-[250px] overflow-y-auto">
+                        {filteredCourts.length > 0 ? (
+                          filteredCourts.map(c => (
+                            <button type="button" key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 text-left">
+                              <div>
+                                <p className="text-xs font-black text-white uppercase">{c.name}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase mt-1">{c.city} - {c.state}</p>
+                              </div>
+                              <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary">MAPEAR</Badge>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-10 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-black text-primary uppercase">Vara</Label>
-                  <Input className={cn(inputClass, "h-12")} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} />
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-widest">Vara / Unidade</Label>
+                  <Input className={cn(inputClass, "h-12")} value={formData.vara} onChange={(e) => handleInputChange("vara", e.target.value.toUpperCase())} placeholder="EX: 45ª VARA DO TRABALHO" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[11px] font-black text-muted-foreground uppercase">Resumo da Demanda</Label>
-                <textarea className="w-full bg-black/40 border border-white/10 min-h-[120px] text-white text-sm uppercase resize-none p-4 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50" value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} />
+              <div className="space-y-2 border-t border-white/5 pt-6">
+                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Fatos & Objeto da Ação</Label>
+                <textarea 
+                  className="w-full bg-black/40 border border-white/10 min-h-[150px] text-white text-sm uppercase font-bold resize-none p-5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all" 
+                  value={formData.notes} 
+                  onChange={(e) => handleInputChange("notes", e.target.value.toUpperCase())} 
+                  placeholder="RELATE OS FATOS PRINCIPAIS PARA A IA ANALISAR..."
+                />
               </div>
             </div>
           )}
@@ -398,9 +490,9 @@ export function LeadForm({
       </ScrollArea>
 
       <div className="p-6 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between shadow-2xl z-30 flex-none">
-        <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[11px] tracking-widest px-8 h-12" onClick={onCancel}>ABORTAR</Button>
-        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-14 text-[12px] uppercase tracking-widest shadow-xl rounded-xl px-12 flex items-center gap-3">
-          <ShieldCheck className="h-5 w-5" /> SALVAR DOSSIÊ
+        <Button variant="ghost" className="text-muted-foreground font-black uppercase text-[11px] tracking-widest px-8 h-12 hover:text-white" onClick={onCancel}>ABORTAR ATO</Button>
+        <Button onClick={handleSubmit} className="gold-gradient text-background font-black h-14 text-[12px] uppercase tracking-widest shadow-xl rounded-xl px-12 flex items-center gap-3 hover:scale-[1.02] transition-transform">
+          <ShieldCheck className="h-5 w-5" /> SALVAR CADASTRO ESTRATÉGICO
         </Button>
       </div>
     </div>
