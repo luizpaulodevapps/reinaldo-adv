@@ -812,17 +812,22 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="entrevistas" className="w-full space-y-6">
+                    <TabsContent value="entrevistas" className="w-full space-y-8 animate-in fade-in duration-700">
                       <div className="space-y-4">
                         <div className="flex items-center gap-2.5 border-b border-white/5 pb-2.5">
                           <PlusCircle className="h-3.5 w-3.5 text-primary" />
-                          <h3 className="text-xs font-bold text-white uppercase tracking-widest">Nova Captura Técnica</h3>
+                          <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           {templates?.map(t => (
-                            <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-primary/15 text-primary font-black uppercase text-[10px] h-14 gap-3.5 rounded-xl justify-start px-5 hover:bg-primary/5 transition-all shadow-lg border-2">
-                              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><Zap className="h-4 w-4" /></div>
-                              <span className="truncate flex-1 text-left">{t.title}</span>
+                            <Button 
+                              key={t.id} 
+                              onClick={() => handleStartInterview(t)} 
+                              variant="outline" 
+                              className="glass border-primary/15 text-primary font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:bg-primary hover:text-background transition-all shadow-lg border-2"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Zap className="h-4 w-4" /></div>
+                              <span className="truncate flex-1 text-left leading-tight">{t.title}</span>
                             </Button>
                           ))}
                         </div>
@@ -832,31 +837,41 @@ export default function LeadsPage() {
                         <div className="space-y-4">
                           <div className="flex items-center gap-2.5 border-b border-white/5 pb-2.5">
                             <FileSearch className="h-3.5 w-3.5 text-emerald-500" />
-                            <h3 className="text-xs font-bold text-white uppercase tracking-widest">Entrevistas Concluídas</h3>
+                            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Entrevistas Concluídas</h3>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {leadInterviews.map((int, idx) => (
-                              <Card key={idx} className="glass border-white/5 hover-gold transition-all p-5 rounded-2xl bg-white/[0.01] flex flex-col h-full group">
-                                <div className="flex justify-between items-start mb-3">
-                                  <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-2 h-5">
-                                    {int.interviewType}
+                              <Card key={idx} className="glass border-white/5 hover-gold transition-all p-6 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-xl">
+                                <div className="flex justify-between items-start mb-4">
+                                  <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/20 text-emerald-500 bg-emerald-500/5 px-3 h-6">
+                                    CONCLUÍDA
                                   </Badge>
-                                  <div className="text-[8px] font-mono font-bold text-muted-foreground uppercase opacity-40">
+                                  <div className="text-[9px] font-mono font-bold text-muted-foreground uppercase opacity-40 flex items-center gap-2">
+                                    <Clock className="h-3 w-3" />
                                     {int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString('pt-BR') : '---'}
                                   </div>
                                 </div>
-                                <h4 className="text-sm font-bold text-white uppercase tracking-tight mb-4 line-clamp-1 group-hover:text-primary transition-colors">
-                                  Auditoria: {selectedLead.name}
+                                <h4 className="text-base font-bold text-white uppercase tracking-tight mb-6 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+                                  {int.interviewType}
                                 </h4>
-                                <Button 
-                                  onClick={() => {
-                                    setViewingInterview(int);
-                                    setInterviewAnalysis(int.aiAnalysis || null);
-                                  }}
-                                  className="mt-auto gold-gradient text-background font-black h-9 rounded-lg uppercase text-[9px] tracking-widest shadow-lg"
-                                >
-                                  ABRIR DOSSIÊ IA
-                                </Button>
+                                <div className="grid grid-cols-2 gap-3 mt-auto">
+                                  <Button 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setViewingInterview(int);
+                                      setInterviewAnalysis(int.aiAnalysis || null);
+                                    }}
+                                    className="h-10 glass border-white/10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg"
+                                  >
+                                    VER DOSSIÊ
+                                  </Button>
+                                  <Button 
+                                    onClick={() => handleRunInterviewAnalysis(int)}
+                                    className="h-10 gold-gradient text-background font-black uppercase text-[9px] tracking-widest rounded-lg shadow-lg flex items-center gap-2"
+                                  >
+                                    <Brain className="h-3.5 w-3.5" /> IA
+                                  </Button>
+                                </div>
                               </Card>
                             ))}
                           </div>
@@ -880,7 +895,7 @@ export default function LeadsPage() {
                           </div>
                         </div>
                         <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-11 px-6 glass border-primary/20 text-primary font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg hover:bg-primary/5 transition-all">
-                          {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />} CONSOLIDAR IA
+                          {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Brain className="h-4 w-4" />} CONSOLIDAR IA
                         </Button>
                       </div>
 
@@ -1026,7 +1041,7 @@ export default function LeadsPage() {
               disabled={isAiAnalyzing}
               className="h-10 px-5 gold-gradient text-background font-black uppercase text-[9px] gap-2.5 rounded-lg shadow-lg hover:scale-105 transition-all"
             >
-              {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA
+              {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA
             </Button>
           </div>
 
