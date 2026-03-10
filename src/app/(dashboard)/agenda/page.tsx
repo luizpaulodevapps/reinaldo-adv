@@ -61,6 +61,7 @@ export default function AgendaPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isRescheduling, setIsRescheduling] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   
   const [rescheduleData, setRescheduleData] = useState({ date: "", time: "" })
   const [newEventData, setNewEventData] = useState({
@@ -155,16 +156,16 @@ export default function AgendaPage() {
 
   const hasEventsOnDay = (day: Date) => {
     const hasHearing = (hearings || []).some(h => {
-      const d = parseDate(h.startDateTime)
-      return d && isSameDay(d, day)
+      const date = parseDate(h.startDateTime)
+      return date && isSameDay(date, day)
     })
-    const hasDeadline = (deadlines || []).some(d => {
-      const d = parseDate(d.dueDate)
-      return d && isSameDay(d, day)
+    const hasDeadline = (deadlines || []).some(dl => {
+      const date = parseDate(dl.dueDate)
+      return date && isSameDay(date, day)
     })
     const hasAppointment = (appointments || []).some(a => {
-      const d = parseDate(a.startDateTime)
-      return d && isSameDay(d, day)
+      const date = parseDate(a.startDateTime)
+      return date && isSameDay(date, day)
     })
     return { hasHearing, hasDeadline, hasAppointment }
   }
@@ -245,8 +246,10 @@ export default function AgendaPage() {
       })
       return
     }
+    setSyncing(true)
     toast({ title: "Sincronizando...", description: "Comunicação estabelecida com Google Calendar API." })
     setTimeout(() => {
+      setSyncing(false)
       window.location.reload()
     }, 1000)
   }
