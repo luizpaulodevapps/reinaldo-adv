@@ -1,11 +1,11 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, limit, doc, where } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { 
   Search, 
@@ -36,7 +36,8 @@ import {
   Calculator,
   DollarSign,
   TrendingUp,
-  Gavel
+  Gavel,
+  AlertCircle
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -56,7 +57,7 @@ import {
 import { ClientForm } from "@/components/clients/client-form"
 import { ProcessForm } from "@/components/cases/process-form"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -68,6 +69,7 @@ export default function ClientsPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<any>(null)
   const [selectedClientDossier, setSelectedClientDossier] = useState<any>(null)
+  const [activeDossierTab, setActiveDossierTab] = useState("overview")
   
   const [isNewProcessOpen, setIsNewProcessOpen] = useState(false)
   const [isNewFinancialOpen, setIsNewFinancialOpen] = useState(false)
@@ -150,6 +152,7 @@ export default function ClientsPage() {
 
   const handleOpenDossier = (client: any) => {
     setSelectedClientDossier(client)
+    setActiveDossierTab("overview")
   }
 
   const handleInactivateClient = (id: string) => {
@@ -263,7 +266,7 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-8">
+        <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-8">
           <TabsList className="bg-transparent border-b border-white/5 h-12 p-0 gap-8 w-full justify-start rounded-none">
             <TabsTrigger value="overview" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">VISÃO GERAL</TabsTrigger>
             <TabsTrigger value="processos" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase tracking-[0.2em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all">PROCESSOS ({clientProcesses?.length || 0})</TabsTrigger>
@@ -313,7 +316,7 @@ export default function ClientsPage() {
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">Painel Financeiro</h3>
                 </div>
                 <p className="text-[10px] text-emerald-500/70 font-bold uppercase tracking-widest leading-relaxed">Consulte repasses e honorários vinculados ao CPF deste cliente na Central Financeira.</p>
-                <Button onClick={() => setActiveTab("financeiro")} variant="outline" className="w-full border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 h-10 rounded-xl text-[9px] font-black uppercase tracking-widest">
+                <Button onClick={() => setActiveDossierTab("financeiro")} variant="outline" className="w-full border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 h-10 rounded-xl text-[9px] font-black uppercase tracking-widest">
                   Acessar Carteira <ChevronRight className="h-3 w-3 ml-2" />
                 </Button>
               </Card>
