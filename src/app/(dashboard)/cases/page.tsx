@@ -112,13 +112,6 @@ export default function CasesPage() {
   const { data: processesData, isLoading } = useCollection(processesQuery)
   const processes = processesData || []
 
-  // Timeline real (cruzamento de coleções)
-  const timelineEventsQuery = useMemoFirebase(() => {
-    if (!db || !activeActionProcess) return null
-    // Nota: Em um app real, faríamos queries em hearings, deadlines e appointments filtrando por processId
-    return null
-  }, [db, activeActionProcess])
-
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
       if (proc.status === "Arquivado") return false
@@ -186,7 +179,6 @@ export default function CasesPage() {
     toast({ title: "Processo Arquivado" })
   }
 
-  // Handlers de Gestão
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
     const payload = {
@@ -271,7 +263,7 @@ export default function CasesPage() {
 
   const ProcessActionsMenu = ({ proc }: { proc: any }) => (
     <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
-      <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
+      <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO PROCESSO</DropdownMenuLabel>
       
       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsTimelineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <History className="h-4 w-4 text-muted-foreground" /> Timeline do Processo
@@ -306,7 +298,7 @@ export default function CasesPage() {
       </DropdownMenuItem>
       
       <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
-        <Archive className="h-4 w-4" /> Arquivar Caso
+        <Archive className="h-4 w-4" /> Arquivar Processo
       </DropdownMenuItem>
     </DropdownMenuContent>
   )
@@ -320,7 +312,7 @@ export default function CasesPage() {
             <ChevronRight className="h-2 w-2" />
             <span>DASHBOARD</span>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white">DOSSIÊS ATIVOS</span>
+            <span className="text-white">ACERVO DE PROCESSOS</span>
           </div>
           <h1 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Gestão de Processos</h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-60">
@@ -352,7 +344,7 @@ export default function CasesPage() {
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/50 transition-all" />
           <CardContent className="p-6">
             <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
-              <Zap className="h-4 w-4" /> DOSSIÊS ATIVOS
+              <Zap className="h-4 w-4" /> PROCESSOS ATIVOS
             </p>
             <div className="text-2xl font-black text-white tracking-tighter">
               {isLoading ? "..." : metrics.total}
@@ -441,7 +433,7 @@ export default function CasesPage() {
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <h3 className="text-[#F5D030] font-black text-sm uppercase tracking-tight">RT- {proc.description}</h3>
+                          <h3 className="text-[#F5D030] font-black text-sm uppercase tracking-tight">PROCESSO: {proc.description}</h3>
                           <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black">ATIVO</Badge>
                         </div>
                         <div className="flex items-center gap-12">
@@ -457,7 +449,7 @@ export default function CasesPage() {
                           <div className="flex items-center gap-3">
                             <div className="flex flex-col items-center justify-center border border-amber-500/30 bg-amber-500/5 px-2 py-1 rounded-lg">
                               <Calendar className="h-3 w-3 text-amber-500 mb-0.5" />
-                              <span className="text-[8px] font-black text-amber-500">12/03/25</span>
+                              <span className="text-[8px] font-black text-amber-500">PAUTA</span>
                             </div>
                             <div className="flex items-center justify-center p-2 text-muted-foreground/20">
                               <Handshake className="h-4 w-4" />
@@ -557,8 +549,8 @@ export default function CasesPage() {
           <div className="py-40 flex flex-col items-center justify-center space-y-8 glass rounded-3xl border-dashed border-2 border-white/5 opacity-20">
             <Scale className="h-20 w-20 text-muted-foreground" />
             <div className="text-center space-y-2">
-              <p className="text-base font-black text-white uppercase tracking-[0.4em]">Base Silenciosa</p>
-              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Nenhum dossiê estratégico nesta categoria.</p>
+              <p className="text-base font-black text-white uppercase tracking-[0.4em]">Pauta Vazia</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Nenhum processo estratégico nesta categoria.</p>
             </div>
           </div>
         )}
@@ -574,7 +566,7 @@ export default function CasesPage() {
                 </div>
                 <div>
                   <SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                    {editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}
+                    {editingProcess ? "GESTÃO DO PROCESSO" : "Novo Processo"}
                   </SheetTitle>
                   <SheetDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-60">
                     {editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}
@@ -602,7 +594,7 @@ export default function CasesPage() {
             <div className="space-y-8 relative">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/5" />
               {[
-                { date: "15/03/2024", type: "Protocolo", title: "Processo Protocolado", desc: "Dossiê injetado no ecossistema RGMJ." },
+                { date: "15/03/2024", type: "Protocolo", title: "Processo Protocolado", desc: "Ação judicial injetada no ecossistema RGMJ." },
                 { date: "20/03/2024", type: "Financeiro", title: "Honorários Provisionados", desc: "Lançamento de verba contratual realizado." },
               ].map((ev, i) => (
                 <div key={i} className="relative pl-12">
