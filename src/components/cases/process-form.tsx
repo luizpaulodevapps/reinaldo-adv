@@ -22,7 +22,8 @@ import {
   ShieldAlert,
   Loader2,
   MapPin,
-  Library
+  Library,
+  Tag
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -136,11 +137,17 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   const filteredCourts = useMemo(() => {
     if (!courtSearchTerm || courtSearchTerm.length < 2) return []
-    return (dbCourts || []).filter(c => 
-      c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
-      c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
-    )
-  }, [courtSearchTerm, dbCourts])
+    return (dbCourts || []).filter(c => {
+      const matchesText = c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
+                         c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
+      
+      // Filtragem por área contextual
+      const areas = c.legalAreas || []
+      const matchesArea = areas.length === 0 || areas.includes(formData.caseType)
+      
+      return matchesText && matchesArea
+    })
+  }, [courtSearchTerm, dbCourts, formData.caseType])
 
   const handleNext = () => {
     if (currentStep < 6) setCurrentStep(currentStep + 1)
@@ -448,8 +455,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                       <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                         <SelectItem value="Trabalhista">⚖️ TRABALHISTA</SelectItem>
                         <SelectItem value="Cível">🏛️ CÍVEL</SelectItem>
+                        <SelectItem value="Criminal">🚔 CRIMINAL</SelectItem>
                         <SelectItem value="Previdenciário">👴 PREVIDENCIÁRIO</SelectItem>
                         <SelectItem value="Tributário">💰 TRIBUTÁRIO</SelectItem>
+                        <SelectItem value="Família">🏠 FAMÍLIA</SelectItem>
+                        <SelectItem value="Empresarial">🏢 EMPRESARIAL</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -464,7 +474,9 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <div className="space-y-8 p-8 rounded-2xl border border-white/5 bg-white/[0.02] shadow-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3 relative" ref={courtSearchRef}>
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">TRIBUNAL / ÓRGÃO *</Label>
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                      <Library className="h-3 w-3" /> TRIBUNAL / ÓRGÃO *
+                    </Label>
                     <div className="relative">
                       <Input 
                         placeholder="PESQUISAR FÓRUM..." 
@@ -487,6 +499,11 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                             filteredCourts.map(c => (
                               <button type="button" key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 text-left group">
                                 <div>
+                                  <div className="flex flex-wrap gap-1 mb-1">
+                                    {(c.legalAreas || []).map((area: string) => (
+                                      <Badge key={area} className="text-[7px] font-black uppercase h-3.5 px-1 bg-primary/20 text-primary border-0">{area}</Badge>
+                                    ))}
+                                  </div>
                                   <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{c.name}</p>
                                   <p className="text-[9px] text-muted-foreground uppercase mt-1">{c.city} - {c.state}</p>
                                 </div>
@@ -494,7 +511,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                               </button>
                             ))
                           ) : (
-                            <div className="p-8 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum fórum cadastrado</p></div>
+                            <div className="p-8 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhum fórum compatível cadastrado</p></div>
                           )}
                         </div>
                       </div>

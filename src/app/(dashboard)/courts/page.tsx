@@ -22,7 +22,11 @@ import {
   Save,
   X,
   Library,
-  ListPlus
+  ListPlus,
+  Scale,
+  Gavel,
+  ShieldCheck,
+  Tag
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -31,6 +35,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
 import { cn, maskCEP } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
+
+const LEGAL_AREAS = ["Trabalhista", "Cível", "Criminal", "Previdenciário", "Tributário", "Família", "Empresarial"]
 
 export default function CourtsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -49,6 +56,7 @@ export default function CourtsPage() {
     city: "",
     state: "",
     mapsLink: "",
+    legalAreas: ["Trabalhista"],
     varas: [],
     notes: ""
   })
@@ -116,6 +124,16 @@ export default function CourtsPage() {
     }))
   }
 
+  const handleToggleArea = (area: string) => {
+    setFormData((prev: any) => {
+      const areas = prev.legalAreas || []
+      if (areas.includes(area)) {
+        return { ...prev, legalAreas: areas.filter((a: string) => a !== area) }
+      }
+      return { ...prev, legalAreas: [...areas, area] }
+    })
+  }
+
   const handleSave = () => {
     if (!db || !formData.name || !formData.zipCode) {
       toast({ variant: "destructive", title: "Dados Incompletos" })
@@ -146,7 +164,7 @@ export default function CourtsPage() {
 
   const handleOpenEdit = (court: any) => {
     setEditingCourt(court)
-    setFormData({ ...court, varas: court.varas || [] })
+    setFormData({ ...court, varas: court.varas || [], legalAreas: court.legalAreas || [] })
     setIsDialogOpen(true)
   }
 
@@ -162,6 +180,7 @@ export default function CourtsPage() {
       city: "",
       state: "",
       mapsLink: "",
+      legalAreas: ["Trabalhista"],
       varas: [],
       notes: ""
     })
@@ -224,6 +243,13 @@ export default function CourtsPage() {
                 </div>
 
                 <div className="space-y-1">
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {(court.legalAreas || []).map((area: string) => (
+                      <Badge key={area} variant="outline" className="text-[8px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-2 py-0">
+                        {area}
+                      </Badge>
+                    ))}
+                  </div>
                   <h3 className="text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight">
                     {court.name}
                   </h3>
@@ -289,6 +315,21 @@ export default function CourtsPage() {
 
           <ScrollArea className="max-h-[60vh]">
             <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
+              
+              <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-4 shadow-inner">
+                <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <Tag className="h-4 w-4" /> Competência / Áreas de Atuação *
+                </Label>
+                <div className="flex flex-wrap gap-3">
+                  {LEGAL_AREAS.map(area => (
+                    <div key={area} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/40 border border-white/5 hover:border-primary/30 transition-all cursor-pointer" onClick={() => handleToggleArea(area)}>
+                      <Checkbox checked={(formData.legalAreas || []).includes(area)} onCheckedChange={() => handleToggleArea(area)} className="data-[state=checked]:bg-primary" />
+                      <span className="text-[10px] font-black text-white uppercase">{area}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Nome do Órgão / Prédio *</Label>
                 <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black text-sm" placeholder="EX: TRT 2ª REGIÃO - FÓRUM RUY BARBOSA" />

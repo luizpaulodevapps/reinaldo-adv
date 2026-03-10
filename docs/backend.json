@@ -118,6 +118,7 @@
         "city": { "type": "string" },
         "state": { "type": "string" },
         "mapsLink": { "type": "string" },
+        "legalAreas": { "type": "array", "items": { "type": "string" }, "description": "Legal areas this court serves (e.g., Trabalhista, Cível)." },
         "varas": { "type": "array", "items": { "type": "string" }, "description": "List of court chambers in this building." },
         "notes": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }

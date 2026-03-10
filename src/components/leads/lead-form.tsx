@@ -30,7 +30,8 @@ import {
   Navigation,
   ShieldCheck,
   UserPlus,
-  CheckCircle2
+  CheckCircle2,
+  Tag
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -163,11 +164,17 @@ export function LeadForm({
 
   const filteredCourts = useMemo(() => {
     if (!courtSearchTerm || courtSearchTerm.length < 2) return []
-    return (dbCourts || []).filter(c => 
-      c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
-      c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
-    )
-  }, [courtSearchTerm, dbCourts])
+    return (dbCourts || []).filter(c => {
+      const matchesText = c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
+                         c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
+      
+      // Filtragem por área contextual
+      const areas = c.legalAreas || []
+      const matchesArea = areas.length === 0 || areas.includes(formData.type)
+      
+      return matchesText && matchesArea
+    })
+  }, [courtSearchTerm, dbCourts, formData.type])
 
   useEffect(() => {
     if (initialData) {
@@ -433,8 +440,33 @@ export function LeadForm({
             <div className="space-y-6 animate-in fade-in duration-500">
               <SectionTitle icon={Gavel}>Logística Judiciária</SectionTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Área Jurídica *</Label>
+                  <Select value={formData.type} onValueChange={(v) => handleInputChange("type", v)}>
+                    <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="Trabalhista">⚖️ TRABALHISTA</SelectItem>
+                      <SelectItem value="Cível">🏛️ CÍVEL</SelectItem>
+                      <SelectItem value="Criminal">🚔 CRIMINAL</SelectItem>
+                      <SelectItem value="Previdenciário">👴 PREVIDENCIÁRIO</SelectItem>
+                      <SelectItem value="Tributário">💰 TRIBUTÁRIO</SelectItem>
+                      <SelectItem value="Família">🏠 FAMÍLIA</SelectItem>
+                      <SelectItem value="Empresarial">🏢 EMPRESARIAL</SelectItem>
+                      <SelectItem value="Geral">🌐 GERAL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Responsável Técnico</Label>
+                  <Input className={inputClass} value={formData.responsibleLawyer} onChange={(e) => handleInputChange("responsibleLawyer", e.target.value.toUpperCase())} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                 <div className="space-y-1.5 relative" ref={courtSearchRef}>
-                  <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Órgão / Tribunal</Label>
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                    <Library className="h-3 w-3" /> Órgão / Tribunal
+                  </Label>
                   <div className="relative">
                     <Input 
                       placeholder="PESQUISAR FÓRUM..." 
@@ -454,16 +486,21 @@ export function LeadForm({
                       <div className="max-h-[250px] overflow-y-auto">
                         {filteredCourts.length > 0 ? (
                           filteredCourts.map(c => (
-                            <button type="button" key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 text-left">
+                            <button type="button" key={c.id} onClick={() => handleSelectCourt(c)} className="w-full p-4 flex items-center justify-between hover:bg-primary/10 border-b border-white/5 last:border-0 text-left group">
                               <div>
-                                <p className="text-xs font-black text-white uppercase">{c.name}</p>
+                                <div className="flex flex-wrap gap-1 mb-1">
+                                  {(c.legalAreas || []).map((area: string) => (
+                                    <Badge key={area} className="text-[7px] font-black uppercase h-3.5 px-1 bg-primary/20 text-primary border-0">{area}</Badge>
+                                  ))}
+                                </div>
+                                <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{c.name}</p>
                                 <p className="text-[9px] text-muted-foreground uppercase mt-1">{c.city} - {c.state}</p>
                               </div>
                               <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary">MAPEAR</Badge>
                             </button>
                           ))
                         ) : (
-                          <div className="p-8 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Órgão não listado</p></div>
+                          <div className="p-8 text-center opacity-40"><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Órgão não compatível ou não listado</p></div>
                         )}
                       </div>
                     </div>
