@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CheckCircle2, ShieldCheck, Brain, Loader2, Save } from "lucide-react"
+import { CheckCircle2, ShieldCheck, Brain, Loader2, Save, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useToast } from "@/hooks/use-toast"
 
 interface DynamicInterviewProps {
   template: any
@@ -21,6 +22,8 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
   const [responses, setResponses] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [errors, setErrors] = useState<Record<string, boolean>>({})
+  const { toast } = useToast()
 
   useEffect(() => {
     if (typeof window !== 'undefined' && template?.id) {
@@ -49,12 +52,26 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
 
   const handleInputChange = (label: string, value: any) => {
     setResponses(prev => ({ ...prev, [label]: value }))
+    if (value && errors[label]) {
+      setErrors(prev => ({ ...prev, [label]: false }))
+    }
   }
 
-  const handleFinalize = () => {
-    const missingFields = template.items?.filter((item: any) => (item.required || item.balizaObrigatoria) && !responses[item.label])
+  const handleFinalize = async () => {
+    const newErrors: Record<string, boolean> = {}
+    const missingFields = template.items?.filter((item: any) => {
+      const isMissing = (item.required || item.balizaObrigatoria) && !responses[item.label]
+      if (isMissing) newErrors[item.label] = true
+      return isMissing
+    })
+
     if (missingFields?.length > 0) {
-      alert(`Os seguintes campos são obrigatórios para a banca: ${missingFields.map((f: any) => f.label).join(", ")}`)
+      setErrors(newErrors)
+      toast({
+        variant: "destructive",
+        title: "Dados Obrigatórios Pendentes",
+        description: `Por favor, preencha os campos marcados antes de protocolar.`,
+      })
       return
     }
 
@@ -70,13 +87,20 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
     }))
 
     setLoading(true)
-    setTimeout(() => {
-      onSubmit({ responses, templateSnapshot })
+    try {
+      await onSubmit({ responses, templateSnapshot })
       if (typeof window !== 'undefined') {
         localStorage.removeItem(`rgmj_interview_v1_${template.id}`)
       }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha no Protocolo",
+        description: "Ocorreu um erro ao salvar a entrevista no banco de dados.",
+      })
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   if (!template) return null
@@ -106,17 +130,36 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
         <div className="max-w-3xl mx-auto p-10 space-y-12 pb-32">
           {template.items?.map((field: any, idx: number) => (
             <div key={idx} className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: `${idx * 40}ms` }}>
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(245,208,48,0.5)]" />
-                <Label className="text-xs font-black text-white uppercase tracking-[0.15em] leading-relaxed">
-                  {field.label} {field.required && <span className="text-destructive font-bold">*</span>}
-                </Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(245,208,48,0.5)]",
+                    errors[field.label] ? "bg-rose-500" : "bg-primary"
+                  )} />
+                  <Label className={cn(
+                    "text-xs font-black uppercase tracking-[0.15em] leading-relaxed",
+                    errors[field.label] ? "text-rose-400" : "text-white"
+                  )}>
+                    {field.label} {(field.required || field.balizaObrigatoria) && <span className="text-destructive font-bold">*</span>}
+                  </Label>
+                </div>
+                {errors[field.label] && (
+                  <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest animate-pulse flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Campo Obrigatório
+                  </span>
+                )}
               </div>
 
-              <div className="pl-4 border-l border-white/5 space-y-4">
+              <div className={cn(
+                "pl-4 border-l transition-all space-y-4",
+                errors[field.label] ? "border-rose-500/50" : "border-white/5"
+              )}>
                 {field.type === 'text' && (
                   <Textarea 
-                    className="bg-black/30 border-white/10 min-h-[120px] text-white focus:ring-1 focus:ring-primary/50 text-sm resize-none p-5 rounded-xl transition-all"
+                    className={cn(
+                      "bg-black/30 border-white/10 min-h-[120px] text-white focus:ring-1 focus:ring-primary/50 text-sm resize-none p-5 rounded-xl transition-all",
+                      errors[field.label] && "border-rose-500/30 bg-rose-500/5"
+                    )}
                     placeholder="Relato técnico detalhado..."
                     value={responses[field.label] || ""}
                     onChange={(e) => handleInputChange(field.label, e.target.value)}
@@ -126,7 +169,10 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
                 {field.type === 'number' && (
                   <Input 
                     type="number"
-                    className="bg-black/30 border-white/10 h-14 text-white text-lg font-black focus:ring-1 focus:ring-primary/50 rounded-xl px-5"
+                    className={cn(
+                      "bg-black/30 border-white/10 h-14 text-white text-lg font-black focus:ring-1 focus:ring-primary/50 rounded-xl px-5",
+                      errors[field.label] && "border-rose-500/30 bg-rose-500/5"
+                    )}
                     placeholder="0,00"
                     value={responses[field.label] || ""}
                     onChange={(e) => handleInputChange(field.label, e.target.value)}
@@ -141,14 +187,16 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
                   >
                     <div className={cn(
                       "flex items-center gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer group",
-                      responses[field.label] === "Sim" ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                      responses[field.label] === "Sim" ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : "border-white/5 bg-white/[0.02] hover:border-white/10",
+                      errors[field.label] && !responses[field.label] && "border-rose-500/30"
                     )}>
                       <RadioGroupItem value="Sim" id={`yes-${idx}`} className="border-emerald-500 text-emerald-500" />
                       <Label htmlFor={`yes-${idx}`} className="text-xs font-black text-white uppercase cursor-pointer tracking-widest">Sim</Label>
                     </div>
                     <div className={cn(
                       "flex items-center gap-4 p-5 rounded-xl border-2 transition-all cursor-pointer group",
-                      responses[field.label] === "Não" ? "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.1)]" : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                      responses[field.label] === "Não" ? "border-rose-500 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.1)]" : "border-white/5 bg-white/[0.02] hover:border-white/10",
+                      errors[field.label] && !responses[field.label] && "border-rose-500/30"
                     )}>
                       <RadioGroupItem value="Não" id={`no-${idx}`} className="border-rose-500 text-rose-500" />
                       <Label htmlFor={`no-${idx}`} className="text-xs font-black text-white uppercase cursor-pointer tracking-widest">Não</Label>
@@ -164,21 +212,24 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
                   >
                     <div className={cn(
                       "flex items-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
-                      responses[field.label] === "Sim" ? "border-emerald-500 bg-emerald-500/10" : "border-white/5 bg-white/[0.02]"
+                      responses[field.label] === "Sim" ? "border-emerald-500 bg-emerald-500/10" : "border-white/5 bg-white/[0.02]",
+                      errors[field.label] && !responses[field.label] && "border-rose-500/30"
                     )}>
                       <RadioGroupItem value="Sim" id={`pyes-${idx}`} className="border-emerald-500 text-emerald-500" />
                       <Label htmlFor={`pyes-${idx}`} className="text-[10px] font-black text-white uppercase cursor-pointer">Sim</Label>
                     </div>
                     <div className={cn(
                       "flex items-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
-                      responses[field.label] === "Parcial" ? "border-amber-500 bg-amber-500/10" : "border-white/5 bg-white/[0.02]"
+                      responses[field.label] === "Parcial" ? "border-amber-500 bg-amber-500/10" : "border-white/5 bg-white/[0.02]",
+                      errors[field.label] && !responses[field.label] && "border-rose-500/30"
                     )}>
                       <RadioGroupItem value="Parcial" id={`ppart-${idx}`} className="border-amber-500 text-amber-500" />
                       <Label htmlFor={`ppart-${idx}`} className="text-[10px] font-black text-white uppercase cursor-pointer">Parcial</Label>
                     </div>
                     <div className={cn(
                       "flex items-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
-                      responses[field.label] === "Não" ? "border-rose-500 bg-rose-500/10" : "border-white/5 bg-white/[0.02]"
+                      responses[field.label] === "Não" ? "border-rose-500 bg-rose-500/10" : "border-white/5 bg-white/[0.02]",
+                      errors[field.label] && !responses[field.label] && "border-rose-500/30"
                     )}>
                       <RadioGroupItem value="Não" id={`pno-${idx}`} className="border-rose-500 text-rose-500" />
                       <Label htmlFor={`pno-${idx}`} className="text-[10px] font-black text-white uppercase cursor-pointer">Não</Label>
@@ -202,6 +253,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
         <Button 
           variant="ghost" 
           onClick={onCancel} 
+          disabled={loading}
           className="text-muted-foreground font-black uppercase text-[11px] tracking-[0.2em] px-10 h-14 hover:text-white transition-colors"
         >
           Abortar Ato
