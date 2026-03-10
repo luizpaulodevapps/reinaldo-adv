@@ -130,6 +130,13 @@ export default function LeadsPage() {
   }, [leadsData])
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
+  
+  // Sincroniza o Lead selecionado com a versão mais recente do banco
+  const activeLead = useMemo(() => {
+    if (!selectedLead || !leads) return selectedLead
+    return leads.find(l => l.id === selectedLead.id) || selectedLead
+  }, [leads, selectedLead?.id])
+
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
   const [isEditModeOpen, setIsEditModeOpen] = useState(false)
@@ -181,21 +188,21 @@ export default function LeadsPage() {
   const { data: templates } = useCollection(templatesQuery)
 
   const leadInterviewsQuery = useMemoFirebase(() => {
-    if (!user || !db || !selectedLead) return null
+    if (!user || !db || !activeLead?.id) return null
     return query(
       collection(db!, "interviews"), 
-      where("clientId", "==", selectedLead.id),
+      where("clientId", "==", activeLead.id),
       orderBy("createdAt", "desc")
     )
-  }, [db, user, selectedLead])
-  const { data: leadInterviews } = useCollection(leadInterviewsQuery)
+  }, [db, user, activeLead?.id])
+  const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
 
   useEffect(() => {
-    if (selectedLead) {
-      if (selectedLead.status === 'atendimento') setActiveDossierTab("entrevistas")
-      else if (selectedLead.status === 'burocracia') setActiveDossierTab("burocracia")
-      else if (selectedLead.status === 'distribuicao') setActiveDossierTab("revisao")
-      else setActiveDossierTab("overview")
+    if (activeLead) {
+      if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("entrevistas")
+      else if (activeLead.status === 'burocracia' && activeDossierTab === 'overview') setActiveDossierTab("burocracia")
+      else if (activeLead.status === 'distribuicao' && activeDossierTab === 'overview') setActiveDossierTab("revisao")
+      
       setStrategicSummary(null)
       setIsSchedulingHearing(false)
       setIntakeSuccess(false)
@@ -208,16 +215,16 @@ export default function LeadsPage() {
         location: ""
       })
       setIntakeData({
-        date: selectedLead.scheduledDate || "",
-        time: selectedLead.scheduledTime || "",
-        type: selectedLead.meetingType || "online",
-        locationType: selectedLead.locationType || "sede",
-        customAddress: selectedLead.customAddress || "",
-        observations: selectedLead.intakeObservations || ""
+        date: activeLead.scheduledDate || "",
+        time: activeLead.scheduledTime || "",
+        type: activeLead.meetingType || "online",
+        locationType: activeLead.locationType || "sede",
+        customAddress: activeLead.customAddress || "",
+        observations: activeLead.intakeObservations || ""
       })
-      setLocationSearch(selectedLead.customAddress || "")
+      setLocationSearch(activeLead.customAddress || "")
     }
-  }, [selectedLead?.id, selectedLead?.status])
+  }, [activeLead?.id])
 
   const handleMapSearch = useCallback(async (query: string) => {
     if (!query || query.length < 3) {
@@ -253,10 +260,9 @@ export default function LeadsPage() {
   }
 
   const handleGenerateStrategicSummary = async () => {
-    if (!selectedLead) return
+    if (!activeLead) return
     setIsGeneratingSummary(true)
     
-    // Coletar todas as respostas das entrevistas como contexto
     const interviewContext = (leadInterviews || []).map(int => {
       const responses = Object.entries(int.responses || {})
         .map(([q, a]) => `${q}: ${a}`)
@@ -266,14 +272,14 @@ export default function LeadsPage() {
 
     try {
       const result = await generateCaseSummary({
-        caseId: selectedLead.id,
-        clientName: selectedLead.name,
-        caseTitle: selectedLead.demandTitle || "Demanda Estratégica",
-        caseDescription: interviewContext || selectedLead.notes || "Aguardando entrevistas técnicas.",
+        caseId: activeLead.id,
+        clientName: activeLead.name,
+        caseTitle: activeLead.demandTitle || "Demanda Estratégica",
+        caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas técnicas.",
         currentStatus: "Fase de Triagem e Qualificação",
         lastEvents: ["Entrevista Realizada", "Dados Capturados"],
         nextDeadlines: ["Protocolo Inicial", "Saneamento de Burocracia"],
-        relatedParties: [selectedLead.defendantName || "Polo Passivo Pendente"],
+        relatedParties: [activeLead.defendantName || "Polo Passivo Pendente"],
         financialStatus: "Aguardando definição de valor tático."
       })
       setStrategicSummary(result)
@@ -292,7 +298,7 @@ export default function LeadsPage() {
   }
 
   const handleScheduleIntake = async () => {
-    if (!db || !selectedLead || !intakeData.date || !intakeData.time) {
+    if (!db || !activeLead || !intakeData.date || !intakeData.time) {
       toast({ variant: "destructive", title: "Dados Incompletos", description: "Defina data e hora para o atendimento." })
       return
     }
@@ -317,14 +323,14 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp()
     }
 
-    updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), payload)
+    updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
 
     const appointmentPayload = {
-      title: `Atendimento: ${selectedLead.name}`,
+      title: `Atendimento: ${activeLead.name}`,
       type: "Atendimento",
       startDateTime: `${intakeData.date}T${intakeData.time}:00`,
-      clientId: selectedLead.id,
-      clientName: selectedLead.name,
+      clientId: activeLead.id,
+      clientName: activeLead.name,
       meetingType: intakeData.type,
       location: finalLocation,
       meetingLink: meetLink,
@@ -335,9 +341,6 @@ export default function LeadsPage() {
     }
     addDocumentNonBlocking(collection(db, "appointments"), appointmentPayload)
 
-    setSelectedLead({ ...selectedLead, ...payload })
-    setIntakeSuccess(true)
-    
     toast({ 
       title: "Atendimento Agendado", 
       description: "O ato foi sincronizado com a pauta estratégica." 
@@ -345,14 +348,14 @@ export default function LeadsPage() {
   }
 
   const handleShareIntake = (method: 'whatsapp' | 'email') => {
-    if (!selectedLead) return
+    if (!activeLead) return
     
-    const date = new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')
-    const time = selectedLead.scheduledTime
-    const location = selectedLead.meetingLocation
-    const link = selectedLead.meetingLink
+    const date = new Date(activeLead.scheduledDate).toLocaleDateString('pt-BR')
+    const time = activeLead.scheduledTime
+    const location = activeLead.meetingLocation
+    const link = activeLead.meetingLink
     
-    let message = `Olá ${selectedLead.name},\n\nConfirmamos seu agendamento com a banca RGMJ Advogados.\n\n📅 Data: ${date}\n⏰ Horário: ${time}\n📍 Local: ${location}`
+    let message = `Olá ${activeLead.name},\n\nConfirmamos seu agendamento com a banca RGMJ Advogados.\n\n📅 Data: ${date}\n⏰ Horário: ${time}\n📍 Local: ${location}`
     
     if (link) {
       message += `\n🔗 Link da Reunião: ${link}`
@@ -361,26 +364,25 @@ export default function LeadsPage() {
     message += `\n\nAtenciosamente,\nEquipe RGMJ.`
 
     if (method === 'whatsapp') {
-      const phone = selectedLead.phone?.replace(/\D/g, '')
+      const phone = activeLead.phone?.replace(/\D/g, '')
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank")
     } else {
       const subject = encodeURIComponent("Confirmação de Agendamento - RGMJ Advogados")
-      window.open(`mailto:${selectedLead.email}?subject=${subject}&body=${encodeURIComponent(message)}`, "_blank")
+      window.open(`mailto:${activeLead.email}?subject=${subject}&body=${encodeURIComponent(message)}`, "_blank")
     }
   }
 
   const handleSyncDrive = async () => {
-    if (!selectedLead || !db) return
+    if (!activeLead || !db) return
     setIsSyncingDrive(true)
     setTimeout(async () => {
       let nextStatus = "pasta_lead"
-      if (selectedLead.status === "distribuicao" || selectedLead.status === "burocracia") nextStatus = "pasta_cliente"
-      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+      if (activeLead.status === "distribuicao" || activeLead.status === "burocracia") nextStatus = "pasta_cliente"
+      await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
         driveStatus: nextStatus,
         driveFolderId: "DRIVE_" + Math.random().toString(36).substring(7),
         updatedAt: serverTimestamp()
       })
-      setSelectedLead({ ...selectedLead, driveStatus: nextStatus })
       setIsSyncingDrive(false)
       toast({ title: "Drive Sincronizado" })
     }, 1000)
@@ -392,10 +394,10 @@ export default function LeadsPage() {
   }
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
-    if (!db || !selectedLead || !user) return
+    if (!db || !activeLead || !user) return
     const interviewData = {
-      clientId: selectedLead.id,
-      clientName: selectedLead.name,
+      clientId: activeLead.id,
+      clientName: activeLead.name,
       templateId: executingTemplate.id,
       interviewType: executingTemplate.title,
       responses: payload.responses,
@@ -408,8 +410,8 @@ export default function LeadsPage() {
     }
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
     
-    if (selectedLead.status === 'novo' || !selectedLead.status) {
-      await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+    if (activeLead.status === 'novo' || !activeLead.status) {
+      await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
         status: "atendimento",
         updatedAt: serverTimestamp()
       })
@@ -424,7 +426,7 @@ export default function LeadsPage() {
     setInterviewAnalysis(null)
     try {
       const result = await aiAnalyzeFullInterview({
-        clientName: selectedLead.name,
+        clientName: activeLead.name,
         interviewType: interview.interviewType,
         responses: interview.responses
       })
@@ -443,20 +445,19 @@ export default function LeadsPage() {
   }
 
   const handlePromoteSummary = async () => {
-    if (!db || !selectedLead || !interviewAnalysis) return
-    await updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), {
+    if (!db || !activeLead || !interviewAnalysis) return
+    await updateDocumentNonBlocking(doc(db, "leads", activeLead.id), {
       aiSummary: interviewAnalysis.summary,
       updatedAt: serverTimestamp()
     })
-    setSelectedLead({ ...selectedLead, aiSummary: interviewAnalysis.summary })
     toast({ title: "Sintese Promovida", description: "O resumo da IA agora é o oficial do Lead." })
   }
 
   const handleConvertProcess = async (data: any) => {
-    if (!db || !selectedLead) return
+    if (!db || !activeLead) return
     const processPayload = {
       ...data,
-      leadId: selectedLead.id,
+      leadId: activeLead.id,
       status: "Em Andamento",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -465,14 +466,14 @@ export default function LeadsPage() {
     
     if (isSchedulingHearing && hearingData.date && hearingData.time) {
       const hearingPayload = {
-        title: `Audiência ${hearingData.type}: ${selectedLead.name}`,
+        title: `Audiência ${hearingData.type}: ${activeLead.name}`,
         type: hearingData.type,
         startDateTime: `${hearingData.date}T${hearingData.time}:00`,
         processId: (processRef as any).id,
         processNumber: processPayload.processNumber,
-        clientName: selectedLead.name,
-        clientId: selectedLead.id,
-        location: hearingData.type === 'Virtual' ? 'SALA VIRTUAL RGMJ' : (hearingData.location || selectedLead.courtAddress || 'Fórum'),
+        clientName: activeLead.name,
+        clientId: activeLead.id,
+        location: hearingData.type === 'Virtual' ? 'SALA VIRTUAL RGMJ' : (hearingData.location || activeLead.courtAddress || 'Fórum'),
         meetingLink: hearingData.meetingLink,
         accessCode: hearingData.accessCode,
         hearingType: hearingData.type === 'Virtual' ? 'Virtual' : 'Física',
@@ -482,7 +483,7 @@ export default function LeadsPage() {
       await addDocumentNonBlocking(collection(db!, "hearings"), hearingPayload)
     }
 
-    updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
+    updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
       status: "arquivado",
       convertedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -693,7 +694,7 @@ export default function LeadsPage() {
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                               <div className="flex gap-1.5">
                                 {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 font-black uppercase px-1.5 py-0">CPF OK</Badge>}
-                                {lead.interviewsCount > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 font-black uppercase px-1.5 py-0">ENTREVISTA</Badge>}
+                                {(lead.interviewsCount > 0 || lead.status === 'atendimento') && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 font-black uppercase px-1.5 py-0">DNA CAPTURADO</Badge>}
                               </div>
                               <div className="flex items-center gap-1.5 text-primary font-black text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
                                 ABRIR <ArrowRight className="h-3 w-3" />
@@ -720,7 +721,7 @@ export default function LeadsPage() {
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl">
-          {selectedLead && (
+          {activeLead && (
             <div className="flex flex-col h-full">
               <SheetHeader className="p-6 border-b border-white/5 bg-[#0a0f1e] z-10 flex-none shadow-xl">
                 <div className="flex items-center justify-between">
@@ -729,17 +730,17 @@ export default function LeadsPage() {
                       <Fingerprint className="h-5 w-5 text-primary" />
                     </div>
                     <div className="space-y-0.5">
-                      <SheetTitle className="text-lg font-bold uppercase tracking-tight text-white">{selectedLead.name}</SheetTitle>
+                      <SheetTitle className="text-lg font-bold uppercase tracking-tight text-white">{activeLead.name}</SheetTitle>
                       <SheetDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.25em] flex items-center gap-2" asChild>
                         <span>
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> 
-                          DOSSIÊ ESTRATÉGICO • ID {selectedLead.id.substring(0, 12).toUpperCase()}
+                          DOSSIÊ ESTRATÉGICO • ID {activeLead.id.substring(0, 12).toUpperCase()}
                         </span>
                       </SheetDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => { handleDeleteLead(selectedLead.id); }} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-rose-500/10 hover:text-rose-500 text-rose-400">
+                    <Button onClick={() => { handleDeleteLead(activeLead.id); }} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-rose-500/10 hover:text-rose-500 text-rose-400">
                       <Trash2 className="h-3.5 w-3.5" /> EXCLUIR
                     </Button>
                     <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
@@ -758,10 +759,10 @@ export default function LeadsPage() {
               <div className="p-4 bg-[#0a0f1e]/60 border-b border-white/5 flex-none overflow-x-auto scrollbar-hide">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 min-w-[800px]">
                   {[
-                    { label: "Status Operacional", value: selectedLead.status?.toUpperCase() || "NOVO", icon: Zap, color: "text-primary" },
-                    { label: "Réu Principal", value: selectedLead.defendantName || "NÃO INFORMADO", icon: Building, color: "text-muted-foreground" },
-                    { label: "Canal WhatsApp", value: selectedLead.phone, icon: Phone, color: "text-emerald-500" },
-                    { label: "Jurisdição", value: selectedLead.city ? `${selectedLead.city}-${selectedLead.state}` : "N/A", icon: MapPin, color: "text-muted-foreground" },
+                    { label: "Status Operacional", value: activeLead.status?.toUpperCase() || "NOVO", icon: Zap, color: "text-primary" },
+                    { label: "Réu Principal", value: activeLead.defendantName || "NÃO INFORMADO", icon: Building, color: "text-muted-foreground" },
+                    { label: "Canal WhatsApp", value: activeLead.phone, icon: Phone, color: "text-emerald-500" },
+                    { label: "Jurisdição", value: activeLead.city ? `${activeLead.city}-${activeLead.state}` : "N/A", icon: MapPin, color: "text-muted-foreground" },
                   ].map((item, i) => (
                     <div key={i} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-3.5 shadow-lg">
                       <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center bg-black/20 border border-white/5", item.color)}>
@@ -799,7 +800,7 @@ export default function LeadsPage() {
                           <div className="absolute top-0 right-0 p-6 opacity-5"><Clock className="h-16 w-16" /></div>
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] flex items-center gap-2.5"><Clock className="h-4 w-4" /> Cronograma</h4>
-                            {selectedLead.scheduledDate && (
+                            {activeLead.scheduledDate && (
                               <div className="flex gap-2">
                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10 rounded-lg" onClick={(e) => { e.stopPropagation(); handleShareIntake('whatsapp'); }}>
                                   <MessageCircle className="h-4 w-4" />
@@ -812,13 +813,13 @@ export default function LeadsPage() {
                           </div>
                           <div className="space-y-3">
                             <p className="text-lg font-bold text-white uppercase tracking-tighter">
-                              {selectedLead.scheduledDate ? `${new Date(selectedLead.scheduledDate).toLocaleDateString('pt-BR')} às ${selectedLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
+                              {activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString('pt-BR')} às ${activeLead.scheduledTime}` : "AGUARDANDO AGENDAMENTO"}
                             </p>
                             <Badge variant="outline" className="text-[10px] font-black text-muted-foreground border-white/10 px-3 py-1 rounded-lg uppercase tracking-widest bg-white/[0.02]">
-                              {selectedLead.meetingType === 'online' ? '🖥️ VIRTUAL RGMJ' : `🏢 PRESENCIAL: ${selectedLead.meetingLocation || 'LOCAL A DEFINIR'}`}
+                              {activeLead.meetingType === 'online' ? '🖥️ VIRTUAL RGMJ' : `🏢 PRESENCIAL: ${activeLead.meetingLocation || 'LOCAL A DEFINIR'}`}
                             </Badge>
-                            {selectedLead.meetingLink && (
-                              <p className="text-[10px] text-primary font-mono font-bold truncate mt-2 opacity-60">LINK: {selectedLead.meetingLink}</p>
+                            {activeLead.meetingLink && (
+                              <p className="text-[10px] text-primary font-mono font-bold truncate mt-2 opacity-60">LINK: {activeLead.meetingLink}</p>
                             )}
                           </div>
                         </Card>
@@ -826,7 +827,7 @@ export default function LeadsPage() {
                           <div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-16 w-16" /></div>
                           <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2.5 mb-4"><Brain className="h-4 w-4" /> Síntese Estratégica</h4>
                           <p className="text-sm text-white/80 leading-relaxed italic text-justify font-medium">
-                            {selectedLead.aiSummary || "Aguardando entrevistas técnicas para consolidar fatos."}
+                            {activeLead.aiSummary || "Aguardando entrevistas técnicas para consolidar fatos."}
                           </p>
                         </Card>
                       </div>
@@ -853,12 +854,20 @@ export default function LeadsPage() {
                         </div>
                       </div>
 
-                      {leadInterviews && leadInterviews.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2.5 border-b border-white/5 pb-2.5">
-                            <FileSearch className="h-3.5 w-3.5 text-emerald-500" />
-                            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Entrevistas Concluídas</h3>
+                      <div className="space-y-4 pt-4">
+                        <div className="flex items-center gap-2.5 border-b border-white/5 pb-2.5">
+                          <FileSearch className="h-3.5 w-3.5 text-emerald-500" />
+                          <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">
+                            Entrevistas Concluídas {(leadInterviews?.length || 0) > 0 && `(${leadInterviews?.length})`}
+                          </h3>
+                        </div>
+                        
+                        {isLoadingInterviews ? (
+                          <div className="py-10 flex flex-col items-center justify-center opacity-40 gap-3">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            <p className="text-[9px] font-black uppercase tracking-widest">Auditando Dossiês...</p>
                           </div>
+                        ) : leadInterviews && leadInterviews.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {leadInterviews.map((int, idx) => (
                               <Card key={idx} className="glass border-white/5 hover-gold transition-all p-6 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-xl">
@@ -900,12 +909,17 @@ export default function LeadsPage() {
                               </Card>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="py-20 flex flex-col items-center justify-center opacity-20 space-y-4 glass rounded-2xl border-dashed border-2 border-white/5">
+                            <FileSearch className="h-12 w-12" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Nenhuma captura realizada</p>
+                          </div>
+                        )}
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="burocracia" className="w-full">
-                      <BurocraciaView lead={selectedLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
+                      <BurocraciaView lead={activeLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
                     <TabsContent value="revisao" className="space-y-6 animate-in fade-in duration-700 w-full">
@@ -927,20 +941,20 @@ export default function LeadsPage() {
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         {[
                           { title: "Polo Ativo (Autor)", icon: User, data: [
-                            { label: "Nome Civil", value: selectedLead.name },
-                            { label: "CPF/CNPJ", value: selectedLead.cpf || selectedLead.documentNumber || "NÃO INFORMADO" },
-                            { label: "WhatsApp", value: selectedLead.phone },
-                            { label: "Endereço", value: selectedLead.address ? `${selectedLead.address}, ${selectedLead.city}` : "PENDENTE" },
+                            { label: "Nome Civil", value: activeLead.name },
+                            { label: "CPF/CNPJ", value: activeLead.cpf || activeLead.documentNumber || "NÃO INFORMADO" },
+                            { label: "WhatsApp", value: activeLead.phone },
+                            { label: "Endereço", value: activeLead.address ? `${activeLead.address}, ${activeLead.city}` : "PENDENTE" },
                           ]},
                           { title: "Polo Passivo (Réu)", icon: Building, data: [
-                            { label: "Razão Social", value: selectedLead.defendantName || "NÃO INFORMADO" },
-                            { label: "Documento", value: selectedLead.defendantDocument || "NÃO INFORMADO" },
-                            { label: "Endereço", value: selectedLead.defendantAddress || "NÃO MAPEADO" },
+                            { label: "Razão Social", value: activeLead.defendantName || "NÃO INFORMADO" },
+                            { label: "Documento", value: activeLead.defendantDocument || "NÃO INFORMADO" },
+                            { label: "Endereço", value: activeLead.defendantAddress || "NÃO MAPEADO" },
                           ]},
                           { title: "Logística", icon: Gavel, data: [
-                            { label: "Tribunal", value: selectedLead.court || "NÃO MAPEADO" },
-                            { label: "Vara", value: selectedLead.vara || "NÃO MAPEADA" },
-                            { label: "Endereço Juízo", value: selectedLead.courtAddress || "PENDENTE" },
+                            { label: "Tribunal", value: activeLead.court || "NÃO MAPEADO" },
+                            { label: "Vara", value: activeLead.vara || "NÃO MAPEADA" },
+                            { label: "Endereço Juízo", value: activeLead.courtAddress || "PENDENTE" },
                           ]}
                         ].map((section, idx) => (
                           <Card key={idx} className="glass border-white/5 p-6 rounded-2xl space-y-5 shadow-xl bg-white/[0.01]">
@@ -989,8 +1003,8 @@ export default function LeadsPage() {
                           <Input 
                             placeholder="0000000-00.0000.0.00.0000" 
                             className="bg-black/60 border-purple-500/30 h-14 text-white font-mono text-lg font-black w-full tracking-[0.15em] rounded-xl px-6" 
-                            value={selectedLead.processNumber || ""} 
-                            onChange={(e) => setSelectedLead({...selectedLead, processNumber: e.target.value})} 
+                            value={activeLead.processNumber || ""} 
+                            onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} 
                           />
                         </div>
                         <Button 
@@ -1325,16 +1339,16 @@ export default function LeadsPage() {
             <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0">
-            {selectedLead && (
+            {activeLead && (
               <ProcessForm 
                 initialData={{
-                  clientName: selectedLead.name,
-                  clientId: selectedLead.id,
-                  defendantName: selectedLead.defendantName,
-                  caseType: selectedLead.type,
-                  court: selectedLead.court,
-                  vara: selectedLead.vara,
-                  processNumber: selectedLead.processNumber || "",
+                  clientName: activeLead.name,
+                  clientId: activeLead.id,
+                  defendantName: activeLead.defendantName,
+                  caseType: activeLead.type,
+                  court: activeLead.court,
+                  vara: activeLead.vara,
+                  processNumber: activeLead.processNumber || "",
                   responsibleStaffId: user?.uid
                 }}
                 onSubmit={handleConvertProcess}
@@ -1372,14 +1386,13 @@ export default function LeadsPage() {
             <SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0">
-            {selectedLead && (
+            {activeLead && (
               <LeadForm 
                 existingLeads={[]}
-                initialData={selectedLead}
+                initialData={activeLead}
                 lockMode={true}
                 onSubmit={async (data) => {
-                  await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), { ...data, updatedAt: serverTimestamp() })
-                  setSelectedLead({ ...selectedLead, ...data })
+                  await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() })
                   setIsEditModeOpen(false)
                   toast({ title: "Qualificação Atualizada" })
                 }}
