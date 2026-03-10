@@ -203,7 +203,6 @@ function SettingsContent() {
     isMeetActive: true
   })
 
-  // Carregamento de Configurações do Banco
   const firmRef = useMemoFirebase(() => db ? doc(db, 'settings', 'firm') : null, [db])
   const { data: firmData } = useDoc(firmRef)
 
@@ -222,13 +221,13 @@ function SettingsContent() {
     if (!user || !db) return null
     return query(collection(db!, "document_templates"), orderBy("createdAt", "desc"))
   }, [db, user])
-  const { data: models, isLoading: loadingModels } = useCollection(modelsQuery)
+  const { data: models } = useCollection(modelsQuery)
 
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "notification_templates"), orderBy("createdAt", "desc"))
   }, [db, user])
-  const { data: messageTemplates, isLoading: loadingMessages } = useCollection(messagesQuery)
+  const { data: messageTemplates } = useCollection(messagesQuery)
 
   const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
 
@@ -418,12 +417,6 @@ function SettingsContent() {
     toast({ title: "Perfil de Notificação Salvo" })
   }
 
-  const handleDeleteMessageTemplate = (id: string) => {
-    if (!db || !confirm("Remover este perfil de notificação?")) return
-    deleteDocumentNonBlocking(doc(db!, "notification_templates", id))
-    toast({ variant: "destructive", title: "Perfil Removido" })
-  }
-
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="space-y-2">
@@ -436,7 +429,7 @@ function SettingsContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl overflow-x-auto scrollbar-hide mb-10">
           <TabsTrigger value="geral" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Geral</TabsTrigger>
-          <TabsTrigger value="seo" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">SEO & Analytics</TabsTrigger>
+          <TabsTrigger value="seo" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Google Hub</TabsTrigger>
           <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Usuarios</TabsTrigger>
           <TabsTrigger value="financeiro" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Financeiro</TabsTrigger>
           <TabsTrigger value="tags" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Dicionário de Tags</TabsTrigger>
@@ -446,9 +439,7 @@ function SettingsContent() {
           <TabsTrigger value="licenca" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Licença</TabsTrigger>
         </TabsList>
 
-        {/* --- ABA GERAL --- */}
         <TabsContent value="geral" className="mt-0 space-y-10">
-          {/* Dados da Banca */}
           <Card className="glass border-white/5 overflow-hidden shadow-2xl">
             <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
               <div className="flex items-center gap-6">
@@ -502,7 +493,6 @@ function SettingsContent() {
             </CardContent>
           </Card>
 
-          {/* Meu Perfil */}
           <Card className="glass border-white/5 overflow-hidden shadow-2xl">
             <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e]">
               <div className="flex items-center gap-6">
@@ -546,7 +536,6 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        {/* --- ABA SEO & ANALYTICS --- */}
         <TabsContent value="seo" className="mt-0 space-y-10">
           <Card className="glass border-primary/20 overflow-hidden shadow-2xl">
             <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
@@ -578,6 +567,31 @@ function SettingsContent() {
                   <Input value={googleConfig.clientId} onChange={(e) => setGoogleConfig({...googleConfig, clientId: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-xs" />
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5">
+                {[
+                  { id: 'isCalendarActive', label: 'Google Calendar', icon: Calendar },
+                  { id: 'isTasksActive', label: 'Google Tasks', icon: ListTodo },
+                  { id: 'isDriveActive', label: 'Google Drive', icon: Database },
+                  { id: 'isMeetActive', label: 'Google Meet', icon: Video },
+                  { id: 'isDocsActive', label: 'Google Docs', icon: FileText },
+                ].map((service) => (
+                  <div key={service.id} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                        <service.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{service.label}</span>
+                    </div>
+                    <Switch 
+                      checked={(googleConfig as any)[service.id]} 
+                      onCheckedChange={(v) => setGoogleConfig({...googleConfig, [service.id]: v})}
+                      className="data-[state=checked]:bg-emerald-500"
+                    />
+                  </div>
+                ))}
+              </div>
+
               <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] tracking-widest px-10 shadow-2xl">
                 <Save className="h-5 w-5 mr-3" /> SINCRONIZAR GATEWAY GOOGLE
               </Button>
@@ -585,7 +599,6 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        {/* --- ABA USUARIOS --- */}
         <TabsContent value="usuarios" className="mt-0">
           <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
             <Users className="h-14 w-14 text-primary mx-auto" />
@@ -596,7 +609,6 @@ function SettingsContent() {
           </div>
         </TabsContent>
 
-        {/* --- ABA FINANCEIRO --- */}
         <TabsContent value="financeiro" className="mt-0">
           <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
             <CreditCard className="h-14 w-14 text-primary mx-auto" />
@@ -607,7 +619,6 @@ function SettingsContent() {
           </div>
         </TabsContent>
 
-        {/* --- ABA DICIONARIO DE TAGS --- */}
         <TabsContent value="tags" className="mt-0 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {MESSAGE_PLACEHOLDERS.map((p) => (
@@ -627,7 +638,6 @@ function SettingsContent() {
           </div>
         </TabsContent>
 
-        {/* --- ABA KIT CLIENTE --- */}
         <TabsContent value="kit" className="mt-0 space-y-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 border-b border-white/5 pb-8">
             <div className="space-y-2">
@@ -655,7 +665,6 @@ function SettingsContent() {
           </div>
         </TabsContent>
 
-        {/* --- ABA MODELOS --- */}
         <TabsContent value="modelos" className="mt-0 space-y-10">
           <div className="flex items-center justify-between border-b border-white/5 pb-8">
             <div className="space-y-2">
@@ -686,7 +695,6 @@ function SettingsContent() {
           </div>
         </TabsContent>
 
-        {/* --- ABA BACKUP --- */}
         <TabsContent value="backup" className="mt-0">
           <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
             <History className="h-14 w-14 text-primary mx-auto" />
@@ -697,7 +705,6 @@ function SettingsContent() {
           </div>
         </TabsContent>
 
-        {/* --- ABA LICENÇA --- */}
         <TabsContent value="licenca" className="mt-0">
           <Card className="glass border-primary/20 p-10 rounded-2xl shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-10 opacity-5"><ShieldCheck className="h-40 w-40" /></div>
@@ -714,7 +721,6 @@ function SettingsContent() {
         </TabsContent>
       </Tabs>
 
-      {/* DIALOGS (Modelos e Mensagens) mantidos da versão anterior, apenas com refinos de UI */}
       <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">

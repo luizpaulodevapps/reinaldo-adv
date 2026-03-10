@@ -45,11 +45,13 @@ import {
   Fingerprint,
   Target,
   X,
-  Building2
+  Building2,
+  ListTodo,
+  CloudLightning
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, limit, doc, where } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { 
@@ -96,12 +98,10 @@ export default function CasesPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingProcess, setEditingProcess] = useState<any>(null)
   
-  // States para Visão 360º e Gestão
   const [viewingProcess, setViewingProcess] = useState<any>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
   
   const [activeActionProcess, setActiveActionProcess] = useState<any>(null)
-  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [isMeetingOpen, setIsMeetingOpen] = useState(false)
   const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
   const [isHearingOpen, setIsHearingOpen] = useState(false)
@@ -109,7 +109,6 @@ export default function CasesPage() {
   const [isFinancialOpen, setIsFinancialOpen] = useState(false)
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
 
-  // Form states internos
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
   const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "" })
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
@@ -127,6 +126,9 @@ export default function CasesPage() {
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
+
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleConfig } = useDoc(googleSettingsRef)
 
   const processesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -176,7 +178,7 @@ export default function CasesPage() {
   const handleOpenEdit = (proc: any) => {
     setEditingProcess(proc)
     setIsSheetOpen(true)
-    setIsViewOpen(false) // Fecha o view se for editar
+    setIsViewOpen(false)
   }
 
   const handleOpenView = (proc: any) => {
@@ -285,11 +287,21 @@ export default function CasesPage() {
       assigneeName: selectedStaff?.name || user?.displayName || "Responsável",
       requiresSubestabelecimento: diligenceData.requiresSubestabelecimento,
       status: "Pendente",
+      syncGoogleTasks: googleConfig?.isTasksActive || false,
       createdAt: serverTimestamp()
     }
     await addDocumentNonBlocking(collection(db, "diligences"), payload)
     setIsDiligenceOpen(false)
-    toast({ title: "Diligência Agendada", description: "O ato foi delegado e injetado na agenda." })
+    
+    if (googleConfig?.isTasksActive) {
+      toast({ 
+        title: "Tarefa Agendada", 
+        description: "O ato foi delegado e sincronizado com o Google Tasks.",
+        duration: 5000 
+      })
+    } else {
+      toast({ title: "Diligência Agendada", description: "O ato foi delegado internamente." })
+    }
   }
 
   const handleSaveFinancial = async (data: any) => {
@@ -333,7 +345,7 @@ export default function CasesPage() {
       </DropdownMenuItem>
 
       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
-        <Navigation className="h-4 w-4" /> Agendar Diligência
+        <ListTodo className="h-4 w-4" /> Agendar Diligência (Task)
       </DropdownMenuItem>
       
       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
@@ -619,7 +631,6 @@ export default function CasesPage() {
         )}
       </div>
 
-      {/* VISÃO 360º DO PROCESSO (DOSSIÊ DE CONSULTA) */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex items-center justify-between shadow-xl">
@@ -928,12 +939,21 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: AGENDAR DILIGÊNCIA */}
+      {/* MODAL: AGENDAR DILIGÊNCIA (TASK) */}
       <Dialog open={isDiligenceOpen} onOpenChange={setIsDiligenceOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
-            <Navigation className="h-6 w-6 text-blue-400" />
-            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência</DialogTitle>
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <ListTodo className="h-6 w-6 text-blue-400" />
+              <div>
+                <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
+                {googleConfig?.isTasksActive && (
+                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                    <CloudLightning className="h-2.5 w-2.5" /> Sincronismo Google Tasks Ativo
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           <div className="p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

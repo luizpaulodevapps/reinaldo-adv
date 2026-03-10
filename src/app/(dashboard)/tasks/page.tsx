@@ -20,9 +20,11 @@ import {
   MoreVertical,
   CheckCircle,
   AlertCircle,
-  FileSignature
+  FileSignature,
+  ListTodo,
+  CloudLightning
 } from "lucide-react"
-import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { format, isBefore, startOfDay, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -43,6 +45,10 @@ export default function DiligencesPage() {
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
+
+  // Google Settings para status de sincronismo
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleConfig } = useDoc(googleSettingsRef)
 
   const diligencesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -72,7 +78,7 @@ export default function DiligencesPage() {
       completedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     })
-    toast({ title: "Diligência Concluída", description: "O ato foi arquivado com sucesso." })
+    toast({ title: "Tarefa Concluída", description: "O ato foi arquivado no sistema e sincronizado." })
   }
 
   const handleDelete = (id: string) => {
@@ -88,25 +94,30 @@ export default function DiligencesPage() {
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
             <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Agenda de Diligências</span>
+            <span className="text-white uppercase tracking-tighter">Tasks & Diligências</span>
           </div>
-          <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Pauta de Diligências</h1>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] font-black opacity-60">Gestão de atos externos e delegações RGMJ.</p>
+          <h1 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
+            <ListTodo className="h-8 w-8 text-primary" /> Pauta de Tarefas
+          </h1>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] font-black opacity-60">Gestão de atos externos e sincronismo com Google Tasks.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
+          {googleConfig?.isTasksActive && (
+            <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-lg">
+              <CloudLightning className="h-3.5 w-3.5 text-emerald-500 animate-pulse" />
+              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sinc. Google Tasks</span>
+            </div>
+          )}
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar diligências..." 
+              placeholder="Pesquisar tarefas..." 
               className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="glass border-white/10 h-12 px-6 text-[10px] font-black uppercase tracking-widest gap-2">
-            <Filter className="h-4 w-4" /> Filtrar
-          </Button>
         </div>
       </div>
 
@@ -193,11 +204,11 @@ export default function DiligencesPage() {
                     <div className="p-6 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-4">
                       {task.status !== 'Concluída' ? (
                         <Button onClick={() => handleComplete(task.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[9px] uppercase tracking-widest h-11 px-6 rounded-lg shadow-xl">
-                          <CheckCircle className="h-4 w-4 mr-2" /> Finalizar
+                          <CheckCircle className="h-4 w-4 mr-2" /> Finalizar Task
                         </Button>
                       ) : (
                         <div className="flex items-center gap-2 text-emerald-500 font-black text-[9px] uppercase">
-                          <CheckCircle2 className="h-5 w-5" /> Realizada
+                          <CheckCircle2 className="h-5 w-5" /> Task Realizada
                         </div>
                       )}
                       
@@ -212,7 +223,7 @@ export default function DiligencesPage() {
                             <Clock className="h-4 w-4" /> Reagendar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(task.id)} className="text-[10px] font-black uppercase tracking-widest cursor-pointer gap-2 text-rose-500">
-                            <Trash2 className="h-4 w-4" /> Excluir Diligência
+                            <Trash2 className="h-4 w-4" /> Excluir Task
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -224,10 +235,10 @@ export default function DiligencesPage() {
           </div>
         ) : (
           <div className="py-40 flex flex-col items-center justify-center space-y-8 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
-            <Navigation className="h-20 w-20 text-muted-foreground" />
+            <ListTodo className="h-20 w-20 text-muted-foreground" />
             <div className="text-center space-y-2">
-              <p className="text-base font-black text-white uppercase tracking-[0.4em]">Pauta Limpa</p>
-              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Nenhuma diligência estratégica pendente.</p>
+              <p className="text-base font-black text-white uppercase tracking-[0.4em]">To-Do List Limpo</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Nenhuma tarefa estratégica pendente.</p>
             </div>
           </div>
         )}
