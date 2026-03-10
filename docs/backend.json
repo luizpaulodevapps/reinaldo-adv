@@ -61,13 +61,22 @@
       "properties": {
         "id": { "type": "string" },
         "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
         "processNumber": { "type": "string" },
         "caseType": { "type": "string" },
         "status": { "type": "string" },
         "description": { "type": "string" },
         "court": { "type": "string" },
+        "vara": { "type": "string" },
+        "courtAddress": { "type": "string" },
+        "defendantName": { "type": "string" },
+        "defendantDocument": { "type": "string" },
+        "defendantAddress": { "type": "string" },
         "responsibleStaffId": { "type": "string" },
+        "responsibleStaffName": { "type": "string" },
+        "strategyNotes": { "type": "string" },
         "startDate": { "type": "string", "format": "date" },
+        "value": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },

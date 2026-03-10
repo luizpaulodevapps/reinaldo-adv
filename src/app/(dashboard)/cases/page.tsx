@@ -122,6 +122,7 @@ export default function CasesPage() {
     assigneeId: "",
     requiresSubestabelecimento: false
   })
+  const [aiDocInitialDetails, setAiDocInitialDetails] = useState("")
 
   const db = useFirestore()
   const { user, profile } = useUser()
@@ -220,7 +221,7 @@ export default function CasesPage() {
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
     const payload = {
-      title: `REUNIÃO: ${activeActionProcess.clientName}`,
+      title: meetingData.title || `REUNIÃO: ${activeActionProcess.clientName}`,
       type: "Atendimento",
       startDateTime: `${meetingData.date}T${meetingData.time}:00`,
       clientId: activeActionProcess.clientId,
@@ -262,7 +263,7 @@ export default function CasesPage() {
       processId: activeActionProcess.id,
       processNumber: activeActionProcess.processNumber,
       clientName: activeActionProcess.clientName,
-      location: hearingData.location || activeActionProcess.court || "Fórum",
+      location: hearingData.location || activeActionProcess.courtAddress || activeActionProcess.court || "Fórum",
       status: "Agendado",
       createdAt: serverTimestamp()
     }
@@ -282,7 +283,7 @@ export default function CasesPage() {
       processNumber: activeActionProcess.processNumber,
       clientName: activeActionProcess.clientName,
       type: diligenceData.type,
-      location: diligenceData.location,
+      location: diligenceData.location || activeActionProcess.courtAddress || "Local não informado",
       assigneeId: diligenceData.assigneeId,
       assigneeName: selectedStaff?.name || user?.displayName || "Responsável",
       requiresSubestabelecimento: diligenceData.requiresSubestabelecimento,
@@ -337,39 +338,87 @@ export default function CasesPage() {
       <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO PROCESSO</DropdownMenuLabel>
       
       <DropdownMenuItem onClick={() => { handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-        <History className="h-4 w-4 text-muted-foreground" /> Ver Dossiê Completo
+        <History className="h-4 w-4 text-muted-foreground" /> Ver Processo Completo
       </DropdownMenuItem>
       
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={() => { 
+        setActiveActionProcess(proc); 
+        setMeetingData({
+          title: `REUNIÃO ESTRATÉGICA: ${proc.clientName}`,
+          date: "",
+          time: "",
+          type: "online",
+          notes: `Alinhamento sobre o processo ${proc.processNumber || proc.id}.`
+        });
+        setIsMeetingOpen(true); 
+      }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <CalendarDays className="h-4 w-4" /> Agendar Reunião/Atend.
       </DropdownMenuItem>
 
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
+      <DropdownMenuItem onClick={() => { 
+        setActiveActionProcess(proc); 
+        setDiligenceData({
+          title: `DILIGÊNCIA: ${proc.clientName}`,
+          description: `Realizar ato técnico no processo ${proc.processNumber || proc.id}.`,
+          date: "",
+          time: "",
+          type: "Física",
+          location: proc.courtAddress || `${proc.court || ""} - ${proc.vara || ""}`.trim(),
+          assigneeId: user?.uid || "",
+          requiresSubestabelecimento: false
+        });
+        setIsDiligenceOpen(true); 
+      }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
         <ListTodo className="h-4 w-4" /> Agendar Diligência (Task)
       </DropdownMenuItem>
       
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
+      <DropdownMenuItem onClick={() => { 
+        setActiveActionProcess(proc); 
+        setDeadlineData({
+          title: "PRAZO PARA ",
+          date: "",
+          description: `Providência fatal referente ao processo ${proc.processNumber || proc.id}.`
+        });
+        setIsDeadlineOpen(true); 
+      }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
         <AlarmClock className="h-4 w-4" /> Lançar Prazo Fatal
       </DropdownMenuItem>
       
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsHearingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
+      <DropdownMenuItem onClick={() => { 
+        setActiveActionProcess(proc); 
+        setHearingData({
+          type: "UNA",
+          date: "",
+          time: "",
+          location: proc.courtAddress || `${proc.court || ""} - ${proc.vara || ""}`.trim()
+        });
+        setIsHearingOpen(true); 
+      }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
         <Gavel className="h-4 w-4" /> Agendar Audiência
       </DropdownMenuItem>
       
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsAiDocOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={() => { 
+        setActiveActionProcess(proc); 
+        const details = `DADOS DO PROCESSO:\nCNJ: ${proc.processNumber}\nCLIENTE (AUTOR): ${proc.clientName}\nPARTE CONTRÁRIA (RÉU): ${proc.defendantName || 'NÃO INFORMADO'}\nJUÍZO: ${proc.court} - ${proc.vara}\n\nRESUMO DO OBJETO:\n${proc.description}\n\nESTRATÉGIA DEFINIDA:\n${proc.strategyNotes || 'Sem notas táticas informadas.'}`;
+        setAiDocInitialDetails(details);
+        setIsAiDocOpen(true); 
+      }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <FilePlus className="h-4 w-4" /> Gerar Documento (IA)
       </DropdownMenuItem>
       
       <DropdownMenuSeparator className="bg-white/5 my-1" />
       
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsFinancialOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+      <DropdownMenuItem onClick={() => {
+        setActiveActionProcess(proc);
+        setIsFinancialOpen(true);
+      }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
         <DollarSign className="h-4 w-4" /> Evento Financeiro
       </DropdownMenuItem>
       
       <DropdownMenuSeparator className="bg-white/5 my-1" />
       
       <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-        <Edit3 className="h-4 w-4 text-muted-foreground" /> Editar Dados
+        <Edit3 className="h-4 w-4 text-muted-foreground" /> Editar Processo
       </DropdownMenuItem>
       
       <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
@@ -724,6 +773,10 @@ export default function CasesPage() {
                               <p className="text-sm font-bold text-emerald-500 uppercase">{viewingProcess?.startDate || "PENDENTE"}</p>
                             </div>
                           </div>
+                          <div className="pt-4 border-t border-white/5">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Endereço do Juízo</p>
+                            <p className="text-sm font-bold text-white uppercase">{viewingProcess?.courtAddress || "NÃO MAPEADO"}</p>
+                          </div>
                         </Card>
                       </div>
                     </TabsContent>
@@ -835,6 +888,10 @@ export default function CasesPage() {
             <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
           </div>
           <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Pauta</Label>
+              <Input className="glass h-12 text-white uppercase font-bold" value={meetingData.title} onChange={e => setMeetingData({...meetingData, title: e.target.value})} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
@@ -986,7 +1043,7 @@ export default function CasesPage() {
 
             <div className="space-y-2">
               <Label className="text-[10px] font-black text-muted-foreground uppercase">Responsável / Executor</Label>
-              <Select value={diligenceData.assigneeId} onValueChange={v => setDiligenceData({...diligenceData, assigneeId: v})}>
+              <Select value={diligenceData.assigneeId} onValueChange={(v) => setDiligenceData({...diligenceData, assigneeId: v})}>
                 <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue placeholder="Selecione o advogado ou assistente" /></SelectTrigger>
                 <SelectContent className="bg-[#0d121f] text-white">
                   <SelectItem value={user?.uid || "self"}>DR(A). {user?.displayName?.toUpperCase() || "EU MESMO"}</SelectItem>
@@ -1030,7 +1087,7 @@ export default function CasesPage() {
             <DialogTitle className="text-white font-bold uppercase tracking-widest text-xl">Minuta Estratégica IA</DialogTitle>
           </div>
           <div className="p-10 max-h-[80vh] overflow-y-auto">
-            <DraftingTool />
+            <DraftingTool initialCaseDetails={aiDocInitialDetails} />
           </div>
         </DialogContent>
       </Dialog>

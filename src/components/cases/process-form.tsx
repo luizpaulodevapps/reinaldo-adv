@@ -80,6 +80,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     caseType: "Trabalhista",
     court: "",
     vara: "",
+    courtAddress: "",
     city: "",
     responsibleStaffId: user?.uid || "",
     description: "",
@@ -427,6 +428,13 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                     <Input value={formData.vara} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("vara", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: 45ª VARA DO TRABALHO" />
                   </div>
                 </div>
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ENDEREÇO DO JUÍZO (PARA DILIGÊNCIAS)</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                    <Input value={formData.courtAddress} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("courtAddress", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 pl-12 text-white font-bold" placeholder="RUA DO FÓRUM, Nº 123 - CIDADE/UF" />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -486,7 +494,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
           </Button>
         ) : (
           <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background h-14 px-14 gap-3 uppercase font-black text-[12px] tracking-widest rounded-xl shadow-2xl transition-all active:scale-95">
-            {initialData ? "Atualizar Dossiê" : "Protocolar Processo"} <CheckCircle2 className="h-5 w-5" />
+            {initialData ? "Atualizar Registro" : "Protocolar Processo"} <CheckCircle2 className="h-5 w-5" />
           </Button>
         )}
       </div>

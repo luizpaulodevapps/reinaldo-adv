@@ -1,6 +1,7 @@
+
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -9,12 +10,22 @@ import { Brain, Sparkles, Loader2, Copy, Trash2 } from "lucide-react"
 import { aiAssistDocumentDrafting } from "@/ai/flows/ai-assist-document-drafting"
 import { useToast } from "@/hooks/use-toast"
 
-export function DraftingTool() {
-  const [caseDetails, setCaseDetails] = useState("")
+interface DraftingToolProps {
+  initialCaseDetails?: string;
+}
+
+export function DraftingTool({ initialCaseDetails = "" }: DraftingToolProps) {
+  const [caseDetails, setCaseDetails] = useState(initialCaseDetails)
   const [documentType, setDocumentType] = useState("Petição Inicial")
   const [loading, setLoading] = useState(false)
   const [draft, setDraft] = useState<string | null>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (initialCaseDetails) {
+      setCaseDetails(initialCaseDetails);
+    }
+  }, [initialCaseDetails]);
 
   const handleDraft = async () => {
     if (!caseDetails) return
@@ -23,7 +34,7 @@ export function DraftingTool() {
       const result = await aiAssistDocumentDrafting({
         caseDetails,
         documentType,
-        specificInstructions: "Focar em fundamentação jurídica técnica e jurisprudência atualizada."
+        specificInstructions: "Focar em fundamentação jurídica técnica e jurisprudência atualizada baseada nos fatos informados."
       })
       setDraft(result.draftContent)
       toast({
