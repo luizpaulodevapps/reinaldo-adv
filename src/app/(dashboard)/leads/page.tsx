@@ -255,23 +255,32 @@ export default function LeadsPage() {
   const handleGenerateStrategicSummary = async () => {
     if (!selectedLead) return
     setIsGeneratingSummary(true)
+    
+    // Coletar todas as respostas das entrevistas como contexto
+    const interviewContext = (leadInterviews || []).map(int => {
+      const responses = Object.entries(int.responses || {})
+        .map(([q, a]) => `${q}: ${a}`)
+        .join("\n")
+      return `ENTREVISTA (${int.interviewType}):\n${responses}`
+    }).join("\n\n")
+
     try {
       const result = await generateCaseSummary({
         caseId: selectedLead.id,
         clientName: selectedLead.name,
-        caseTitle: selectedLead.demandTitle || "Reclamação Trabalhista",
-        caseDescription: selectedLead.notes || "Sem descrição adicional.",
-        currentStatus: "Fase de Distribuição (Pré-Protocolo)",
-        lastEvents: ["Entrevista de Triagem Realizada", "Documentação Coletada"],
-        nextDeadlines: ["Protocolo da Inicial", "Audiência Inicial (Agendar)"],
-        relatedParties: [selectedLead.defendantName || "Réu não identificado"],
-        financialStatus: "Aguardando definição de valor da causa."
+        caseTitle: selectedLead.demandTitle || "Demanda Estratégica",
+        caseDescription: interviewContext || selectedLead.notes || "Aguardando entrevistas técnicas.",
+        currentStatus: "Fase de Triagem e Qualificação",
+        lastEvents: ["Entrevista Realizada", "Dados Capturados"],
+        nextDeadlines: ["Protocolo Inicial", "Saneamento de Burocracia"],
+        relatedParties: [selectedLead.defendantName || "Polo Passivo Pendente"],
+        financialStatus: "Aguardando definição de valor tático."
       })
       setStrategicSummary(result)
-      toast({ title: "Análise IA Concluída" })
+      toast({ title: "DNA Jurídico Consolidado" })
     } catch (error) {
       console.error("Erro GenAI:", error);
-      toast({ variant: "destructive", title: "Erro na Análise", description: "O rito de IA falhou. Verifique a conexão." })
+      toast({ variant: "destructive", title: "Falha na Consolidação IA", description: "O motor de IA falhou. Verifique a pauta." })
     } finally {
       setIsGeneratingSummary(false)
     }
@@ -294,7 +303,7 @@ export default function LeadsPage() {
 
     const finalLocation = intakeData.type === 'online' 
       ? 'Virtual RGMJ' 
-      : (intakeData.locationType === 'sede' ? 'Sede RGMJ (Rua do Advogado, 123)' : intakeData.customAddress)
+      : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
 
     const payload = {
       scheduledDate: intakeData.date,
@@ -331,7 +340,7 @@ export default function LeadsPage() {
     
     toast({ 
       title: "Atendimento Agendado", 
-      description: "O ato foi sincronizado com o Google Calendar da banca." 
+      description: "O ato foi sincronizado com a pauta estratégica." 
     })
   }
 
@@ -349,7 +358,7 @@ export default function LeadsPage() {
       message += `\n🔗 Link da Reunião: ${link}`
     }
     
-    message += `\n\nAtenciosamente,\nDr. Reinaldo Gonçalves.`
+    message += `\n\nAtenciosamente,\nEquipe RGMJ.`
 
     if (method === 'whatsapp') {
       const phone = selectedLead.phone?.replace(/\D/g, '')
@@ -398,6 +407,7 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp(),
     }
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
+    
     if (selectedLead.status === 'novo' || !selectedLead.status) {
       await updateDocumentNonBlocking(doc(db!, "leads", selectedLead.id), {
         status: "atendimento",
@@ -406,7 +416,7 @@ export default function LeadsPage() {
     }
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
-    toast({ title: "Entrevista Registrada" })
+    toast({ title: "DNA Capturado", description: "Dados técnicos salvos no dossiê." })
   }
 
   const handleRunInterviewAnalysis = async (interview: any) => {
@@ -430,6 +440,16 @@ export default function LeadsPage() {
     } finally {
       setIsAiAnalyzing(false)
     }
+  }
+
+  const handlePromoteSummary = async () => {
+    if (!db || !selectedLead || !interviewAnalysis) return
+    await updateDocumentNonBlocking(doc(db, "leads", selectedLead.id), {
+      aiSummary: interviewAnalysis.summary,
+      updatedAt: serverTimestamp()
+    })
+    setSelectedLead({ ...selectedLead, aiSummary: interviewAnalysis.summary })
+    toast({ title: "Sintese Promovida", description: "O resumo da IA agora é o oficial do Lead." })
   }
 
   const handleConvertProcess = async (data: any) => {
@@ -529,19 +549,19 @@ export default function LeadsPage() {
 
   const handleArchiveLead = (leadId: string) => {
     if (!db) return
-    if (!confirm("Confirmar o arquivamento deste lead? Ele será removido do funil ativo.")) return
+    if (!confirm("Confirmar o arquivamento deste lead?")) return
     updateDocumentNonBlocking(doc(db, "leads", leadId), {
       status: "arquivado",
       updatedAt: serverTimestamp()
     })
-    toast({ title: "Lead Arquivado", description: "Registro movido para o histórico passivo." })
+    toast({ title: "Lead Arquivado" })
   }
 
   const handleDeleteLead = (leadId: string) => {
     if (!db) return
-    if (!confirm("Deseja EXCLUIR PERMANENTEMENTE este lead? Esta ação não pode ser desfeita.")) return
+    if (!confirm("Deseja EXCLUIR PERMANENTEMENTE este lead?")) return
     deleteDocumentNonBlocking(doc(db, "leads", leadId))
-    toast({ variant: "destructive", title: "Lead Removido", description: "O dossiê foi apagado da base tática." })
+    toast({ variant: "destructive", title: "Lead Removido" })
     setIsSheetOpen(false)
   }
 
@@ -854,23 +874,28 @@ export default function LeadsPage() {
                                 <h4 className="text-base font-bold text-white uppercase tracking-tight mb-6 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                                   {int.interviewType}
                                 </h4>
-                                <div className="grid grid-cols-2 gap-3 mt-auto">
-                                  <Button 
-                                    variant="outline"
-                                    onClick={() => {
-                                      setViewingInterview(int);
-                                      setInterviewAnalysis(int.aiAnalysis || null);
-                                    }}
-                                    className="h-10 glass border-white/10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg"
-                                  >
-                                    VER DOSSIÊ
-                                  </Button>
-                                  <Button 
-                                    onClick={() => handleRunInterviewAnalysis(int)}
-                                    className="h-10 gold-gradient text-background font-black uppercase text-[9px] tracking-widest rounded-lg shadow-lg flex items-center gap-2"
-                                  >
-                                    <Brain className="h-3.5 w-3.5" /> IA
-                                  </Button>
+                                <div className="space-y-2 mt-auto">
+                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-black uppercase opacity-60 mb-2">
+                                    <User className="h-3 w-3" /> Dr(a). {int.interviewerName || "RGMJ"}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <Button 
+                                      variant="outline"
+                                      onClick={() => {
+                                        setViewingInterview(int);
+                                        setInterviewAnalysis(int.aiAnalysis || null);
+                                      }}
+                                      className="h-10 glass border-white/10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg"
+                                    >
+                                      VER DOSSIÊ
+                                    </Button>
+                                    <Button 
+                                      onClick={() => handleRunInterviewAnalysis(int)}
+                                      className="h-10 gold-gradient text-background font-black uppercase text-[9px] tracking-widest rounded-lg shadow-lg flex items-center gap-2"
+                                    >
+                                      <Brain className="h-3.5 w-3.5" /> IA
+                                    </Button>
+                                  </div>
                                 </div>
                               </Card>
                             ))}
@@ -1030,19 +1055,21 @@ export default function LeadsPage() {
                 <FileSearch className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Dossiê de Atendimento</DialogTitle>
+                <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle>
                 <DialogDescription className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> AUDITORIA RGMJ
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> DOSSIÊ TÉCNICO • DR(A). {viewingInterview?.interviewerName}
                 </DialogDescription>
               </div>
             </div>
-            <Button 
-              onClick={() => handleRunInterviewAnalysis(viewingInterview)} 
-              disabled={isAiAnalyzing}
-              className="h-10 px-5 gold-gradient text-background font-black uppercase text-[9px] gap-2.5 rounded-lg shadow-lg hover:scale-105 transition-all"
-            >
-              {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => handleRunInterviewAnalysis(viewingInterview)} 
+                disabled={isAiAnalyzing}
+                className="h-10 px-5 gold-gradient text-background font-black uppercase text-[9px] gap-2.5 rounded-lg shadow-lg hover:scale-105 transition-all"
+              >
+                {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA
+              </Button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-hidden">
@@ -1062,14 +1089,20 @@ export default function LeadsPage() {
                 <TabsContent value="transcricao" className="h-full mt-0">
                   <ScrollArea className="h-full pr-4">
                     <div className="space-y-5 max-w-3xl mx-auto pb-10">
-                      {viewingInterview && Object.entries(viewingInterview.responses || {}).map(([q, a]: any, i) => (
-                        <div key={i} className="space-y-1.5">
-                          <h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{q}</h5>
-                          <p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">
-                            {String(a)}
-                          </p>
-                        </div>
-                      ))}
+                      {viewingInterview && (viewingInterview.templateSnapshot || Object.keys(viewingInterview.responses)).map((item: any, i: number) => {
+                        const label = typeof item === 'string' ? item : item.label
+                        const answer = viewingInterview.responses[label]
+                        if (!answer) return null
+                        
+                        return (
+                          <div key={i} className="space-y-1.5">
+                            <h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5>
+                            <p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">
+                              {String(answer)}
+                            </p>
+                          </div>
+                        )
+                      })}
                     </div>
                   </ScrollArea>
                 </TabsContent>
@@ -1084,7 +1117,12 @@ export default function LeadsPage() {
                     <ScrollArea className="h-full pr-4">
                       <div className="space-y-6 max-w-4xl mx-auto pb-10">
                         <Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg">
-                          <h5 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3">Resumo Executivo</h5>
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Resumo Executivo</h5>
+                            <Button onClick={handlePromoteSummary} variant="outline" className="h-7 border-primary/20 text-primary text-[8px] font-black uppercase rounded-full hover:bg-primary hover:text-background">
+                              PROMOVER A SÍNTESE DO LEAD
+                            </Button>
+                          </div>
                           <p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p>
                         </Card>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
