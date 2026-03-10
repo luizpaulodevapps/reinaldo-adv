@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Client": {
@@ -69,6 +70,28 @@
         "startDate": { "type": "string", "format": "date" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Diligence": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Diligence",
+      "type": "object",
+      "description": "A task or diligence to be performed by a staff member.",
+      "properties": {
+        "id": { "type": "string" },
+        "processId": { "type": "string" },
+        "processNumber": { "type": "string" },
+        "clientName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "assigneeId": { "type": "string" },
+        "assigneeName": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pendente", "Em Andamento", "Concluída"] },
+        "type": { "type": "string", "enum": ["Física", "Virtual"] },
+        "location": { "type": "string" },
+        "requiresSubestabelecimento": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -78,6 +101,7 @@
     "/staff_profiles/{staffId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." },
     "/clients/{clientId}": { "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." },
     "/processes/{processId}": { "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." },
-    "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." }
+    "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." },
+    "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Legal diligences and tasks." }
   }
 }

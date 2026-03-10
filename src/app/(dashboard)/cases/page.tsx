@@ -37,7 +37,10 @@ import {
   Brain,
   Sparkles,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Navigation,
+  UserPlus,
+  ShieldAlert
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,6 +66,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { ProcessForm } from "@/components/cases/process-form"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { DraftingTool } from "@/components/drafting/drafting-tool"
@@ -94,11 +98,22 @@ export default function CasesPage() {
   const [isHearingOpen, setIsHearingOpen] = useState(false)
   const [isAiDocOpen, setIsAiDocOpen] = useState(false)
   const [isFinancialOpen, setIsFinancialOpen] = useState(false)
+  const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
 
   // Form states internos
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
   const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "" })
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
+  const [diligenceData, setDiligenceData] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    type: "Física",
+    location: "",
+    assigneeId: "",
+    requiresSubestabelecimento: false
+  })
 
   const db = useFirestore()
   const { user, profile } = useUser()
@@ -111,6 +126,12 @@ export default function CasesPage() {
 
   const { data: processesData, isLoading } = useCollection(processesQuery)
   const processes = processesData || []
+
+  const staffQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
+  const { data: staffMembers } = useCollection(staffQuery)
 
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
@@ -233,6 +254,29 @@ export default function CasesPage() {
     toast({ title: "Audiência Injetada na Agenda" })
   }
 
+  const handleScheduleDiligence = async () => {
+    if (!db || !activeActionProcess) return
+    const selectedStaff = staffMembers?.find(s => s.id === diligenceData.assigneeId)
+    const payload = {
+      title: diligenceData.title.toUpperCase(),
+      description: diligenceData.description,
+      dueDate: `${diligenceData.date}T${diligenceData.time}:00`,
+      processId: activeActionProcess.id,
+      processNumber: activeActionProcess.processNumber,
+      clientName: activeActionProcess.clientName,
+      type: diligenceData.type,
+      location: diligenceData.location,
+      assigneeId: diligenceData.assigneeId,
+      assigneeName: selectedStaff?.name || user?.displayName || "Responsável",
+      requiresSubestabelecimento: diligenceData.requiresSubestabelecimento,
+      status: "Pendente",
+      createdAt: serverTimestamp()
+    }
+    await addDocumentNonBlocking(collection(db, "diligences"), payload)
+    setIsDiligenceOpen(false)
+    toast({ title: "Diligência Agendada", description: "O ato foi delegado e injetado na agenda." })
+  }
+
   const handleSaveFinancial = async (data: any) => {
     if (!db || !activeActionProcess) return
     const payload = {
@@ -271,6 +315,10 @@ export default function CasesPage() {
       
       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <CalendarDays className="h-4 w-4" /> Agendar Reunião/Atend.
+      </DropdownMenuItem>
+
+      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+        <Navigation className="h-4 w-4" /> Agendar Diligência
       </DropdownMenuItem>
       
       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
@@ -717,6 +765,80 @@ export default function CasesPage() {
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsHearingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
             <Button onClick={handleScheduleHearing} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl shadow-xl">Confirmar Pauta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: AGENDAR DILIGÊNCIA */}
+      <Dialog open={isDiligenceOpen} onOpenChange={setIsDiligenceOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <Navigation className="h-6 w-6 text-blue-400" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Diligência</Label>
+                <Input placeholder="EX: RETIRADA DE ALVARÁ" className="glass h-12 text-white uppercase font-bold" value={diligenceData.title} onChange={e => setDiligenceData({...diligenceData, title: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
+                <Select value={diligenceData.type} onValueChange={v => setDiligenceData({...diligenceData, type: v})}>
+                  <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="Física">🏢 FÍSICA / PRESENCIAL</SelectItem>
+                    <SelectItem value="Virtual">🖥️ VIRTUAL / DIGITAL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data Limite</Label>
+                <Input type="date" className="glass h-12 text-white" value={diligenceData.date} onChange={e => setDiligenceData({...diligenceData, date: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Horário</Label>
+                <Input type="time" className="glass h-12 text-white" value={diligenceData.time} onChange={e => setDiligenceData({...diligenceData, time: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Responsável / Executor</Label>
+              <Select value={diligenceData.assigneeId} onValueChange={v => setDiligenceData({...diligenceData, assigneeId: v})}>
+                <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue placeholder="Selecione o advogado ou assistente" /></SelectTrigger>
+                <SelectContent className="bg-[#0d121f] text-white">
+                  <SelectItem value={user?.uid || "self"}>DR(A). {user?.displayName?.toUpperCase() || "EU MESMO"}</SelectItem>
+                  {staffMembers?.filter(s => s.id !== user?.uid).map(staff => (
+                    <SelectItem key={staff.id} value={staff.id}>{staff.name.toUpperCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Requer Subestabelecimento</Label>
+                <p className="text-[9px] text-muted-foreground uppercase font-bold">Ativar se o executor não for o patrono original.</p>
+              </div>
+              <Switch checked={diligenceData.requiresSubestabelecimento} onCheckedChange={v => setDiligenceData({...diligenceData, requiresSubestabelecimento: v})} />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Localização / Juízo</Label>
+              <Input className="glass h-12 text-white uppercase font-bold" value={diligenceData.location} onChange={e => setDiligenceData({...diligenceData, location: e.target.value})} placeholder="FÓRUM, REPARTIÇÃO OU LINK" />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Instruções Técnicas</Label>
+              <Textarea className="glass min-h-[80px] text-white" value={diligenceData.description} onChange={e => setDiligenceData({...diligenceData, description: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsDiligenceOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
+            <Button onClick={handleScheduleDiligence} className="bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] px-8 h-12 rounded-xl shadow-xl">Confirmar Delegação</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

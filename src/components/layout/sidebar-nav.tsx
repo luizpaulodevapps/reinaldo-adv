@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -21,6 +22,7 @@ import {
   DollarSign,
   Wallet,
   Users2,
+  Navigation,
   User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -69,6 +71,7 @@ const menuGroups = [
     title: "OPERACIONAL",
     items: [
       { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
+      { name: "DILIGÊNCIAS", href: "/tasks", icon: Navigation },
       { name: "ROTINAS", href: "/checklists/execucao", icon: ClipboardList },
       { name: "PRAZOS", href: "/deadlines", icon: Clock },
       { name: "AUDIÊNCIAS", href: "/agenda", icon: Gavel },
