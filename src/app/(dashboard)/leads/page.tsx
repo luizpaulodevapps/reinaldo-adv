@@ -131,7 +131,7 @@ export default function LeadsPage() {
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   
-  // Sincroniza o Lead selecionado com a versão mais recente do banco
+  // Sincroniza o Lead selecionado com a versão mais recente do banco para refletir mudanças de status/interviews
   const activeLead = useMemo(() => {
     if (!selectedLead || !leads) return selectedLead
     return leads.find(l => l.id === selectedLead.id) || selectedLead
@@ -181,12 +181,14 @@ export default function LeadsPage() {
   const [locationResults, setLocationResults] = useState<any[]>([])
   const [isSearchingLocation, setIsSearchingLocation] = useState(false)
 
+  // Query de Templates de Checklist
   const templatesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "checklists"), orderBy("title", "asc"))
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
+  // Query de Entrevistas Concluídas para o Lead Ativo
   const leadInterviewsQuery = useMemoFirebase(() => {
     if (!user || !db || !activeLead?.id) return null
     return query(
@@ -199,6 +201,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     if (activeLead) {
+      // Auto-navegação de abas baseada no status para agilizar o rito
       if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("entrevistas")
       else if (activeLead.status === 'burocracia' && activeDossierTab === 'overview') setActiveDossierTab("burocracia")
       else if (activeLead.status === 'distribuicao' && activeDossierTab === 'overview') setActiveDossierTab("revisao")
@@ -206,14 +209,7 @@ export default function LeadsPage() {
       setStrategicSummary(null)
       setIsSchedulingHearing(false)
       setIntakeSuccess(false)
-      setHearingData({
-        type: "UNA",
-        date: "",
-        time: "",
-        meetingLink: "",
-        accessCode: "",
-        location: ""
-      })
+      setHearingData({ type: "UNA", date: "", time: "", meetingLink: "", accessCode: "", location: "" })
       setIntakeData({
         date: activeLead.scheduledDate || "",
         time: activeLead.scheduledTime || "",
@@ -263,6 +259,7 @@ export default function LeadsPage() {
     if (!activeLead) return
     setIsGeneratingSummary(true)
     
+    // Coleta contexto de todas as entrevistas para alimentar a IA
     const interviewContext = (leadInterviews || []).map(int => {
       const responses = Object.entries(int.responses || {})
         .map(([q, a]) => `${q}: ${a}`)
@@ -349,18 +346,12 @@ export default function LeadsPage() {
 
   const handleShareIntake = (method: 'whatsapp' | 'email') => {
     if (!activeLead) return
-    
     const date = new Date(activeLead.scheduledDate).toLocaleDateString('pt-BR')
     const time = activeLead.scheduledTime
     const location = activeLead.meetingLocation
     const link = activeLead.meetingLink
-    
     let message = `Olá ${activeLead.name},\n\nConfirmamos seu agendamento com a banca RGMJ Advogados.\n\n📅 Data: ${date}\n⏰ Horário: ${time}\n📍 Local: ${location}`
-    
-    if (link) {
-      message += `\n🔗 Link da Reunião: ${link}`
-    }
-    
+    if (link) message += `\n🔗 Link da Reunião: ${link}`
     message += `\n\nAtenciosamente,\nEquipe RGMJ.`
 
     if (method === 'whatsapp') {
@@ -410,6 +401,7 @@ export default function LeadsPage() {
     }
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
     
+    // Avança o Lead para o status de 'atendimento' se for um lead novo
     if (activeLead.status === 'novo' || !activeLead.status) {
       await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
         status: "atendimento",
@@ -506,6 +498,7 @@ export default function LeadsPage() {
     const lead = leads.find(l => l.id === draggedLeadId)
     if (!lead) return
 
+    // Regra de Rito: Burocracia exige ao menos uma entrevista
     if (targetStatus === 'burocracia') {
       const interviewsSnap = await getDocs(query(collection(db, "interviews"), where("clientId", "==", lead.id)))
       if (interviewsSnap.empty) {
@@ -519,11 +512,11 @@ export default function LeadsPage() {
       }
     }
 
+    // Regra de Rito: Distribuição exige qualificação mínima
     if (targetStatus === 'distribuicao') {
       const hasCpf = !!(lead.cpf || lead.documentNumber)
       const hasAddress = !!lead.address
       const hasDefendant = !!lead.defendantName
-
       if (!hasCpf || !hasAddress || !hasDefendant) {
         toast({
           variant: "destructive",
@@ -570,13 +563,8 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => {
-    if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1])
-  }
-
-  const handlePrevTab = () => {
-    if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1])
-  }
+  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
@@ -604,11 +592,7 @@ export default function LeadsPage() {
       ) : (
         <div className="flex gap-6 overflow-x-auto pb-12 scrollbar-hide min-h-[700px]">
           {columns.map((col) => {
-            const leadsInCol = leads.filter(l => {
-              const currentStatus = l.status || "novo"
-              return currentStatus === col.id
-            })
-            
+            const leadsInCol = leads.filter(l => (l.status || "novo") === col.id)
             return (
               <div 
                 key={col.id} 
@@ -740,10 +724,10 @@ export default function LeadsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => { handleDeleteLead(activeLead.id); }} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-rose-500/10 hover:text-rose-500 text-rose-400">
+                    <Button onClick={() => handleDeleteLead(activeLead.id)} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-rose-500/10 hover:text-rose-500 text-rose-400">
                       <Trash2 className="h-3.5 w-3.5" /> EXCLUIR
                     </Button>
-                    <Button onClick={() => handleSyncDrive()} disabled={isSyncingDrive} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
+                    <Button onClick={handleSyncDrive} disabled={isSyncingDrive} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
                       {isSyncingDrive ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <CloudLightning className="h-3.5 w-3.5 text-amber-500" />} SINC. DRIVE
                     </Button>
                     <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-9 border-white/10 bg-white/5 text-[9px] font-black uppercase px-4 rounded-lg gap-2.5 hover:bg-primary/5">
@@ -787,7 +771,9 @@ export default function LeadsPage() {
                         { id: "burocracia", label: "BUROCRACIA" },
                         { id: "revisao", label: "REVISÃO" }
                       ].map(tab => (
-                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">{tab.label}</TabsTrigger>
+                        <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">
+                          {tab.label} {tab.id === 'entrevistas' && leadInterviews && leadInterviews.length > 0 && `(${leadInterviews.length})`}
+                        </TabsTrigger>
                       ))}
                     </TabsList>
 
@@ -870,7 +856,7 @@ export default function LeadsPage() {
                         ) : leadInterviews && leadInterviews.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {leadInterviews.map((int, idx) => (
-                              <Card key={idx} className="glass border-white/5 hover-gold transition-all p-6 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-xl">
+                              <Card key={int.id || idx} className="glass border-white/5 hover-gold transition-all p-6 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-xl">
                                 <div className="flex justify-between items-start mb-4">
                                   <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/20 text-emerald-500 bg-emerald-500/5 px-3 h-6">
                                     CONCLUÍDA
@@ -1034,7 +1020,7 @@ export default function LeadsPage() {
                     <div 
                       key={tab} 
                       className={cn(
-                        "w-2 h-2 rounded-full transition-all duration-500",
+                        "w-2.5 h-2.5 rounded-full transition-all duration-500",
                         activeDossierTab === tab ? "bg-primary shadow-[0_0_8px_rgba(245,208,48,0.5)] scale-125" : i < currentTabIndex ? "bg-emerald-500" : "bg-white/10"
                       )} 
                     />
