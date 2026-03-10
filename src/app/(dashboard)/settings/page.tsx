@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -53,7 +53,10 @@ import {
   Search,
   History,
   CreditCard,
-  Tag
+  Tag,
+  UserPlus,
+  UserCog,
+  UserCheck
 } from "lucide-react"
 import { 
   Select, 
@@ -137,8 +140,36 @@ function SettingsContent() {
   const initialTab = searchParams.get("tab") || "geral"
   const [activeTab, setActiveTab] = useState(initialTab)
   const db = useFirestore()
-  const { user, profile } = useUser()
+  const { user, profile, role } = useUser()
 
+  const canManageUsers = role === 'admin'
+
+  // Estados CRUD Usuários
+  const [userSearchTerm, setUserSearchTerm] = useState("")
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [userFormData, setUserFormData] = useState({
+    name: "",
+    email: "",
+    role: "lawyer",
+    isActive: true
+  })
+
+  const teamQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
+  const { data: team, isLoading: isTeamLoading } = useCollection(teamQuery)
+
+  const filteredTeam = useMemo(() => {
+    if (!team) return []
+    return team.filter(m => 
+      m.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      m.email?.toLowerCase().includes(userSearchTerm.toLowerCase())
+    )
+  }, [team, userSearchTerm])
+
+  // Outros estados
   const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
   const [editingModel, setEditingModel] = useState<any>(null)
   const [modelFormData, setModelFormData] = useState({
@@ -234,6 +265,54 @@ function SettingsContent() {
     }
   }, [profile])
 
+  // Handlers CRUD Usuários
+  const handleOpenCreateUser = () => {
+    setEditingUser(null)
+    setUserFormData({ name: "", email: "", role: "lawyer", isActive: true })
+    setIsUserDialogOpen(true)
+  }
+
+  const handleOpenEditUser = (member: any) => {
+    setEditingUser(member)
+    setUserFormData({ 
+      name: member.name || "", 
+      email: member.email || "", 
+      role: member.role || "lawyer", 
+      isActive: member.isActive ?? true 
+    })
+    setIsUserDialogOpen(true)
+  }
+
+  const handleSaveUser = () => {
+    if (!db || !userFormData.name || !userFormData.email) return
+    const payload = {
+      ...userFormData,
+      name: userFormData.name.toUpperCase(),
+      email: userFormData.email.toLowerCase(),
+      updatedAt: serverTimestamp()
+    }
+
+    if (editingUser) {
+      updateDocumentNonBlocking(doc(db!, "staff_profiles", editingUser.id), payload)
+      toast({ title: "Acesso Atualizado" })
+    } else {
+      addDocumentNonBlocking(collection(db!, "staff_profiles"), {
+        ...payload,
+        createdAt: serverTimestamp(),
+        id: crypto.randomUUID()
+      })
+      toast({ title: "Novo Acesso Liberado" })
+    }
+    setIsUserDialogOpen(false)
+  }
+
+  const handleDeleteUser = (id: string) => {
+    if (!db || !confirm("Revogar este acesso permanentemente?")) return
+    deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
+    toast({ variant: "destructive", title: "Acesso Revogado" })
+  }
+
+  // Outros Handlers
   const handleUpdateMyProfile = () => {
     if (!user || !db || !profileFormData.name) return
     const docRef = doc(db!, "staff_profiles", user.uid)
@@ -627,13 +706,84 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="usuarios" className="mt-0">
-          <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
-            <Users className="h-14 w-14 text-primary mx-auto" />
+        <TabsContent value="usuarios" className="mt-0 space-y-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-8">
             <div className="space-y-2">
-              <p className="text-sm font-black uppercase tracking-[0.4em]">Gestão de Hierarquia</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest">Consulte a aba EQUIPE no menu lateral para gerenciar acessos.</p>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Gestão de Acessos</h2>
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">CONTROLE DE PERMISSÕES E USUÁRIOS DA BANCA.</p>
             </div>
+            {canManageUsers && (
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar usuários..." 
+                    className="pl-10 glass border-white/5 h-11 text-xs text-white"
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleOpenCreateUser} className="gold-gradient text-background font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl gap-2 shadow-2xl">
+                  <UserPlus className="h-4 w-4" /> NOVO ACESSO
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isTeamLoading ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest mt-4">Sincronizando usuários...</span>
+              </div>
+            ) : filteredTeam.length > 0 ? (
+              filteredTeam.map((member) => (
+                <Card key={member.id} className="glass border-white/5 hover:border-primary/30 transition-all group shadow-2xl rounded-2xl overflow-hidden flex flex-col">
+                  <CardContent className="p-8 space-y-6 flex-1">
+                    <div className="flex items-start justify-between">
+                      <Avatar className="h-14 w-14 border-2 border-primary/20">
+                        <AvatarFallback className="bg-secondary text-primary font-black uppercase">{member.name?.substring(0, 2) || "??"}</AvatarFallback>
+                      </Avatar>
+                      <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-3">
+                        {member.role?.toUpperCase() || "USER"}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{member.name}</h3>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">
+                        <Mail className="h-3 w-3 opacity-50" /> {member.email}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-6 border-t border-white/5 mt-auto">
+                      <div className="flex gap-2">
+                        {canManageUsers && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white" onClick={() => handleOpenEditUser(member)}>
+                              <Settings2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-rose-500" onClick={() => handleDeleteUser(member.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">
+                        {member.isActive ? (
+                          <span className="flex items-center gap-1.5 text-emerald-500"><ShieldCheck className="h-3 w-3" /> Ativo</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-rose-500"><ShieldAlert className="h-3 w-3" /> Inativo</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
+                <Users className="h-14 w-14 text-primary mx-auto" />
+                <p className="text-sm font-black uppercase tracking-[0.4em]">Nenhum usuário localizado</p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -748,6 +898,56 @@ function SettingsContent() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* DIÁLOGO USUÁRIOS */}
+      <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
+                {editingUser ? "Retificar Acesso" : "Novo Acesso RGMJ"}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nome Completo *</Label>
+              <Input value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white uppercase font-bold" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">E-mail Google *</Label>
+              <Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase()})} className="glass border-white/10 h-14 text-white font-medium" placeholder="usuario@gmail.com" />
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nível de Acesso</Label>
+                <Select value={userFormData.role} onValueChange={(v) => setUserFormData({...userFormData, role: v})}>
+                  <SelectTrigger className="glass border-white/10 h-14 text-white font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="admin">ADMINISTRADOR</SelectItem>
+                    <SelectItem value="lawyer">ADVOGADO</SelectItem>
+                    <SelectItem value="financial">FINANCEIRO</SelectItem>
+                    <SelectItem value="assistant">ASSISTENTE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status da Conta</Label>
+                <div className="h-14 flex items-center justify-between px-4 glass border-white/10 rounded-xl">
+                  <span className="text-[10px] font-black text-white uppercase">{userFormData.isActive ? "ATIVO" : "BLOQUEADO"}</span>
+                  <Switch checked={userFormData.isActive} onCheckedChange={(v) => setUserFormData({...userFormData, isActive: v})} className="data-[state=checked]:bg-emerald-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
+            <Button onClick={handleSaveUser} className="gold-gradient text-background font-black h-14 px-10 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest flex items-center gap-3">
+              <UserCheck className="h-5 w-5" /> CONFIRMAR ACESSO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
