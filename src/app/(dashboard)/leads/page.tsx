@@ -131,7 +131,7 @@ export default function LeadsPage() {
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   
-  // Sincroniza o Lead selecionado com a versão mais recente do banco para refletir mudanças de status/interviews
+  // Sincroniza o Lead selecionado com a versão mais recente do banco
   const activeLead = useMemo(() => {
     if (!selectedLead || !leads) return selectedLead
     return leads.find(l => l.id === selectedLead.id) || selectedLead
@@ -188,12 +188,13 @@ export default function LeadsPage() {
   }, [db, user])
   const { data: templates } = useCollection(templatesQuery)
 
-  // Query de Entrevistas Concluídas para o Lead Ativo
+  // Query de Entrevistas Concluídas para o Lead Ativo - ESTABILIZADA
   const leadInterviewsQuery = useMemoFirebase(() => {
-    if (!user || !db || !activeLead?.id) return null
+    const leadId = activeLead?.id
+    if (!user || !db || !leadId) return null
     return query(
       collection(db!, "interviews"), 
-      where("clientId", "==", activeLead.id),
+      where("clientId", "==", leadId),
       orderBy("createdAt", "desc")
     )
   }, [db, user, activeLead?.id])
@@ -201,7 +202,6 @@ export default function LeadsPage() {
 
   useEffect(() => {
     if (activeLead) {
-      // Auto-navegação de abas baseada no status para agilizar o rito
       if (activeLead.status === 'atendimento' && activeDossierTab === 'overview') setActiveDossierTab("entrevistas")
       else if (activeLead.status === 'burocracia' && activeDossierTab === 'overview') setActiveDossierTab("burocracia")
       else if (activeLead.status === 'distribuicao' && activeDossierTab === 'overview') setActiveDossierTab("revisao")
@@ -259,7 +259,6 @@ export default function LeadsPage() {
     if (!activeLead) return
     setIsGeneratingSummary(true)
     
-    // Coleta contexto de todas as entrevistas para alimentar a IA
     const interviewContext = (leadInterviews || []).map(int => {
       const responses = Object.entries(int.responses || {})
         .map(([q, a]) => `${q}: ${a}`)
@@ -399,18 +398,21 @@ export default function LeadsPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }
+    
+    // Protocolo da Entrevista no Firestore
     await addDocumentNonBlocking(collection(db!, "interviews"), interviewData)
     
-    // Avança o Lead para o status de 'atendimento' se for um lead novo
+    // Atualização de Status do Lead
     if (activeLead.status === 'novo' || !activeLead.status) {
-      await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
+      updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), {
         status: "atendimento",
         updatedAt: serverTimestamp()
       })
     }
+    
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
-    toast({ title: "DNA Capturado", description: "Dados técnicos salvos no dossiê." })
+    toast({ title: "DNA Jurídico Protocolado", description: "Os dados foram injetados no dossiê técnico." })
   }
 
   const handleRunInterviewAnalysis = async (interview: any) => {
@@ -498,7 +500,6 @@ export default function LeadsPage() {
     const lead = leads.find(l => l.id === draggedLeadId)
     if (!lead) return
 
-    // Regra de Rito: Burocracia exige ao menos uma entrevista
     if (targetStatus === 'burocracia') {
       const interviewsSnap = await getDocs(query(collection(db, "interviews"), where("clientId", "==", lead.id)))
       if (interviewsSnap.empty) {
@@ -512,7 +513,6 @@ export default function LeadsPage() {
       }
     }
 
-    // Regra de Rito: Distribuição exige qualificação mínima
     if (targetStatus === 'distribuicao') {
       const hasCpf = !!(lead.cpf || lead.documentNumber)
       const hasAddress = !!lead.address
