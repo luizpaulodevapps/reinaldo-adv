@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -52,6 +53,7 @@ export default function InterviewsPage() {
 
   const interviewsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
+    // Busca global de todas as entrevistas concluídas pela banca
     return query(collection(db!, "interviews"), orderBy("createdAt", "desc"))
   }, [db, user])
 
@@ -59,7 +61,14 @@ export default function InterviewsPage() {
 
   const handleCreateInterview = (data: any) => {
     if (!user || !db) return
-    const newInterview = { ...data, interviewerId: user.uid, interviewerName: user.displayName, status: "Concluída", createdAt: serverTimestamp(), updatedAt: serverTimestamp() }
+    const newInterview = { 
+      ...data, 
+      interviewerId: user.uid, 
+      interviewerName: user.displayName, 
+      status: "Concluída", 
+      createdAt: serverTimestamp(), 
+      updatedAt: serverTimestamp() 
+    }
     addDocumentNonBlocking(collection(db!, "interviews"), newInterview)
       .then(() => { setIsNewFormOpen(false); toast({ title: "Entrevista Registrada" }) })
   }
@@ -101,7 +110,6 @@ export default function InterviewsPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar dossiês..." className="pl-12 glass border-white/5 h-12 text-xs text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <button onClick={() => setIsNewFormOpen(true)} className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95"><Plus className="h-6 w-6 text-background" /></button>
         </div>
       </div>
 
@@ -110,7 +118,7 @@ export default function InterviewsPage() {
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><span className="text-[10px] font-black uppercase tracking-widest mt-4">Auditando Dossiês...</span></div>
         ) : filteredInterviews.length > 0 ? (
           filteredInterviews.map((item) => (
-            <Card key={item.id} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-2xl relative overflow-hidden">
+            <Card key={item.id} className="glass border-white/5 hover-gold transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col h-full group shadow-2xl relative overflow-hidden">
               {item.aiAnalysis && <div className="absolute top-0 right-0 p-4"><Sparkles className="h-4 w-4 text-primary animate-pulse" /></div>}
               <div className="p-8 space-y-6 flex-1">
                 <div className="flex justify-between items-start">
@@ -150,10 +158,23 @@ export default function InterviewsPage() {
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">
               <div className="px-5 bg-black/20 border-b border-white/5 flex-none"><TabsList className="bg-transparent h-10 gap-6 p-0"><TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full tracking-widest">Transcrição</TabsTrigger><TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full tracking-widest">Análise IA</TabsTrigger></TabsList></div>
               <div className="flex-1 overflow-hidden p-5">
-                <TabsContent value="transcricao" className="h-full mt-0"><ScrollArea className="h-full pr-4"><div className="space-y-5 max-w-3xl mx-auto pb-10">{(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => {
-                  const label = typeof item === 'string' ? item : item.label; const answer = viewingInterview?.responses?.[label]; if (!answer) return null;
-                  return (<div key={i} className="space-y-1.5"><h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5><p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">{String(answer)}</p></div>)
-                })}</div></ScrollArea></TabsContent>
+                <TabsContent value="transcricao" className="h-full mt-0">
+                  <ScrollArea className="h-full pr-4">
+                    <div className="space-y-5 max-w-3xl mx-auto pb-10">
+                      {(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => {
+                        const label = typeof item === 'string' ? item : item.label; 
+                        const answer = viewingInterview?.responses?.[label]; 
+                        if (!answer) return null;
+                        return (
+                          <div key={i} className="space-y-1.5">
+                            <h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5>
+                            <p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">{String(answer)}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
                 <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-4"><Brain className="h-12 w-12 text-primary animate-pulse" /><p className="text-[10px] font-bold text-white uppercase tracking-widest">Processando...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full pr-4"><div className="space-y-6 max-w-4xl mx-auto pb-10"><Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg"><h5 className="text-[10px] font-black text-primary uppercase mb-3">Resumo Executivo</h5><p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-2 gap-4"><Card className="glass border-rose-500/20 bg-rose-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-rose-500 uppercase mb-3">Teses & Riscos</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-emerald-500 uppercase mb-3">Recomendações</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3"><Sparkles className="h-10 w-10" /><p className="text-[10px] font-black uppercase tracking-widest">Aguardando Comando</p></div>)}</TabsContent>
               </div>
             </Tabs>

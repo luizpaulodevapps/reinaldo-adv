@@ -90,7 +90,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { cn } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { BurocraciaView } from "@/components/leads/burocracia-view"
@@ -125,6 +125,8 @@ export default function LeadsPage() {
   const leads = useMemo(() => (leadsData || []).filter(l => l.status !== 'arquivado'), [leadsData])
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
+  
+  // activeLead garante que sempre tenhamos a versão mais atual do lead que está no banco
   const activeLead = useMemo(() => {
     if (!selectedLead || !leads) return selectedLead
     return leads.find(l => l.id === selectedLead.id) || selectedLead
@@ -169,6 +171,7 @@ export default function LeadsPage() {
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id
     if (!user || !db || !leadId) return null
+    // Busca na coleção 'interviews' filtrando pelo leadId (clientId)
     return query(collection(db!, "interviews"), where("clientId", "==", leadId), orderBy("createdAt", "desc"))
   }, [db, user, activeLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
@@ -188,8 +191,10 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (currentTabIndex < 3) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
+  const handleNextTab = () => { if (currentTabIndex < 3) setActiveTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveTab(DOSSIER_TABS[currentTabIndex - 1]) }
+
+  const setActiveTab = (tab: string) => setActiveDossierTab(tab)
 
   useEffect(() => {
     if (activeLead) {
@@ -271,9 +276,32 @@ export default function LeadsPage() {
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !activeLead || !user) return
-    addDocumentNonBlocking(collection(db!, "interviews"), { clientId: activeLead.id, clientName: activeLead.name, templateId: executingTemplate.id, interviewType: executingTemplate.title, responses: payload.responses, templateSnapshot: payload.templateSnapshot, interviewerId: user.uid, interviewerName: user.displayName, status: "Concluída", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
-    if (activeLead.status === 'novo') updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "atendimento", updatedAt: serverTimestamp() })
-    setIsInterviewDialogOpen(false); setExecutingTemplate(null); toast({ title: "Protocolo Concluído" })
+    // SALVA NA COLEÇÃO 'interviews'
+    addDocumentNonBlocking(collection(db!, "interviews"), { 
+      clientId: activeLead.id, 
+      clientName: activeLead.name, 
+      templateId: executingTemplate.id, 
+      interviewType: executingTemplate.title, 
+      responses: payload.responses, 
+      templateSnapshot: payload.templateSnapshot, 
+      interviewerId: user.uid, 
+      interviewerName: user.displayName, 
+      status: "Concluída", 
+      createdAt: serverTimestamp(), 
+      updatedAt: serverTimestamp() 
+    })
+    
+    // Atualiza o status do lead se necessário
+    if (activeLead.status === 'novo') {
+      updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { 
+        status: "atendimento", 
+        updatedAt: serverTimestamp() 
+      })
+    }
+    
+    setIsInterviewDialogOpen(false)
+    setExecutingTemplate(null)
+    toast({ title: "Protocolo Concluído" })
   }
 
   const handleRunInterviewAnalysis = async (interview: any) => {
@@ -447,7 +475,11 @@ export default function LeadsPage() {
                       </div>
 
                       <div className="space-y-6 pt-4">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-3"><h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}</h3></div>
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                          <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">
+                            Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews?.length}</Badge>}
+                          </h3>
+                        </div>
                         {isLoadingInterviews ? (
                           <div className="py-20 flex flex-col items-center justify-center opacity-40 gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-[10px] font-black uppercase tracking-[0.4em]">Auditando...</p></div>
                         ) : leadInterviews && leadInterviews.length > 0 ? (
