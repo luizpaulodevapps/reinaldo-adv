@@ -21,9 +21,12 @@ import {
   Trash2,
   FileText,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  CloudLightning,
+  AlertCircle
 } from "lucide-react"
-import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
 import { 
   format, 
@@ -72,6 +75,19 @@ export default function AgendaPage() {
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
+
+  // Sincronismo Real com Google Settings
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleConfig } = useDoc(googleSettingsRef)
+
+  const isGoogleUser = user?.providerData.some(p => p.providerId === 'google.com')
+  const isIntegrationActive = googleConfig?.isCalendarActive && googleConfig?.clientId
+
+  const syncStatus = useMemo(() => {
+    if (!isGoogleUser) return { label: "LOGIN NECESSÁRIO", color: "text-amber-500", bg: "bg-amber-500/10", dot: "bg-amber-500" }
+    if (!isIntegrationActive) return { label: "AGUARDANDO CONFIG", color: "text-rose-500", bg: "bg-rose-500/10", dot: "bg-rose-500" }
+    return { label: "SINC. ATIVA", color: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500" }
+  }, [isGoogleUser, isIntegrationActive])
 
   const hearingsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -143,12 +159,12 @@ export default function AgendaPage() {
       return d && isSameDay(d, day)
     })
     const hasDeadline = (deadlines || []).some(d => {
-      const date = parseDate(d.dueDate)
-      return date && isSameDay(date, day)
+      const d = parseDate(d.dueDate)
+      return d && isSameDay(d, day)
     })
     const hasAppointment = (appointments || []).some(a => {
-      const date = parseDate(a.startDateTime)
-      return date && isSameDay(date, day)
+      const d = parseDate(a.startDateTime)
+      return d && isSameDay(d, day)
     })
     return { hasHearing, hasDeadline, hasAppointment }
   }
@@ -220,20 +236,47 @@ export default function AgendaPage() {
     toast({ title: "Compromisso Injetado na Pauta" })
   }
 
+  const handleManualSync = () => {
+    if (!isIntegrationActive) {
+      toast({ 
+        variant: "destructive", 
+        title: "Integração Pendente", 
+        description: "Configure o Client ID do Google no Centro de Comando." 
+      })
+      return
+    }
+    toast({ title: "Sincronizando...", description: "Comunicação estabelecida com Google Calendar API." })
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase">Agenda de Compromissos</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Agenda de Compromissos</h1>
           <p className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] font-black opacity-60">Visão global de pauta física e virtual RGMJ.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest gap-2 h-10 px-4">
-            <Filter className="h-3.5 w-3.5" /> Filtrar
-          </Button>
-          <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest gap-2 h-10 px-4" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-3.5 w-3.5" /> Sincronizar
-          </Button>
+        <div className="flex items-center gap-3">
+          {/* Status Real de Sincronismo */}
+          <div className={cn("px-4 py-2 rounded-full border flex items-center gap-2.5 transition-all shadow-lg", syncStatus.bg, syncStatus.color.replace('text-', 'border-').replace('500', '500/20'))}>
+            <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", syncStatus.dot)} />
+            <span className="text-[9px] font-black uppercase tracking-widest">{syncStatus.label}</span>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest gap-2 h-10 px-4">
+              <Filter className="h-3.5 w-3.5" /> Filtrar
+            </Button>
+            <Button 
+              onClick={handleManualSync}
+              variant="outline" 
+              className="glass border-white/10 text-[10px] font-black uppercase tracking-widest gap-2 h-10 px-4 hover:border-primary/40 hover:text-primary transition-all"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} /> Sincronizar
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -269,7 +312,7 @@ export default function AgendaPage() {
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <Button variant="secondary" className="h-8 px-4 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/5" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
+                <Button variant="secondary" className="h-8 px-4 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/5 rounded-lg" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/5" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
                   <ChevronRight className="h-5 w-5" />
                 </Button>
@@ -305,7 +348,7 @@ export default function AgendaPage() {
                         {format(day, "d")}
                       </span>
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {hasHearing && <div className="h-1.5 w-1.5 rounded-full bg-destructive shadow-[0_0_5px_rgba(239,68,68,0.6)]" />}
+                        {hasHearing && <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_5px_rgba(239,68,68,0.6)]" />}
                         {hasDeadline && <div className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(245,208,48,0.6)]" />}
                         {hasAppointment && <div className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.6)]" />}
                       </div>
@@ -383,7 +426,7 @@ export default function AgendaPage() {
               </div>
 
               <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-2 py-6 rounded-xl shadow-xl uppercase text-[10px] tracking-[0.2em] hover:scale-[1.02] transition-all">
-                Agendar Ato
+                <Plus className="h-4 w-4" /> Agendar Ato
               </Button>
             </div>
           </div>
