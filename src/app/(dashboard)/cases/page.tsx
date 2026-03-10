@@ -174,7 +174,7 @@ export default function CasesPage() {
             <ChevronRight className="h-2 w-2" />
             <span className="text-white">DOSSIÊS ATIVOS</span>
           </div>
-          <h1 className="text-3xl font-black text-white mb-1 uppercase tracking-tighter">Gestão de Processos</h1>
+          <h1 className="text-2xl font-black text-white mb-1 uppercase tracking-tighter">Gestão de Processos</h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-60">
             CONTROLE JURÍDICO ESTRATÉGICO RGMJ.
           </p>
@@ -185,14 +185,14 @@ export default function CasesPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar..." 
-              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50 rounded-xl"
+              className="pl-12 glass border-white/5 h-11 text-xs text-white focus:ring-primary/50 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Button 
             onClick={handleOpenCreate}
-            className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[11px] tracking-widest rounded-xl shadow-2xl hover:scale-[1.02] transition-all"
+            className="gold-gradient text-background font-black gap-3 px-8 h-11 uppercase text-[11px] tracking-widest rounded-xl shadow-2xl hover:scale-[1.02] transition-all"
           >
             <Plus className="h-4 w-4" /> NOVO PROCESSO
           </Button>
@@ -200,33 +200,33 @@ export default function CasesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center shadow-xl rounded-2xl group hover:border-primary/20 transition-all">
+        <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center shadow-xl rounded-2xl group hover:border-primary/20 transition-all">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/50 transition-all" />
           <CardContent className="p-6">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-3">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
               <Zap className="h-4 w-4" /> DOSSIÊS ATIVOS
             </p>
-            <div className="text-3xl font-black text-white tracking-tighter">
+            <div className="text-2xl font-black text-white tracking-tighter">
               {isLoading ? "..." : metrics.total}
             </div>
           </CardContent>
         </Card>
         
-        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center rounded-2xl">
+        <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center rounded-2xl">
           <CardContent className="p-6">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 flex items-center gap-3">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
               <Scale className="h-4 w-4" /> VALOR SOB GESTÃO
             </p>
-            <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
+            <div className="text-2xl font-black text-white tracking-tighter tabular-nums">
               R$ {metrics.valorEmRisco.toLocaleString('pt-BR')}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center rounded-2xl">
+        <Card className="glass border-white/5 relative overflow-hidden h-28 flex flex-col justify-center rounded-2xl">
           <CardContent className="p-6">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3">TICKET MÉDIO</p>
-            <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">TICKET MÉDIO</p>
+            <div className="text-2xl font-black text-white tracking-tighter tabular-nums">
               R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </div>
           </CardContent>
@@ -322,19 +322,19 @@ export default function CasesPage() {
                               <ChevronDown className="h-4 w-4 text-muted-foreground/40" />
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <button className="h-8 w-8 rounded-lg flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all">
+                                  <button className="h-8 w-8 rounded-lg flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none">
                                     <MoreVertical className="h-4 w-4" />
                                   </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2">
-                                  <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
-                                    <Edit3 className="h-4 w-4" /> Editar Dados
+                                <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
+                                  <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+                                    <Edit3 className="h-4 w-4 text-muted-foreground" /> EDITAR DOSSIÊ
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
-                                    <Archive className="h-4 w-4" /> Arquivar
+                                  <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+                                    <Archive className="h-4 w-4 text-muted-foreground" /> ARQUIVAR
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg text-rose-500 focus:text-rose-400">
-                                    <Trash2 className="h-4 w-4" /> Excluir Dossiê
+                                  <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg text-rose-500 focus:text-rose-400 hover:bg-rose-500/5">
+                                    <Trash2 className="h-4 w-4" /> EXCLUIR DOSSIÊ
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -398,19 +398,19 @@ export default function CasesPage() {
                         <div className="flex items-center gap-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white rounded-lg bg-white/5">
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white rounded-lg bg-white/5 outline-none">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2">
-                              <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
-                                <Edit3 className="h-4 w-4" /> Editar Dados
+                            <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
+                              <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+                                <Edit3 className="h-4 w-4 text-muted-foreground" /> EDITAR DOSSIÊ
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
-                                <Archive className="h-4 w-4" /> Arquivar
+                              <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+                                <Archive className="h-4 w-4 text-muted-foreground" /> ARQUIVAR
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg text-rose-500 focus:text-rose-400">
-                                <Trash2 className="h-4 w-4" /> Excluir Dossiê
+                              <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg text-rose-500 focus:text-rose-400 hover:bg-rose-500/5">
+                                <Trash2 className="h-4 w-4" /> EXCLUIR DOSSIÊ
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -446,7 +446,7 @@ export default function CasesPage() {
                 </div>
                 <div>
                   <SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                    {editingProcess ? "Gestão Estratégica" : "Novo Processo"}
+                    {editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}
                   </SheetTitle>
                   <SheetDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-60">
                     {editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}
