@@ -270,7 +270,8 @@ export default function LeadsPage() {
       setStrategicSummary(result)
       toast({ title: "Análise IA Concluída" })
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro na Análise" })
+      console.error("Erro GenAI:", error);
+      toast({ variant: "destructive", title: "Erro na Análise", description: "O rito de IA falhou. Verifique a conexão." })
     } finally {
       setIsGeneratingSummary(false)
     }

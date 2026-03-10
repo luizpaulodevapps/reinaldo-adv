@@ -64,7 +64,7 @@ Próximos Prazos:
 {{#each nextDeadlines}}- {{{this}}}
 {{/each}}
 {{else}}Nenhum prazo futuro registrado.
-{{/if}
+{{/if}}
 
 Partes Relacionadas (Réus/Reclamadas):
 {{#if relatedParties}}
