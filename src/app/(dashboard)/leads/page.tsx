@@ -621,7 +621,7 @@ export default function LeadsPage() {
                         <Card 
                           className={cn(
                             "glass hover-gold transition-all cursor-grab active:cursor-grabbing group border-white/5 shadow-lg rounded-xl overflow-hidden",
-                            draggedLeadId === CalvertId && "opacity-50 grayscale scale-95"
+                            draggedLeadId === lead.id && "opacity-50 grayscale scale-95"
                           )} 
                           onClick={() => handleOpenLead(lead)}
                         >
@@ -989,7 +989,7 @@ export default function LeadsPage() {
                 {canGoNext ? (
                   <Button 
                     onClick={handleNextTab} 
-                    className="gold-gradient text-black font-black h-10 px-8 rounded-lg uppercase text-[9px] tracking-widest gap-2.5 shadow-lg hover:scale-[1.02] transition-all"
+                    className="gold-gradient text-black font-black h-10 px-8 rounded-lg uppercase text-[9px] tracking-widest gap-2.5 shadow-lg hover:scale-102 transition-all"
                   >
                     PRÓXIMO RITO <ArrowRight className="h-4 w-4" />
                   </Button>
