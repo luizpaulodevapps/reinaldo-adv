@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -13,11 +14,17 @@ import {
   MoreVertical,
   Edit3,
   Trash2,
-  Archive
+  Archive,
+  LayoutGrid,
+  List,
+  Gavel,
+  ShieldCheck,
+  TrendingUp,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, limit, doc } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { 
@@ -36,10 +43,20 @@ import {
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+const AREAS = [
+  { id: "todos", label: "TODOS" },
+  { id: "trabalhista", label: "TRABALHISTA" },
+  { id: "cível", label: "CÍVEL" },
+  { id: "previdenciário", label: "PREVIDENCIÁRIO" },
+  { id: "tributário", label: "TRIBUTÁRIO" },
+]
 
 export default function CasesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeArea, setActiveArea] = useState("todos")
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingProcess, setEditingProcess] = useState<any>(null)
   
@@ -57,19 +74,23 @@ export default function CasesPage() {
 
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
+      if (proc.status === "Arquivado") return false
+      
       const matchesSearch = 
         proc.processNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        proc.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        proc.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        proc.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
       
-      const matchesArea = activeArea === "todos" || proc.caseType?.toLowerCase() === activeArea
+      const matchesArea = activeArea === "todos" || proc.caseType?.toLowerCase() === activeArea.toLowerCase()
       
       return matchesSearch && matchesArea
     })
   }, [processes, searchTerm, activeArea])
 
   const metrics = useMemo(() => {
-    const total = processes.length
-    const valorEmRisco = processes.reduce((acc, p) => {
+    const activeOnes = processes.filter(p => p.status !== "Arquivado")
+    const total = activeOnes.length
+    const valorEmRisco = activeOnes.reduce((acc, p) => {
       const val = typeof p.value === 'number' ? p.value : parseFloat(String(p.value || "0").replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, ''))
       return acc + (isNaN(val) ? 0 : val)
     }, 0)
@@ -95,7 +116,7 @@ export default function CasesPage() {
         ...data,
         updatedAt: serverTimestamp(),
       })
-      toast({ title: "Processo Atualizado", description: "O dossiê foi devidamente retificado." })
+      toast({ title: "Processo Atualizado" })
     } else {
       addDocumentNonBlocking(collection(db!, "processes"), {
         ...data,
@@ -103,15 +124,15 @@ export default function CasesPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
-      toast({ title: "Processo Protocolado", description: "Novo dossiê registrado com sucesso." })
+      toast({ title: "Processo Protocolado" })
     }
     setIsSheetOpen(false)
   }
 
   const handleDeleteProcess = (id: string) => {
-    if (!db || !confirm("Deseja remover permanentemente este processo?")) return
+    if (!db || !confirm("Remover permanentemente este processo?")) return
     deleteDocumentNonBlocking(doc(db!, "processes", id))
-    toast({ variant: "destructive", title: "Dossiê Removido", description: "O processo foi excluído da base tática." })
+    toast({ variant: "destructive", title: "Dossiê Removido" })
   }
 
   const handleArchiveProcess = (id: string) => {
@@ -120,7 +141,7 @@ export default function CasesPage() {
       status: "Arquivado",
       updatedAt: serverTimestamp()
     })
-    toast({ title: "Processo Arquivado", description: "O dossiê foi movido para o acervo passivo." })
+    toast({ title: "Processo Arquivado" })
   }
 
   const getDrawerWidthClass = () => {
@@ -136,140 +157,206 @@ export default function CasesPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
+      {/* BREADCRUMBS & HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 mb-4">
-            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
+            <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
             <ChevronRight className="h-2 w-2" />
-            <span>Dashboard</span>
+            <span>DASHBOARD</span>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Dossiês Ativos</span>
+            <span className="text-white">DOSSIÊS ATIVOS</span>
           </div>
-          <h1 className="text-4xl font-black text-white mb-1 uppercase tracking-tighter">Processos</h1>
+          <h1 className="text-5xl font-black text-white mb-1 uppercase tracking-tighter">Processos</h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] opacity-60">
             GESTÃO JURÍDICA ESTRATÉGICA RGMJ.
           </p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar..." 
-              className="pl-10 glass border-white/5 h-11 text-xs text-white focus:ring-primary/50"
+              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Button 
             onClick={handleOpenCreate}
-            className="gold-gradient text-background font-black gap-2 px-8 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
+            className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[11px] tracking-widest rounded-xl shadow-2xl hover:scale-[1.02] transition-all"
           >
-            <Plus className="h-4 w-4" /> Novo Processo
+            <Plus className="h-4 w-4" /> NOVO PROCESSO
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="glass border-primary/20 relative overflow-hidden h-32 flex flex-col justify-center shadow-2xl">
-          <CardContent className="p-6">
-            <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-2 flex items-center gap-2">
-              <Zap className="h-3.5 w-3.5" /> Dossiês Ativos
+      {/* METRICS PANEL */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="glass border-white/5 relative overflow-hidden h-36 flex flex-col justify-center shadow-xl rounded-3xl group hover:border-primary/20 transition-all">
+          <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/50 transition-all" />
+          <CardContent className="p-8">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-3">
+              <Zap className="h-4 w-4" /> DOSSIÊS ATIVOS
             </p>
-            <div className="text-4xl font-black text-white tracking-tighter">
+            <div className="text-5xl font-black text-white tracking-tighter">
               {isLoading ? "..." : metrics.total}
             </div>
           </CardContent>
         </Card>
         
-        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
-          <CardContent className="p-6">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
-              <Scale className="h-3.5 w-3.5" /> Valor sob Gestão
+        <Card className="glass border-white/5 relative overflow-hidden h-36 flex flex-col justify-center rounded-3xl">
+          <CardContent className="p-8">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 flex items-center gap-3">
+              <Scale className="h-4 w-4" /> VALOR SOB GESTÃO
             </p>
-            <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
+            <div className="text-4xl font-black text-white tracking-tighter tabular-nums">
               R$ {metrics.valorEmRisco.toLocaleString('pt-BR')}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center">
-          <CardContent className="p-6">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-2">Ticket Médio</p>
-            <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
+        <Card className="glass border-white/5 relative overflow-hidden h-36 flex flex-col justify-center rounded-3xl">
+          <CardContent className="p-8">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3">TICKET MÉDIO</p>
+            <div className="text-4xl font-black text-white tracking-tighter tabular-nums">
               R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* TABS & VIEW TOGGLE */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-2">
+        <Tabs value={activeArea} onValueChange={setActiveArea} className="w-full md:w-auto">
+          <TabsList className="bg-transparent h-10 p-0 gap-8 justify-start">
+            {AREAS.map(area => (
+              <TabsTrigger 
+                key={area.id} 
+                value={area.id}
+                className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase tracking-[0.25em] h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all"
+              >
+                {area.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+          <Button 
+            onClick={() => setViewMode("list")}
+            variant={viewMode === "list" ? "secondary" : "ghost"}
+            size="icon"
+            className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "list" ? "bg-primary text-background" : "text-muted-foreground")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button 
+            onClick={() => setViewMode("grid")}
+            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            size="icon"
+            className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "grid" ? "bg-primary text-background" : "text-muted-foreground")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* CONTENT AREA */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="py-20 flex flex-col items-center justify-center space-y-4">
+          <div className="py-32 flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Base Jurídica...</span>
           </div>
         ) : filteredProcesses.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
+          <div className={cn(
+            "grid gap-4 transition-all duration-500",
+            viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+          )}>
             {filteredProcesses.map((proc) => (
-              <Card key={proc.id} className="glass border-white/5 hover-gold transition-all group overflow-hidden">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="text-[8px] font-black border-primary/30 text-primary bg-primary/5 uppercase tracking-widest">
-                        {proc.caseType?.toUpperCase()}
+              <Card 
+                key={proc.id} 
+                className={cn(
+                  "glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer",
+                  viewMode === "list" ? "rounded-2xl" : "rounded-3xl"
+                )}
+                onClick={() => handleOpenEdit(proc)}
+              >
+                <CardContent className={cn("p-6 flex", viewMode === "list" ? "items-center justify-between" : "flex-col space-y-6")}>
+                  <div className="space-y-3 min-w-0 flex-1">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary bg-primary/5 uppercase tracking-[0.15em] px-3 h-6">
+                        {proc.caseType?.toUpperCase() || "GERAL"}
                       </Badge>
-                      <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-tighter">{proc.processNumber}</span>
+                      <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-tight truncate">{proc.processNumber}</span>
                     </div>
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">{proc.description}</h3>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.2em]">{proc.court} • {proc.vara}</p>
+                    <div>
+                      <h3 className="text-base font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight truncate">
+                        {proc.description}
+                      </h3>
+                      <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1.5 opacity-50 flex items-center gap-2">
+                        <Gavel className="h-3 w-3" /> {proc.court} • {proc.vara}
+                      </p>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-4 flex-none ml-6">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-white">
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-white rounded-xl bg-white/5">
                           <MoreVertical className="h-5 w-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 bg-[#0d121f] border-white/10 text-white">
-                        <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                      <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2">
+                        <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
                           <Edit3 className="h-4 w-4" /> Editar Dossiê
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                        <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
                           <Archive className="h-4 w-4" /> Arquivar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
-                          <Trash2 className="h-4 w-4" /> Excluir Permanentemente
+                        <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg text-rose-500 focus:text-rose-400">
+                          <Trash2 className="h-4 w-4" /> Excluir Dossiê
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground hover:text-primary">
-                      <ChevronRight className="h-6 w-6" />
-                    </Button>
+                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-all shadow-inner border border-white/5">
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          <div className="py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[2rem] border-dashed border-2 border-white/5 opacity-30">
-            <Scale className="h-16 w-16 text-muted-foreground" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center">Nenhum dossiê estratégico no radar</p>
+          <div className="py-40 flex flex-col items-center justify-center space-y-8 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
+            <Scale className="h-20 w-20 text-muted-foreground" />
+            <div className="text-center space-y-2">
+              <p className="text-lg font-black text-white uppercase tracking-[0.4em]">Base Silenciosa</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Nenhum dossiê estratégico nesta categoria.</p>
+            </div>
           </div>
         )}
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl", getDrawerWidthClass())}>
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
+          <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
             <SheetHeader>
-              <SheetTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
-                {editingProcess ? "Editar Processo" : "Novo Processo"}
-              </SheetTitle>
-              <SheetDescription className="text-muted-foreground text-[11px] uppercase font-bold tracking-[0.2em] mt-1">
-                {editingProcess ? "Atualização de dados técnicos no ecossistema." : "Cadastro estruturado no ecossistema RGMJ."}
-              </SheetDescription>
+              <div className="flex items-center gap-5 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                    {editingProcess ? "Saneamento de Dossiê" : "Novo Processo"}
+                  </SheetTitle>
+                  <SheetDescription className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.25em] mt-1.5 opacity-60">
+                    {editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}
+                  </SheetDescription>
+                </div>
+              </div>
             </SheetHeader>
           </div>
           <ProcessForm 
