@@ -28,7 +28,12 @@ import {
   ChevronDown,
   FolderOpen,
   ExternalLink,
-  User
+  User,
+  History,
+  CalendarDays,
+  AlarmClock,
+  FilePlus,
+  DollarSign
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +52,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
@@ -162,6 +169,48 @@ export default function CasesPage() {
       default: return "sm:max-w-4xl"
     }
   }
+
+  const ProcessActionsMenu = ({ proc }: { proc: any }) => (
+    <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
+      <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
+      
+      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+        <History className="h-4 w-4 text-muted-foreground" /> Timeline do Processo
+      </DropdownMenuItem>
+      
+      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+        <CalendarDays className="h-4 w-4" /> Agendar Reunião/Atend.
+      </DropdownMenuItem>
+      
+      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
+        <AlarmClock className="h-4 w-4" /> Lançar Prazo Fatal
+      </DropdownMenuItem>
+      
+      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
+        <Gavel className="h-4 w-4" /> Agendar Audiência
+      </DropdownMenuItem>
+      
+      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+        <FilePlus className="h-4 w-4" /> Gerar Documento (IA)
+      </DropdownMenuItem>
+      
+      <DropdownMenuSeparator className="bg-white/5 my-1" />
+      
+      <DropdownMenuItem className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+        <DollarSign className="h-4 w-4" /> Evento Financeiro
+      </DropdownMenuItem>
+      
+      <DropdownMenuSeparator className="bg-white/5 my-1" />
+      
+      <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+        <FileText className="h-4 w-4 text-muted-foreground" /> Editar Dados
+      </DropdownMenuItem>
+      
+      <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
+        <Archive className="h-4 w-4" /> Arquivar Caso
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  )
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
@@ -326,17 +375,7 @@ export default function CasesPage() {
                                     <MoreVertical className="h-4 w-4" />
                                   </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
-                                  <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-                                    <Edit3 className="h-4 w-4 text-muted-foreground" /> EDITAR DOSSIÊ
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-                                    <Archive className="h-4 w-4 text-muted-foreground" /> ARQUIVAR
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg text-rose-500 focus:text-rose-400 hover:bg-rose-500/5">
-                                    <Trash2 className="h-4 w-4" /> EXCLUIR DOSSIÊ
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
+                                <ProcessActionsMenu proc={proc} />
                               </DropdownMenu>
                             </div>
                           </div>
@@ -402,17 +441,7 @@ export default function CasesPage() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
-                              <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-                                <Edit3 className="h-4 w-4 text-muted-foreground" /> EDITAR DOSSIÊ
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
-                                <Archive className="h-4 w-4 text-muted-foreground" /> ARQUIVAR
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg text-rose-500 focus:text-rose-400 hover:bg-rose-500/5">
-                                <Trash2 className="h-4 w-4" /> EXCLUIR DOSSIÊ
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
+                            <ProcessActionsMenu proc={proc} />
                           </DropdownMenu>
                           <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-all border border-white/5">
                             <ChevronRight className="h-4 w-4" />
