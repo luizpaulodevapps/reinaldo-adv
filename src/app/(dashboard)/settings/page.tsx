@@ -92,20 +92,6 @@ const MESSAGE_PLACEHOLDERS = [
   { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
 ]
 
-const CALENDAR_COLORS = [
-  { id: "1", name: "Lavanda (Padrão)", hex: "#a4bdfc" },
-  { id: "2", name: "Sálvia", hex: "#7ae7bf" },
-  { id: "3", name: "Uva", hex: "#dbadff" },
-  { id: "4", name: "Flamingo", hex: "#ff887c" },
-  { id: "5", name: "Banana", hex: "#fbd75b" },
-  { id: "6", name: "Tangerina", hex: "#ffb878" },
-  { id: "7", name: "Pavão", hex: "#46d6db" },
-  { id: "8", name: "Grafite", hex: "#e1e1e1" },
-  { id: "9", name: "Mirtilo", hex: "#5484ed" },
-  { id: "10", name: "Manjericão", hex: "#51b749" },
-  { id: "11", name: "Tomate (Crítico)", hex: "#dc2127" },
-]
-
 const DEFAULT_TEMPLATES = {
   "Audiência Física": {
     profileName: "AUDIÊNCIA PRESENCIAL RGMJ",
@@ -536,65 +522,81 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="seo" className="mt-0 space-y-10">
-          <Card className="glass border-primary/20 overflow-hidden shadow-2xl">
-            <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+        <TabsContent value="seo" className="mt-0">
+          <Card className="glass border-[#1a1f2e] bg-[#05070a] overflow-hidden shadow-2xl rounded-[2rem] border">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]/40 flex flex-row items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-xl">
-                  <CloudLightning className="h-6 w-6 text-primary" />
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-primary shadow-xl">
+                  <CloudLightning className="h-7 w-7 text-[#f5d030]" />
                 </div>
-                <div>
-                  <CardTitle className="text-xl font-black text-white uppercase tracking-tighter">Google Workspace Hub</CardTitle>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">INFRAESTRUTURA DE APIS RGMJ.</p>
+                <div className="space-y-1">
+                  <CardTitle className="text-xl font-black text-white uppercase tracking-tight">Google Workspace Hub</CardTitle>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-40">Infraestrutura de APIs RGMJ.</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#0d121f] border border-white/5 shadow-inner">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Gateway Ativo</span>
               </div>
             </CardHeader>
-            <CardContent className="p-10 space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CONTA MESTRE (ADMIN)</Label>
+            
+            <CardContent className="p-12 space-y-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Conta Mestre (Admin)</Label>
                   <div className="relative">
-                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                    <Input value={googleConfig.masterEmail} onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})} className="glass border-white/10 h-14 pl-12 text-white font-bold" />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CLIENT ID (OAUTH 2.0)</Label>
-                  <Input value={googleConfig.clientId} onChange={(e) => setGoogleConfig({...googleConfig, clientId: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-xs" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5">
-                {[
-                  { id: 'isCalendarActive', label: 'Google Calendar', icon: Calendar },
-                  { id: 'isTasksActive', label: 'Google Tasks', icon: ListTodo },
-                  { id: 'isDriveActive', label: 'Google Drive', icon: Database },
-                  { id: 'isMeetActive', label: 'Google Meet', icon: Video },
-                  { id: 'isDocsActive', label: 'Google Docs', icon: FileText },
-                ].map((service) => (
-                  <div key={service.id} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
-                        <service.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{service.label}</span>
-                    </div>
-                    <Switch 
-                      checked={(googleConfig as any)[service.id]} 
-                      onCheckedChange={(v) => setGoogleConfig({...googleConfig, [service.id]: v})}
-                      className="data-[state=checked]:bg-emerald-500"
+                    <Globe className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#f5d030]/40" />
+                    <Input 
+                      value={googleConfig.masterEmail} 
+                      onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})} 
+                      className="bg-black/40 border-white/5 h-16 pl-14 text-white font-bold text-sm rounded-xl focus:ring-1 focus:ring-primary/50" 
                     />
                   </div>
-                ))}
+                </div>
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Client ID (OAuth 2.0)</Label>
+                  <Input 
+                    value={googleConfig.clientId} 
+                    onChange={(e) => setGoogleConfig({...googleConfig, clientId: e.target.value})} 
+                    className="bg-black/40 border-white/5 h-16 text-white font-mono text-xs rounded-xl px-6 focus:ring-1 focus:ring-primary/50" 
+                  />
+                </div>
               </div>
 
-              <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] tracking-widest px-10 shadow-2xl">
-                <Save className="h-5 w-5 mr-3" /> SINCRONIZAR GATEWAY GOOGLE
-              </Button>
+              <div className="pt-10 border-t border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { id: 'isCalendarActive', label: 'Google Calendar', icon: Calendar },
+                    { id: 'isTasksActive', label: 'Google Tasks', icon: ListTodo },
+                    { id: 'isDriveActive', label: 'Google Drive', icon: Database },
+                    { id: 'isMeetActive', label: 'Google Meet', icon: Video },
+                    { id: 'isDocsActive', label: 'Google Docs', icon: FileText },
+                  ].map((service) => (
+                    <div key={service.id} className="p-6 rounded-[1.25rem] bg-[#0d121f]/40 border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-lg shadow-black/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                          <service.icon className="h-5 w-5" />
+                        </div>
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{service.label}</span>
+                      </div>
+                      <Switch 
+                        checked={(googleConfig as any)[service.id]} 
+                        onCheckedChange={(v) => setGoogleConfig({...googleConfig, [service.id]: v})}
+                        className="data-[state=checked]:bg-emerald-500 scale-110"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <Button 
+                  onClick={handleSaveGoogleConfig} 
+                  className="gold-gradient h-16 rounded-xl font-black uppercase text-xs tracking-[0.2em] px-12 shadow-2xl hover:scale-[1.02] transition-transform flex items-center gap-4 text-background"
+                >
+                  <Save className="h-5 w-5" /> Sincronizar Gateway Google
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
