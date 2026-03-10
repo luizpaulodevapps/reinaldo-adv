@@ -57,7 +57,7 @@ import {
 import { ClientForm } from "@/components/clients/client-form"
 import { ProcessForm } from "@/components/cases/process-form"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
