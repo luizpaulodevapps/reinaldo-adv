@@ -126,7 +126,6 @@ export default function LeadsPage() {
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   
-  // activeLead garante que sempre tenhamos a versão mais atual do lead que está no banco
   const activeLead = useMemo(() => {
     if (!selectedLead || !leads) return selectedLead
     return leads.find(l => l.id === selectedLead.id) || selectedLead
@@ -171,7 +170,6 @@ export default function LeadsPage() {
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id
     if (!user || !db || !leadId) return null
-    // Busca na coleção 'interviews' filtrando pelo leadId (clientId)
     return query(collection(db!, "interviews"), where("clientId", "==", leadId), orderBy("createdAt", "desc"))
   }, [db, user, activeLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
@@ -191,10 +189,8 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (currentTabIndex < 3) setActiveTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveTab(DOSSIER_TABS[currentTabIndex - 1]) }
-
-  const setActiveTab = (tab: string) => setActiveDossierTab(tab)
+  const handleNextTab = () => { if (currentTabIndex < 3) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (currentTabIndex > 0) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   useEffect(() => {
     if (activeLead) {
@@ -241,7 +237,10 @@ export default function LeadsPage() {
       const result = await generateCaseSummary({ caseId: activeLead.id, clientName: activeLead.name, caseTitle: activeLead.demandTitle || "Demanda Estratégica", caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas.", currentStatus: "Triagem", lastEvents: ["Entrevista"], nextDeadlines: ["Protocolo"], relatedParties: [activeLead.defendantName || "Réu"], financialStatus: "" })
       setStrategicSummary(result)
       toast({ title: "DNA Consolidado" })
-    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }) } finally { setIsGeneratingSummary(false) }
+    } catch (e) { 
+      console.error(e)
+      toast({ variant: "destructive", title: "Erro IA" }) 
+    } finally { setIsGeneratingSummary(false) }
   }
 
   const handleOpenLead = (lead: any) => { setSelectedLead(lead); setIsSheetOpen(true); }
@@ -276,7 +275,6 @@ export default function LeadsPage() {
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !activeLead || !user) return
-    // SALVA NA COLEÇÃO 'interviews'
     addDocumentNonBlocking(collection(db!, "interviews"), { 
       clientId: activeLead.id, 
       clientName: activeLead.name, 
@@ -291,7 +289,6 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp() 
     })
     
-    // Atualiza o status do lead se necessário
     if (activeLead.status === 'novo') {
       updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { 
         status: "atendimento", 
@@ -443,10 +440,19 @@ export default function LeadsPage() {
               <ScrollArea className="flex-1 bg-[#05070a]">
                 <div className="p-6 space-y-6 w-full max-w-[1400px] mx-auto pb-32">
                   <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-6">
-                    <TabsList className="bg-transparent border-b border-white/5 h-10 w-full justify-start rounded-none p-0 gap-8">
-                      {["overview", "entrevistas", "burocracia", "revisao"].map(tab => (
-                        <TabsTrigger key={tab} value={tab} className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none px-0 border-b-2 border-transparent data-[state=active]:border-primary transition-all tracking-[0.2em]">{tab.toUpperCase()} {tab === 'entrevistas' && leadInterviews && leadInterviews.length > 0 && `(${leadInterviews.length})`}</TabsTrigger>
-                      ))}
+                    <TabsList className="bg-white/5 border border-white/10 h-12 p-1 gap-1 w-full justify-start rounded-xl mb-6 shadow-inner">
+                      <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
+                        <LayoutGrid className="h-3.5 w-3.5" /> OVERVIEW
+                      </TabsTrigger>
+                      <TabsTrigger value="entrevistas" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
+                        <MessageSquare className="h-3.5 w-3.5" /> ENTREVISTAS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-1 border-0 h-4 px-1.5 text-[8px]">{leadInterviews.length}</Badge>}
+                      </TabsTrigger>
+                      <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
+                        <ClipboardList className="h-3.5 w-3.5" /> BUROCRACIA
+                      </TabsTrigger>
+                      <TabsTrigger value="revisao" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
+                        <ShieldCheck className="h-3.5 w-3.5" /> REVISÃO
+                      </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="animate-in fade-in duration-500 outline-none w-full">
@@ -464,7 +470,9 @@ export default function LeadsPage() {
 
                     <TabsContent value="entrevistas" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
                       <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-white/5 pb-3"><h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3></div>
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                          <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Nova Captura Técnica</h3>
+                        </div>
                         <div className="grid grid-cols-4 gap-4">
                           {templates?.map(t => (
                             <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-white/10 text-white font-black uppercase text-[10px] h-16 gap-4 rounded-xl justify-start px-5 hover:border-primary/40 hover:bg-primary/5 transition-all group border-2">
