@@ -60,7 +60,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   const [isSavingClient, setIsSavingClient] = useState(false)
   const [isAwaitingNumber, setIsAwaitingNumber] = useState(false)
   const [loadingDefendantCep, setLoadingDefendantCep] = useState(false)
-  const [availableVaras, setAvailableVaras] = useState<string[]>([])
+  const [availableVaras, setAvailableVaras] = useState<any[]>([])
   
   const courtSearchRef = useRef<HTMLDivElement>(null)
   const db = useFirestore()
@@ -93,28 +93,6 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     strategyNotes: ""
   })
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData(prev => ({
-        ...prev,
-        ...initialData
-      }))
-      if (initialData.court) {
-        setCourtSearchTerm(initialData.court)
-      }
-    }
-  }, [initialData])
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (courtSearchRef.current && !courtSearchRef.current.contains(event.target as Node)) {
-        setIsCourtSearchOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
   const clientsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "clients"), orderBy("name", "asc"))
@@ -126,6 +104,30 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     return query(collection(db, "courts"), orderBy("name", "asc"))
   }, [db])
   const { data: dbCourts } = useCollection(courtsQuery)
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData
+      }))
+      if (initialData.court) {
+        setCourtSearchTerm(initialData.court)
+        const court = dbCourts?.find(c => c.name === initialData.court)
+        if (court) setAvailableVaras(court.varas || [])
+      }
+    }
+  }, [initialData, dbCourts])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (courtSearchRef.current && !courtSearchRef.current.contains(event.target as Node)) {
+        setIsCourtSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const filteredClients = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return []
@@ -140,11 +142,8 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     return (dbCourts || []).filter(c => {
       const matchesText = c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
                          c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
-      
-      // Filtragem por área contextual
       const areas = c.legalAreas || []
       const matchesArea = areas.length === 0 || areas.includes(formData.caseType)
-      
       return matchesText && matchesArea
     })
   }, [courtSearchTerm, dbCourts, formData.caseType])
@@ -523,8 +522,13 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                       <Select value={formData.vara} onValueChange={(v) => handleInputChange("vara", v)}>
                         <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-bold uppercase"><SelectValue placeholder="SELECIONE A VARA" /></SelectTrigger>
                         <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                          {availableVaras.map(v => (
-                            <SelectItem key={v} value={v}>{v}</SelectItem>
+                          {availableVaras.map((v: any) => (
+                            <SelectItem key={v.name} value={v.name}>
+                              <div className="flex flex-col items-start leading-none gap-1 py-1">
+                                <span className="font-bold text-xs">{v.name}</span>
+                                {v.phone && <span className="text-[9px] opacity-50 font-black">TEL: {v.phone}</span>}
+                              </div>
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

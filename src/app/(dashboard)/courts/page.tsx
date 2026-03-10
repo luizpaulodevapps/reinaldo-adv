@@ -26,7 +26,8 @@ import {
   Scale,
   Gavel,
   ShieldCheck,
-  Tag
+  Tag,
+  Phone
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -34,7 +35,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
-import { cn, maskCEP } from "@/lib/utils"
+import { cn, maskCEP, maskPhone } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 
 const LEGAL_AREAS = ["Trabalhista", "Cível", "Criminal", "Previdenciário", "Tributário", "Família", "Empresarial"]
@@ -44,7 +45,7 @@ export default function CourtsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCourt, setEditingCourt] = useState<any>(null)
   const [loadingCep, setLoadingCep] = useState(false)
-  const [newVara, setNewVara] = useState("")
+  const [newVara, setNewVara] = useState({ name: "", phone: "", notes: "" })
 
   const [formData, setFormData] = useState<any>({
     name: "",
@@ -104,23 +105,29 @@ export default function CourtsPage() {
   }
 
   const handleAddVara = () => {
-    if (!newVara.trim()) return
-    const v = newVara.toUpperCase().trim()
-    if (formData.varas.includes(v)) {
+    if (!newVara.name.trim()) return
+    const v = { 
+      name: newVara.name.toUpperCase().trim(),
+      phone: newVara.phone.trim(),
+      notes: newVara.notes.trim()
+    }
+    
+    if (formData.varas.some((item: any) => item.name === v.name)) {
       toast({ variant: "destructive", title: "Vara já cadastrada" })
       return
     }
+    
     setFormData((prev: any) => ({
       ...prev,
       varas: [...prev.varas, v]
     }))
-    setNewVara("")
+    setNewVara({ name: "", phone: "", notes: "" })
   }
 
-  const handleRemoveVara = (v: string) => {
+  const handleRemoveVara = (idx: number) => {
     setFormData((prev: any) => ({
       ...prev,
-      varas: prev.varas.filter((item: string) => item !== v)
+      varas: prev.varas.filter((_: any, i: number) => i !== idx)
     }))
   }
 
@@ -270,8 +277,10 @@ export default function CourtsPage() {
                   <div className="space-y-2">
                     <p className="text-[9px] font-black text-primary uppercase tracking-widest">Unidades Internas ({court.varas.length})</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {court.varas.slice(0, 5).map((v: string) => (
-                        <Badge key={v} variant="secondary" className="bg-white/5 text-[8px] font-black border-white/5 uppercase">{v}</Badge>
+                      {court.varas.slice(0, 5).map((v: any, i: number) => (
+                        <Badge key={i} variant="secondary" className="bg-white/5 text-[8px] font-black border-white/5 uppercase">
+                          {v.name} {v.phone && `• ${v.phone}`}
+                        </Badge>
                       ))}
                       {court.varas.length > 5 && <span className="text-[8px] text-muted-foreground font-black">+ {court.varas.length - 5} OUTRAS</span>}
                     </div>
@@ -301,7 +310,7 @@ export default function CourtsPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
@@ -313,7 +322,7 @@ export default function CourtsPage() {
             </DialogHeader>
           </div>
 
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="max-h-[65vh]">
             <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
               
               <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-4 shadow-inner">
@@ -374,30 +383,59 @@ export default function CourtsPage() {
                 </div>
               </div>
 
+              {/* GESTÃO DE VARAS REFILTRADA */}
               <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 shadow-inner">
                 <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
                   <Library className="h-4 w-4" /> Unidades Judiciárias (Varas)
                 </Label>
-                <div className="flex gap-3">
-                  <Input 
-                    value={newVara} 
-                    onChange={(e) => setNewVara(e.target.value)} 
-                    placeholder="EX: 45ª VARA DO TRABALHO"
-                    className="glass border-primary/30 h-12 text-white font-bold"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddVara()}
-                  />
-                  <Button onClick={handleAddVara} className="h-12 px-6 gold-gradient text-background font-black uppercase text-[10px] rounded-xl">
-                    <ListPlus className="h-4 w-4 mr-2" /> SOMAR
-                  </Button>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-1 space-y-1.5">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase">Nome / Número *</Label>
+                    <Input 
+                      value={newVara.name} 
+                      onChange={(e) => setNewVara({...newVara, name: e.target.value})} 
+                      placeholder="EX: 45ª VARA"
+                      className="glass border-primary/30 h-11 text-white font-bold"
+                    />
+                  </div>
+                  <div className="md:col-span-1 space-y-1.5">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase">Telefone de Contato</Label>
+                    <Input 
+                      value={newVara.phone} 
+                      onChange={(e) => setNewVara({...newVara, phone: maskPhone(e.target.value)})} 
+                      placeholder="(11) 0000-0000"
+                      className="glass border-primary/30 h-11 text-white font-bold"
+                    />
+                  </div>
+                  <div className="md:col-span-1 flex items-end">
+                    <Button onClick={handleAddVara} className="h-11 w-full gold-gradient text-background font-black uppercase text-[10px] rounded-xl shadow-lg">
+                      <ListPlus className="h-4 w-4 mr-2" /> SOMAR VARA
+                    </Button>
+                  </div>
+                  <div className="md:col-span-3 space-y-1.5">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase">Notas (E-mail, Balcão Virtual, etc)</Label>
+                    <Input 
+                      value={newVara.notes} 
+                      onChange={(e) => setNewVara({...newVara, notes: e.target.value})} 
+                      placeholder="EX: BALCAO.VIRTUAL@TRT2.JUS.BR"
+                      className="glass border-primary/30 h-11 text-white text-xs"
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {formData.varas.map((v: string) => (
-                    <Badge key={v} className="bg-primary text-background font-black uppercase text-[9px] py-1.5 px-3 gap-2 rounded-lg flex items-center">
-                      {v} <button onClick={() => handleRemoveVara(v)} className="hover:text-rose-700 transition-colors"><X className="h-3 w-3" /></button>
+
+                <div className="flex flex-wrap gap-2 pt-4">
+                  {formData.varas.map((v: any, idx: number) => (
+                    <Badge key={idx} className="bg-primary text-background font-black uppercase text-[9px] py-2 px-4 gap-4 rounded-xl flex items-center shadow-xl border-0">
+                      <div className="flex flex-col text-left leading-tight">
+                        <span className="font-black">{v.name}</span>
+                        {v.phone && <span className="text-[7px] opacity-80 mt-0.5">TEL: {v.phone}</span>}
+                      </div>
+                      <button onClick={() => handleRemoveVara(idx)} className="hover:text-rose-700 transition-colors bg-black/10 p-1.5 rounded-full"><X className="h-3 w-3" /></button>
                     </Badge>
                   ))}
                   {formData.varas.length === 0 && (
-                    <p className="text-[10px] text-primary/40 uppercase font-black tracking-widest italic py-2">Nenhuma unidade interna mapeada.</p>
+                    <p className="text-[10px] text-primary/40 uppercase font-black tracking-widest italic py-4">Nenhuma unidade interna mapeada para este prédio.</p>
                   )}
                 </div>
               </div>

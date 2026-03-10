@@ -79,7 +79,7 @@ export function LeadForm({
   const [courtSearchTerm, setCourtSearchTerm] = useState("")
   const [isCourtSearchOpen, setIsCourtSearchOpen] = useState(false)
   const [loadingCep, setLoadingCep] = useState<"client" | "defendant" | "court" | null>(null)
-  const [availableVaras, setAvailableVaras] = useState<string[]>([])
+  const [availableVaras, setAvailableVaras] = useState<any[]>([])
 
   const searchRef = useRef<HTMLDivElement>(null)
   const courtSearchRef = useRef<HTMLDivElement>(null)
@@ -132,7 +132,6 @@ export function LeadForm({
     value: ""
   })
 
-  // Listener para fechar dropdowns ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -167,11 +166,8 @@ export function LeadForm({
     return (dbCourts || []).filter(c => {
       const matchesText = c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
                          c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
-      
-      // Filtragem por área contextual
       const areas = c.legalAreas || []
       const matchesArea = areas.length === 0 || areas.includes(formData.type)
-      
       return matchesText && matchesArea
     })
   }, [courtSearchTerm, dbCourts, formData.type])
@@ -182,9 +178,11 @@ export function LeadForm({
       setSearchTerm(initialData.name || "")
       if (initialData.court) {
         setCourtSearchTerm(initialData.court)
+        const court = dbCourts?.find(c => c.name === initialData.court)
+        if (court) setAvailableVaras(court.varas || [])
       }
     }
-  }, [initialData])
+  }, [initialData, dbCourts])
 
   const handleCepBlur = async (type: "client" | "defendant" | "court") => {
     let cep = ""
@@ -514,8 +512,13 @@ export function LeadForm({
                         <SelectValue placeholder="SELECIONE A VARA" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                        {availableVaras.map(v => (
-                          <SelectItem key={v} value={v}>{v}</SelectItem>
+                        {availableVaras.map((v: any) => (
+                          <SelectItem key={v.name} value={v.name}>
+                            <div className="flex flex-col items-start leading-none gap-1 py-1">
+                              <span className="font-bold text-xs">{v.name}</span>
+                              {v.phone && <span className="text-[9px] opacity-50 font-black">TEL: {v.phone}</span>}
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
