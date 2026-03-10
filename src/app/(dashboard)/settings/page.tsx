@@ -179,7 +179,7 @@ function SettingsContent() {
   })
 
   const [googleConfig, setGoogleConfig] = useState({
-    masterEmail: "financeiro@rgmj.com.br",
+    masterEmail: "",
     rootFolderId: "",
     clientId: "",
     isDriveActive: true,
@@ -541,19 +541,18 @@ function SettingsContent() {
             </CardHeader>
             
             <CardContent className="p-12 space-y-12">
-              {/* Box de Instruções URI */}
               <div className="p-8 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-6">
                 <div className="flex items-center gap-3">
                   <ShieldAlert className="h-5 w-5 text-amber-500" />
                   <h4 className="text-sm font-black text-white uppercase tracking-widest">URIs de Redirecionamento Autorizadas</h4>
                 </div>
                 <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                  Para o sincronismo funcionar, você deve cadastrar estas URLs no <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-primary underline">Google Cloud Console</a> dentro do seu Client ID OAuth 2.0:
+                  Cadastre estas URLs no <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-primary underline">Google Cloud Console</a> para habilitar o rito de autenticação:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
                     "http://localhost:9002",
-                    "https://reinaldo-adv.web.app"
+                    "https://reinaldo-adv.vercel.app"
                   ].map(uri => (
                     <div key={uri} className="flex items-center justify-between p-4 rounded-xl bg-black/40 border border-white/10 group">
                       <code className="text-[10px] text-primary font-black">{uri}</code>
