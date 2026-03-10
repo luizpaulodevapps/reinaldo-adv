@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -5,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { 
   Search, 
@@ -31,7 +31,7 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
+import { cn, maskPhone, maskCEP, maskCPFOrCNPJ } from "@/lib/utils"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 
@@ -265,7 +265,12 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-black uppercase text-muted-foreground">WhatsApp *</Label>
-                    <Input className={inputClass} value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
+                    <Input 
+                      className={inputClass} 
+                      value={formData.phone} 
+                      onChange={(e) => handleInputChange("phone", maskPhone(e.target.value))} 
+                      placeholder="(00) 00000-0000"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-black uppercase text-muted-foreground">E-mail</Label>
@@ -279,7 +284,12 @@ export function LeadForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-black text-muted-foreground uppercase">CPF / CNPJ</Label>
-                    <Input className={cn(inputClass, "font-mono")} value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
+                    <Input 
+                      className={cn(inputClass, "font-mono")} 
+                      value={formData.cpf} 
+                      onChange={(e) => handleInputChange("cpf", maskCPFOrCNPJ(e.target.value))} 
+                      placeholder="000.000.000-00"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-black text-muted-foreground uppercase">RG</Label>
@@ -288,6 +298,30 @@ export function LeadForm({
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-black text-muted-foreground uppercase">Profissão</Label>
                     <Input className={inputClass} value={formData.profession} onChange={(e) => handleInputChange("profession", e.target.value.toUpperCase())} />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">CEP</Label>
+                    <div className="relative">
+                      <Input 
+                        className={cn(inputClass, "font-mono")} 
+                        value={formData.zipCode} 
+                        onChange={(e) => handleInputChange("zipCode", maskCEP(e.target.value))} 
+                        onBlur={() => handleCepBlur("client")}
+                        placeholder="00000-000"
+                      />
+                      {loadingCep === 'client' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 space-y-1.5">
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Endereço</Label>
+                    <Input className={inputClass} value={formData.address} onChange={(e) => handleInputChange("address", e.target.value.toUpperCase())} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-black text-muted-foreground uppercase">Nº</Label>
+                    <Input className={inputClass} value={formData.number} onChange={(e) => handleInputChange("number", e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -304,7 +338,36 @@ export function LeadForm({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-black text-muted-foreground uppercase">CNPJ / CPF</Label>
-                  <Input className={cn(inputClass, "h-12 font-mono")} value={formData.defendantDocument} onChange={(e) => handleInputChange("defendantDocument", e.target.value)} />
+                  <Input 
+                    className={cn(inputClass, "h-12 font-mono")} 
+                    value={formData.defendantDocument} 
+                    onChange={(e) => handleInputChange("defendantDocument", maskCPFOrCNPJ(e.target.value))} 
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">CEP</Label>
+                  <div className="relative">
+                    <Input 
+                      className={cn(inputClass, "font-mono")} 
+                      value={formData.defendantZipCode} 
+                      onChange={(e) => handleInputChange("defendantZipCode", maskCEP(e.target.value))} 
+                      onBlur={() => handleCepBlur("defendant")}
+                      placeholder="00000-000"
+                    />
+                    {loadingCep === 'defendant' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                  </div>
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Endereço Réu</Label>
+                  <Input className={inputClass} value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase">Nº</Label>
+                  <Input className={inputClass} value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} />
                 </div>
               </div>
             </div>

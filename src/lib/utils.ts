@@ -6,6 +6,61 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Máscara para Telefone/WhatsApp
+ */
+export function maskPhone(value: string) {
+  const cleanValue = value.replace(/\D/g, "").slice(0, 11);
+  if (cleanValue.length <= 10) {
+    return cleanValue.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+  }
+  return cleanValue.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+}
+
+/**
+ * Máscara para CPF
+ */
+export function maskCPF(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+/**
+ * Máscara para CNPJ
+ */
+export function maskCNPJ(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 14)
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
+/**
+ * Máscara para CEP
+ */
+export function maskCEP(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 8)
+    .replace(/(\d{5})(\d{1,3})/, "$1-$2");
+}
+
+/**
+ * Máscara Dinâmica CPF ou CNPJ
+ */
+export function maskCPFOrCNPJ(value: string) {
+  const cleanValue = value.replace(/\D/g, "");
+  if (cleanValue.length <= 11) return maskCPF(value);
+  return maskCNPJ(value);
+}
+
+/**
  * Valida matematicamente um CPF (Dígitos Verificadores)
  */
 export function validateCPF(cpf: string): boolean {

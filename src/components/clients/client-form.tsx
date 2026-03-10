@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Search, CheckCircle2, ShieldAlert, User, Building2, MapPin, Wallet, Fingerprint } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { cn, validateCPF, validateCNPJ } from "@/lib/utils"
+import { cn, maskPhone, maskCEP, maskCPFOrCNPJ } from "@/lib/utils"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query } from "firebase/firestore"
 
@@ -68,7 +68,6 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
       setFormData(prev => ({
         ...prev,
         ...initialData,
-        // Garante que o nome seja mapeado corretamente se vier de formatos diferentes
         firstName: initialData.firstName || initialData.name || "",
         cpf: initialData.cpf || initialData.documentNumber || ""
       }))
@@ -104,7 +103,7 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
   }
 
   const handleSubmit = () => {
-    if (!formData.firstName && !formData.lastName) {
+    if (!formData.firstName) {
       toast({ variant: "destructive", title: "Dados Obrigatórios", description: "Nome é um pilar do rito RGMJ." })
       return
     }
@@ -154,7 +153,12 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
                 </div>
                 <div className="space-y-2">
                   <Label className={labelMini}>CPF / CNPJ *</Label>
-                  <Input className={cn(inputClass, "font-mono")} value={formData.cpf} onChange={(e) => handleInputChange("cpf", e.target.value)} />
+                  <Input 
+                    className={cn(inputClass, "font-mono")} 
+                    value={formData.cpf} 
+                    onChange={(e) => handleInputChange("cpf", maskCPFOrCNPJ(e.target.value))} 
+                    placeholder="000.000.000-00"
+                  />
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label className={labelMini}>Nome Completo / Razão Social *</Label>
@@ -162,7 +166,12 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
                 </div>
                 <div className="space-y-2">
                   <Label className={labelMini}>WhatsApp / Celular</Label>
-                  <Input className={inputClass} value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
+                  <Input 
+                    className={inputClass} 
+                    value={formData.phone} 
+                    onChange={(e) => handleInputChange("phone", maskPhone(e.target.value))} 
+                    placeholder="(00) 00000-0000"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className={labelMini}>E-mail Principal</Label>
@@ -181,7 +190,13 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div className="md:col-span-1 space-y-2">
                   <Label className={labelMini}>CEP {loadingCep && <Loader2 className="h-3 w-3 animate-spin inline ml-2" />}</Label>
-                  <Input className={cn(inputClass, "font-mono")} value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} onBlur={handleCepBlur} />
+                  <Input 
+                    className={cn(inputClass, "font-mono")} 
+                    value={formData.zipCode} 
+                    onChange={(e) => handleInputChange("zipCode", maskCEP(e.target.value))} 
+                    onBlur={handleCepBlur} 
+                    placeholder="00000-000"
+                  />
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label className={labelMini}>Logradouro</Label>
