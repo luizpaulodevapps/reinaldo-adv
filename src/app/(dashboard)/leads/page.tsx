@@ -1171,7 +1171,7 @@ export default function LeadsPage() {
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}>
         <SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full">
           <SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none">
-            <SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Saneamento de Dossiê</SheetTitle>
+            <SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0">
             {selectedLead && (

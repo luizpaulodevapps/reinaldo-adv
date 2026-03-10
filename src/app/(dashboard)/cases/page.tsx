@@ -165,7 +165,6 @@ export default function CasesPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
-      {/* BREADCRUMBS & HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
@@ -200,7 +199,6 @@ export default function CasesPage() {
         </div>
       </div>
 
-      {/* METRICS PANEL */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="glass border-white/5 relative overflow-hidden h-32 flex flex-col justify-center shadow-xl rounded-2xl group hover:border-primary/20 transition-all">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/50 transition-all" />
@@ -235,7 +233,6 @@ export default function CasesPage() {
         </Card>
       </div>
 
-      {/* TABS & VIEW TOGGLE */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-2">
         <Tabs value={activeArea} onValueChange={setActiveArea} className="w-full md:w-auto">
           <TabsList className="bg-transparent h-10 p-0 gap-8 justify-start">
@@ -271,7 +268,6 @@ export default function CasesPage() {
         </div>
       </div>
 
-      {/* CONTENT AREA */}
       <div className="space-y-4">
         {isLoading ? (
           <div className="py-32 flex flex-col items-center justify-center space-y-4">
@@ -332,7 +328,7 @@ export default function CasesPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2">
                                   <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
-                                    <Edit3 className="h-4 w-4" /> Editar Dossiê
+                                    <Edit3 className="h-4 w-4" /> Editar Dados
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
                                     <Archive className="h-4 w-4" /> Arquivar
@@ -408,7 +404,7 @@ export default function CasesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white rounded-xl p-2">
                               <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
-                                <Edit3 className="h-4 w-4" /> Editar Dossiê
+                                <Edit3 className="h-4 w-4" /> Editar Dados
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest cursor-pointer h-10 rounded-lg">
                                 <Archive className="h-4 w-4" /> Arquivar
@@ -450,9 +446,9 @@ export default function CasesPage() {
                 </div>
                 <div>
                   <SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                    {editingProcess ? "Saneamento de Dossiê" : "Novo Processo"}
+                    {editingProcess ? "Gestão Estratégica" : "Novo Processo"}
                   </SheetTitle>
-                  <SheetDescription className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.25em] mt-1.5 opacity-60">
+                  <SheetDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-60">
                     {editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}
                   </SheetDescription>
                 </div>
