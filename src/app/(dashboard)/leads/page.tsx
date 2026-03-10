@@ -187,10 +187,8 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (canGoNext) setActiveTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (canGoBack) setActiveTab(DOSSIER_TABS[currentTabIndex - 1]) }
-
-  const setActiveTab = (tab: string) => setActiveDossierTab(tab)
+  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   useEffect(() => {
     if (activeLead) {
@@ -536,7 +534,7 @@ export default function LeadsPage() {
       {/* DIALOGS */}
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl space-y-0">
+          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl space-y-0 text-left">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><FileSearch className="h-5 w-5 text-primary" /></div>
               <div>
@@ -563,7 +561,7 @@ export default function LeadsPage() {
 
       <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5">
+          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 text-left">
             <DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle>
             <DialogDescription className="sr-only">Rito de captura de DNA jurídico RGMJ.</DialogDescription>
           </DialogHeader>
@@ -573,7 +571,7 @@ export default function LeadsPage() {
       
       <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none">
+          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none text-left">
             <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
             <DialogDescription className="sr-only">Conversão estratégica de Lead em Processo Judicial.</DialogDescription>
           </DialogHeader>
@@ -586,35 +584,39 @@ export default function LeadsPage() {
       
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
-            <Clock className="h-6 w-6 text-amber-500" />
-            <div>
-              <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle>
-              <DialogDescription className="sr-only">Configure a data e hora do rito de triagem.</DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
-                <Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} />
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left">
+              <Clock className="h-6 w-6 text-amber-500" />
+              <div>
+                <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle>
+                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure a data e hora do rito de triagem.</DialogDescription>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
-                <Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
-              <Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}>
-                <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[#0d121f] text-white">
-                  <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
-                  <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            </DialogHeader>
           </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
+                  <Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
+                  <Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
+                <Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}>
+                  <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
+                    <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </ScrollArea>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
             <Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>

@@ -633,7 +633,7 @@ export default function CasesPage() {
                           <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary bg-primary/5 uppercase tracking-[0.15em] px-3 h-6">
                             {proc.caseType?.toUpperCase() || "GERAL"}
                           </Badge>
-                          <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-tight truncate">{proc.processNumber}</span>
+                          <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest truncate">{proc.processNumber}</span>
                         </div>
                         <div>
                           <h3 className="text-base font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight truncate">
@@ -682,19 +682,18 @@ export default function CasesPage() {
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
-          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex flex-row items-center justify-between shadow-xl space-y-0">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex flex-row items-center justify-between shadow-xl space-y-0">
             <div className="flex items-center gap-6">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
                 <Scale className="h-7 w-7" />
               </div>
-              <div>
+              <DialogHeader className="space-y-0 text-left">
                 <DialogTitle className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</DialogTitle>
-                <DialogDescription className="sr-only">Visualização detalhada do rito processual.</DialogDescription>
-                <div className="flex items-center gap-3 mt-2">
+                <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-2 flex items-center gap-3">
                   <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
                   <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest">{viewingProcess?.processNumber}</span>
-                </div>
-              </div>
+                </DialogDescription>
+              </DialogHeader>
             </div>
             <div className="flex gap-3">
               <Button onClick={() => handleOpenEdit(viewingProcess)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl gap-2 hover:bg-primary hover:text-background transition-all">
@@ -704,7 +703,7 @@ export default function CasesPage() {
                 <X className="h-6 w-6" />
               </Button>
             </div>
-          </DialogHeader>
+          </div>
 
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="resumo" className="h-full flex flex-col">
@@ -884,43 +883,47 @@ export default function CasesPage() {
       {/* MODAL: AGENDAR REUNIÃO */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
-            <CalendarDays className="h-6 w-6 text-emerald-500" />
-            <div>
-              <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
-              <DialogDescription className="sr-only">Configure os detalhes da reunião estratégica.</DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="p-8 space-y-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Pauta</Label>
-              <Input className="glass h-12 text-white uppercase font-bold" value={meetingData.title} onChange={e => setMeetingData({...meetingData, title: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
-                <Input type="date" className="glass h-12 text-white" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} />
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
+              <CalendarDays className="h-6 w-6 text-emerald-500" />
+              <div>
+                <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
+                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure os detalhes da reunião estratégica.</DialogDescription>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
-                <Input type="time" className="glass h-12 text-white" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
-              <Select value={meetingData.type} onValueChange={v => setMeetingData({...meetingData, type: v})}>
-                <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[#0d121f] text-white">
-                  <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
-                  <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Notas Táticas</Label>
-              <Textarea className="glass min-h-[100px] text-white" value={meetingData.notes} onChange={e => setMeetingData({...meetingData, notes: e.target.value})} />
-            </div>
+            </DialogHeader>
           </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Pauta</Label>
+                <Input className="glass h-12 text-white uppercase font-bold" value={meetingData.title} onChange={e => setMeetingData({...meetingData, title: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
+                  <Input type="date" className="glass h-12 text-white" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
+                  <Input type="time" className="glass h-12 text-white" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
+                <Select value={meetingData.type} onValueChange={v => setMeetingData({...meetingData, type: v})}>
+                  <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
+                    <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Notas Táticas</Label>
+                <Textarea className="glass min-h-[100px] text-white" value={meetingData.notes} onChange={e => setMeetingData({...meetingData, notes: e.target.value})} />
+              </div>
+            </div>
+          </ScrollArea>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
             <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
@@ -931,27 +934,31 @@ export default function CasesPage() {
       {/* MODAL: LANÇAR PRAZO FATAL */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
-            <AlarmClock className="h-6 w-6 text-rose-500" />
-            <div>
-              <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
-              <DialogDescription className="sr-only">Registro de prazo judicial preclusivo.</DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="p-8 space-y-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Título do Ato</Label>
-              <Input placeholder="EX: PRAZO PARA RÉPLICA" className="glass h-12 text-white uppercase font-bold" value={deadlineData.title} onChange={e => setDeadlineData({...deadlineData, title: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Vencimento (Termo Final)</Label>
-              <Input type="date" className="glass h-12 text-white" value={deadlineData.date} onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Descrição da Providência</Label>
-              <Textarea className="glass min-h-[100px] text-white" value={deadlineData.description} onChange={e => setDeadlineData({...deadlineData, description: e.target.value})} />
-            </div>
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
+              <AlarmClock className="h-6 w-6 text-rose-500" />
+              <div>
+                <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
+                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Registro de prazo judicial preclusivo.</DialogDescription>
+              </div>
+            </DialogHeader>
           </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Título do Ato</Label>
+                <Input placeholder="EX: PRAZO PARA RÉPLICA" className="glass h-12 text-white uppercase font-bold" value={deadlineData.title} onChange={e => setDeadlineData({...deadlineData, title: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Vencimento (Termo Final)</Label>
+                <Input type="date" className="glass h-12 text-white" value={deadlineData.date} onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Descrição da Providência</Label>
+                <Textarea className="glass min-h-[100px] text-white" value={deadlineData.description} onChange={e => setDeadlineData({...deadlineData, description: e.target.value})} />
+              </div>
+            </div>
+          </ScrollArea>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
             <Button onClick={handleLaunchDeadline} className="bg-rose-600 hover:bg-rose-500 text-white font-black uppercase text-[10px] px-8 h-12 rounded-xl">Registrar Prazo</Button>
@@ -962,43 +969,47 @@ export default function CasesPage() {
       {/* MODAL: AGENDAR AUDIÊNCIA */}
       <Dialog open={isHearingOpen} onOpenChange={setIsHearingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
-            <Gavel className="h-6 w-6 text-amber-500" />
-            <div>
-              <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
-              <DialogDescription className="sr-only">Cadastro de pauta judiciária para o caso.</DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label>
-                <Select value={hearingData.type} onValueChange={v => setHearingData({...hearingData, type: v})}>
-                  <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[#0d121f] text-white">
-                    <SelectItem value="UNA">UNA</SelectItem>
-                    <SelectItem value="Instrução">INSTRUÇÃO</SelectItem>
-                    <SelectItem value="Conciliação">CONCILIAÇÃO</SelectItem>
-                    <SelectItem value="Virtual">VIRTUAL</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
+              <Gavel className="h-6 w-6 text-amber-500" />
+              <div>
+                <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
+                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Cadastro de pauta judiciária para o caso.</DialogDescription>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
-                <Input type="date" className="glass h-12 text-white" value={hearingData.date} onChange={e => setHearingData({...hearingData, date: e.target.value})} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Horário</Label>
-                <Input type="time" className="glass h-12 text-white" value={hearingData.time} onChange={e => setHearingData({...hearingData, time: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Local / Juízo</Label>
-                <Input className="glass h-12 text-white uppercase font-bold" value={hearingData.location} onChange={e => setHearingData({...hearingData, location: e.target.value})} />
-              </div>
-            </div>
+            </DialogHeader>
           </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label>
+                  <Select value={hearingData.type} onValueChange={v => setHearingData({...hearingData, type: v})}>
+                    <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="UNA">UNA</SelectItem>
+                      <SelectItem value="Instrução">INSTRUÇÃO</SelectItem>
+                      <SelectItem value="Conciliação">CONCILIAÇÃO</SelectItem>
+                      <SelectItem value="Virtual">VIRTUAL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
+                  <Input type="date" className="glass h-12 text-white" value={hearingData.date} onChange={e => setHearingData({...hearingData, date: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Horário</Label>
+                  <Input type="time" className="glass h-12 text-white" value={hearingData.time} onChange={e => setHearingData({...hearingData, time: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Local / Juízo</Label>
+                  <Input className="glass h-12 text-white uppercase font-bold" value={hearingData.location} onChange={e => setHearingData({...hearingData, location: e.target.value})} />
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsHearingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
             <Button onClick={handleScheduleHearing} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl shadow-xl">Confirmar Pauta</Button>
@@ -1009,80 +1020,84 @@ export default function CasesPage() {
       {/* MODAL: AGENDAR DILIGÊNCIA (TASK) */}
       <Dialog open={isDiligenceOpen} onOpenChange={setIsDiligenceOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
-          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between space-y-0">
-            <div className="flex items-center gap-4">
-              <ListTodo className="h-6 w-6 text-blue-400" />
-              <div>
-                <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
-                <DialogDescription className="sr-only">Atribuição de tarefa operacional ou externa.</DialogDescription>
-                {googleConfig?.isTasksActive && (
-                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                    <CloudLightning className="h-2.5 w-2.5" /> Sincronismo Google Tasks Ativo
-                  </p>
-                )}
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+              <div className="flex items-center gap-4">
+                <ListTodo className="h-6 w-6 text-blue-400" />
+                <div>
+                  <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
+                  <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground mt-1">Atribuição de tarefa operacional ou externa.</DialogDescription>
+                  {googleConfig?.isTasksActive && (
+                    <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                      <CloudLightning className="h-2.5 w-2.5" /> Sincronismo Google Tasks Ativo
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          </DialogHeader>
-          <div className="p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Diligência</Label>
-                <Input placeholder="EX: RETIRADA DE ALVARÁ" className="glass h-12 text-white uppercase font-bold" value={diligenceData.title} onChange={e => setDiligenceData({...diligenceData, title: e.target.value})} />
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Título da Diligência</Label>
+                  <Input placeholder="EX: RETIRADA DE ALVARÁ" className="glass h-12 text-white uppercase font-bold" value={diligenceData.title} onChange={e => setDiligenceData({...diligenceData, title: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
+                  <Select value={diligenceData.type} onValueChange={v => setDiligenceData({...diligenceData, type: v})}>
+                    <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="Física">🏢 FÍSICA / PRESENCIAL</SelectItem>
+                      <SelectItem value="Virtual">🖥️ VIRTUAL / DIGITAL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Data Limite</Label>
+                  <Input type="date" className="glass h-12 text-white" value={diligenceData.date} onChange={e => setDiligenceData({...diligenceData, date: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Horário</Label>
+                  <Input type="time" className="glass h-12 text-white" value={diligenceData.time} onChange={e => setDiligenceData({...diligenceData, time: e.target.value})} />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
-                <Select value={diligenceData.type} onValueChange={v => setDiligenceData({...diligenceData, type: v})}>
-                  <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Responsável / Executor</Label>
+                <Select value={diligenceData.assigneeId} onValueChange={(v) => setDiligenceData({...diligenceData, assigneeId: v})}>
+                  <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue placeholder="Selecione o advogado ou assistente" /></SelectTrigger>
                   <SelectContent className="bg-[#0d121f] text-white">
-                    <SelectItem value="Física">🏢 FÍSICA / PRESENCIAL</SelectItem>
-                    <SelectItem value="Virtual">🖥️ VIRTUAL / DIGITAL</SelectItem>
+                    <SelectItem value={user?.uid || "self"}>DR(A). {user?.displayName?.toUpperCase() || "EU MESMO"}</SelectItem>
+                    {staffMembers?.filter(s => s.id !== user?.uid).map(staff => (
+                      <SelectItem key={staff.id} value={staff.id}>{staff.name.toUpperCase()}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Requer Subestabelecimento</Label>
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold">Ativar se o executor não for o patrono original.</p>
+                </div>
+                <Switch checked={diligenceData.requiresSubestabelecimento} onCheckedChange={v => setDiligenceData({...diligenceData, requiresSubestabelecimento: v})} />
+              </div>
+
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Data Limite</Label>
-                <Input type="date" className="glass h-12 text-white" value={diligenceData.date} onChange={e => setDiligenceData({...diligenceData, date: e.target.value})} />
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Localização / Juízo</Label>
+                <Input className="glass h-12 text-white uppercase font-bold" value={diligenceData.location} onChange={e => setDiligenceData({...diligenceData, location: e.target.value})} placeholder="FÓRUM, REPARTIÇÃO OU LINK" />
               </div>
+
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Horário</Label>
-                <Input type="time" className="glass h-12 text-white" value={diligenceData.time} onChange={e => setDiligenceData({...diligenceData, time: e.target.value})} />
+                <Label className="text-[10px] font-black text-muted-foreground uppercase">Instruções Técnicas</Label>
+                <Textarea className="glass min-h-[80px] text-white" value={diligenceData.description} onChange={e => setDiligenceData({...diligenceData, description: e.target.value})} />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Responsável / Executor</Label>
-              <Select value={diligenceData.assigneeId} onValueChange={(v) => setDiligenceData({...diligenceData, assigneeId: v})}>
-                <SelectTrigger className="glass h-12 text-white font-bold text-[10px]"><SelectValue placeholder="Selecione o advogado ou assistente" /></SelectTrigger>
-                <SelectContent className="bg-[#0d121f] text-white">
-                  <SelectItem value={user?.uid || "self"}>DR(A). {user?.displayName?.toUpperCase() || "EU MESMO"}</SelectItem>
-                  {staffMembers?.filter(s => s.id !== user?.uid).map(staff => (
-                    <SelectItem key={staff.id} value={staff.id}>{staff.name.toUpperCase()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-              <div className="space-y-0.5">
-                <Label className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Requer Subestabelecimento</Label>
-                <p className="text-[9px] text-muted-foreground uppercase font-bold">Ativar se o executor não for o patrono original.</p>
-              </div>
-              <Switch checked={diligenceData.requiresSubestabelecimento} onCheckedChange={v => setDiligenceData({...diligenceData, requiresSubestabelecimento: v})} />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Localização / Juízo</Label>
-              <Input className="glass h-12 text-white uppercase font-bold" value={diligenceData.location} onChange={e => setDiligenceData({...diligenceData, location: e.target.value})} placeholder="FÓRUM, REPARTIÇÃO OU LINK" />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Instruções Técnicas</Label>
-              <Textarea className="glass min-h-[80px] text-white" value={diligenceData.description} onChange={e => setDiligenceData({...diligenceData, description: e.target.value})} />
-            </div>
-          </div>
+          </ScrollArea>
           <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsDiligenceOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
             <Button onClick={handleScheduleDiligence} className="bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] px-8 h-12 rounded-xl shadow-xl">Confirmar Delegação</Button>
@@ -1113,13 +1128,15 @@ export default function CasesPage() {
             <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Evento Financeiro</DialogTitle>
             <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Lançamento de honorários ou custas para o processo.</DialogDescription>
           </DialogHeader>
-          <div className="px-10 py-8 bg-[#0a0f1e]/50">
-            <FinancialTitleForm 
-              initialData={{ description: `HONORÁRIOS: ${activeActionProcess?.clientName}`, processNumber: activeActionProcess?.processNumber }}
-              onSubmit={handleSaveFinancial} 
-              onCancel={() => setIsFinancialOpen(false)} 
-            />
-          </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="px-10 py-8 bg-[#0a0f1e]/50">
+              <FinancialTitleForm 
+                initialData={{ description: `HONORÁRIOS: ${activeActionProcess?.clientName}`, processNumber: activeActionProcess?.processNumber }}
+                onSubmit={handleSaveFinancial} 
+                onCancel={() => setIsFinancialOpen(false)} 
+              />
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
