@@ -169,11 +169,18 @@ export default function LeadsPage() {
     if (!user || !db || !leadId) return null
     return query(
       collection(db!, "interviews"), 
-      where("clientId", "==", leadId), 
-      orderBy("createdAt", "desc")
+      where("clientId", "==", leadId)
     )
   }, [db, user, selectedLead?.id])
-  const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
+  const { data: leadInterviewsRaw, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
+  const leadInterviews = useMemo(() => {
+    if (!leadInterviewsRaw) return null
+    return [...leadInterviewsRaw].sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || a.createdAt || 0
+      const dateB = b.createdAt?.toDate?.() || b.createdAt || 0
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    })
+  }, [leadInterviewsRaw])
 
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
   const canGoBack = currentTabIndex > 0
