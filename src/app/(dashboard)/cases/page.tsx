@@ -550,7 +550,11 @@ export default function CasesPage() {
                   "glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer",
                   viewMode === "list" ? "rounded-xl" : "rounded-3xl"
                 )}
-                onClick={() => handleOpenView(proc)}
+                onClick={(e) => {
+                  // Prevenir abertura de detalhes ao clicar em botões de ação
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  handleOpenView(proc);
+                }}
               >
                 <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
                   {viewMode === "list" ? (

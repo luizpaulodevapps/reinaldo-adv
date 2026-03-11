@@ -394,7 +394,10 @@ export default function LeadsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-5">
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><Fingerprint className="h-5 w-5 text-primary" /></div>
-                    <div className="space-y-0.5"><SheetTitle className="text-lg font-bold uppercase text-white">{activeLead.name}</SheetTitle><SheetDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2"><span>ID {activeLead.id.toUpperCase()}</span></SheetDescription></div>
+                    <div className="space-y-0.5">
+                      <SheetTitle className="text-lg font-bold uppercase text-white">{activeLead.name}</SheetTitle>
+                      <SheetDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2"><span>ID {activeLead.id.toUpperCase()}</span></SheetDescription>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button onClick={() => handleDeleteLead(activeLead.id)} variant="outline" className="h-9 text-[9px] font-black uppercase px-4 rounded-lg text-rose-400 border-white/10"><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -445,7 +448,10 @@ export default function LeadsPage() {
                       <div className="grid grid-cols-2 gap-6">
                         <Card className="glass border-white/5 p-6 rounded-2xl shadow-xl bg-white/[0.01] relative overflow-hidden group cursor-pointer hover:border-amber-500/30 transition-all" onClick={() => setIsSchedulingIntake(true)}>
                           <div className="flex items-center justify-between mb-4"><h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-4 w-4" /> Cronograma</h4></div>
-                          <div className="space-y-3"><p className="text-lg font-bold text-white uppercase tracking-tighter">{activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : "AGUARDANDO"}</p><Badge variant="outline" className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{activeLead.meetingLocation || "LOCAL A DEFINIR"}</Badge></div>
+                          <div className="space-y-3">
+                            <p className="text-lg font-bold text-white uppercase tracking-tighter">{activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : "AGUARDANDO"}</p>
+                            <Badge variant="outline" className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{activeLead.meetingLocation || "LOCAL A DEFINIR"}</Badge>
+                          </div>
                         </Card>
                         <Card className="glass border-primary/15 p-6 rounded-2xl shadow-xl bg-primary/5 relative overflow-hidden">
                           <h4 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2 mb-4"><Brain className="h-4 w-4" /> Síntese Estratégica</h4>
