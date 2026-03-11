@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -57,7 +57,8 @@ import {
   ListTodo,
   ShieldQuestion,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Scale
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -514,7 +515,6 @@ export default function LeadsPage() {
 
                     <TabsContent value="revisao" className="w-full space-y-8 animate-in fade-in duration-700 outline-none">
                       <div className="flex flex-col lg:flex-row gap-8">
-                        {/* Audit Lateral */}
                         <div className="w-full lg:w-80 flex-none space-y-6">
                           <Card className="glass border-white/5 bg-black/40 rounded-2xl overflow-hidden shadow-2xl">
                             <div className="p-5 bg-white/[0.03] border-b border-white/5 flex items-center gap-3">
@@ -547,7 +547,6 @@ export default function LeadsPage() {
                           </div>
                         </div>
 
-                        {/* Conteúdo Principal de Revisão */}
                         <div className="flex-1 space-y-8">
                           <div className="flex items-center justify-between border-b border-white/5 pb-4">
                             <div className="flex items-center gap-4">
@@ -632,7 +631,6 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* DIALOGS */}
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
           <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl space-y-0 text-left">
