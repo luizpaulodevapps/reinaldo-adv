@@ -26,7 +26,11 @@ import {
   User as UserIcon,
   Building2,
   Handshake,
-  Calculator
+  Calculator,
+  ArrowUpRight,
+  ArrowDownRight,
+  TrendingUp,
+  LineChart
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -85,7 +89,10 @@ const menuGroups = [
     title: "FINANCEIRO",
     items: [
       { name: "CENTRAL", href: "/billing", icon: Calculator },
+      { name: "CONTAS A RECEBER", href: "/receivables", icon: ArrowUpRight },
+      { name: "CONTAS A PAGAR", href: "/payables", icon: ArrowDownRight },
       { name: "REPASSES", href: "/financial", icon: Wallet },
+      { name: "FLUXO DE CAIXA", href: "/cash-flow", icon: TrendingUp },
     ]
   },
   {
