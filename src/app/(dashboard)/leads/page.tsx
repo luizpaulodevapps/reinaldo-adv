@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -164,12 +163,8 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (canGoNext) setActiveTabInternal(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (canGoBack) setActiveTabInternal(DOSSIER_TABS[currentTabIndex - 1]) }
-
-  const setActiveTabInternal = (tab: string) => {
-    setActiveDossierTab(tab)
-  }
+  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
@@ -279,7 +274,7 @@ export default function LeadsPage() {
     
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
-    setActiveTabInternal("dossies")
+    setActiveDossierTab("dossies")
     toast({ title: "Protocolo Concluído" })
   }
 
@@ -327,11 +322,17 @@ export default function LeadsPage() {
     if (!interviewAnalysis) return
     
     const content = `
-DIAGNÓSTICO JURÍDICO ESTRATÉGICO - RGMJ ADVOGADOS
+REGINALDO GONÇALVES MIGUEL DE JESUS - ADVOCACIA ESTRATÉGICA
 CLIENTE: ${activeLead?.name}
-TIPO: ${viewingInterview?.interviewType}
-DATA: ${new Date().toLocaleDateString('pt-BR')}
+QUALIFICAÇÃO: ${activeLead?.cpf || 'Não informado'} | ${activeLead?.phone}
+CONTRA: ${activeLead?.defendantName || 'Não informado'}
+ÓRGÃO: ${activeLead?.court || 'Não informado'} | ${activeLead?.vara || 'Não informado'}
 
+--------------------------------------------------
+MINUTA ESTRUTURADA DE PETIÇÃO INICIAL
+--------------------------------------------------
+
+${interviewAnalysis.draftPetition || `
 1. RESUMO EXECUTIVO DOS FATOS
 ${interviewAnalysis.summary}
 
@@ -340,6 +341,7 @@ ${interviewAnalysis.legalAnalysis}
 
 3. RECOMENDAÇÕES E PRÓXIMOS PASSOS
 ${interviewAnalysis.recommendations}
+`}
 
 --------------------------------------------------
 Documento gerado via Inteligência Artificial RGMJ.
@@ -347,8 +349,8 @@ Documento gerado via Inteligência Artificial RGMJ.
 
     navigator.clipboard.writeText(content).then(() => {
       toast({
-        title: "Conteúdo Preparado",
-        description: "Diagnóstico copiado! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
+        title: "Peça Preparada",
+        description: "Estrutura copiada! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
       })
       setTimeout(() => {
         window.open("https://doc.new", "_blank")

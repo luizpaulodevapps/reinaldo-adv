@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -94,11 +93,17 @@ export default function InterviewsPage() {
     if (!interviewAnalysis) return
     
     const content = `
-DIAGNÓSTICO JURÍDICO ESTRATÉGICO - RGMJ ADVOGADOS
+REGINALDO GONÇALVES MIGUEL DE JESUS - ADVOCACIA ESTRATÉGICA
 CLIENTE: ${viewingInterview?.clientName}
+QUALIFICAÇÃO: ${viewingInterview?.responses?.["IDENTIFICACAO: CPF"] || 'Não informado'}
 TIPO: ${viewingInterview?.interviewType}
 DATA: ${new Date().toLocaleDateString('pt-BR')}
 
+--------------------------------------------------
+MINUTA ESTRUTURADA DE PETIÇÃO INICIAL
+--------------------------------------------------
+
+${interviewAnalysis.draftPetition || `
 1. RESUMO EXECUTIVO DOS FATOS
 ${interviewAnalysis.summary}
 
@@ -107,6 +112,7 @@ ${interviewAnalysis.legalAnalysis}
 
 3. RECOMENDAÇÕES E PRÓXIMOS PASSOS
 ${interviewAnalysis.recommendations}
+`}
 
 --------------------------------------------------
 Documento gerado via Inteligência Artificial RGMJ.
@@ -114,8 +120,8 @@ Documento gerado via Inteligência Artificial RGMJ.
 
     navigator.clipboard.writeText(content).then(() => {
       toast({
-        title: "Conteúdo Preparado",
-        description: "Diagnóstico copiado! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
+        title: "Peça Preparada",
+        description: "Estrutura copiada! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
       })
       setTimeout(() => {
         window.open("https://doc.new", "_blank")

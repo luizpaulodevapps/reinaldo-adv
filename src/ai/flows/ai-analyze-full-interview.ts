@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Flow de IA focado em realizar a análise profunda de uma entrevista jurídica.
+ * @fileOverview Flow de IA focado em realizar a análise profunda de uma entrevista jurídica e gerar uma minuta de petição.
  * 
- * - aiAnalyzeFullInterview - Processa as respostas e gera resumo, análise de teses e riscos.
+ * - aiAnalyzeFullInterview - Processa as respostas e gera resumo, análise de teses e rascunho de petição estruturada.
  */
 
 import {ai} from '@/ai/genkit';
@@ -18,6 +18,7 @@ const AnalyzeInterviewOutputSchema = z.object({
   summary: z.string().describe('Um resumo executivo dos fatos narrados pelo cliente.'),
   legalAnalysis: z.string().describe('Uma análise jurídica técnica, identificando teses possíveis e riscos processuais.'),
   recommendations: z.string().describe('Próximos passos sugeridos e provas/documentos necessários.'),
+  draftPetition: z.string().describe('Um rascunho completo de petição inicial estruturada (Endereçamento, Fatos, Fundamentos e Pedidos).'),
 });
 
 export type AnalyzeInterviewOutput = z.infer<typeof AnalyzeInterviewOutputSchema>;
@@ -40,8 +41,12 @@ Abaixo estão as respostas capturadas durante o rito de triagem:
 
 OBJETIVOS DA ANÁLISE:
 1. SUMÁRIO EXECUTIVO: Sintetize os fatos de forma clara e objetiva.
-2. ANÁLISE JURÍDICA: Identifique as teses de mérito (ex: horas extras, assédio, vínculo) e aponte os riscos (prescrição, falta de prova, contradições).
-3. RECOMENDAÇÕES: Liste quais documentos o cliente deve enviar e quais testemunhas seriam ideais.
+2. ANÁLISE JURÍDICA: Identifique as teses de mérito (ex: horas extras, assédio, vínculo) e aponte os riscos.
+3. RECOMENDAÇÕES: Liste documentos e provas.
+4. RASCUNHO DE PETIÇÃO: Crie uma MINUTA ESTRUTURADA DE PETIÇÃO INICIAL.
+   - Use: "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DA ... VARA DO TRABALHO DE ..."
+   - Inclua os tópicos: I - DOS FATOS; II - DO DIREITO (Fundamentação Técnica); III - DOS PEDIDOS.
+   - Deixe espaços como [NOME DA RECLAMADA] ou [VALOR] onde faltarem dados.
 
 MANTENHA UM TOM PROFISSIONAL, TÉCNICO E ESTRATÉGICO.
 Responda sempre em Português (Brasil).`,
