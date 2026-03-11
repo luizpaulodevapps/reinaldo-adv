@@ -25,7 +25,8 @@ import {
   Navigation,
   User as UserIcon,
   Building2,
-  Handshake
+  Handshake,
+  Calculator
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -81,16 +82,16 @@ const menuGroups = [
     ]
   },
   {
-    title: "PARCERIAS",
+    title: "FINANCEIRO",
     items: [
-      { name: "CORRESPONDENTES", href: "/correspondents", icon: Handshake },
+      { name: "CENTRAL", href: "/billing", icon: Calculator },
+      { name: "REPASSES", href: "/financial", icon: Wallet },
     ]
   },
   {
-    title: "FINANCEIRO",
+    title: "PARCERIAS",
     items: [
-      { name: "CENTRAL", href: "/billing", icon: DollarSign },
-      { name: "REPASSES", href: "/financial", icon: Wallet },
+      { name: "CORRESPONDENTES", href: "/correspondents", icon: Handshake },
     ]
   },
   {

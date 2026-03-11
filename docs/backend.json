@@ -102,96 +102,23 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
-    "Court": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Court",
+    "FinancialTitle": {
+      "title": "FinancialTitle",
       "type": "object",
-      "description": "Represents a judicial building or organ (Fórum, Tribunal).",
+      "description": "Financial entry for the legal firm (income or expense).",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string" },
-        "zipCode": { "type": "string" },
-        "address": { "type": "string" },
-        "number": { "type": "string" },
-        "complement": { "type": "string" },
-        "neighborhood": { "type": "string" },
-        "city": { "type": "string" },
-        "state": { "type": "string" },
-        "mapsLink": { "type": "string" },
-        "legalAreas": { "type": "array", "items": { "type": "string" }, "description": "Legal areas this court serves." },
-        "varas": { 
-          "type": "array", 
-          "items": { 
-            "type": "object",
-            "properties": {
-              "name": { "type": "string" },
-              "phone": { "type": "string" },
-              "notes": { "type": "string" }
-            }
-          }, 
-          "description": "List of court chambers in this building with details." 
-        },
-        "notes": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "zipCode", "address", "city", "state"]
-    },
-    "Freelancer": {
-      "title": "Freelancer",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "documentNumber": { "type": "string" },
-        "phone": { "type": "string" },
-        "email": { "type": "string" },
-        "city": { "type": "string" },
-        "state": { "type": "string" },
-        "pixKey": { "type": "string" },
-        "notes": { "type": "string" },
-        "isActive": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "documentNumber", "isActive"]
-    },
-    "Counterparty": {
-      "title": "Counterparty",
-      "type": "object",
-      "description": "Generic financial entity (client, firm, company) that requests freelance services.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["Cliente", "Escritório Parceiro", "Empresa", "Outro"] },
-        "documentNumber": { "type": "string" },
-        "email": { "type": "string" },
-        "phone": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "FreelanceDiligence": {
-      "title": "FreelanceDiligence",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "processId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Entrada (Receita)", "Saída (Despesa)"] },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "value": { "type": "number" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Pendente", "Pago", "Recebido", "Cancelado"] },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "entityName": { "type": "string" },
         "processNumber": { "type": "string" },
-        "type": { "type": "string", "enum": ["Audiência", "Protocolo", "Cópias", "Despacho", "Certidão", "Outro"] },
-        "court": { "type": "string" },
-        "city": { "type": "string" },
-        "serviceDate": { "type": "string", "format": "date" },
-        "deadline": { "type": "string", "format": "date-time" },
-        "freelancerId": { "type": "string" },
-        "freelancerName": { "type": "string" },
-        "solicitorId": { "type": "string" },
-        "solicitorName": { "type": "string" },
-        "valueToPay": { "type": "number" },
-        "valueToCharge": { "type": "number" },
-        "extraExpenses": { "type": "number" },
-        "status": { "type": "string", "enum": ["Criada", "Ofertada", "Aceita", "Em Execução", "Entregue", "Aprovada", "Faturada", "Cancelada"] },
-        "notes": { "type": "string" },
-        "financialSynced": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" }
       }
     }
   },
@@ -204,6 +131,7 @@
     "/processes/{processId}": { "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." },
     "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." },
     "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Legal diligences and tasks." },
+    "/financial_titles/{titleId}": { "schema": { "$ref": "#/backend/entities/FinancialTitle" }, "description": "Financial entries." },
     "/courts/{courtId}": { "schema": { "$ref": "#/backend/entities/Court" }, "description": "Judicial organs and buildings registry." },
     "/freelancers/{freelancerId}": { "schema": { "$ref": "#/backend/entities/Freelancer" }, "description": "Registry of freelance correspondents." },
     "/counterparties/{counterpartyId}": { "schema": { "$ref": "#/backend/entities/Counterparty" }, "description": "Financial entities involved in freelance requests." },

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -15,10 +16,14 @@ import {
   Wallet,
   ShieldCheck,
   X,
-  Loader2
+  Loader2,
+  Handshake,
+  DollarSign,
+  Tag
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
+import { cn } from "@/lib/utils"
 
 interface FinancialTitleFormProps {
   initialData?: any
@@ -36,6 +41,9 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     category: "Honorários Contratuais",
     processId: "",
     processNumber: "",
+    clientId: "",
+    clientName: "",
+    entityName: "", // Para fornecedores ou freelancers
     description: "",
     value: "0,00",
     dueDate: new Date().toISOString().split('T')[0],
@@ -49,19 +57,12 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
       setFormData({
         ...formData,
         ...initialData,
-        value: (initialData.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+        value: typeof initialData.value === 'number' 
+          ? initialData.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+          : initialData.value || "0,00"
       })
     }
   }, [initialData])
-
-  const canQuery = !!user && !!db
-
-  const processesQuery = useMemoFirebase(() => {
-    if (!canQuery) return null
-    return query(collection(db!, "processes"), orderBy("createdAt", "desc"))
-  }, [db, canQuery])
-
-  const { data: processes } = useCollection(processesQuery)
 
   const handleValueChange = (val: string) => {
     let clean = val.replace(/\D/g, "")
@@ -74,7 +75,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     onSubmit({
       ...formData,
       numericValue: parseFloat(formData.value.replace(/\./g, '').replace(',', '.')),
-      status: formData.status || (formData.type.includes("Entrada") ? "Recebido" : "Pendente")
+      status: formData.status || (formData.type.includes("Entrada") ? "Pendente" : "Pendente")
     })
   }
 
@@ -87,12 +88,14 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
   ]
 
   const expenseCategories = [
-    { id: "Folha de Pagamento", label: "Folha de Pagamento", icon: UserCircle },
-    { id: "Aluguel & Manutenção", label: "Aluguel & Manutenção", icon: Building2 },
-    { id: "Softwares & Licenças", label: "Softwares & Licenças", icon: Calculator },
-    { id: "Marketing & Publicidade", label: "Marketing & Publicidade", icon: Zap },
-    { id: "Impostos & Tributos", label: "Impostos & Tributos", icon: ShieldCheck },
-    { id: "Suprimentos / Outros", label: "Suprimentos / Outros", icon: X },
+    { id: "Folha de Pagamento", label: "Folha / Salários", icon: UserCircle },
+    { id: "Repasse Associado", label: "Repasse Associado", icon: Handshake },
+    { id: "Aluguel & Manutenção", label: "Aluguel & Sede", icon: Building2 },
+    { id: "Softwares & TI", label: "Softwares & TI", icon: Calculator },
+    { id: "Marketing & Comercial", label: "Marketing & Leads", icon: Zap },
+    { id: "Impostos & Tributos", label: "Impostos & Taxas", icon: ShieldCheck },
+    { id: "Diligência Terceirizada", label: "Correspondente / Atos", icon: Handshake },
+    { id: "Outros", label: "Suprimentos / Diversos", icon: Tag },
   ]
 
   const currentCategories = formData.type.includes("Entrada") ? revenueCategories : expenseCategories
@@ -101,14 +104,14 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     <div className="space-y-8 py-4 font-sans">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tipo de Fluxo *</Label>
+          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tipo de Operação *</Label>
           <Select value={formData.type} onValueChange={(v) => {
             setFormData({...formData, type: v, category: v.includes("Entrada") ? "Honorários Contratuais" : "Folha de Pagamento"})
           }}>
-            <SelectTrigger className="glass border-primary/20 h-14 text-white focus:ring-primary/50 text-sm font-bold uppercase tracking-tight">
+            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white focus:ring-primary/50 text-sm font-bold uppercase">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="glass border-white/10 text-white">
+            <SelectContent className="bg-[#0d121f] border-white/10 text-white">
               <SelectItem value="Entrada (Receita)">💰 ENTRADA (RECEITA)</SelectItem>
               <SelectItem value="Saída (Despesa)">💸 SAÍDA (DESPESA)</SelectItem>
             </SelectContent>
@@ -116,17 +119,17 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
         </div>
 
         <div className="space-y-2">
-          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Classificação Estratégica *</Label>
+          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Classificação Técnica *</Label>
           <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}>
-            <SelectTrigger className="glass border-white/10 h-14 text-white focus:ring-primary/50 text-sm font-bold uppercase tracking-tight">
+            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white focus:ring-primary/50 text-sm font-bold uppercase">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="glass border-white/10 text-white">
+            <SelectContent className="bg-[#0d121f] border-white/10 text-white">
               {currentCategories.map(cat => (
                 <SelectItem key={cat.id} value={cat.id}>
-                  <div className="flex items-center gap-3">
-                    <cat.icon className="h-4 w-4 opacity-50" />
-                    {cat.label.toUpperCase()}
+                  <div className="flex items-center gap-3 uppercase font-black text-[10px] tracking-widest">
+                    <cat.icon className="h-4 w-4 opacity-50 text-primary" />
+                    {cat.label}
                   </div>
                 </SelectItem>
               ))}
@@ -135,23 +138,46 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Descrição do Lançamento *</Label>
-        <Input 
-          placeholder="EX: PAGAMENTO DE HONORÁRIOS CONTRATUAIS" 
-          className="glass border-white/10 h-14 text-white font-bold uppercase"
-          value={formData.description}
-          onChange={(e) => setFormData({...formData, description: e.target.value.toUpperCase()})}
-        />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Descrição do Lançamento *</Label>
+          <Input 
+            placeholder="EX: HONORÁRIOS CONTRATUAIS - CLIENTE X" 
+            className="bg-black/40 border-white/10 h-14 text-white font-bold uppercase placeholder:opacity-20"
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value.toUpperCase()})}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Entidade (Cliente/Fornecedor)</Label>
+            <Input 
+              value={formData.clientName || formData.entityName} 
+              onChange={(e) => setFormData({...formData, entityName: e.target.value.toUpperCase(), clientName: e.target.value.toUpperCase()})}
+              className="bg-black/40 border-white/10 h-12 text-white text-xs font-bold"
+              placeholder="VINCULAR ENTIDADE..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo (Opcional)</Label>
+            <Input 
+              value={formData.processNumber} 
+              onChange={(e) => setFormData({...formData, processNumber: e.target.value})}
+              className="bg-black/40 border-white/10 h-12 text-white font-mono text-xs"
+              placeholder="0000000-00.0000.0.00.0000"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="p-10 rounded-2xl border border-primary/20 bg-primary/5 grid grid-cols-1 md:grid-cols-2 gap-10 relative overflow-hidden shadow-2xl">
+      <div className="p-10 rounded-[2rem] border border-primary/20 bg-primary/5 grid grid-cols-1 md:grid-cols-2 gap-10 relative overflow-hidden shadow-2xl">
         <div className="space-y-3 relative z-10">
-          <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Valor Nominal (R$) *</Label>
+          <Label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Valor da Operação (R$)</Label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">R$</span>
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl">R$</span>
             <Input 
-              className="glass border-primary/30 h-16 pl-12 text-2xl font-black text-white focus:ring-primary/50"
+              className="bg-black/60 border-primary/30 h-20 pl-16 text-3xl font-black text-white focus:ring-primary/50 shadow-inner"
               value={formData.value}
               onChange={(e) => handleValueChange(e.target.value)}
             />
@@ -159,27 +185,57 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
         </div>
 
         <div className="space-y-3 relative z-10">
-          <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Data de Vencimento *</Label>
+          <Label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Vencimento / Repasse</Label>
           <Input 
             type="date"
-            className="glass border-primary/30 h-16 text-sm text-white font-black uppercase focus:ring-primary/50"
+            className="bg-black/60 border-primary/30 h-20 text-lg text-white font-black uppercase focus:ring-primary/50 shadow-inner px-8"
             value={formData.dueDate}
             onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
           />
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6">
-        <Button variant="ghost" onClick={onCancel} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest px-10 h-14">
-          Cancelar Operação
-        </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+        <div className="space-y-2">
+          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status Atual</Label>
+          <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+            <SelectTrigger className="bg-black/40 border-white/10 h-12 text-white font-black text-[10px] uppercase">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-[#0d121f] text-white">
+              <SelectItem value="Pendente">⌛ AGUARDANDO (PENDENTE)</SelectItem>
+              <SelectItem value="Pago">✅ LIQUIDADO / PAGO</SelectItem>
+              <SelectItem value="Recebido">💵 CONCLUÍDO / RECEBIDO</SelectItem>
+              <SelectItem value="Cancelado">❌ CANCELADO</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between px-6 border-l border-white/5">
+          <div className="space-y-0.5">
+            <Label className="text-[10px] font-black text-white uppercase tracking-widest">Lançamento Recorrente?</Label>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold">Repetir operação mensalmente.</p>
+          </div>
+          <Input 
+            type="number" 
+            placeholder="MÊS" 
+            className="w-20 bg-black/40 border-white/10 text-center font-black h-10" 
+            value={formData.recurrenceMonths}
+            onChange={(e) => setFormData({...formData, recurrenceMonths: parseInt(e.target.value), isRecurring: parseInt(e.target.value) > 1})}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-white/5">
+        <button onClick={onCancel} className="text-muted-foreground font-black uppercase text-[11px] tracking-widest px-10 h-14 hover:text-white transition-colors">
+          ABORTAR OPERAÇÃO
+        </button>
         <Button 
           onClick={handleConfirm}
           disabled={loading || !formData.description || formData.value === "0,00"}
-          className="w-full md:w-[320px] h-16 gold-gradient text-background font-black uppercase text-[12px] tracking-widest shadow-2xl rounded-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+          className="w-full md:w-[380px] h-16 gold-gradient text-background font-black uppercase text-[13px] tracking-[0.2em] shadow-[0_20px_50px_rgba(245,208,48,0.2)] rounded-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-4 active:scale-95"
         >
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-          {initialData ? "ATUALIZAR REGISTRO" : "REGISTRAR NO FLUXO"}
+          {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <ShieldCheck className="h-6 w-6" />}
+          {initialData ? "ATUALIZAR REGISTRO TÁTICO" : "INJETAR NO FLUXO RGMJ"}
         </Button>
       </div>
     </div>
