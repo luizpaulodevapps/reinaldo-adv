@@ -58,7 +58,9 @@ import {
   ShieldQuestion,
   TrendingUp,
   AlertCircle,
-  Scale
+  Scale,
+  Copy,
+  FileDown
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -162,8 +164,12 @@ export default function LeadsPage() {
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
 
-  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
+  const handleNextTab = () => { if (canGoNext) setActiveTabInternal(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (canGoBack) setActiveTabInternal(DOSSIER_TABS[currentTabIndex - 1]) }
+
+  const setActiveTabInternal = (tab: string) => {
+    setActiveDossierTab(tab)
+  }
 
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
@@ -183,14 +189,15 @@ export default function LeadsPage() {
   const { data: templates } = useCollection(templatesQuery)
 
   const leadInterviewsQuery = useMemoFirebase(() => {
-    const leadId = selectedLead?.id
+    const leadId = activeLead?.id
     if (!user || !db || !leadId) return null
     return query(
       collection(db!, "interviews"), 
       where("clientId", "==", leadId)
     )
-  }, [db, user, selectedLead?.id])
+  }, [db, user, activeLead?.id])
   const { data: leadInterviewsRaw, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
+  
   const leadInterviews = useMemo(() => {
     if (!leadInterviewsRaw) return null
     return [...leadInterviewsRaw].sort((a, b) => {
@@ -272,7 +279,7 @@ export default function LeadsPage() {
     
     setIsInterviewDialogOpen(false)
     setExecutingTemplate(null)
-    setActiveDossierTab("dossies")
+    setActiveTabInternal("dossies")
     toast({ title: "Protocolo Concluído" })
   }
 
@@ -282,7 +289,7 @@ export default function LeadsPage() {
       const result = await aiAnalyzeFullInterview({ clientName: activeLead.name, interviewType: interview.interviewType, responses: interview.responses })
       setInterviewAnalysis(result)
       if (db) updateDocumentNonBlocking(doc(db, "interviews", interview.id), { aiAnalysis: result, updatedAt: serverTimestamp() })
-    } catch (e) { toast({ variant: "destructive", title: "Erro Análise" }) } finally { setIsAiAnalyzing(false) }
+    } catch (e) { toast({ variant: "destructive", title: "Erro na análise" }) } finally { setIsAiAnalyzing(false) }
   }
 
   const handleGenerateStrategicSummary = async () => {
@@ -314,6 +321,39 @@ export default function LeadsPage() {
     await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
     updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
     setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
+  }
+
+  const handleExportToGoogleDocs = () => {
+    if (!interviewAnalysis) return
+    
+    const content = `
+DIAGNÓSTICO JURÍDICO ESTRATÉGICO - RGMJ ADVOGADOS
+CLIENTE: ${activeLead?.name}
+TIPO: ${viewingInterview?.interviewType}
+DATA: ${new Date().toLocaleDateString('pt-BR')}
+
+1. RESUMO EXECUTIVO DOS FATOS
+${interviewAnalysis.summary}
+
+2. ANÁLISE JURÍDICA E RISCOS
+${interviewAnalysis.legalAnalysis}
+
+3. RECOMENDAÇÕES E PRÓXIMOS PASSOS
+${interviewAnalysis.recommendations}
+
+--------------------------------------------------
+Documento gerado via Inteligência Artificial RGMJ.
+`.trim()
+
+    navigator.clipboard.writeText(content).then(() => {
+      toast({
+        title: "Conteúdo Preparado",
+        description: "Diagnóstico copiado! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
+      })
+      setTimeout(() => {
+        window.open("https://doc.new", "_blank")
+      }, 1500)
+    })
   }
 
   const handleDragStart = (id: string) => setDraggedLeadId(id)
@@ -379,7 +419,7 @@ export default function LeadsPage() {
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                               <div className="flex gap-1.5">
                                 {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase">CPF OK</Badge>}
-                                {(leadInterviews?.filter(i => i.clientId === lead.id).length || 0) > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
+                                {leadInterviews?.filter(i => i.clientId === lead.id).length > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
                               </div>
                               <ArrowRight className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-all" />
                             </div>
@@ -488,7 +528,7 @@ export default function LeadsPage() {
                       <div className="space-y-6">
                         <div className="flex items-center justify-between border-b border-white/5 pb-3">
                           <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">
-                            Dossiês Concluídos {(leadInterviews?.length || 0) > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews.length}</Badge>}
+                            Dossiês Concluídos {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 font-black h-5">{leadInterviews.length}</Badge>}
                           </h3>
                         </div>
                         {isLoadingInterviews ? (
@@ -496,7 +536,7 @@ export default function LeadsPage() {
                         ) : leadInterviews && leadInterviews.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leadInterviews.map((int) => (
-                              <Card key={int.id} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col group shadow-2xl relative overflow-hidden">
+                              <Card key={int.id} className="glass border-white/5 hover-border-primary/20 transition-all p-0 rounded-2xl bg-white/[0.01] flex flex-col group shadow-2xl relative overflow-hidden">
                                 {int.aiAnalysis && <div className="absolute top-0 right-0 p-4"><Sparkles className="h-4 w-4 text-primary animate-pulse" /></div>}
                                 <div className="p-6 space-y-6 flex-1">
                                   <div className="flex justify-between items-start"><Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/30 text-emerald-500 h-6">CONCLUÍDO</Badge><span className="text-[9px] font-mono text-muted-foreground uppercase opacity-40">{int.createdAt?.toDate ? new Date(int.createdAt.toDate()).toLocaleDateString() : '---'}</span></div>
@@ -648,7 +688,14 @@ export default function LeadsPage() {
                 <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription>
               </div>
             </div>
-            <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
+            <div className="flex items-center gap-3">
+              {interviewAnalysis && (
+                <Button onClick={handleExportToGoogleDocs} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] gap-2.5 h-11 px-6 rounded-lg shadow-lg hover:bg-primary/10">
+                  <FileDown className="h-4 w-4" /> EXPORTAR DOC.NEW
+                </Button>
+              )}
+              <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
+            </div>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">

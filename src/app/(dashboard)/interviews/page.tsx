@@ -20,7 +20,10 @@ import {
   Save,
   User,
   FileSearch,
-  Sparkles
+  Sparkles,
+  Copy,
+  FileDown,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,6 +88,39 @@ export default function InterviewsPage() {
       setInterviewAnalysis(result)
       if (db) updateDocumentNonBlocking(doc(db, "interviews", interview.id), { aiAnalysis: result, updatedAt: serverTimestamp() })
     } catch (e) { toast({ variant: "destructive", title: "Erro na análise" }) } finally { setIsAiAnalyzing(false) }
+  }
+
+  const handleExportToGoogleDocs = () => {
+    if (!interviewAnalysis) return
+    
+    const content = `
+DIAGNÓSTICO JURÍDICO ESTRATÉGICO - RGMJ ADVOGADOS
+CLIENTE: ${viewingInterview?.clientName}
+TIPO: ${viewingInterview?.interviewType}
+DATA: ${new Date().toLocaleDateString('pt-BR')}
+
+1. RESUMO EXECUTIVO DOS FATOS
+${interviewAnalysis.summary}
+
+2. ANÁLISE JURÍDICA E RISCOS
+${interviewAnalysis.legalAnalysis}
+
+3. RECOMENDAÇÕES E PRÓXIMOS PASSOS
+${interviewAnalysis.recommendations}
+
+--------------------------------------------------
+Documento gerado via Inteligência Artificial RGMJ.
+`.trim()
+
+    navigator.clipboard.writeText(content).then(() => {
+      toast({
+        title: "Conteúdo Preparado",
+        description: "Diagnóstico copiado! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
+      })
+      setTimeout(() => {
+        window.open("https://doc.new", "_blank")
+      }, 1500)
+    })
   }
 
   const filteredInterviews = (interviews || []).filter(i => 
@@ -154,7 +190,14 @@ export default function InterviewsPage() {
                 <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription>
               </div>
             </div>
-            <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
+            <div className="flex items-center gap-3">
+              {interviewAnalysis && (
+                <Button onClick={handleExportToGoogleDocs} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] gap-2.5 h-11 px-6 rounded-lg shadow-lg hover:bg-primary/10">
+                  <FileDown className="h-4 w-4" /> EXPORTAR DOC.NEW
+                </Button>
+              )}
+              <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
+            </div>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">
