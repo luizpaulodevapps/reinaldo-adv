@@ -165,14 +165,14 @@ export default function LeadsPage() {
   const { data: templates } = useCollection(templatesQuery)
 
   const leadInterviewsQuery = useMemoFirebase(() => {
-    const leadId = activeLead?.id
+    const leadId = selectedLead?.id // Usamos selectedLead.id para estabilidade da query
     if (!user || !db || !leadId) return null
     return query(
       collection(db!, "interviews"), 
       where("clientId", "==", leadId), 
       orderBy("createdAt", "desc")
     )
-  }, [db, user, activeLead?.id])
+  }, [db, user, selectedLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
 
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
@@ -436,7 +436,7 @@ export default function LeadsPage() {
                         <Zap className="h-3.5 w-3.5" /> CAPTURA
                       </TabsTrigger>
                       <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
-                        <MessageSquare className="h-3.5 w-3.5" /> DOSSIÊS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-1 border-0 h-4 px-1.5 text-[8px]">{leadInterviews.length}</Badge>}
+                        <MessageSquare className="h-3.5 w-3.5" /> DOSSIÊS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-1 border-0 h-4 px-1.5 text-[8px] font-black">{leadInterviews.length}</Badge>}
                       </TabsTrigger>
                       <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-6 rounded-lg gap-2 transition-all flex items-center tracking-widest">
                         <ClipboardList className="h-3.5 w-3.5" /> BUROCRACIA
