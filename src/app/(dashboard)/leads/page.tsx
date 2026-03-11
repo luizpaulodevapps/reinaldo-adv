@@ -168,14 +168,7 @@ export default function LeadsPage() {
   const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
 
   const getDrawerWidthClass = () => {
-    const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
-    switch (pref) {
-      case "padrão": return "sm:max-w-2xl"
-      case "largo": return "sm:max-w-4xl"
-      case "extra-largo": return "sm:max-w-[95vw]"
-      case "full": return "sm:max-w-full"
-      default: return "sm:max-w-[95vw]"
-    }
+    return "sm:max-w-[95vw] w-[95vw]"
   }
 
   const templatesQuery = useMemoFirebase(() => {
@@ -671,7 +664,7 @@ Documento gerado via Inteligência Artificial RGMJ.
                                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-16 w-16" /></div>
                                 <div className="flex items-center gap-4">
                                   <div className="w-1.5 h-8 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
-                                  <h5 className="text-xs font-black text-blue-400 uppercase tracking-[0.4em]">Análise Tática Final</h5>
+                                  <h5 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.4em]">Análise Tática Final</h5>
                                 </div>
                                 <p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.strategicAnalysis}</p>
                               </Card>
