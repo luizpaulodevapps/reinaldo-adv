@@ -52,7 +52,12 @@ import {
   Share2,
   ExternalLink,
   BookOpen,
-  ClipboardList
+  ClipboardList,
+  Target,
+  ListTodo,
+  ShieldQuestion,
+  TrendingUp,
+  AlertCircle
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -149,9 +154,6 @@ export default function LeadsPage() {
 
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
-  const [isSchedulingHearing, setIsSchedulingHearing] = useState(false)
-  const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", meetingLink: "", accessCode: "", location: "" })
-
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "" })
 
@@ -172,6 +174,13 @@ export default function LeadsPage() {
   }, [db, user, activeLead?.id])
   const { data: leadInterviews, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
 
+  const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
+  const canGoBack = currentTabIndex > 0
+  const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
+
+  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
+  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
+
   const getDrawerWidthClass = () => {
     const pref = profile?.themePreferences?.drawerWidth || "extra-largo"
     switch (pref) {
@@ -183,17 +192,9 @@ export default function LeadsPage() {
     }
   }
 
-  const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
-  const canGoBack = currentTabIndex > 0
-  const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
-
-  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
-
   useEffect(() => {
     if (activeLead) {
       setStrategicSummary(null)
-      setIsSchedulingHearing(false)
       setIntakeData({ 
         date: activeLead.scheduledDate || "", 
         time: activeLead.scheduledTime || "", 
@@ -302,7 +303,7 @@ export default function LeadsPage() {
 
   const handleConvertProcess = async (data: any) => {
     if (!db || !activeLead) return
-    const processRef = await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
+    await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
     updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
     setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
   }
@@ -511,16 +512,110 @@ export default function LeadsPage() {
                       <BurocraciaView lead={activeLead} interviews={leadInterviews || []} onEdit={() => setIsEditModeOpen(true)} />
                     </TabsContent>
 
-                    <TabsContent value="revisao" className="space-y-6 animate-in fade-in duration-700 w-full">
-                      <div className="flex items-center justify-between pb-6 border-b border-white/5">
-                        <div className="flex items-center gap-4"><div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20"><ShieldCheck className="h-6 w-6 text-emerald-500" /></div><div><h3 className="text-lg font-bold text-white uppercase tracking-widest">Auditoria de Protocolo</h3><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-1.5 opacity-50">Validação final de DNA Jurídico.</p></div></div>
-                        <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-11 px-6 glass border-primary/20 text-primary font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">
-                          {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />} CONSOLIDAR IA
-                        </Button>
-                      </div>
-                      <div className="p-6 rounded-3xl bg-purple-500/5 border border-purple-500/20 flex items-end gap-6 w-full shadow-xl relative overflow-hidden">
-                        <div className="flex-1 space-y-3 w-full"><Label className="text-[10px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-2.5"><FileCheck className="h-4 w-4" /> PROTOCOLO CNJ *</Label><Input placeholder="0000000-00.0000.0.00.0000" className="bg-black/60 border-purple-500/30 h-14 text-white font-mono text-lg font-black w-full tracking-widest" value={activeLead.processNumber || ""} onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} /></div>
-                        <Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-black font-black h-14 px-8 rounded-xl uppercase text-xs tracking-widest shadow-xl">PROTOCOLAR E CONVERTER</Button>
+                    <TabsContent value="revisao" className="w-full space-y-8 animate-in fade-in duration-700 outline-none">
+                      <div className="flex flex-col lg:flex-row gap-8">
+                        {/* Audit Lateral */}
+                        <div className="w-full lg:w-80 flex-none space-y-6">
+                          <Card className="glass border-white/5 bg-black/40 rounded-2xl overflow-hidden shadow-2xl">
+                            <div className="p-5 bg-white/[0.03] border-b border-white/5 flex items-center gap-3">
+                              <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                              <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Integridade DNA</h4>
+                            </div>
+                            <div className="p-5 space-y-4">
+                              {[
+                                { label: "Polo Ativo", ok: !!activeLead.name && !!activeLead.cpf },
+                                { label: "Polo Passivo", ok: !!activeLead.defendantName },
+                                { label: "Jurisdição", ok: !!activeLead.court && !!activeLead.vara },
+                                { label: "DNA Jurídico", ok: (leadInterviews?.length || 0) > 0 },
+                                { label: "Audit Logístico", ok: !!activeLead.courtAddress },
+                              ].map((audit, i) => (
+                                <div key={i} className="flex items-center justify-between gap-4">
+                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{audit.label}</span>
+                                  {audit.ok ? (
+                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-5 px-2 text-[8px] font-black uppercase">SANEADO</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[8px] border-amber-500/20 text-amber-500 bg-amber-500/5 px-2 h-5 font-black uppercase">PENDENTE</Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
+
+                          <div className="p-6 rounded-2xl border-2 border-dashed border-white/5 flex flex-col items-center text-center space-y-4 opacity-40">
+                            <FileText className="h-10 w-10 text-muted-foreground" />
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">O protocolo criará um novo processo no acervo ativo.</p>
+                          </div>
+                        </div>
+
+                        {/* Conteúdo Principal de Revisão */}
+                        <div className="flex-1 space-y-8">
+                          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                                <Brain className="h-6 w-6 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Análise Estratégica Consolidada</h3>
+                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Diagnóstico unificado de todas as entrevistas.</p>
+                              </div>
+                            </div>
+                            <Button 
+                              onClick={handleGenerateStrategicSummary} 
+                              disabled={isGeneratingSummary} 
+                              className="h-12 px-8 gold-gradient text-background font-black uppercase text-[11px] gap-3 rounded-xl shadow-xl transition-all hover:scale-105"
+                            >
+                              {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                              CONSOLIDAR DNA (IA)
+                            </Button>
+                          </div>
+
+                          {strategicSummary ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-500">
+                              <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl space-y-4 shadow-xl">
+                                <h5 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Fatos Relevantes</h5>
+                                <p className="text-xs text-white/90 leading-relaxed font-medium text-justify italic">{strategicSummary.keyFacts}</p>
+                              </Card>
+                              <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-6 rounded-2xl space-y-4">
+                                <h5 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5" /> Próximos Passos</h5>
+                                <p className="text-xs text-white/90 leading-relaxed font-medium">{strategicSummary.potentialNextSteps}</p>
+                              </Card>
+                              <Card className="glass border-rose-500/20 bg-rose-500/5 p-6 rounded-2xl space-y-4">
+                                <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2"><AlertCircle className="h-3.5 w-3.5" /> Riscos & Desafios</h5>
+                                <p className="text-xs text-white/90 leading-relaxed font-medium">{strategicSummary.risksAndChallenges}</p>
+                              </Card>
+                              <Card className="glass border-blue-500/20 bg-blue-500/5 p-6 rounded-2xl space-y-4">
+                                <h5 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2"><Target className="h-3.5 w-3.5" /> Análise Tática</h5>
+                                <p className="text-xs text-white/90 leading-relaxed font-medium">{strategicSummary.strategicAnalysis}</p>
+                              </Card>
+                            </div>
+                          ) : (
+                            <div className="py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
+                              <Brain className="h-16 w-16 text-muted-foreground" />
+                              <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center max-w-[300px]">Aguardando consolidação de dados para gerar o parecer estratégico.</p>
+                            </div>
+                          )}
+
+                          <div className="p-8 rounded-[2.5rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-8 w-full shadow-2xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity"><Scale className="h-40 w-40" /></div>
+                            <div className="flex-1 space-y-4 w-full relative z-10">
+                              <Label className="text-[11px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-3">
+                                <FileCheck className="h-5 w-5" /> PROTOCOLO CNJ (AUTOMAÇÃO) *
+                              </Label>
+                              <Input 
+                                placeholder="0000000-00.0000.0.00.0000" 
+                                className="bg-black/60 border-purple-500/30 h-16 text-white font-mono text-2xl font-black w-full tracking-[0.2em] px-8 rounded-2xl focus:ring-1 focus:ring-purple-500/50" 
+                                value={activeLead.processNumber || ""} 
+                                onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} 
+                              />
+                            </div>
+                            <Button 
+                              onClick={() => setIsConversionOpen(true)} 
+                              className="gold-gradient text-black font-black h-16 px-12 rounded-2xl uppercase text-[13px] tracking-widest shadow-2xl hover:scale-[1.02] transition-all relative z-10 w-full md:w-auto"
+                            >
+                              PROTOCOLAR E CONVERTER
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </TabsContent>
                   </Tabs>
