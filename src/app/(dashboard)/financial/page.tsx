@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Scale,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -170,7 +171,7 @@ export default function FinancialPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar por ato ou cliente..." 
-              className="pl-12 glass border-white/10 h-14 text-sm text-white focus:ring-primary/50 rounded-xl"
+              className="pl-12 glass border-white/5 h-14 text-sm text-white focus:ring-primary/50 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
