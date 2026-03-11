@@ -24,7 +24,8 @@ import {
   Users2,
   Navigation,
   User as UserIcon,
-  Building2
+  Building2,
+  Handshake
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -77,6 +78,12 @@ const menuGroups = [
       { name: "PRAZOS", href: "/deadlines", icon: Clock },
       { name: "AUDIÊNCIAS", href: "/agenda", icon: Gavel },
       { name: "MODELOS", href: "/drafting", icon: BookOpen },
+    ]
+  },
+  {
+    title: "PARCERIAS",
+    items: [
+      { name: "CORRESPONDENTES", href: "/correspondents", icon: Handshake },
     ]
   },
   {
