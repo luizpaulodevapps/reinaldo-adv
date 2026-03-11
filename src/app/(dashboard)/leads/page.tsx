@@ -189,17 +189,17 @@ export default function LeadsPage() {
   const { data: templates } = useCollection(templatesQuery)
 
   const leadInterviewsQuery = useMemoFirebase(() => {
-    const leadId = activeLead?.id
+    const leadId = activeLead?.id || selectedLead?.id
     if (!user || !db || !leadId) return null
     return query(
       collection(db!, "interviews"), 
       where("clientId", "==", leadId)
     )
-  }, [db, user, activeLead?.id])
+  }, [db, user, activeLead?.id, selectedLead?.id])
   const { data: leadInterviewsRaw, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
   
   const leadInterviews = useMemo(() => {
-    if (!leadInterviewsRaw) return null
+    if (!leadInterviewsRaw) return []
     return [...leadInterviewsRaw].sort((a, b) => {
       const dateA = a.createdAt?.toDate?.() || a.createdAt || 0
       const dateB = b.createdAt?.toDate?.() || b.createdAt || 0
@@ -544,7 +544,7 @@ Documento gerado via Inteligência Artificial RGMJ.
                                   <div className="flex items-center gap-2.5 pt-4 border-t border-white/5"><Avatar className="h-6 w-6 border border-white/10"><AvatarFallback className="bg-secondary text-[8px] font-black text-primary">{int.interviewerName?.substring(0, 2)}</AvatarFallback></Avatar><span className="text-[9px] font-black text-muted-foreground uppercase">Dr(a). {int.interviewerName}</span></div>
                                 </div>
                                 <div className="p-4 bg-white/[0.02] border-t border-white/5 grid grid-cols-2 gap-2">
-                                  <Button variant="ghost" onClick={() => { setViewingInterview(int); setInterviewAnalysis(int.aiAnalysis || null); }} className="h-10 text-white font-black uppercase text-[9px] rounded-lg hover:bg-white/5 gap-2"><FileSearch className="h-3.5 w-3.5" /> DOSSIÊ</Button>
+                                  <Button variant="ghost" onClick={() => { setViewingInterview(int); setInterviewAnalysis(int.aiAnalysis || null); }} className="h-10 text-white font-black uppercase text-[9px] tracking-widest rounded-lg hover:bg-white/5 gap-2"><FileSearch className="h-3.5 w-3.5" /> DOSSIÊ</Button>
                                   <Button onClick={() => handleRunInterviewAnalysis(int)} className="h-10 glass border-primary/20 text-primary font-black uppercase text-[9px] rounded-lg hover:bg-primary hover:text-background gap-2 shadow-lg"><Brain className="h-3.5 w-3.5" /> ANALISAR IA</Button>
                                 </div>
                               </Card>
@@ -576,10 +576,10 @@ Documento gerado via Inteligência Artificial RGMJ.
                                 { label: "DNA Jurídico", ok: (leadInterviews?.length || 0) > 0 },
                                 { label: "Audit Logístico", ok: !!activeLead.courtAddress },
                               ].map((audit, i) => (
-                                <div key={i} className="flex items-center justify-between gap-4">
-                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{audit.label}</span>
+                                <div key={i} className="flex items-center justify-between gap-4 p-2 rounded-lg hover:bg-white/5 transition-colors group">
+                                  <span className="text-[10px] font-bold text-muted-foreground group-hover:text-white uppercase tracking-widest transition-colors">{audit.label}</span>
                                   {audit.ok ? (
-                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-5 px-2 text-[8px] font-black uppercase">SANEADO</Badge>
+                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-5 px-2 text-[8px] font-black uppercase shadow-[0_0_10px_rgba(16,185,129,0.1)]">SANEADO</Badge>
                                   ) : (
                                     <Badge variant="outline" className="text-[8px] border-amber-500/20 text-amber-500 bg-amber-500/5 px-2 h-5 font-black uppercase">PENDENTE</Badge>
                                   )}
@@ -588,77 +588,103 @@ Documento gerado via Inteligência Artificial RGMJ.
                             </div>
                           </Card>
 
-                          <div className="p-6 rounded-2xl border-2 border-dashed border-white/5 flex flex-col items-center text-center space-y-4 opacity-40">
-                            <FileText className="h-10 w-10 text-muted-foreground" />
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">O protocolo criará um novo processo no acervo ativo.</p>
-                          </div>
+                          <Card className="p-6 rounded-2xl border border-white/5 bg-white/[0.01] flex flex-col items-center text-center space-y-4 shadow-xl">
+                            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
+                              <FileText className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-relaxed">
+                              O rito de protocolo criará um novo dossiê no acervo de processos ativos da banca RGMJ.
+                            </p>
+                          </Card>
                         </div>
 
                         <div className="flex-1 space-y-8">
-                          <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                                <Brain className="h-6 w-6 text-primary" />
+                          <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
+                                <Brain className="h-8 w-8 text-primary animate-pulse" />
                               </div>
                               <div>
-                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Análise Estratégica Consolidada</h3>
-                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Diagnóstico unificado de todas as entrevistas.</p>
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Missão Estratégica</h3>
+                                <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Diagnóstico consolidado via inteligência de banca.</p>
                               </div>
                             </div>
                             <Button 
                               onClick={handleGenerateStrategicSummary} 
                               disabled={isGeneratingSummary} 
-                              className="h-12 px-8 gold-gradient text-background font-black uppercase text-[11px] gap-3 rounded-xl shadow-xl transition-all hover:scale-105"
+                              className="h-14 px-10 gold-gradient text-background font-black uppercase text-[12px] gap-4 rounded-xl shadow-[0_15px_40px_rgba(245,208,48,0.2)] transition-all hover:scale-105 active:scale-95"
                             >
-                              {isGeneratingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                              {isGeneratingSummary ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                               CONSOLIDAR DNA (IA)
                             </Button>
                           </div>
 
                           {strategicSummary ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-500">
-                              <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl space-y-4 shadow-xl">
-                                <h5 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Fatos Relevantes</h5>
-                                <p className="text-xs text-white/90 leading-relaxed font-medium text-justify italic">{strategicSummary.keyFacts}</p>
+                              <Card className="glass border-primary/20 bg-primary/[0.03] p-8 rounded-[2rem] space-y-5 shadow-2xl relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><FileText className="h-12 w-12" /></div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(245,208,48,0.5)]" />
+                                  <h5 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Fatos Relevantes</h5>
+                                </div>
+                                <p className="text-sm text-white/90 leading-relaxed font-serif text-justify italic whitespace-pre-wrap">{strategicSummary.keyFacts}</p>
                               </Card>
-                              <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-6 rounded-2xl space-y-4">
-                                <h5 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5" /> Próximos Passos</h5>
-                                <p className="text-xs text-white/90 leading-relaxed font-medium">{strategicSummary.potentialNextSteps}</p>
+
+                              <Card className="glass border-emerald-500/20 bg-emerald-500/[0.03] p-8 rounded-[2rem] space-y-5 shadow-2xl relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp className="h-12 w-12" /></div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-1 h-6 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                  <h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em]">Próximos Passos</h5>
+                                </div>
+                                <p className="text-sm text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.potentialNextSteps}</p>
                               </Card>
-                              <Card className="glass border-rose-500/20 bg-rose-500/5 p-6 rounded-2xl space-y-4">
-                                <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2"><AlertCircle className="h-3.5 w-3.5" /> Riscos & Desafios</h5>
-                                <p className="text-xs text-white/90 leading-relaxed font-medium">{strategicSummary.risksAndChallenges}</p>
+
+                              <Card className="glass border-rose-500/20 bg-rose-500/[0.03] p-8 rounded-[2rem] space-y-5 shadow-2xl relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><AlertCircle className="h-12 w-12" /></div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-1 h-6 bg-rose-500 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
+                                  <h5 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em]">Riscos & Desafios</h5>
+                                </div>
+                                <p className="text-sm text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.risksAndChallenges}</p>
                               </Card>
-                              <Card className="glass border-blue-500/20 bg-blue-500/5 p-6 rounded-2xl space-y-4">
-                                <h5 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2"><Target className="h-3.5 w-3.5" /> Análise Tática</h5>
-                                <p className="text-xs text-white/90 leading-relaxed font-medium">{strategicSummary.strategicAnalysis}</p>
+
+                              <Card className="glass border-blue-500/20 bg-blue-500/[0.03] p-8 rounded-[2rem] space-y-5 shadow-2xl relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-12 w-12" /></div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-1 h-6 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                                  <h5 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.3em]">Análise Tática</h5>
+                                </div>
+                                <p className="text-sm text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.strategicAnalysis}</p>
                               </Card>
                             </div>
                           ) : (
-                            <div className="py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
-                              <Brain className="h-16 w-16 text-muted-foreground" />
-                              <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center max-w-[300px]">Aguardando consolidação de dados para gerar o parecer estratégico.</p>
+                            <div className="py-40 flex flex-col items-center justify-center space-y-8 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-30 shadow-inner">
+                              <div className="relative">
+                                <Brain className="h-20 w-20 text-muted-foreground" />
+                                <div className="absolute -top-2 -right-2"><Sparkles className="h-8 w-8 text-primary animate-pulse" /></div>
+                              </div>
+                              <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center max-w-[320px] leading-loose">Aguardando comando de inteligência para consolidar os dossiês técnicos.</p>
                             </div>
                           )}
 
-                          <div className="p-8 rounded-[2.5rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-8 w-full shadow-2xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity"><Scale className="h-40 w-40" /></div>
-                            <div className="flex-1 space-y-4 w-full relative z-10">
-                              <Label className="text-[11px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-3">
-                                <FileCheck className="h-5 w-5" /> PROTOCOLO CNJ (AUTOMAÇÃO) *
+                          <div className="p-10 rounded-[3rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-10 w-full shadow-[0_30px_60px_rgba(0,0,0,0.4)] relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-all duration-700 -rotate-12 group-hover:rotate-0"><Scale className="h-56 w-56 text-white" /></div>
+                            <div className="flex-1 space-y-5 w-full relative z-10">
+                              <Label className="text-[12px] font-black text-purple-400 uppercase tracking-[0.25em] flex items-center gap-4">
+                                <FileCheck className="h-6 w-6" /> PROTOCOLO CNJ (ESTRUTURAÇÃO) *
                               </Label>
                               <Input 
                                 placeholder="0000000-00.0000.0.00.0000" 
-                                className="bg-black/60 border-purple-500/30 h-16 text-white font-mono text-2xl font-black w-full tracking-[0.2em] px-8 rounded-2xl focus:ring-1 focus:ring-purple-500/50" 
+                                className="bg-black/60 border-purple-500/30 h-20 text-white font-mono text-3xl font-black w-full tracking-[0.2em] px-10 rounded-2xl focus:ring-2 focus:ring-purple-500/50 shadow-inner" 
                                 value={activeLead.processNumber || ""} 
                                 onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} 
                               />
                             </div>
                             <Button 
                               onClick={() => setIsConversionOpen(true)} 
-                              className="gold-gradient text-black font-black h-16 px-12 rounded-2xl uppercase text-[13px] tracking-widest shadow-2xl hover:scale-[1.02] transition-all relative z-10 w-full md:w-auto"
+                              className="gold-gradient text-background font-black h-20 px-16 rounded-2xl uppercase text-[14px] tracking-[0.3em] shadow-2xl hover:scale-[1.02] transition-all relative z-10 w-full md:w-auto active:scale-95 group"
                             >
-                              PROTOCOLAR E CONVERTER
+                              PROTOCOLAR E CONVERTER <ChevronRight className="ml-3 h-5 w-5 group-hover:translate-x-2 transition-transform" />
                             </Button>
                           </div>
                         </div>
@@ -784,7 +810,7 @@ Documento gerado via Inteligência Artificial RGMJ.
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 text-left">
             <DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle>
-            <DialogDescription className="sr-only">Rito de captura de DNA jurídico RGMJ.</DialogDescription>
+            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Rito de captura de DNA jurídico RGMJ.</DialogDescription>
           </DialogHeader>
           {executingTemplate && (<DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />)}
         </DialogContent>
@@ -794,7 +820,7 @@ Documento gerado via Inteligência Artificial RGMJ.
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
           <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none text-left">
             <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
-            <DialogDescription className="sr-only">Conversão estratégica de Lead em Processo Judicial.</DialogDescription>
+            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Conversão estratégica de Lead em Processo Judicial.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0">{activeLead && (<ProcessForm initialData={{ clientName: activeLead.name, clientId: activeLead.id, defendantName: activeLead.defendantName, caseType: activeLead.type, court: activeLead.court, vara: activeLead.vara, processNumber: activeLead.processNumber || "", responsibleStaffId: user?.uid }} onSubmit={handleConvertProcess} onCancel={() => setIsConversionOpen(false)} />)}</div>
         </DialogContent>
