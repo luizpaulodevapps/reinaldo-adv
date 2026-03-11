@@ -29,7 +29,8 @@ import {
   Eye,
   Brain,
   CheckCircle2,
-  Navigation
+  Navigation,
+  Sparkles
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -52,6 +53,7 @@ export default function CourtsPage() {
   const [loadingCep, setLoadingCep] = useState(false)
   const [isAiSearching, setIsAiSearching] = useState(false)
   const [newVara, setNewVara] = useState({ name: "", phone: "", notes: "" })
+  const [bulkCount, setBulkCount] = useState("")
 
   const [formData, setFormData] = useState<any>({
     name: "",
@@ -149,6 +151,38 @@ export default function CourtsPage() {
     setNewVara({ name: "", phone: "", notes: "" })
   }
 
+  const handleBulkAddVaras = () => {
+    const count = parseInt(bulkCount)
+    if (isNaN(count) || count <= 0) {
+      toast({ variant: "destructive", title: "Quantidade inválida" })
+      return
+    }
+
+    setFormData((prev: any) => {
+      const existingNames = new Set(prev.varas.map((v: any) => v.name))
+      const newVaras = [...prev.varas]
+      let added = 0
+      
+      for (let i = 1; i <= count; i++) {
+        const name = `${i}ª VARA`
+        if (!existingNames.has(name)) {
+          newVaras.push({ name, phone: "", notes: "" })
+          existingNames.add(name)
+          added++
+        }
+      }
+      
+      if (added > 0) {
+        toast({ title: "Geração em Lote", description: `${added} unidades genéricas foram injetadas.` })
+      } else {
+        toast({ variant: "destructive", title: "Operação redundante", description: "As unidades já existem neste fórum." })
+      }
+      
+      return { ...prev, varas: newVaras }
+    })
+    setBulkCount("")
+  }
+
   const handleRemoveVara = (idx: number) => {
     setFormData((prev: any) => ({
       ...prev,
@@ -190,7 +224,7 @@ export default function CourtsPage() {
 
   const handleDelete = (id: string) => {
     if (!db || !confirm("Deseja remover este órgão da base logística?")) return
-    deleteDocumentNonBlocking(doc(db!, "courts", id))
+    deleteDocumentNonBlocking(doc(db, "courts", id))
     toast({ variant: "destructive", title: "Fórum Removido" })
   }
 
@@ -274,7 +308,6 @@ export default function CourtsPage() {
               onClick={() => handleOpenView(court)}
             >
               <CardContent className="p-10 space-y-8 relative">
-                {/* Header do Card - Ícone e Ações */}
                 <div className="flex items-start justify-between">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
                     <Building2 className="h-8 w-8" />
@@ -295,7 +328,6 @@ export default function CourtsPage() {
                   </div>
                 </div>
 
-                {/* Identificação */}
                 <div className="space-y-2">
                   <h3 className="text-2xl font-black text-[#f5d030] uppercase tracking-tighter leading-tight">
                     {court.name}
@@ -305,7 +337,6 @@ export default function CourtsPage() {
                   </div>
                 </div>
 
-                {/* Box de Endereço - Fiel ao Print */}
                 <div className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-4 shadow-inner">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Endereço de Citação</p>
                   <div className="space-y-1">
@@ -318,7 +349,6 @@ export default function CourtsPage() {
                   </div>
                 </div>
 
-                {/* Rodapé do Card */}
                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
                   <Badge variant="outline" className="text-[9px] font-black uppercase border-[#f5d030]/20 text-[#f5d030] bg-[#f5d030]/5 px-4 h-7 rounded-full">
                     LOGÍSTICA OK
@@ -427,11 +457,33 @@ export default function CourtsPage() {
               </div>
 
               <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 shadow-inner">
-                <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                  <Library className="h-4 w-4" /> Unidades Judiciárias (Varas)
-                </Label>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                    <Library className="h-4 w-4" /> Unidades Judiciárias (Varas)
+                  </Label>
+                  
+                  <div className="flex items-center gap-3 bg-black/40 p-2 rounded-xl border border-white/5">
+                    <Label className="text-[9px] font-black text-muted-foreground uppercase whitespace-nowrap">Geração em Lote:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        type="number" 
+                        placeholder="QTD" 
+                        className="w-16 h-8 bg-black/40 border-white/10 text-white font-black text-center" 
+                        value={bulkCount}
+                        onChange={(e) => setBulkCount(e.target.value)}
+                      />
+                      <Button 
+                        onClick={handleBulkAddVaras}
+                        variant="outline" 
+                        className="h-8 px-3 border-primary/30 text-primary font-black uppercase text-[8px] hover:bg-primary hover:text-background"
+                      >
+                        <Sparkles className="h-3 w-3 mr-1.5" /> GERAR VARAS
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/5 pt-6">
                   <div className="md:col-span-1 space-y-1.5">
                     <Label className="text-[9px] font-black text-muted-foreground uppercase">Nome / Número *</Label>
                     <Input 
