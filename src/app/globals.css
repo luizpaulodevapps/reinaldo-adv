@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 222 47% 4%;
+    --background: 222 47% 4%; /* #020617 */
     --foreground: 0 0% 98%;
     
     --card: 222 47% 6%;
@@ -13,7 +13,7 @@
     --popover: 222 47% 4%;
     --popover-foreground: 0 0% 98%;
     
-    --primary: 43 65% 53%; /* #D4AF37 - Classic Gold */
+    --primary: 48 91% 58%; /* #F5D030 - Vibrant Gold */
     --primary-foreground: 222 47% 4%;
     
     --secondary: 222 47% 8%;
@@ -22,27 +22,27 @@
     --muted: 222 47% 10%;
     --muted-foreground: 0 0% 60%;
     
-    --accent: 43 65% 53%;
+    --accent: 48 91% 58%;
     --accent-foreground: 0 0% 98%;
     
-    --success: 135 36% 41%;
-    --destructive: 0 84% 60%;
+    --success: 135 36% 41%; /* #438F56 */
+    --destructive: 335 49% 49%; /* #BD4073 - Muted Rose */
     --destructive-foreground: 0 0% 98%;
     
     --border: 222 47% 12%;
     --input: 222 47% 12%;
-    --ring: 43 65% 53%;
+    --ring: 48 91% 58%;
     
     --radius: 1rem;
 
     --sidebar-background: 222 47% 3%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 43 65% 53%;
+    --sidebar-primary: 48 91% 58%;
     --sidebar-primary-foreground: 222 47% 4%;
     --sidebar-accent: 222 47% 8%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 222 47% 10%;
-    --sidebar-ring: 43 65% 53%;
+    --sidebar-ring: 48 91% 58%;
   }
 }
 
@@ -54,17 +54,17 @@
     font-size: 16px; 
   }
   body {
-    @apply bg-[#02040a] text-foreground antialiased selection:bg-primary/30 selection:text-white;
-    font-family: 'Roboto', sans-serif;
+    @apply bg-[#020617] text-foreground antialiased selection:bg-primary/30 selection:text-white;
+    font-family: 'PT Sans', sans-serif;
   }
 }
 
 .font-headline {
-  @apply font-bold tracking-tight uppercase;
+  @apply font-serif font-bold tracking-tight uppercase;
 }
 
 .text-gradient-gold {
-  background: linear-gradient(135deg, #FFD700 0%, #D4AF37 50%, #B8860B 100%);
+  background: linear-gradient(135deg, #FFD700 0%, #F5D030 50%, #B8860B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -74,11 +74,11 @@
 }
 
 .hover-gold:hover {
-  @apply border-primary/30 shadow-[0_0_25px_rgba(245,208,48,0.08)];
+  @apply border-primary/30 shadow-[0_0_30px_rgba(245,208,48,0.1)];
 }
 
 .gold-gradient {
-  background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%);
+  background: linear-gradient(135deg, #FFD700 0%, #F5D030 100%);
 }
 
 ::-webkit-scrollbar {
@@ -86,7 +86,7 @@
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-[#02040a];
+  @apply bg-[#020617];
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
