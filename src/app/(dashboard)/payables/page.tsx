@@ -19,7 +19,8 @@ import {
   Clock, 
   Wallet,
   Calculator,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
