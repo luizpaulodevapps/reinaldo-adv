@@ -113,11 +113,20 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       }))
       if (initialData.court) {
         setCourtSearchTerm(initialData.court)
-        const court = dbCourts?.find(c => c.name === initialData.court)
-        if (court) setAvailableVaras(court.varas || [])
       }
     }
-  }, [initialData, dbCourts])
+  }, [initialData])
+
+  // Efeito para sincronizar varas quando dbCourts carrega ou quando o court do formulário muda
+  useEffect(() => {
+    if (dbCourts && (formData.court || initialData?.court)) {
+      const targetCourt = formData.court || initialData?.court
+      const court = dbCourts.find(c => c.name === targetCourt)
+      if (court) {
+        setAvailableVaras(court.varas || [])
+      }
+    }
+  }, [dbCourts, formData.court, initialData?.court])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -139,12 +148,19 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   const filteredCourts = useMemo(() => {
     if (!courtSearchTerm || courtSearchTerm.length < 2) return []
+    
+    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const term = normalize(courtSearchTerm)
+
     return (dbCourts || []).filter(c => {
-      const matchesText = c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
-                         c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
+      const matchesName = normalize(c.name).includes(term)
+      const matchesCity = c.city ? normalize(c.city).includes(term) : false
+      
       const areas = c.legalAreas || []
+      // Se não tiver áreas, mostra em todos. Se tiver, filtra pela área da demanda
       const matchesArea = areas.length === 0 || areas.includes(formData.caseType)
-      return matchesText && matchesArea
+      
+      return (matchesName || matchesCity) && matchesArea
     })
   }, [courtSearchTerm, dbCourts, formData.caseType])
 

@@ -163,12 +163,18 @@ export function LeadForm({
 
   const filteredCourts = useMemo(() => {
     if (!courtSearchTerm || courtSearchTerm.length < 2) return []
+    
+    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const term = normalize(courtSearchTerm)
+
     return (dbCourts || []).filter(c => {
-      const matchesText = c.name.toLowerCase().includes(courtSearchTerm.toLowerCase()) ||
-                         c.city?.toLowerCase().includes(courtSearchTerm.toLowerCase())
+      const matchesName = normalize(c.name).includes(term)
+      const matchesCity = c.city ? normalize(c.city).includes(term) : false
+      
       const areas = c.legalAreas || []
       const matchesArea = areas.length === 0 || areas.includes(formData.type)
-      return matchesText && matchesArea
+      
+      return (matchesName || matchesCity) && matchesArea
     })
   }, [courtSearchTerm, dbCourts, formData.type])
 
@@ -176,13 +182,19 @@ export function LeadForm({
     if (initialData) {
       setFormData(prev => ({ ...prev, ...initialData, name: initialData.name || "" }))
       setSearchTerm(initialData.name || "")
-      if (initialData.court) {
-        setCourtSearchTerm(initialData.court)
-        const court = dbCourts?.find(c => c.name === initialData.court)
-        if (court) setAvailableVaras(court.varas || [])
+    }
+  }, [initialData])
+
+  // Efeito para sincronizar varas quando dbCourts carrega ou quando o court do formulário muda
+  useEffect(() => {
+    if (dbCourts && (formData.court || initialData?.court)) {
+      const targetCourt = formData.court || initialData?.court
+      const court = dbCourts.find(c => c.name === targetCourt)
+      if (court) {
+        setAvailableVaras(court.varas || [])
       }
     }
-  }, [initialData, dbCourts])
+  }, [dbCourts, formData.court, initialData?.court])
 
   const handleCepBlur = async (type: "client" | "defendant" | "court") => {
     let cep = ""
@@ -253,7 +265,7 @@ export function LeadForm({
   const inputClass = "bg-black/40 border-white/10 h-10 text-xs text-white uppercase font-bold focus:ring-primary/50"
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-[#0a0f1e] font-sans overflow-hidden">
+    <div className="flex flex-col h-full bg-[#0a0f1e] font-sans overflow-hidden">
       <div className="px-6 pt-4 pb-1 flex-none bg-[#0a0f1e]/50 border-b border-white/5">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-[#1a1f2e] w-full p-1 h-10 rounded-lg gap-1">
