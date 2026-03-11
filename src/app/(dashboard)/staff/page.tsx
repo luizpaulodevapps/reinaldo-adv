@@ -22,7 +22,9 @@ import {
   UserCheck,
   X,
   Save,
-  AlertCircle
+  AlertCircle,
+  MapPin,
+  Home
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,7 +35,7 @@ import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBl
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn, maskPhone, maskCPF } from "@/lib/utils"
+import { cn, maskPhone, maskCPF, maskCEP } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
 
@@ -57,6 +59,7 @@ export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<any>(null)
+  const [loadingCep, setLoadingCep] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -68,6 +71,13 @@ export default function StaffPage() {
     oabState: "SP",
     hiringDate: new Date().toISOString().split('T')[0],
     status: "Ativo",
+    zipCode: "",
+    address: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: ""
   })
 
   const db = useFirestore()
@@ -94,6 +104,30 @@ export default function StaffPage() {
   const currentRoleConfig = useMemo(() => {
     return STAFF_ROLES.find(r => r.id === formData.role)
   }, [formData.role])
+
+  const handleCepBlur = async () => {
+    const cep = formData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+
+    setLoadingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }))
+      }
+    } catch (error) {
+      console.error("CEP error")
+    } finally {
+      setLoadingCep(false)
+    }
+  }
 
   const handleSave = () => {
     if (!db || !formData.name || !formData.role) {
@@ -154,6 +188,13 @@ export default function StaffPage() {
       oabState: "SP",
       hiringDate: new Date().toISOString().split('T')[0],
       status: "Ativo",
+      zipCode: "",
+      address: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: ""
     })
     setIsDialogOpen(true)
   }
@@ -398,7 +439,79 @@ export default function StaffPage() {
                 </div>
               </div>
 
-              {/* Seção 4: Dados Contratuais */}
+              {/* Seção 4: Endereço Residencial (Opcional) */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <Home className="h-4 w-4 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Endereço Residencial (Opcional)</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <Label className={labelMini}>CEP</Label>
+                    <div className="relative">
+                      <Input 
+                        value={formData.zipCode} 
+                        onChange={(e) => setFormData({...formData, zipCode: maskCEP(e.target.value)})} 
+                        onBlur={handleCepBlur}
+                        className={cn(inputClass, "font-mono")}
+                        placeholder="00000-000"
+                      />
+                      {loadingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className={labelMini}>Logradouro</Label>
+                    <Input 
+                      value={formData.address} 
+                      onChange={(e) => setFormData({...formData, address: e.target.value.toUpperCase()})} 
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Número</Label>
+                    <Input 
+                      value={formData.number} 
+                      onChange={(e) => setFormData({...formData, number: e.target.value})} 
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Complemento</Label>
+                    <Input 
+                      value={formData.complement} 
+                      onChange={(e) => setFormData({...formData, complement: e.target.value.toUpperCase()})} 
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Bairro</Label>
+                    <Input 
+                      value={formData.neighborhood} 
+                      onChange={(e) => setFormData({...formData, neighborhood: e.target.value.toUpperCase()})} 
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Cidade</Label>
+                    <Input 
+                      value={formData.city} 
+                      onChange={(e) => setFormData({...formData, city: e.target.value.toUpperCase()})} 
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>UF</Label>
+                    <Select value={formData.state} onValueChange={(v) => setFormData({...formData, state: v})}>
+                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] text-white">
+                        {BRAZIL_STATES.map(state => <SelectItem key={state} value={state}>{state}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção 5: Dados Contratuais */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Calendar className="h-4 w-4 text-primary" />
