@@ -13,10 +13,9 @@ import {
   ChevronRight,
   MoreVertical,
   Edit3,
-  Trash2,
   Archive,
-  LayoutGrid,
   List,
+  LayoutGrid,
   Gavel,
   ShieldCheck,
   TrendingUp,
@@ -47,7 +46,8 @@ import {
   X,
   Building2,
   ListTodo,
-  CloudLightning
+  CloudLightning,
+  Trash2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -152,7 +152,8 @@ export default function CasesPage() {
       const matchesSearch = 
         proc.processNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proc.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        proc.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+        proc.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        proc.defendantName?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesArea = activeArea === "todos" || proc.caseType?.toLowerCase() === activeArea.toLowerCase()
       
@@ -551,27 +552,33 @@ export default function CasesPage() {
                   viewMode === "list" ? "rounded-xl" : "rounded-3xl"
                 )}
                 onClick={(e) => {
-                  // Prevenir abertura de detalhes ao clicar em botões de ação
                   if ((e.target as HTMLElement).closest('button')) return;
                   handleOpenView(proc);
                 }}
               >
                 <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
                   {viewMode === "list" ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <h3 className="text-[#F5D030] font-black text-sm uppercase tracking-tight">PROCESSO: {proc.description}</h3>
-                          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black">ATIVO</Badge>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-4">
+                            <h3 className="text-[#F5D030] font-black text-base uppercase tracking-tight truncate leading-tight">PROCESSO: {proc.description}</h3>
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black shrink-0">ATIVO</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <span className="text-[9px] font-black uppercase tracking-widest opacity-50">VS</span>
+                            <span className="text-sm font-bold text-white uppercase truncate">{proc.defendantName || "NÃO MAPEADO"}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-12">
+                        
+                        <div className="flex items-center gap-12 shrink-0 ml-8">
                           <div className="flex flex-col">
                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">CLIENTE / OUTORGANTE</span>
                             <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded bg-white/5 flex items-center justify-center border border-white/10 text-primary">
-                                <User className="h-3.5 w-3.5" />
+                              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary">
+                                <User className="h-4 w-4" />
                               </div>
-                              <span className="text-xs font-bold text-white uppercase">{proc.clientName}</span>
+                              <span className="text-sm font-bold text-white uppercase">{proc.clientName}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -579,18 +586,14 @@ export default function CasesPage() {
                               <Calendar className="h-3 w-3 text-amber-500 mb-0.5" />
                               <span className="text-[8px] font-black text-amber-500">PAUTA</span>
                             </div>
-                            <div className="flex items-center justify-center p-2 text-muted-foreground/20">
-                              <Handshake className="h-4 w-4" />
-                            </div>
                             <div className="flex flex-col items-center justify-center border border-rose-500/30 bg-rose-500/5 px-2 py-1 rounded-lg">
                               <Clock className="h-3 w-3 text-rose-500 mb-0.5" />
                               <span className="text-[8px] font-black text-rose-500 uppercase">PRAZOS</span>
                             </div>
                             <div className="flex items-center gap-2 pl-4 border-l border-white/5">
-                              <ChevronDown className="h-4 w-4 text-muted-foreground/40" />
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <button className="h-8 w-8 rounded-lg flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none">
+                                  <button className="h-9 w-9 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5">
                                     <MoreVertical className="h-4 w-4" />
                                   </button>
                                 </DropdownMenuTrigger>
@@ -601,21 +604,43 @@ export default function CasesPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-4 mt-1">
-                        <div className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-muted-foreground tracking-tight">
-                          {proc.processNumber}
+                      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 p-4 rounded-xl bg-white/[0.02] border border-white/5 shadow-inner">
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Protocolo CNJ</p>
+                          <div className="bg-black/20 border border-white/10 px-2 py-1 rounded font-mono text-[10px] font-bold text-white tracking-tight w-fit">
+                            {proc.processNumber}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-amber-500">
-                          <Scale className="h-3 w-3" />
-                          <span className="text-[9px] font-black uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Área / Matéria</p>
+                          <div className="flex items-center gap-1.5 text-amber-500">
+                            <Scale className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-emerald-500">
-                          <UserIcon className="h-3 w-3" />
-                          <span className="text-[9px] font-black uppercase tracking-widest">DR(A). {proc.responsibleStaffName || "EQUIPE RGMJ"}</span>
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Unidade</p>
+                          <div className="flex items-center gap-1.5 text-white/80">
+                            <Gavel className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-[10px] font-bold uppercase truncate">{proc.court || "---"} • {proc.vara || "---"}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Valor da Causa</p>
+                          <div className="flex items-center gap-1.5 text-emerald-500 font-black tabular-nums text-[11px]">
+                            <TrendingUp className="h-3.5 w-3.5" /> R$ {Number(proc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Responsável</p>
+                          <div className="flex items-center gap-1.5 text-emerald-500">
+                            <UserIcon className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-black uppercase tracking-widest truncate">DR(A). {proc.responsibleStaffName || "EQUIPE RGMJ"}</span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
                         <div className="flex items-center gap-3">
                           <Button variant="outline" size="sm" className="h-8 border-emerald-500/30 text-emerald-500 bg-emerald-500/5 text-[9px] font-black uppercase tracking-widest px-3 rounded-lg hover:bg-emerald-500/10 transition-all">
                             <FolderOpen className="h-3.5 w-3.5 mr-2" /> DRIVE DO CASO
@@ -884,7 +909,7 @@ export default function CasesPage() {
         </SheetContent>
       </Sheet>
 
-      {/* MODAL: AGENDAR REUNIÃO */}
+      {/* MODAIS DE OPERAÇÃO COM SCROLL FIXED */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
@@ -935,7 +960,6 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: LANÇAR PRAZO FATAL */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
@@ -970,7 +994,6 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: AGENDAR AUDIÊNCIA */}
       <Dialog open={isHearingOpen} onOpenChange={setIsHearingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
@@ -1021,7 +1044,6 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: AGENDAR DILIGÊNCIA (TASK) */}
       <Dialog open={isDiligenceOpen} onOpenChange={setIsDiligenceOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
@@ -1031,11 +1053,6 @@ export default function CasesPage() {
                 <div>
                   <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
                   <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground mt-1">Atribuição de tarefa operacional ou externa.</DialogDescription>
-                  {googleConfig?.isTasksActive && (
-                    <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                      <CloudLightning className="h-2.5 w-2.5" /> Sincronismo Google Tasks Ativo
-                    </p>
-                  )}
                 </div>
               </div>
             </DialogHeader>
@@ -1109,7 +1126,6 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: GERAR DOCUMENTO IA */}
       <Dialog open={isAiDocOpen} onOpenChange={setIsAiDocOpen}>
         <DialogContent className="glass border-primary/20 sm:max-w-[1100px] bg-[#0a0f1e] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
@@ -1125,7 +1141,6 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: EVENTO FINANCEIRO */}
       <Dialog open={isFinancialOpen} onOpenChange={setIsFinancialOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
           <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
