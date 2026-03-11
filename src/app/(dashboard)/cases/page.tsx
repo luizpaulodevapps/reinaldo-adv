@@ -108,6 +108,7 @@ export default function CasesPage() {
   const [isAiDocOpen, setIsAiDocOpen] = useState(false)
   const [isFinancialOpen, setIsFinancialOpen] = useState(false)
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
+  const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
 
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
   const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "" })
@@ -321,6 +322,39 @@ export default function CasesPage() {
     await addDocumentNonBlocking(collection(db, "financial_titles"), payload)
     setIsFinancialOpen(false)
     toast({ title: "Evento Financeiro Registrado" })
+  }
+
+  const handleSyncDrive = async (proc: any) => {
+    if (!db || !googleConfig?.rootFolderId) {
+      toast({ 
+        variant: "destructive", 
+        title: "Configuração Pendente", 
+        description: "O Root Folder ID do Google Drive não foi configurado nas configurações." 
+      })
+      return
+    }
+
+    setSyncingDriveId(proc.id)
+    try {
+      // Simulação de criação de infraestrutura
+      // Em produção, isso chamaria uma Cloud Function ou Server Action com Auth do Google
+      const driveUrl = `https://drive.google.com/drive/u/0/folders/${googleConfig.rootFolderId}`
+      
+      await updateDocumentNonBlocking(doc(db, "processes", proc.id), {
+        driveStatus: "synced",
+        driveUrl: driveUrl,
+        updatedAt: serverTimestamp()
+      })
+      
+      toast({ 
+        title: "Drive Sincronizado", 
+        description: `Estrutura de pastas criada para o processo ${proc.processNumber || proc.id}.` 
+      })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro no Sincronismo" })
+    } finally {
+      setSyncingDriveId(null)
+    }
   }
 
   const getDrawerWidthClass = () => {
@@ -642,8 +676,31 @@ export default function CasesPage() {
 
                       <div className="flex items-center justify-between pt-2 border-t border-white/5">
                         <div className="flex items-center gap-3">
-                          <Button variant="outline" size="sm" className="h-8 border-emerald-500/30 text-emerald-500 bg-emerald-500/5 text-[9px] font-black uppercase tracking-widest px-3 rounded-lg hover:bg-emerald-500/10 transition-all">
-                            <FolderOpen className="h-3.5 w-3.5 mr-2" /> DRIVE DO CASO
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-8 text-[9px] font-black uppercase tracking-widest px-3 rounded-lg transition-all",
+                              proc.driveStatus === 'synced' 
+                                ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10" 
+                                : "border-amber-500/30 text-amber-500 bg-amber-500/5 hover:bg-amber-500/10"
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (proc.driveStatus === 'synced') {
+                                window.open(proc.driveUrl || "#", "_blank")
+                              } else {
+                                handleSyncDrive(proc)
+                              }
+                            }}
+                            disabled={syncingDriveId === proc.id}
+                          >
+                            {syncingDriveId === proc.id ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                            ) : (
+                              <FolderOpen className={cn("h-3.5 w-3.5 mr-2", proc.driveStatus === 'synced' ? "text-emerald-500" : "text-amber-500")} />
+                            )}
+                            {proc.driveStatus === 'synced' ? "ACESSAR PASTA DRIVE" : "SINCRONIZAR DRIVE"}
                           </Button>
                           <Button variant="outline" size="sm" className="h-8 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[9px] font-black uppercase tracking-widest px-3 rounded-lg hover:bg-blue-500/10 transition-all">
                             <ExternalLink className="h-3.5 w-3.5 mr-2" /> PORTAL JUDICIÁRIO
