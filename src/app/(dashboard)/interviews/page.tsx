@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -53,7 +53,6 @@ export default function InterviewsPage() {
 
   const interviewsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    // Busca global de todas as entrevistas concluídas pela banca
     return query(collection(db!, "interviews"), orderBy("createdAt", "desc"))
   }, [db, user])
 
@@ -146,39 +145,97 @@ export default function InterviewsPage() {
       </div>
 
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <div className="p-5 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none">
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh]">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl space-y-0 text-left">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><FileSearch className="h-5 w-5 text-primary" /></div>
-              <div><DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle><DialogDescription className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription></div>
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><FileSearch className="h-6 w-6 text-primary" /></div>
+              <div>
+                <DialogTitle className="text-white text-xl font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle>
+                <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription>
+              </div>
             </div>
-            <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-10 px-5 gold-gradient text-background font-black uppercase text-[9px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
-          </div>
+            <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
+          </DialogHeader>
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">
-              <div className="px-5 bg-black/20 border-b border-white/5 flex-none"><TabsList className="bg-transparent h-10 gap-6 p-0"><TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full tracking-widest">Transcrição</TabsTrigger><TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[10px] uppercase h-full tracking-widest">Análise IA</TabsTrigger></TabsList></div>
-              <div className="flex-1 overflow-hidden p-5">
+              <div className="px-6 bg-black/20 border-b border-white/5 flex-none"><TabsList className="bg-transparent h-12 gap-8 p-0"><TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full tracking-widest">Transcrição Técnica</TabsTrigger><TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full tracking-widest">Diagnóstico IA</TabsTrigger></TabsList></div>
+              <div className="flex-1 overflow-hidden">
                 <TabsContent value="transcricao" className="h-full mt-0">
-                  <ScrollArea className="h-full pr-4">
-                    <div className="space-y-5 max-w-3xl mx-auto pb-10">
+                  <ScrollArea className="h-full">
+                    <div className="p-10 space-y-8 max-w-4xl mx-auto pb-20">
                       {(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => {
                         const label = typeof item === 'string' ? item : item.label; 
                         const answer = viewingInterview?.responses?.[label]; 
                         if (!answer) return null;
                         return (
-                          <div key={i} className="space-y-1.5">
-                            <h5 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</h5>
-                            <p className="text-sm text-white font-medium uppercase leading-relaxed text-justify border-l border-white/5 pl-3">{String(answer)}</p>
+                          <div key={i} className="space-y-2 group">
+                            <h5 className="text-[9px] font-black text-primary uppercase tracking-[0.2em] group-hover:text-white transition-colors">{label}</h5>
+                            <p className="text-base text-white/90 font-serif leading-relaxed text-justify border-l-2 border-white/5 pl-6 py-1">{String(answer)}</p>
                           </div>
                         )
                       })}
                     </div>
                   </ScrollArea>
                 </TabsContent>
-                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-4"><Brain className="h-12 w-12 text-primary animate-pulse" /><p className="text-[10px] font-bold text-white uppercase tracking-widest">Processando...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full pr-4"><div className="space-y-6 max-w-4xl mx-auto pb-10"><Card className="glass border-primary/20 bg-primary/5 p-5 rounded-2xl shadow-lg"><h5 className="text-[10px] font-black text-primary uppercase mb-3">Resumo Executivo</h5><p className="text-sm text-white/90 leading-relaxed font-medium">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-2 gap-4"><Card className="glass border-rose-500/20 bg-rose-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-rose-500 uppercase mb-3">Teses & Riscos</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-5 rounded-2xl"><h5 className="text-[10px] font-black text-emerald-500 uppercase mb-3">Recomendações</h5><p className="text-xs text-white/80 leading-relaxed font-medium">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3"><Sparkles className="h-10 w-10" /><p className="text-[10px] font-black uppercase tracking-widest">Aguardando Comando</p></div>)}</TabsContent>
+                <TabsContent value="analise" className="h-full mt-0">
+                  {isAiAnalyzing ? (
+                    <div className="h-full flex flex-col items-center justify-center space-y-6">
+                      <div className="relative">
+                        <Brain className="h-16 w-16 text-primary animate-pulse" />
+                        <div className="absolute -top-2 -right-2"><Sparkles className="h-6 w-6 text-primary animate-bounce" /></div>
+                      </div>
+                      <p className="text-[11px] font-black text-white uppercase tracking-[0.4em] animate-pulse">Processando Inteligência RGMJ...</p>
+                    </div>
+                  ) : interviewAnalysis ? (
+                    <ScrollArea className="h-full">
+                      <div className="p-10 space-y-10 max-w-5xl mx-auto pb-20">
+                        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-20 w-20" /></div>
+                          <div className="flex items-center gap-3 mb-6">
+                            <div className="w-1.5 h-6 bg-primary rounded-full" />
+                            <h5 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Resumo Executivo dos Fatos</h5>
+                          </div>
+                          <p className="text-lg text-white font-serif leading-loose text-justify italic whitespace-pre-wrap">
+                            {interviewAnalysis.summary}
+                          </p>
+                        </Card>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-xl">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-1.5 h-6 bg-rose-500 rounded-full" />
+                              <h5 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em]">Teses & Riscos Processuais</h5>
+                            </div>
+                            <p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">
+                              {interviewAnalysis.legalAnalysis}
+                            </p>
+                          </Card>
+
+                          <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl shadow-xl">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                              <h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em]">Recomendações & Provas</h5>
+                            </div>
+                            <p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">
+                              {interviewAnalysis.recommendations}
+                            </p>
+                          </Card>
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4">
+                      <Sparkles className="h-16 w-16" />
+                      <p className="text-[11px] font-black uppercase tracking-[0.5em]">Aguardando Comando de Inteligência</p>
+                    </div>
+                  )}
+                </TabsContent>
               </div>
             </Tabs>
           </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5 flex-none">
+            <Button onClick={() => setViewingInterview(null)} className="h-12 px-10 glass border-white/10 text-white font-black uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5 transition-all">FECHAR DOSSIÊ</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
