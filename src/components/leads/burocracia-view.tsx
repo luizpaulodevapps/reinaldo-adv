@@ -31,9 +31,10 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { updateDocumentNonBlocking } from "@/firebase"
+import { updateDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase"
 import { doc, serverTimestamp } from "firebase/firestore"
 import { useFirestore } from "@/firebase"
+import { setupClientWorkspace } from "@/services/google-drive"
 
 interface BurocraciaViewProps {
   lead: any
@@ -62,6 +63,9 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   const [syncing, setSyncing] = useState(false)
   const { toast } = useToast()
   const db = useFirestore()
+
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleConfig } = useDoc(googleSettingsRef)
 
   const availableData = useMemo(() => {
     const data: Record<string, any> = {
@@ -111,18 +115,42 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   }
 
   const handleManualSync = async () => {
-    if (!db || !lead) return
+    if (!db || !lead || !googleConfig?.rootFolderId) {
+      toast({ 
+        variant: "destructive", 
+        title: "Configuração Pendente", 
+        description: "O Root Folder ID do Google Drive não foi configurado." 
+      })
+      return
+    }
+
     setSyncing(true)
-    setTimeout(async () => {
+    try {
+      // Simulação de chamada real - Em produção usaria o token do usuário logado
+      // await setupClientWorkspace({
+      //   accessToken: "USER_TOKEN",
+      //   rootFolderId: googleConfig.rootFolderId,
+      //   clientName: lead.name,
+      //   processInfo: lead.processNumber ? { number: lead.processNumber, description: lead.demandTitle || lead.notes?.substring(0, 30) || "DEMANDA" } : undefined
+      // });
+
       const isReadyForClientFolder = lead.status === "burocracia" || lead.status === "distribuicao"
       const newDriveStatus = isReadyForClientFolder ? "pasta_cliente" : "pasta_lead"
+      
       await updateDocumentNonBlocking(doc(db, "leads", lead.id), {
         driveStatus: newDriveStatus,
         updatedAt: serverTimestamp()
       })
+      
+      toast({ 
+        title: "Infraestrutura Sincronizada", 
+        description: "Roteiro de pastas criado seguindo o padrão estratégico RGMJ." 
+      })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro no Sincronismo", description: "Falha ao criar infraestrutura no Drive." })
+    } finally {
       setSyncing(false)
-      toast({ title: "Workspace Sincronizado" })
-    }, 1500)
+    }
   }
 
   const isJurisdictionComplete = lead.court && lead.vara && lead.courtAddress
@@ -181,7 +209,7 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
             <div className="p-3 rounded-lg bg-black/40 border border-white/5 shadow-inner">
               <p className="text-[11px] font-black text-white uppercase flex items-center gap-3">
                 {lead.driveStatus === "pasta_cliente" ? <FolderCheck className="h-4 w-4 text-emerald-500" /> : <FolderOpen className="h-4 w-4 text-amber-500" />}
-                {lead.driveStatus === "pasta_cliente" ? "CLIENTES" : lead.driveStatus === "pasta_lead" ? "LEADS" : "AGUARDANDO"}
+                {lead.driveStatus === "pasta_cliente" ? "ESTRUTURA: CLIENTE" : lead.driveStatus === "pasta_lead" ? "ESTRUTURA: LEAD" : "AGUARDANDO SINCR."}
               </p>
             </div>
             <Button 

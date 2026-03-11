@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -545,7 +544,7 @@ Documento gerado via Inteligência Artificial RGMJ.
                         ) : leadInterviews && leadInterviews.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {leadInterviews.map((int) => (
-                              <Card key={int.id} className="glass border-white/5 hover:border-primary/20 transition-all p-0 rounded-3xl bg-white/[0.01] flex flex-col group shadow-2xl relative overflow-hidden">
+                              <Card key={int.id} className="glass border-white/5 hover-border-primary/20 transition-all p-0 rounded-3xl bg-white/[0.01] flex flex-col group shadow-2xl relative overflow-hidden">
                                 {int.aiAnalysis && <div className="absolute top-0 right-0 p-6"><Sparkles className="h-5 w-5 text-primary animate-pulse shadow-[0_0_15px_rgba(245,208,48,0.3)]" /></div>}
                                 <div className="p-8 space-y-8 flex-1">
                                   <div className="flex justify-between items-start">

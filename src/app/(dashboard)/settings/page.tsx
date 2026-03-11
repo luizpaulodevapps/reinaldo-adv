@@ -211,7 +211,7 @@ function SettingsContent() {
 
   const [googleConfig, setGoogleConfig] = useState({
     masterEmail: "",
-    rootFolderId: "",
+    rootFolderId: "1GKfATRstMYs02aDZJNwyKCO7IdR5hZav",
     clientId: "",
     isDriveActive: true,
     isDocsActive: true,
@@ -659,6 +659,17 @@ function SettingsContent() {
                   </div>
                 </div>
                 <div className="space-y-4">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Root Folder ID (Google Drive)</Label>
+                  <div className="relative">
+                    <Database className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#f5d030]/40" />
+                    <Input 
+                      value={googleConfig.rootFolderId} 
+                      onChange={(e) => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})} 
+                      className="bg-black/40 border-white/5 h-16 pl-14 text-white font-mono text-xs rounded-xl focus:ring-1 focus:ring-primary/50" 
+                    />
+                  </div>
+                </div>
+                <div className="md:col-span-2 space-y-4">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Client ID (OAuth 2.0)</Label>
                   <Input 
                     value={googleConfig.clientId} 
