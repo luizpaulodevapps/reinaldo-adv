@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
 import { addMonths, format, parseISO } from "date-fns"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function FinancialPage() {
   const [searchTerm, setSearchTerm] = useState("")
