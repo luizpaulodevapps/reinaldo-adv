@@ -591,43 +591,43 @@ export default function CasesPage() {
               >
                 <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
                   {viewMode === "list" ? (
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-6">
                       <div className="flex items-start justify-between">
                         <div className="space-y-3 flex-1 min-w-0">
                           <div className="flex items-center gap-4">
-                            <h3 className="text-[#F5D030] font-black text-base uppercase tracking-tight truncate leading-tight">PROCESSO: {proc.description}</h3>
+                            <h3 className="text-[#F5D030] font-black text-lg uppercase tracking-tighter leading-none">PROCESSO:</h3>
                             <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black shrink-0">ATIVO</Badge>
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-50">VS</span>
-                            <span className="text-sm font-bold text-white uppercase truncate">{proc.defendantName || "NÃO MAPEADO"}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">vs</span>
+                            <span className="text-base font-bold text-white uppercase truncate tracking-tight">{proc.defendantName || "NÃO MAPEADO"}</span>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-12 shrink-0 ml-8">
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">CLIENTE / OUTORGANTE</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary">
-                                <User className="h-4 w-4" />
+                          <div className="flex flex-col items-end">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 text-right w-full">CLIENTE / OUTORGANTE</span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary shadow-lg">
+                                <User className="h-5 w-5" />
                               </div>
-                              <span className="text-sm font-bold text-white uppercase">{proc.clientName}</span>
+                              <span className="text-xl font-black text-white uppercase tracking-tighter">{proc.clientName}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="flex flex-col items-center justify-center border border-amber-500/30 bg-amber-500/5 px-2 py-1 rounded-lg">
-                              <Calendar className="h-3 w-3 text-amber-500 mb-0.5" />
-                              <span className="text-[8px] font-black text-amber-500">PAUTA</span>
-                            </div>
-                            <div className="flex flex-col items-center justify-center border border-rose-500/30 bg-rose-500/5 px-2 py-1 rounded-lg">
-                              <Clock className="h-3 w-3 text-rose-500 mb-0.5" />
-                              <span className="text-[8px] font-black text-rose-500 uppercase">PRAZOS</span>
-                            </div>
+                            <button className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                              <Calendar className="h-4 w-4 text-amber-500" />
+                              <span className="text-[7px] font-black text-amber-500 mt-0.5">PAUTA</span>
+                            </button>
+                            <button className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-all shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                              <Clock className="h-4 w-4 text-rose-500" />
+                              <span className="text-[7px] font-black text-rose-500 mt-0.5 uppercase">PRAZOS</span>
+                            </button>
                             <div className="flex items-center gap-2 pl-4 border-l border-white/5">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <button className="h-9 w-9 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5">
-                                    <MoreVertical className="h-4 w-4" />
+                                  <button className="h-10 w-10 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5 shadow-xl">
+                                    <MoreVertical className="h-5 w-5" />
                                   </button>
                                 </DropdownMenuTrigger>
                                 <ProcessActionsMenu proc={proc} />
@@ -637,38 +637,38 @@ export default function CasesPage() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 p-4 rounded-xl bg-white/[0.02] border border-white/5 shadow-inner">
+                      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner">
                         <div className="space-y-1">
                           <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Protocolo CNJ</p>
-                          <div className="bg-black/20 border border-white/10 px-2 py-1 rounded font-mono text-[10px] font-bold text-white tracking-tight w-fit">
+                          <div className="bg-black/40 border border-white/5 px-3 py-2 rounded-lg font-mono text-[11px] font-bold text-white tracking-widest w-full">
                             {proc.processNumber}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Área / Matéria</p>
-                          <div className="flex items-center gap-1.5 text-amber-500">
-                            <Scale className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
+                          <div className="flex items-center gap-2 text-amber-500 pt-1">
+                            <Scale className="h-4 w-4" />
+                            <span className="text-[11px] font-black uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Unidade</p>
-                          <div className="flex items-center gap-1.5 text-white/80">
-                            <Gavel className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-[10px] font-bold uppercase truncate">{proc.court || "---"} • {proc.vara || "---"}</span>
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Comarca</p>
+                          <div className="flex items-center gap-2 text-white/80 pt-1">
+                            <Gavel className="h-4 w-4 text-primary" />
+                            <span className="text-[11px] font-bold uppercase truncate">{proc.vara || "VARA ÚNICA"} — {proc.court || "---"} {proc.city && ` (${proc.city})`}</span>
                           </div>
                         </div>
                         <div className="space-y-1">
                           <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Valor da Causa</p>
-                          <div className="flex items-center gap-1.5 text-emerald-500 font-black tabular-nums text-[11px]">
-                            <TrendingUp className="h-3.5 w-3.5" /> R$ {Number(proc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <div className="flex items-center gap-2 text-emerald-500 font-black tabular-nums text-[12px] pt-1">
+                            <TrendingUp className="h-4 w-4" /> R$ {Number(proc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Responsável</p>
-                          <div className="flex items-center gap-1.5 text-emerald-500">
-                            <UserIcon className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest truncate">DR(A). {proc.responsibleStaffName || "EQUIPE RGMJ"}</span>
+                          <div className="flex items-center gap-2 text-emerald-500 pt-1">
+                            <UserIcon className="h-4 w-4" />
+                            <span className="text-[11px] font-black uppercase tracking-widest truncate">DR(A). {proc.responsibleStaffName || "EQUIPE RGMJ"}</span>
                           </div>
                         </div>
                       </div>
@@ -679,7 +679,7 @@ export default function CasesPage() {
                             variant="outline" 
                             size="sm" 
                             className={cn(
-                              "h-8 text-[9px] font-black uppercase tracking-widest px-3 rounded-lg transition-all",
+                              "h-10 text-[10px] font-black uppercase tracking-widest px-5 rounded-xl transition-all",
                               proc.driveStatus === 'synced' 
                                 ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10" 
                                 : "border-amber-500/30 text-amber-500 bg-amber-500/5 hover:bg-amber-500/10"
@@ -695,19 +695,19 @@ export default function CasesPage() {
                             disabled={syncingDriveId === proc.id}
                           >
                             {syncingDriveId === proc.id ? (
-                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : (
-                              <FolderOpen className={cn("h-3.5 w-3.5 mr-2", proc.driveStatus === 'synced' ? "text-emerald-500" : "text-amber-500")} />
+                              <FolderOpen className={cn("h-4 w-4 mr-2", proc.driveStatus === 'synced' ? "text-emerald-500" : "text-amber-500")} />
                             )}
                             {proc.driveStatus === 'synced' ? "ACESSAR PASTA DRIVE" : "SINCRONIZAR DRIVE"}
                           </Button>
-                          <Button variant="outline" size="sm" className="h-8 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[9px] font-black uppercase tracking-widest px-3 rounded-lg hover:bg-blue-500/10 transition-all">
-                            <ExternalLink className="h-3.5 w-3.5 mr-2" /> PORTAL JUDICIÁRIO
+                          <Button variant="outline" size="sm" className="h-10 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[10px] font-black uppercase tracking-widest px-5 rounded-xl hover:bg-blue-500/10 transition-all">
+                            <ExternalLink className="h-4 w-4 mr-2" /> PORTAL JUDICIÁRIO
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground/40">
-                          <FileText className="h-3.5 w-3.5" />
-                          <span className="text-[9px] font-black uppercase tracking-widest">PROTOCOLO: {proc.startDate || "---"}</span>
+                        <div className="flex items-center gap-2 text-muted-foreground/20">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">PROTOCOLO: {proc.startDate || "---"}</span>
                         </div>
                       </div>
                     </div>
@@ -774,10 +774,12 @@ export default function CasesPage() {
               </div>
               <DialogHeader className="space-y-0 text-left">
                 <DialogTitle className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</DialogTitle>
-                <div className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-2 flex items-center gap-3">
-                  <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
-                  <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest">{viewingProcess?.processNumber}</span>
-                </div>
+                <DialogDescription asChild className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-2 flex items-center gap-3">
+                  <div>
+                    <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
+                    <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest ml-3">{viewingProcess?.processNumber}</span>
+                  </div>
+                </DialogDescription>
               </DialogHeader>
             </div>
             <div className="flex gap-3 pr-8">
@@ -947,8 +949,8 @@ export default function CasesPage() {
                   <SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
                     {editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}
                   </SheetTitle>
-                  <SheetDescription className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-60">
-                    {editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}
+                  <SheetDescription asChild className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-60">
+                    <div>{editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}</div>
                   </SheetDescription>
                 </div>
               </div>
@@ -970,7 +972,7 @@ export default function CasesPage() {
               <CalendarDays className="h-6 w-6 text-emerald-500" />
               <div className="text-left">
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
-                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure os detalhes da reunião estratégica.</DialogDescription>
+                <DialogDescription asChild className="text-[9px] uppercase font-black text-muted-foreground"><div>Configure os detalhes da reunião estratégica.</div></DialogDescription>
               </div>
             </DialogHeader>
           </div>
@@ -1020,7 +1022,7 @@ export default function CasesPage() {
               <AlarmClock className="h-6 w-6 text-rose-500" />
               <div className="text-left">
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
-                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Registro de prazo judicial preclusivo.</DialogDescription>
+                <DialogDescription asChild className="text-[9px] uppercase font-black text-muted-foreground"><div>Registro de prazo judicial preclusivo.</div></DialogDescription>
               </div>
             </DialogHeader>
           </div>
@@ -1050,11 +1052,11 @@ export default function CasesPage() {
       <Dialog open={isHearingOpen} onOpenChange={setIsHearingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
-            <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
+            <DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left">
               <Gavel className="h-6 w-6 text-amber-500" />
-              <div className="text-left">
+              <div>
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
-                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Cadastro de pauta judiciária para o caso.</DialogDescription>
+                <DialogDescription asChild className="text-[10px] uppercase font-black text-muted-foreground"><div>Cadastro de pauta judiciária para o caso.</div></DialogDescription>
               </div>
             </DialogHeader>
           </div>
@@ -1105,7 +1107,7 @@ export default function CasesPage() {
                 <ListTodo className="h-6 w-6 text-blue-400" />
                 <div className="text-left">
                   <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
-                  <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground mt-1">Atribuição de tarefa operacional ou externa.</DialogDescription>
+                  <DialogDescription asChild className="text-[9px] uppercase font-black text-muted-foreground mt-1"><div>Atribuição de tarefa operacional ou externa.</div></DialogDescription>
                 </div>
               </div>
             </DialogHeader>
@@ -1185,7 +1187,7 @@ export default function CasesPage() {
             <Brain className="h-7 w-7 text-primary" />
             <div>
               <DialogTitle className="text-white font-bold uppercase tracking-widest text-xl">Minuta Estratégica IA</DialogTitle>
-              <DialogDescription className="text-[9px] text-muted-foreground uppercase font-black">Geração de peça jurídica fundamentada via Inteligência RGMJ.</DialogDescription>
+              <DialogDescription asChild className="text-[9px] text-muted-foreground uppercase font-black"><div>Geração de peça jurídica fundamentada via Inteligência RGMJ.</div></DialogDescription>
             </div>
           </DialogHeader>
           <div className="p-10 max-h-[80vh] overflow-y-auto">
@@ -1198,7 +1200,7 @@ export default function CasesPage() {
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
           <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl text-left">
             <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Evento Financeiro</DialogTitle>
-            <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Lançamento de honorários ou custas para o processo.</DialogDescription>
+            <DialogDescription asChild className="text-[10px] uppercase font-bold text-muted-foreground mt-1"><div>Lançamento de honorários ou custas para o processo.</div></DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             <div className="px-10 py-8 bg-[#0a0f1e]/50">
