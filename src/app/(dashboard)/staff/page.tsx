@@ -198,7 +198,7 @@ export default function StaffPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between"><DialogHeader className="text-left space-y-1"><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}</DialogTitle><p className="text-[10px] text-muted-foreground font-black uppercase opacity-60">REGISTRO DE DADOS E NÍVEIS DE ACESSO.</p></DialogHeader><div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><UserCheck className="h-6 w-6" /></div></div>
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between"><DialogHeader className="text-left space-y-1"><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-60">REGISTRO DE DADOS E NÍVEIS DE ACESSO.</DialogDescription></DialogHeader><div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><UserCheck className="h-6 w-6" /></div></div>
           <ScrollArea className="max-h-[70vh]"><div className="p-10 space-y-10 bg-[#0a0f1e]/50">
             <div className="space-y-6"><div className="flex items-center gap-3 pb-2 border-b border-white/5"><Briefcase className="h-4 w-4 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Contrato & Função</h4></div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -215,12 +215,30 @@ export default function StaffPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><Label className={labelMini}>Modelo de Contrato</Label><Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white">{PAYMENT_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select></div>{formData.paymentType === "Parceria (Porcentagem)" ? <div className="space-y-2"><Label className={labelMini}>Comissão (%)</Label><Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 h-12 text-white text-center font-black" /></div> : <div className="space-y-2"><Label className={labelMini}>Valor Fixo / Salário</Label><Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 h-12 text-white font-black" /></div>}</div>
             </div>
           </div></ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between"><Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12">ABORTAR</Button><Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">SALVAR REGISTRO</Button></DialogFooter>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between"><Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button><Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">SALVAR REGISTRO</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-3xl text-center"><div className="p-10 space-y-6"><div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl"><CheckCircle2 className="h-10 w-10 animate-bounce" /></div><div className="space-y-2"><h3 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</h3><p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed">O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO SISTEMA.</p></div><div className="grid grid-cols-1 gap-3 pt-2"><Button onClick={handleCopyInvite} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] gap-3 shadow-xl hover:scale-105 transition-all"><Copy className="h-4 w-4" /> COPIAR CONVITE WHATSAPP</Button><Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12">FECHAR</Button></div></div></DialogContent>
+        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-3xl text-center">
+          <div className="p-10 space-y-6">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Acesso Liberado</DialogTitle>
+              <DialogDescription>O perfil do colaborador foi ativado no sistema.</DialogDescription>
+            </DialogHeader>
+            <div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl"><CheckCircle2 className="h-10 w-10 animate-bounce" /></div>
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</DialogTitle>
+              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed">O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO SISTEMA.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 pt-2">
+              <Button onClick={handleCopyInvite} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] gap-3 shadow-xl hover:scale-105 transition-all">
+                <Copy className="h-4 w-4" /> COPIAR CONVITE WHATSAPP
+              </Button>
+              <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12">FECHAR</Button>
+            </div>
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   )

@@ -373,11 +373,15 @@ export default function TeamPage() {
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl animate-in zoom-in-95">
           <div className="p-10 text-center space-y-6">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Acesso Liberado</DialogTitle>
+              <DialogDescription>O perfil de acesso foi ativado com sucesso.</DialogDescription>
+            </DialogHeader>
             <div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl">
               <CheckCircle2 className="h-10 w-10 animate-bounce" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</h3>
+              <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</DialogTitle>
               <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed px-4">
                 O PERFIL DE <span className="text-primary">{invitedUser?.name}</span> JÁ ESTÁ ATIVO NO ECOSSISTEMA RGMJ.
               </p>
