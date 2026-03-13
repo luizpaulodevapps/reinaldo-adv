@@ -373,16 +373,30 @@ export default function MasterAgendaPage() {
                             <Video className="h-3 w-3" />
                           </Button>
                         )}
+                        {/* BOTÕES DE REAGENDAR E CANCELAR SOLICITADOS */}
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white"
+                          className="h-7 w-7 rounded-lg bg-white/5 hover:bg-primary/20 text-primary"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenEdit(event);
                           }}
+                          title="Reagendar / Editar"
                         >
                           <Edit3 className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 rounded-lg bg-white/5 hover:bg-rose-500/20 text-rose-500"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEvent(event);
+                          }}
+                          title="Remover da Pauta"
+                        >
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
