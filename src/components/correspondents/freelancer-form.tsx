@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { maskPhone, maskCPFOrCNPJ } from "@/lib/utils"
+import { maskPhone, maskCPFOrCNPJ, cn } from "@/lib/utils"
 import { 
   User, 
   MapPin, 
@@ -17,7 +17,8 @@ import {
   Landmark,
   ShieldCheck,
   Smartphone,
-  Mail
+  Mail,
+  Gavel
 } from "lucide-react"
 
 export function FreelancerForm({ initialData, onSubmit, onCancel }: any) {
@@ -65,7 +66,7 @@ export function FreelancerForm({ initialData, onSubmit, onCancel }: any) {
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className={labelMini}>Nome Completo / Razão Social *</Label>
+              <Label className={labelMini}>Nome do Freelancer *</Label>
               <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className={inputClass} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -94,36 +95,29 @@ export function FreelancerForm({ initialData, onSubmit, onCancel }: any) {
           </div>
         </div>
 
-        {/* Bloco de Tabela de Preços */}
+        {/* Bloco de Tabela de Preços Exclusiva */}
         <div className="space-y-6">
           <div className="flex items-center gap-3 border-b border-white/5 pb-3">
             <Tag className="h-4 w-4 text-primary" />
-            <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Tabela de Preços (Referência)</h4>
+            <h4 className="text-[11px] font-black text-white uppercase tracking-widest">DNA de Preços (Freelance)</h4>
           </div>
-          <div className="grid grid-cols-2 gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-            <div className="space-y-2">
-              <Label className={labelMini}>Audiência Base</Label>
+          <div className="grid grid-cols-2 gap-6 p-6 rounded-2xl bg-primary/5 border border-primary/20 shadow-inner">
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-2"><Gavel className="h-3 w-3" /> Audiência Freelance (Padrão)</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-[10px]">R$</span>
-                <Input type="number" value={formData.prices.audiencia} onChange={e => handlePriceChange('audiencia', e.target.value)} className={cn(inputClass, "pl-10")} />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">R$</span>
+                <Input type="number" value={formData.prices.audiencia} onChange={e => handlePriceChange('audiencia', e.target.value)} className={cn(inputClass, "pl-12 h-14 bg-black/60 border-primary/30 text-lg")} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className={labelMini}>Protocolo / Ato</Label>
+              <Label className={labelMini}>Ato / Protocolo</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-[10px]">R$</span>
                 <Input type="number" value={formData.prices.protocolo} onChange={e => handlePriceChange('protocolo', e.target.value)} className={cn(inputClass, "pl-10")} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className={labelMini}>Despacho</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-[10px]">R$</span>
-                <Input type="number" value={formData.prices.despacho} onChange={e => handlePriceChange('despacho', e.target.value)} className={cn(inputClass, "pl-10")} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className={labelMini}>Cópia / Digitaliz.</Label>
+              <Label className={labelMini}>Cópia / Dig.</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-[10px]">R$</span>
                 <Input type="number" value={formData.prices.copias} onChange={e => handlePriceChange('copias', e.target.value)} className={cn(inputClass, "pl-10")} />
@@ -178,9 +172,9 @@ export function FreelancerForm({ initialData, onSubmit, onCancel }: any) {
       </div>
 
       <div className="flex justify-between pt-10 border-t border-white/5">
-        <Button variant="ghost" onClick={onCancel} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14">CANCELAR</Button>
+        <Button variant="ghost" onClick={onCancel} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14">FECHAR</Button>
         <Button onClick={() => onSubmit(formData)} className="gold-gradient text-background font-black h-14 px-16 rounded-2xl shadow-2xl uppercase text-[11px] tracking-widest">
-          {initialData ? "ATUALIZAR CADASTRO" : "SALVAR NO BANCO DE TALENTOS"}
+          {initialData ? "ATUALIZAR CADASTRO" : "CADASTRAR NO BANCO DE TALENTOS"}
         </Button>
       </div>
     </div>

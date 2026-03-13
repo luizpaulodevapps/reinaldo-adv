@@ -21,14 +21,15 @@ import {
   TrendingUp,
   Landmark,
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  Gavel
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 export function FreelanceDiligenceForm({ initialData, freelancers, counterparties, onSubmit, onCancel }: any) {
   const [formData, setFormData] = useState({
-    type: "Audiência",
+    type: "Audiência Freelance",
     processNumber: "",
     court: "",
     city: "",
@@ -57,7 +58,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     const f = freelancers.find((item: any) => item.id === id)
     if (!f) return
     
-    // Mapeia o preço base do freelancer se existir
+    // Mapeia o preço base do freelancer seguindo a nomenclatura exclusiva
     const actType = formData.type.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     let defaultValue = 0
     if (actType.includes('audiencia')) defaultValue = f.prices?.audiencia || 0
@@ -89,16 +90,17 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className={labelMini}>Natureza do Ato *</Label>
+                <Label className={labelMini}>Natureza do Ato Freelance *</Label>
                 <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v})}>
-                  <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={cn(inputClass, "h-14")}>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent className="bg-[#0d121f] text-white">
-                    <SelectItem value="Audiência">🏛️ AUDIÊNCIA</SelectItem>
-                    <SelectItem value="Protocolo">📝 PROTOCOLO</SelectItem>
-                    <SelectItem value="Cópias">📄 CÓPIAS / DIGITALIZAÇÃO</SelectItem>
-                    <SelectItem value="Despacho">🗣️ DESPACHO</SelectItem>
-                    <SelectItem value="Certidão">📑 CERTIDÃO</SelectItem>
-                    <SelectItem value="Outro">🌐 OUTRO</SelectItem>
+                    <SelectItem value="Audiência Freelance" className="font-black text-primary uppercase">🏛️ AUDIÊNCIA FREELANCE</SelectItem>
+                    <SelectItem value="Protocolo Freelance">📝 PROTOCOLO FREELANCE</SelectItem>
+                    <SelectItem value="Despacho Freelance">🗣️ DESPACHO FREELANCE</SelectItem>
+                    <SelectItem value="Cópias / Digitalização">📄 CÓPIAS / DIGITALIZAÇÃO</SelectItem>
+                    <SelectItem value="Outro Ato de Logística">🌐 OUTRO ATO DE LOGÍSTICA</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -115,11 +117,11 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                 <Input value={formData.city} onChange={e => setFormData({...formData, city: e.target.value.toUpperCase()})} className={cn(inputClass, "h-14")} />
               </div>
               <div className="space-y-2">
-                <Label className={labelMini}>Data do Ato</Label>
+                <Label className={labelMini}>Data do Serviço</Label>
                 <Input type="date" value={formData.serviceDate} onChange={e => setFormData({...formData, serviceDate: e.target.value})} className={cn(inputClass, "h-14")} />
               </div>
               <div className="space-y-2">
-                <Label className={labelMini}>Prazo Limite Entrega</Label>
+                <Label className={labelMini}>Prazo Limite para Entrega</Label>
                 <Input type="datetime-local" value={formData.deadline} onChange={e => setFormData({...formData, deadline: e.target.value})} className={cn(inputClass, "h-14")} />
               </div>
             </div>
@@ -128,11 +130,11 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
           <div className="space-y-6">
             <div className="flex items-center gap-3 border-b border-white/5 pb-3">
               <Users className="h-5 w-5 text-primary" />
-              <h4 className="text-sm font-black text-white uppercase tracking-widest">Alocação de Responsáveis</h4>
+              <h4 className="text-sm font-black text-white uppercase tracking-widest">Alocação de Correspondente</h4>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <Label className={labelMini}>Correspondente (Executor) *</Label>
+                <Label className={labelMini}>Membro Executor *</Label>
                 <Select value={formData.freelancerId} onValueChange={handleSelectFreelancer}>
                   <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue placeholder="SELECIONE O PROFISSIONAL" /></SelectTrigger>
                   <SelectContent className="bg-[#0d121f] text-white">
@@ -148,7 +150,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className={labelMini}>Entidade Solicitante (Comanditária) *</Label>
+                <Label className={labelMini}>Entidade Contratante *</Label>
                 <Select 
                   value={formData.solicitorId} 
                   onValueChange={v => {
@@ -156,7 +158,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                     setFormData({...formData, solicitorId: v, solicitorName: c?.name || ""})
                   }}
                 >
-                  <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue placeholder="QUEM SOLICITOU?" /></SelectTrigger>
+                  <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue placeholder="QUEM SOLICITOU O ATO?" /></SelectTrigger>
                   <SelectContent className="bg-[#0d121f] text-white">
                     {counterparties.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>
@@ -173,8 +175,8 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
           </div>
 
           <div className="space-y-3">
-            <Label className={labelMini}>Instruções Táticas / Regras de Condução</Label>
-            <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="bg-black/40 border-white/10 min-h-[150px] text-white text-xs resize-none p-6 rounded-2xl" placeholder="DESCREVA ACESSOS, LINKS, ORIENTAÇÕES DE VÍDEO OU COMPORTAMENTO..." />
+            <Label className={labelMini}>Instruções para o Freelancer</Label>
+            <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="bg-black/40 border-white/10 min-h-[150px] text-white text-xs resize-none p-6 rounded-2xl" placeholder="DETALHES DA PAUTA, LINKS DE ACESSO OU PROCEDIMENTOS..." />
           </div>
         </div>
 
@@ -183,13 +185,13 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
             <div className="absolute top-0 right-0 p-8 opacity-5"><DollarSign className="h-20 w-20" /></div>
             <div className="flex items-center gap-3">
               <TrendingUp className="h-5 w-5 text-primary" />
-              <h4 className="text-sm font-black text-white uppercase tracking-widest">Painel de Margem</h4>
+              <h4 className="text-sm font-black text-white uppercase tracking-widest">Controle de Repasse</h4>
             </div>
 
             <div className="space-y-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                  <Landmark className="h-3 w-3" /> Custo (Freelancer) *
+                  <Landmark className="h-3 w-3" /> Valor Freelance (Custo) *
                 </Label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-400 font-black text-sm">R$</span>
@@ -204,7 +206,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
               
               <div className="space-y-2">
                 <Label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                  <DollarSign className="h-3 w-3" /> Receita (Banca) *
+                  <DollarSign className="h-3 w-3" /> Valor Cobrado (Receita) *
                 </Label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-black text-sm">R$</span>
@@ -218,7 +220,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Despesas Adicionais</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Despesas Adicionais (KM/Estac.)</Label>
                 <Input 
                   type="number" 
                   value={formData.extraExpenses} 
@@ -232,7 +234,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
               "p-8 rounded-3xl border-2 flex flex-col items-center justify-center text-center gap-2 shadow-inner",
               margin >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-rose-500/5 border-rose-500/20"
             )}>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Margem Líquida RGMJ</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Resultado Operacional</span>
               <span className={cn("text-3xl font-black tabular-nums", margin >= 0 ? "text-emerald-400" : "text-rose-400")}>
                 R$ {margin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
@@ -241,7 +243,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label className={labelMini}>Status do Ato</Label>
+              <Label className={labelMini}>Status Operacional</Label>
               <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
                 <SelectTrigger className="bg-primary/10 border-primary/20 h-16 text-primary font-black uppercase text-xs rounded-2xl shadow-xl">
                   <SelectValue />
@@ -254,10 +256,10 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
               </Select>
             </div>
             
-            <div className="p-6 rounded-2xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-4">
+            <div className="p-6 rounded-2xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-4 shadow-lg">
               <AlertCircle className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[10px] text-blue-400/70 font-bold uppercase leading-relaxed tracking-wider">
-                Ao transitar para o status <span className="text-white">FATURADA</span>, o ecossistema injetará automaticamente os débitos e créditos na Central Financeira para rito de pagamento e cobrança.
+                Ao faturar a <span className="text-white">ORDEM FREELANCE</span>, o sistema lançará automaticamente o débito do executor e o crédito do solicitante na central financeira.
               </p>
             </div>
           </div>
@@ -265,9 +267,9 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-between pt-10 border-t border-white/5 gap-6">
-        <Button variant="ghost" onClick={onCancel} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14 hover:text-white">ABORTAR OPERAÇÃO</Button>
+        <Button variant="ghost" onClick={onCancel} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14 hover:text-white">DESCARTAR</Button>
         <Button onClick={() => onSubmit(formData)} className="w-full md:w-[450px] gold-gradient text-background font-black h-16 px-16 rounded-2xl shadow-[0_20px_50px_rgba(245,208,48,0.2)] uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-95">
-          <ShieldCheck className="h-6 w-6" /> {initialData ? "ATUALIZAR REGISTRO" : "PROTOCOLAR ORDEM DE SERVIÇO"}
+          <ShieldCheck className="h-6 w-6" /> {initialData ? "ATUALIZAR ORDEM" : "REGISTRAR ATO FREELANCE"}
         </Button>
       </div>
     </div>
