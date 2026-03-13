@@ -33,7 +33,8 @@ import {
   Wallet,
   Scale,
   CreditCard,
-  FileText
+  FileText,
+  UserPlus
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,7 +43,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useFirestore, useCollection, useUser, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -166,240 +167,384 @@ export default function StaffPage() {
   }
 
   const handleDeleteStaff = (id: string) => {
-    if (!db || !confirm("Revogar este acesso permanentemente?")) return
-    deleteDocumentNonBlocking(doc(db!, "employees", id))
-    deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
-    toast({ variant: "destructive", title: "Acesso Revogado" })
-    setIsViewOpen(false)
+    if (!db || !canManage) return
+    if (confirm("Revogar este acesso permanentemente? O usuário será bloqueado no sistema.")) {
+      deleteDocumentNonBlocking(doc(db!, "employees", id))
+      deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
+      toast({ 
+        title: "Acesso Revogado", 
+        description: "O membro foi removido das bases RGMJ. Lembre-se de remover o usuário no Firebase Console para exclusão total do Auth." 
+      })
+      setIsViewOpen(false)
+    }
   }
 
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 block"
   const inputClass = "bg-black/40 border-white/10 h-12 text-white font-bold uppercase focus:ring-primary/50 rounded-xl"
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 font-sans">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
-            <Users2 className="h-3.5 w-3.5" /><Link href="/" className="hover:text-primary transition-colors">Início</Link><ChevronRight className="h-2 w-2" /><span className="text-white uppercase tracking-tighter">Gestão de Equipe</span>
+            <Users2 className="h-3.5 w-3.5" />
+            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+            <ChevronRight className="h-2 w-2" />
+            <span className="text-white uppercase tracking-tighter">Equipe & Permissões</span>
           </div>
           <h1 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">Corpo Técnico RGMJ</h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-60">GESTÃO DE SOBERANIA DIGITAL E PERFIS PROFISSIONAIS.</p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <Input placeholder="Pesquisar..." className="pl-12 glass border-white/5 h-12 text-xs text-white md:w-80" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          {canManage && <button onClick={() => { setEditingStaff(null); setFormData({...formData, isOwner: false}); setIsDialogOpen(true); }} className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all"><Plus className="h-6 w-6 text-background" /></button>}
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por nome ou cargo..." 
+              className="pl-12 glass border-white/5 h-12 text-xs text-white rounded-xl focus:ring-primary/50" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+            />
+          </div>
+          {canManage && (
+            <Button 
+              onClick={() => { setEditingStaff(null); setFormData({...formData, isOwner: false}); setIsDialogOpen(true); }} 
+              className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+            >
+              <UserPlus className="h-4.5 w-4.5" /> NOVO MEMBRO
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {isLoading ? (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+          <div className="col-span-full py-32 flex flex-col items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest mt-4">Sincronizando Hierarquia...</span>
+          </div>
         ) : filtered.length > 0 ? (
           filtered.map((staff) => (
-            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all group rounded-2xl shadow-2xl cursor-pointer overflow-hidden" onClick={() => { setViewingStaff(staff); setIsViewOpen(true); }}>
-              <CardContent className="p-8 space-y-6">
+            <Card key={staff.id} className="glass border-white/5 hover:border-primary/30 transition-all group rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative">
+              <CardContent className="p-10 space-y-8 flex-1">
                 <div className="flex items-start justify-between">
-                  <Avatar className="h-14 w-14 border-2 border-primary/20"><AvatarFallback className="bg-secondary text-primary font-black uppercase">{staff.name?.substring(0, 2)}</AvatarFallback></Avatar>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className={cn("text-[9px] font-black uppercase border-primary/30 text-primary", staff.isOwner && "bg-primary text-background border-0")}>
-                      {staff.isOwner ? <Crown className="h-2.5 w-2.5 mr-1.5" /> : null}
-                      {staff.role}
-                    </Badge>
-                    <Badge className="bg-white/5 text-white/40 text-[8px] font-black uppercase">{staff.paymentType}</Badge>
+                  <div className="relative">
+                    <Avatar className="h-20 w-20 border-4 border-white/5 shadow-2xl transition-transform group-hover:scale-105 duration-500">
+                      <AvatarFallback className="bg-[#1a1f2e] text-primary text-2xl font-black uppercase">
+                        {staff.name?.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {staff.status === 'Ativo' && (
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#0a0f1e] border-2 border-[#0a0f1e] flex items-center justify-center">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                      </div>
+                    )}
+                  </div>
+                  <Badge variant="outline" className={cn(
+                    "text-[10px] font-black uppercase border-primary/30 text-primary px-4 h-7 rounded-full tracking-widest",
+                    staff.isOwner && "bg-primary text-background border-0"
+                  )}>
+                    {staff.isOwner ? <Crown className="h-3 w-3 mr-2" /> : null}
+                    {staff.isOwner ? 'ADMIN' : (staff.role === 'Sócio' ? 'ADMIN' : 'LAWYER')}
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black text-white uppercase truncate tracking-tight group-hover:text-primary transition-colors leading-tight">
+                    {staff.name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+                    <Mail className="h-3.5 w-3.5 text-primary/40" /> {staff.email}
                   </div>
                 </div>
-                <div className="space-y-1"><h3 className="text-xl font-black text-white uppercase truncate group-hover:text-primary transition-colors">{staff.name}</h3><div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase"><Mail className="h-3 w-3 opacity-40" /> {staff.email}</div></div>
-                <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-4">
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-white rounded-xl bg-white/5" onClick={(e) => { e.stopPropagation(); setViewingStaff(staff); setIsViewOpen(true); }}><Eye className="h-5 w-5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-primary rounded-xl bg-white/5" onClick={(e) => { e.stopPropagation(); setEditingStaff(staff); setFormData({...formData, ...staff, createSystemAccess: false}); setIsDialogOpen(true); }}><Settings2 className="h-5 w-5" /></Button>
+
+                <div className="pt-8 border-t border-white/5 flex justify-between items-center">
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-11 w-11 text-white/20 hover:text-white rounded-xl bg-white/5 border border-white/5 transition-all" 
+                      onClick={() => { setViewingStaff(staff); setIsViewOpen(true); }}
+                    >
+                      <Settings2 className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-11 w-11 text-white/20 hover:text-rose-500 rounded-xl bg-white/5 border border-white/5 transition-all" 
+                      onClick={() => handleDeleteStaff(staff.id)}
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
                   </div>
-                  <span className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> {staff.status}</span>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Ativo</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))
         ) : (
-          <div className="col-span-full py-40 text-center opacity-20"><Users2 className="h-20 w-20 mx-auto mb-6" /><p className="text-base font-black uppercase tracking-[0.4em]">Quadro de Pessoal Vazio</p></div>
+          <div className="col-span-full py-48 text-center glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
+            <Users2 className="h-20 w-20 mx-auto mb-6 text-muted-foreground" />
+            <p className="text-base font-black uppercase tracking-[0.5em]">Hierarquia Digital Vazia</p>
+          </div>
         )}
       </div>
 
+      {/* DIÁLOGO DE ADMISSÃO / EDIÇÃO */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
             <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}</DialogTitle>
-              <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-60">REGISTRO DE DADOS E NÍVEIS DE ACESSO.</DialogDescription>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
+                {editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}
+              </DialogTitle>
+              <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-60">
+                REGISTRO DE DADOS E NÍVEIS DE ACESSO.
+              </DialogDescription>
             </DialogHeader>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
               <UserCheck className="h-6 w-6" />
             </div>
           </div>
-          <ScrollArea className="max-h-[70vh]"><div className="p-10 space-y-10 bg-[#0a0f1e]/50">
-            <div className="space-y-6"><div className="flex items-center gap-3 pb-2 border-b border-white/5"><Briefcase className="h-4 w-4 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Contrato & Função</h4></div>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                <div className="md:col-span-8 space-y-2"><Label className={labelMini}>Nome Completo *</Label><Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className={inputClass} /></div>
-                <div className="md:col-span-4 space-y-2"><Label className={labelMini}>Cargo *</Label><Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
-                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[#0d121f] text-white">
-                    {STAFF_ROLES.map(r => <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>)}
-                  </SelectContent>
-                </Select></div>
+          <ScrollArea className="max-h-[70vh]">
+            <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Contrato & Função</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  <div className="md:col-span-8 space-y-2">
+                    <Label className={labelMini}>Nome Completo *</Label>
+                    <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className={inputClass} />
+                  </div>
+                  <div className="md:col-span-4 space-y-2">
+                    <Label className={labelMini}>Cargo *</Label>
+                    <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
+                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] text-white border-white/10">
+                        {STAFF_ROLES.map(r => <SelectItem key={r.id} value={r.id} className="uppercase text-[10px] font-bold">{r.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                  <Checkbox id="isOwner" checked={formData.isOwner} onCheckedChange={(v) => setFormData({...formData, isOwner: !!v})} />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="isOwner" className="text-[10px] font-black text-white uppercase cursor-pointer">Sócio Fundador / Dono da Banca</Label>
+                    <p className="text-[8px] text-primary/60 font-bold uppercase">Habilita soberania financeira total e selo de distinção.</p>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                <Checkbox id="isOwner" checked={formData.isOwner} onCheckedChange={(v) => setFormData({...formData, isOwner: !!v})} />
-                <div className="space-y-0.5">
-                  <Label htmlFor="isOwner" className="text-[10px] font-black text-white uppercase cursor-pointer">Sócio Fundador / Dono da Banca</Label>
-                  <p className="text-[8px] text-primary/60 font-bold uppercase">Habilita soberania financeira total e selo de distinção.</p>
+
+              <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
+                <div className="flex items-center justify-between border-primary/10 pb-4 border-b">
+                  <div className="flex items-center gap-3">
+                    <Lock className="h-5 w-5 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania de Acesso</h4>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Checkbox id="access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} />
+                    <Label htmlFor="access" className="text-[10px] font-black text-white uppercase cursor-pointer">Habilitar Acesso ao Sistema</Label>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className={labelMini}>E-mail Google Corporativo *</Label>
+                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Status Atual</Label>
+                    <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] text-white">
+                        <SelectItem value="Ativo" className="text-[10px] font-bold">✅ ATIVO</SelectItem>
+                        <SelectItem value="Inativo" className="text-[10px] font-bold">❌ BLOQUEADO</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
+                <div className="flex items-center gap-3 border-white/5 pb-4 border-b">
+                  <Landmark className="h-5 w-5 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Remuneração & Repasses</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Modelo de Contrato</Label>
+                    <Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}>
+                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] text-white">
+                        {PAYMENT_TYPES.map(t => <SelectItem key={t.id} value={t.id} className="text-[10px] font-bold">{t.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.paymentType === "Parceria (Porcentagem)" ? (
+                    <div className="space-y-2">
+                      <Label className={labelMini}>Comissão (%)</Label>
+                      <Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 h-12 text-white text-center font-black text-lg" />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className={labelMini}>Valor Fixo / Salário</Label>
+                      <Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 h-12 text-white font-black text-lg" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
-              <div className="flex items-center justify-between border-primary/10 pb-4 border-b"><div className="flex items-center gap-3"><Lock className="h-5 w-5 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania de Acesso</h4></div><div className="flex items-center gap-3"><Checkbox id="access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} /><Label htmlFor="access" className="text-[10px] font-black text-white uppercase cursor-pointer">Habilitar Acesso ao Sistema</Label></div></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><Label className={labelMini}>E-mail Google Corporativo *</Label><Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} /></div><div className="space-y-2"><Label className={labelMini}>Status Atual</Label><Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="Ativo">✅ ATIVO</SelectItem><SelectItem value="Inativo">❌ INATIVO</SelectItem></SelectContent></Select></div></div>
-            </div>
-            <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
-              <div className="flex items-center gap-3 border-white/5 pb-4 border-b"><Landmark className="h-5 w-5 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Remuneração & Repasses</h4></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><Label className={labelMini}>Modelo de Contrato</Label><Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white">{PAYMENT_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select></div>{formData.paymentType === "Parceria (Porcentagem)" ? <div className="space-y-2"><Label className={labelMini}>Comissão (%)</Label><Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 h-12 text-white text-center font-black" /></div> : <div className="space-y-2"><Label className={labelMini}>Valor Fixo / Salário</Label><Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 h-12 text-white font-black" /></div>}</div>
-            </div>
-          </div></ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between"><Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button><Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">SALVAR REGISTRO</Button></DialogFooter>
+          </ScrollArea>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button>
+            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-105">
+              <Save className="h-5 w-5 mr-3" /> SALVAR REGISTRO
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* DIÁLOGO DE CONVITE */}
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-[2.5rem] text-center">
+          <div className="p-12 space-y-8">
+            <div className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl">
+              <CheckCircle2 className="h-12 w-12 animate-bounce" />
+            </div>
+            <div className="space-y-3">
+              <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</DialogTitle>
+              <DialogDescription className="text-muted-foreground text-xs font-bold uppercase tracking-widest leading-relaxed">
+                O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO ECOSSISTEMA RGMJ.
+              </DialogDescription>
+            </div>
+            <div className="grid grid-cols-1 gap-4 pt-4">
+              <Button onClick={handleCopyInvite} className="gold-gradient h-16 rounded-2xl font-black uppercase text-[11px] gap-4 shadow-xl hover:scale-105 transition-all">
+                <Copy className="h-5 w-5" /> COPIAR CONVITE WHATSAPP
+              </Button>
+              <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12 hover:text-white">CONCLUIR RITO</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-xl">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-2xl">
-                <AvatarFallback className="bg-secondary text-2xl font-black text-primary uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] font-sans rounded-3xl">
+          <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 flex-none shadow-xl">
+            <div className="flex items-center gap-8">
+              <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-2xl">
+                <AvatarFallback className="bg-secondary text-3xl font-black text-primary uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
               </Avatar>
-              <div className="text-left space-y-1">
-                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
-                <div className="flex items-center gap-3 pt-2">
-                  <Badge className="bg-primary text-background font-black uppercase text-[9px] px-3">{viewingStaff?.role}</Badge>
-                  {viewingStaff?.isOwner && <Badge className="bg-emerald-500 text-white font-black uppercase text-[9px] px-3">SÓCIO FUNDADOR</Badge>}
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">• {viewingStaff?.status}</span>
+              <div className="text-left space-y-2">
+                <DialogTitle className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
+                <div className="flex items-center gap-4 pt-2">
+                  <Badge className="bg-primary text-background font-black uppercase text-[10px] px-4 h-7 rounded-full shadow-lg">{viewingStaff?.role}</Badge>
+                  {viewingStaff?.isOwner && <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px] px-4 h-7 rounded-full shadow-lg">SÓCIO FUNDADOR</Badge>}
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">• {viewingStaff?.status}</span>
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 pr-8">
-              <Button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff}); setIsDialogOpen(true); setIsViewOpen(false); }} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-white/5">
-                <Settings2 className="h-4 w-4 mr-2" /> EDITAR
+            <div className="flex gap-4 pr-8">
+              <Button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff, createSystemAccess: false}); setIsDialogOpen(true); setIsViewOpen(false); }} variant="outline" className="glass border-white/10 text-white font-black text-[11px] uppercase h-12 px-8 rounded-xl hover:bg-primary hover:text-background transition-all">
+                <Settings2 className="h-5 w-5 mr-3" /> AJUSTES
               </Button>
-              <Button onClick={() => handleDeleteStaff(viewingStaff.id)} variant="ghost" className="h-11 w-11 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl">
+              <Button onClick={() => handleDeleteStaff(viewingStaff?.id)} variant="ghost" className="h-12 w-12 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl border border-white/5">
                 <Trash2 className="h-5 w-5" />
               </Button>
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="p-10 space-y-10 pb-32">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                    <Fingerprint className="h-4 w-4 text-primary" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Identidade & Contato</h4>
+          <ScrollArea className="flex-1 bg-[#05070a]">
+            <div className="p-12 space-y-12 pb-40">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-8">
+                  <div className="flex items-center gap-4 pb-3 border-b border-white/5">
+                    <Fingerprint className="h-5 w-5 text-primary" />
+                    <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Perfil & Contato</h4>
                   </div>
-                  <Card className="glass border-white/5 p-6 rounded-2xl bg-white/[0.01] space-y-6 shadow-lg">
-                    <div className="space-y-1">
-                      <Label className={labelMini}>E-mail de Acesso</Label>
-                      <p className="text-sm font-bold text-white lowercase flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-primary/40" /> {viewingStaff?.email}</p>
+                  <Card className="glass border-white/5 p-8 rounded-[2rem] bg-white/[0.01] space-y-8 shadow-xl">
+                    <div className="space-y-2">
+                      <Label className={labelMini}>E-mail Institucional</Label>
+                      <p className="text-base font-bold text-white lowercase flex items-center gap-3"><Mail className="h-4 w-4 text-primary/40" /> {viewingStaff?.email}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-2">
                         <Label className={labelMini}>WhatsApp</Label>
-                        <p className="text-sm font-bold text-white">{viewingStaff?.phone || '---'}</p>
+                        <p className="text-sm font-bold text-white uppercase flex items-center gap-3"><Smartphone className="h-4 w-4 text-emerald-500/40" /> {viewingStaff?.phone || '---'}</p>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <Label className={labelMini}>CPF</Label>
                         <p className="text-sm font-mono font-bold text-white">{viewingStaff?.cpf || '---'}</p>
                       </div>
                     </div>
                     {viewingStaff?.oabNumber && (
-                      <div className="space-y-1">
+                      <div className="space-y-2 p-4 rounded-xl bg-primary/5 border border-primary/10">
                         <Label className={labelMini}>Inscrição OAB</Label>
-                        <p className="text-sm font-bold text-white uppercase">{viewingStaff.oabNumber}</p>
+                        <p className="text-lg font-black text-primary uppercase tracking-widest">{viewingStaff.oabNumber}</p>
                       </div>
                     )}
                   </Card>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                    <Wallet className="h-4 w-4 text-primary" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Dossiê Financeiro</h4>
+                <div className="space-y-8">
+                  <div className="flex items-center gap-4 pb-3 border-b border-white/5">
+                    <Wallet className="h-5 w-5 text-primary" />
+                    <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Dossiê de Repasses</h4>
                   </div>
-                  <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl space-y-6 shadow-xl">
-                    <div className="space-y-1">
-                      <Label className={labelMini}>Modalidade de Contrato</Label>
-                      <p className="text-sm font-black text-white uppercase">{viewingStaff?.paymentType}</p>
+                  <Card className="glass border-primary/20 bg-primary/[0.02] p-8 rounded-[2rem] space-y-8 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5"><Landmark className="h-20 w-20" /></div>
+                    <div className="space-y-2">
+                      <Label className={labelMini}>Modelo de Contratação</Label>
+                      <Badge className="bg-primary text-background font-black uppercase text-[10px] h-8 px-5 rounded-full">{viewingStaff?.paymentType}</Badge>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label className={labelMini}>Remuneração Base</Label>
-                        <p className="text-lg font-black text-white tabular-nums">R$ {Number(viewingStaff?.baseSalary || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <Label className={labelMini}>Valor Fixo / Base</Label>
+                        <p className="text-2xl font-black text-white tabular-nums">R$ {Number(viewingStaff?.baseSalary || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <Label className={labelMini}>Participação %</Label>
-                        <p className="text-lg font-black text-primary tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
+                        <p className="text-2xl font-black text-primary tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
                       </div>
                     </div>
-                    <div className="pt-4 border-t border-white/10">
-                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-tight">O sistema projeta honorários automaticamente com base nestes parâmetros.</p>
+                    <div className="pt-6 border-t border-white/10">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight italic">
+                        "O sistema projeta honorários automaticamente seguindo este DNA contratual."
+                      </p>
                     </div>
                   </Card>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Cronologia RGMJ</h4>
+              <div className="space-y-8">
+                <div className="flex items-center gap-4 pb-3 border-b border-white/5">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Telemetria RGMJ</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="glass border-white/5 p-5 rounded-xl bg-white/[0.01] flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground"><Plus className="h-5 w-5" /></div>
-                    <div><Label className={labelMini}>Admissão</Label><p className="text-xs font-bold text-white">{viewingStaff?.hiringDate || '---'}</p></div>
+                  <Card className="glass border-white/5 p-6 rounded-2xl bg-white/[0.01] flex items-center gap-5 shadow-lg group hover:border-primary/20 transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-all"><Plus className="h-6 w-6" /></div>
+                    <div><Label className={labelMini}>Admissão</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.hiringDate || '---'}</p></div>
                   </Card>
-                  <Card className="glass border-white/5 p-5 rounded-xl bg-white/[0.01] flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground"><Settings2 className="h-5 w-5" /></div>
-                    <div><Label className={labelMini}>Última Alteração</Label><p className="text-xs font-bold text-white">{viewingStaff?.updatedAt?.toDate ? new Date(viewingStaff.updatedAt.toDate()).toLocaleDateString() : '---'}</p></div>
+                  <Card className="glass border-white/5 p-6 rounded-2xl bg-white/[0.01] flex items-center gap-5 shadow-lg group hover:border-primary/20 transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-all"><Settings2 className="h-6 w-6" /></div>
+                    <div><Label className={labelMini}>Status Acesso</Label><p className="text-sm font-bold text-emerald-500 uppercase">ATIVO</p></div>
                   </Card>
                 </div>
               </div>
             </div>
           </ScrollArea>
 
-          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
-            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-3">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" /> Perfil Técnico Auditado
+          <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-[2.5rem]">
+            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-4 opacity-50">
+              <ShieldCheck className="h-5 w-5 text-emerald-500" /> SOBERANIA TÉCNICA AUDITADA
             </span>
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-2xl shadow-2xl transition-all hover:scale-105 active:scale-95">
               FECHAR DOSSIÊ
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-3xl text-center">
-          <div className="p-10 space-y-6">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Acesso Liberado</DialogTitle>
-              <DialogDescription>O perfil do colaborador foi ativado no sistema.</DialogDescription>
-            </DialogHeader>
-            <div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl"><CheckCircle2 className="h-10 w-10 animate-bounce" /></div>
-            <div className="space-y-2">
-              <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</DialogTitle>
-              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed">O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO SISTEMA.</p>
-            </div>
-            <div className="grid grid-cols-1 gap-3 pt-2">
-              <Button onClick={handleCopyInvite} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] gap-3 shadow-xl hover:scale-105 transition-all">
-                <Copy className="h-4 w-4" /> COPIAR CONVITE WHATSAPP
-              </Button>
-              <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12">FECHAR</Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
