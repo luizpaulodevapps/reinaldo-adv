@@ -16,7 +16,9 @@ import {
   MoreVertical,
   CheckCircle2,
   AlertCircle,
-  Scale
+  Scale,
+  Navigation,
+  Edit3
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
@@ -94,13 +96,27 @@ export default function AudienciasSubpage() {
                     </div>
                   </div>
 
-                  <div className="p-8 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-4">
-                    {h.meetingLink && (
-                      <Button variant="outline" className="h-12 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 font-black text-[10px] uppercase gap-3 px-6 rounded-xl">
+                  <div className="p-8 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-3">
+                    {h.location && (
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-12 w-12 border-primary/20 text-primary hover:bg-primary/10 rounded-xl"
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.location)}`, "_blank")}
+                      >
+                        <Navigation className="h-5 w-5" />
+                      </Button>
+                    )}
+                    {(h.meetingLink || h.meetingUrl) && (
+                      <Button 
+                        variant="outline" 
+                        className="h-12 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 font-black text-[10px] uppercase gap-3 px-6 rounded-xl"
+                        onClick={() => window.open(h.meetingLink || h.meetingUrl, "_blank")}
+                      >
                         <Video className="h-4 w-4" /> Sala Virtual
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-12 w-12 text-white/20 hover:text-white rounded-xl border border-white/5"><MoreVertical className="h-5 w-5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 text-white/20 hover:text-white rounded-xl border border-white/5"><Edit3 className="h-5 w-5" /></Button>
                   </div>
                 </CardContent>
               </Card>

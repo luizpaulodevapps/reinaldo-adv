@@ -27,7 +27,9 @@ import {
   Info,
   Trash2,
   Edit3,
-  Gavel
+  Gavel,
+  Navigation,
+  MessageCircle
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
@@ -308,8 +310,8 @@ export default function MasterAgendaPage() {
                 <Card 
                   key={idx} 
                   className={cn(
-                    "glass border-l-4 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer",
-                    event.eventType === 'audiencia' ? 'border-l-rose-500' : event.eventType === 'atendimento' ? 'border-l-amber-500' : 'border-l-primary'
+                    "glass border-white/5 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer group relative",
+                    event.eventType === 'audiencia' ? 'border-l-4 border-l-rose-500' : event.eventType === 'atendimento' ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'
                   )}
                   onClick={() => setViewingEvent(event)}
                 >
@@ -326,13 +328,63 @@ export default function MasterAgendaPage() {
                       </span>
                     </div>
                     
-                    <h4 className="font-bold text-sm text-white uppercase tracking-tight leading-tight">{event.title}</h4>
-                    
-                    <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest truncate max-w-[150px]">
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm text-white uppercase tracking-tight leading-tight line-clamp-2">{event.title}</h4>
+                      <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate">
                         {event.clientName || event.processNumber || "Geral"}
                       </p>
-                      {event.location && <MapPin className="h-3.5 w-3.5 text-primary opacity-40" />}
+                    </div>
+                    
+                    <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {event.location && (
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="h-3 w-3 text-primary opacity-40" />
+                            <span className="text-[8px] text-muted-foreground uppercase font-black tracking-widest truncate max-w-[100px]">{event.location}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Ações Rápidas em Hover */}
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {event.location && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 rounded-lg bg-white/5 hover:bg-primary/20 text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`, "_blank");
+                            }}
+                          >
+                            <Navigation className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {(event.meetingLink || event.meetingUrl) && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 rounded-lg bg-white/5 hover:bg-emerald-500/20 text-emerald-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(event.meetingLink || event.meetingUrl, "_blank");
+                            }}
+                          >
+                            <Video className="h-3 w-3" />
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(event);
+                          }}
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -467,11 +519,18 @@ export default function MasterAgendaPage() {
                     <MapPin className="h-5 w-5 text-primary" />
                     <span className="text-sm font-bold text-white uppercase">{viewingEvent?.location || "NÃO INFORMADO"}</span>
                   </div>
-                  {viewingEvent?.location && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={() => handleCopyText(viewingEvent.location)}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {viewingEvent?.location && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}>
+                        <Navigation className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {viewingEvent?.location && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={() => handleCopyText(viewingEvent.location)}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 

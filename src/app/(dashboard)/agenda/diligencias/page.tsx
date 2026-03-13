@@ -13,7 +13,8 @@ import {
   Loader2, 
   MoreVertical,
   FileSignature,
-  Scale
+  Scale,
+  Edit3
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
@@ -109,14 +110,24 @@ export default function DiligenciasSubpage() {
                     </div>
                   </div>
 
-                  <div className="p-8 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-4">
+                  <div className="p-8 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-3">
+                    {d.location && (
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-12 w-12 border-primary/20 text-primary hover:bg-primary/10 rounded-xl"
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.location)}`, "_blank")}
+                      >
+                        <Navigation className="h-5 w-5" />
+                      </Button>
+                    )}
                     <Button 
                       onClick={() => handleComplete(d.id)}
                       className="bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-3 text-[10px] uppercase h-12 px-8 rounded-xl shadow-xl transition-all"
                     >
                       <CheckCircle2 className="h-4 w-4" /> Finalizar Task
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-12 w-12 text-white/20 hover:text-white rounded-xl border border-white/5"><MoreVertical className="h-5 w-5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 text-white/20 hover:text-white rounded-xl border border-white/5"><Edit3 className="h-5 w-5" /></Button>
                   </div>
                 </CardContent>
               </Card>
