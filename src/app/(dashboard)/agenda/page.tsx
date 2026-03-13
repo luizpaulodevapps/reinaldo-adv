@@ -34,7 +34,10 @@ import {
   Car,
   Receipt,
   Library,
-  Users
+  Users,
+  UserPlus,
+  Building2,
+  ShieldAlert
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -80,6 +83,12 @@ export default function MasterAgendaPage() {
   const [createMode, setCreateMode] = useState<CreateMode>('atendimento')
   const [viewingEvent, setViewingEvent] = useState<any>(null)
   
+  // Estados para Cadastro Rápido
+  const [isQuickFreelancerOpen, setIsQuickFreelancerOpen] = useState(false)
+  const [isQuickSolicitorOpen, setIsQuickSolicitorOpen] = useState(false)
+  const [quickFreelancerData, setQuickFreelancerData] = useState({ name: "", city: "", pix: "" })
+  const [quickSolicitorData, setQuickSolicitorData] = useState({ name: "", type: "Escritório Parceiro" })
+
   const [newEventData, setNewEventData] = useState({
     title: "",
     date: "",
@@ -95,6 +104,11 @@ export default function MasterAgendaPage() {
     valueToPay: 0,
     valueToCharge: 0,
     extraExpenses: 0,
+    // Sub-detalhamento de despesas
+    fuelExpense: 0,
+    parkingExpense: 0,
+    copyExpense: 0,
+    miscExpense: 0,
     // Campos de Cadastro Rápido Freelance
     plaintiffName: "",
     defendantName: "",
@@ -190,6 +204,10 @@ export default function MasterAgendaPage() {
       valueToPay: 0,
       valueToCharge: 0,
       extraExpenses: 0,
+      fuelExpense: 0,
+      parkingExpense: 0,
+      copyExpense: 0,
+      miscExpense: 0,
       plaintiffName: "",
       defendantName: "",
       representedSide: "Autor",
@@ -197,6 +215,42 @@ export default function MasterAgendaPage() {
       courtName: ""
     })
     setIsCreateOpen(true)
+  }
+
+  const handleSaveQuickFreelancer = async () => {
+    if (!db || !quickFreelancerData.name) return
+    const res = await addDocumentNonBlocking(collection(db, "freelancers"), {
+      name: quickFreelancerData.name.toUpperCase(),
+      city: quickFreelancerData.city.toUpperCase(),
+      pixKey: quickFreelancerData.pix,
+      isActive: true,
+      createdAt: serverTimestamp()
+    })
+    setNewEventData(prev => ({ 
+      ...prev, 
+      freelancerId: (res as any).id, 
+      freelancerName: quickFreelancerData.name.toUpperCase() 
+    }))
+    setIsQuickFreelancerOpen(false)
+    setQuickFreelancerData({ name: "", city: "", pix: "" })
+    toast({ title: "Correspondente Injetado" })
+  }
+
+  const handleSaveQuickSolicitor = async () => {
+    if (!db || !quickSolicitorData.name) return
+    const res = await addDocumentNonBlocking(collection(db, "counterparties"), {
+      name: quickSolicitorData.name.toUpperCase(),
+      type: quickSolicitorData.type,
+      createdAt: serverTimestamp()
+    })
+    setNewEventData(prev => ({ 
+      ...prev, 
+      solicitorId: (res as any).id, 
+      solicitorName: quickSolicitorData.name.toUpperCase() 
+    }))
+    setIsQuickSolicitorOpen(false)
+    setQuickSolicitorData({ name: "", type: "Escritório Parceiro" })
+    toast({ title: "Solicitante Injetado" })
   }
 
   const handleSaveEvent = async () => {
@@ -233,6 +287,8 @@ export default function MasterAgendaPage() {
       payload.status = "Pendente"
     } else if (createMode === 'freelance') {
       // Rito Especial Freelance
+      const totalExtras = Number(newEventData.fuelExpense) + Number(newEventData.parkingExpense) + Number(newEventData.copyExpense) + Number(newEventData.miscExpense)
+      
       const flDoc = await addDocumentNonBlocking(collection(db, "freelance_diligences"), {
         type: "Audiência Freelance",
         freelancerId: newEventData.freelancerId,
@@ -244,8 +300,11 @@ export default function MasterAgendaPage() {
         processNumber: newEventData.processNumber,
         valueToPay: newEventData.valueToPay,
         valueToCharge: newEventData.valueToCharge,
-        extraExpenses: newEventData.extraExpenses || 0,
-        // Novos Campos de Cadastro Rápido
+        extraExpenses: totalExtras,
+        fuelExpense: newEventData.fuelExpense,
+        parkingExpense: newEventData.parkingExpense,
+        copyExpense: newEventData.copyExpense,
+        miscExpense: newEventData.miscExpense,
         plaintiffName: newEventData.plaintiffName.toUpperCase(),
         defendantName: newEventData.defendantName.toUpperCase(),
         representedSide: newEventData.representedSide,
@@ -489,7 +548,10 @@ export default function MasterAgendaPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Correspondente *</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Correspondente *</Label>
+                          <button onClick={() => setIsQuickFreelancerOpen(true)} className="text-[9px] font-black text-primary hover:underline uppercase">Adicionar Novo</button>
+                        </div>
                         <Select value={newEventData.freelancerId} onValueChange={(v) => {
                           const f = freelancers?.find(i => i.id === v)
                           setNewEventData({...newEventData, freelancerId: v, freelancerName: f?.name || ""})
@@ -501,7 +563,10 @@ export default function MasterAgendaPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Solicitante *</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Solicitante *</Label>
+                          <button onClick={() => setIsQuickSolicitorOpen(true)} className="text-[9px] font-black text-primary hover:underline uppercase">Adicionar Novo</button>
+                        </div>
                         <Select value={newEventData.solicitorId} onValueChange={(v) => {
                           const c = counterparties?.find(i => i.id === v)
                           setNewEventData({...newEventData, solicitorId: v, solicitorName: c?.name || ""})
@@ -513,14 +578,33 @@ export default function MasterAgendaPage() {
                         </Select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <div className="space-y-6">
+                      <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2"><Receipt className="h-3.5 w-3.5" /> Reembolsos & Custos Adicionais</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-[8px] font-black text-muted-foreground uppercase">Combustível</Label>
+                          <Input type="number" value={newEventData.fuelExpense} onChange={e => setNewEventData({...newEventData, fuelExpense: Number(e.target.value)})} className="bg-black/40 border-white/5 h-10 text-white font-bold" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[8px] font-black text-muted-foreground uppercase">Estac./Pedágio</Label>
+                          <Input type="number" value={newEventData.parkingExpense} onChange={e => setNewEventData({...newEventData, parkingExpense: Number(e.target.value)})} className="bg-black/40 border-white/5 h-10 text-white font-bold" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[8px] font-black text-muted-foreground uppercase">Cópias/Dig.</Label>
+                          <Input type="number" value={newEventData.copyExpense} onChange={e => setNewEventData({...newEventData, copyExpense: Number(e.target.value)})} className="bg-black/40 border-white/5 h-10 text-white font-bold" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[8px] font-black text-muted-foreground uppercase">Diversos</Label>
+                          <Input type="number" value={newEventData.miscExpense} onChange={e => setNewEventData({...newEventData, miscExpense: Number(e.target.value)})} className="bg-black/40 border-white/5 h-10 text-white font-bold" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Honorário (Pagar)</Label>
                         <Input type="number" value={newEventData.valueToPay} onChange={e => setNewEventData({...newEventData, valueToPay: Number(e.target.value)})} className="bg-black/40 border-rose-500/20 h-12 text-white font-black" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Extras (KM/Cópia)</Label>
-                        <Input type="number" value={newEventData.extraExpenses} onChange={e => setNewEventData({...newEventData, extraExpenses: Number(e.target.value)})} className="bg-black/40 border-amber-500/20 h-12 text-white font-black" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Receita (Cobrar)</Label>
@@ -721,6 +805,52 @@ export default function MasterAgendaPage() {
           </ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex justify-end flex-none">
             <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">FECHAR</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGOS DE CADASTRO RÁPIDO */}
+      <Dialog open={isQuickFreelancerOpen} onOpenChange={setIsQuickFreelancerOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[450px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <UserPlus className="h-6 w-6 text-primary" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Injetar Correspondente</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Nome Completo</Label><Input className="glass h-12 text-white font-bold" value={quickFreelancerData.name} onChange={e => setQuickFreelancerData({...quickFreelancerData, name: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Cidade</Label><Input className="glass h-12 text-white font-bold" value={quickFreelancerData.city} onChange={e => setQuickFreelancerData({...quickFreelancerData, city: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Chave PIX</Label><Input className="glass h-12 text-white font-bold" value={quickFreelancerData.pix} onChange={e => setQuickFreelancerData({...quickFreelancerData, pix: e.target.value})} /></div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsQuickFreelancerOpen(false)} className="text-muted-foreground font-black uppercase text-[10px]">Cancelar</Button>
+            <Button onClick={handleSaveQuickFreelancer} className="gold-gradient text-background font-black h-12 px-8 rounded-xl uppercase text-[10px]">Injetar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isQuickSolicitorOpen} onOpenChange={setIsQuickSolicitorOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[450px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <Building2 className="h-6 w-6 text-primary" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Injetar Solicitante</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Razão Social / Nome</Label><Input className="glass h-12 text-white font-bold" value={quickSolicitorData.name} onChange={e => setQuickSolicitorData({...quickSolicitorData, name: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label>
+              <Select value={quickSolicitorData.type} onValueChange={v => setQuickSolicitorData({...quickSolicitorData, type: v})}>
+                <SelectTrigger className="glass h-12 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#0d121f] text-white">
+                  <SelectItem value="Escritório Parceiro">ESCRITÓRIO PARCEIRO</SelectItem>
+                  <SelectItem value="Cliente">CLIENTE INTERNO</SelectItem>
+                  <SelectItem value="Empresa">EMPRESA</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsQuickSolicitorOpen(false)} className="text-muted-foreground font-black uppercase text-[10px]">Cancelar</Button>
+            <Button onClick={handleSaveQuickSolicitor} className="gold-gradient text-background font-black h-12 px-8 rounded-xl uppercase text-[10px]">Injetar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

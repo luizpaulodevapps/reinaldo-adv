@@ -26,12 +26,20 @@ import {
   Car,
   Receipt,
   Layers,
-  Library
+  Library,
+  UserPlus
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { useFirestore, addDocumentNonBlocking } from "@/firebase"
+import { collection, serverTimestamp } from "firebase/firestore"
+import { useToast } from "@/hooks/use-toast"
 
 export function FreelanceDiligenceForm({ initialData, freelancers, counterparties, onSubmit, onCancel }: any) {
+  const db = useFirestore()
+  const { toast } = useToast()
+  
   const [formData, setFormData] = useState({
     type: "Audiência Freelance",
     processNumber: "",
@@ -61,6 +69,12 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     status: "Criada",
     notes: ""
   })
+
+  // Estados para Cadastro Rápido
+  const [isQuickFreelancerOpen, setIsQuickFreelancerOpen] = useState(false)
+  const [isQuickSolicitorOpen, setIsQuickSolicitorOpen] = useState(false)
+  const [quickFreelancerData, setQuickFreelancerData] = useState({ name: "", city: "", pix: "" })
+  const [quickSolicitorData, setQuickSolicitorData] = useState({ name: "", type: "Escritório Parceiro" })
 
   useEffect(() => {
     if (initialData) {
@@ -105,6 +119,43 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
       valueToPay: defaultValue > 0 ? defaultValue : prev.valueToPay,
       city: f.city || prev.city
     }))
+  }
+
+  const handleSaveQuickFreelancer = async () => {
+    if (!db || !quickFreelancerData.name) return
+    const res = await addDocumentNonBlocking(collection(db, "freelancers"), {
+      name: quickFreelancerData.name.toUpperCase(),
+      city: quickFreelancerData.city.toUpperCase(),
+      pixKey: quickFreelancerData.pix,
+      isActive: true,
+      createdAt: serverTimestamp()
+    })
+    setFormData(prev => ({ 
+      ...prev, 
+      freelancerId: (res as any).id, 
+      freelancerName: quickFreelancerData.name.toUpperCase(),
+      freelancerPix: quickFreelancerData.pix
+    }))
+    setIsQuickFreelancerOpen(false)
+    setQuickFreelancerData({ name: "", city: "", pix: "" })
+    toast({ title: "Correspondente Injetado" })
+  }
+
+  const handleSaveQuickSolicitor = async () => {
+    if (!db || !quickSolicitorData.name) return
+    const res = await addDocumentNonBlocking(collection(db, "counterparties"), {
+      name: quickSolicitorData.name.toUpperCase(),
+      type: quickSolicitorData.type,
+      createdAt: serverTimestamp()
+    })
+    setFormData(prev => ({ 
+      ...prev, 
+      solicitorId: (res as any).id, 
+      solicitorName: quickSolicitorData.name.toUpperCase() 
+    }))
+    setIsQuickSolicitorOpen(false)
+    setQuickSolicitorData({ name: "", type: "Escritório Parceiro" })
+    toast({ title: "Solicitante Injetado" })
   }
 
   const totalCost = Number(formData.valueToPay) + Number(formData.extraExpenses)
@@ -199,7 +250,10 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <Label className={labelMini}>Membro Executor *</Label>
+                <div className="flex items-center justify-between">
+                  <Label className={labelMini}>Membro Executor *</Label>
+                  <button onClick={() => setIsQuickFreelancerOpen(true)} className="text-[9px] font-black text-primary hover:underline uppercase">Adicionar Novo</button>
+                </div>
                 <Select value={formData.freelancerId} onValueChange={handleSelectFreelancer}>
                   <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue placeholder="SELECIONE O PROFISSIONAL" /></SelectTrigger>
                   <SelectContent className="bg-[#0d121f] text-white">
@@ -215,7 +269,10 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className={labelMini}>Entidade Contratante *</Label>
+                <div className="flex items-center justify-between">
+                  <Label className={labelMini}>Entidade Contratante *</Label>
+                  <button onClick={() => setIsQuickSolicitorOpen(true)} className="text-[9px] font-black text-primary hover:underline uppercase">Adicionar Novo</button>
+                </div>
                 <Select 
                   value={formData.solicitorId} 
                   onValueChange={v => {
@@ -360,6 +417,52 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
           <ShieldCheck className="h-6 w-6" /> {initialData ? "ATUALIZAR ORDEM" : "REGISTRAR ATO FREELANCE"}
         </Button>
       </div>
+
+      {/* DIÁLOGOS DE CADASTRO RÁPIDO */}
+      <Dialog open={isQuickFreelancerOpen} onOpenChange={setIsQuickFreelancerOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[450px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <UserPlus className="h-6 w-6 text-primary" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Injetar Correspondente</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Nome Completo</Label><Input className="glass h-12 text-white font-bold" value={quickFreelancerData.name} onChange={e => setQuickFreelancerData({...quickFreelancerData, name: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Cidade</Label><Input className="glass h-12 text-white font-bold" value={quickFreelancerData.city} onChange={e => setQuickFreelancerData({...quickFreelancerData, city: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Chave PIX</Label><Input className="glass h-12 text-white font-bold" value={quickFreelancerData.pix} onChange={e => setQuickFreelancerData({...quickFreelancerData, pix: e.target.value})} /></div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsQuickFreelancerOpen(false)} className="text-muted-foreground font-black uppercase text-[10px]">Cancelar</Button>
+            <Button onClick={handleSaveQuickFreelancer} className="gold-gradient text-background font-black h-12 px-8 rounded-xl uppercase text-[10px]">Injetar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isQuickSolicitorOpen} onOpenChange={setIsQuickSolicitorOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[450px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5 flex items-center gap-4">
+            <Building2 className="h-6 w-6 text-primary" />
+            <DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Injetar Solicitante</DialogTitle>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Razão Social / Nome</Label><Input className="glass h-12 text-white font-bold" value={quickSolicitorData.name} onChange={e => setQuickSolicitorData({...quickSolicitorData, name: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label>
+              <Select value={quickSolicitorData.type} onValueChange={v => setQuickSolicitorData({...quickSolicitorData, type: v})}>
+                <SelectTrigger className="glass h-12 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#0d121f] text-white">
+                  <SelectItem value="Escritório Parceiro">ESCRITÓRIO PARCEIRO</SelectItem>
+                  <SelectItem value="Cliente">CLIENTE INTERNO</SelectItem>
+                  <SelectItem value="Empresa">EMPRESA</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsQuickSolicitorOpen(false)} className="text-muted-foreground font-black uppercase text-[10px]">Cancelar</Button>
+            <Button onClick={handleSaveQuickSolicitor} className="gold-gradient text-background font-black h-12 px-8 rounded-xl uppercase text-[10px]">Injetar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
