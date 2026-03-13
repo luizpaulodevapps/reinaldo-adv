@@ -85,6 +85,9 @@
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string" },
         "isActive": { "type": "boolean" },
+        "paymentType": { "type": "string", "enum": ["Mensalista", "Por Demanda", "Parceria (Porcentagem)"] },
+        "commissionPercentage": { "type": "number" },
+        "baseSalary": { "type": "number" },
         "themePreferences": { "type": "object" }
       }
     },
@@ -153,6 +156,7 @@
         "clientName": { "type": "string" },
         "entityName": { "type": "string" },
         "processNumber": { "type": "string" },
+        "responsibleStaffId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }
@@ -172,6 +176,7 @@
     "/courts/{courtId}": { "schema": { "$ref": "#/backend/entities/Court" }, "description": "Judicial organs and buildings registry." },
     "/freelancers/{freelancerId}": { "schema": { "$ref": "#/backend/entities/Freelancer" }, "description": "Registry of freelance correspondents." },
     "/counterparties/{counterpartyId}": { "schema": { "$ref": "#/backend/entities/Counterparty" }, "description": "Financial entities involved in freelance requests." },
-    "/freelance_diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/FreelanceDiligence" }, "description": "Task management for freelance services." }
+    "/freelance_diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/FreelanceDiligence" }, "description": "Task management for freelance services." },
+    "/employees/{employeeId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Detailed employee records for D.P." }
   }
 }

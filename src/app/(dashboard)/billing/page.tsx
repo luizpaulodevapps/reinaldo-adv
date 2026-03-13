@@ -20,7 +20,10 @@ import {
   AlertCircle,
   FileText,
   DollarSign,
-  ArrowRight
+  ArrowRight,
+  Landmark,
+  Handshake,
+  Percent
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,10 +54,16 @@ export default function BillingPage() {
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
 
+  const staffQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "employees"))
+  }, [db, user])
+  const { data: staffMembers } = useCollection(staffQuery)
+
   const isLoading = isUserLoading || isLoadingTransactions
 
   const stats = useMemo(() => {
-    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, admin: 0, pendente: 0 }
+    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, repassesPrevistos: 0, lucroBanca: 0, pendente: 0 }
     
     const entradas = transactions
       .filter(t => t.type?.includes('Entrada'))
@@ -64,16 +73,25 @@ export default function BillingPage() {
       .filter(t => t.type?.includes('Saída'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const admin = transactions
-      .filter(t => t.type?.includes('Saída') && !t.category?.includes('Folha'))
-      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+    // Lógica de Repasse: Se a entrada for honorário e tiver staff vinculado com parceria
+    let repassesPrevistos = 0
+    transactions
+      .filter(t => t.type?.includes('Entrada') && t.category?.includes('Honorários'))
+      .forEach(t => {
+        const staff = staffMembers?.find(s => s.id === t.responsibleStaffId)
+        if (staff && staff.paymentType === "Parceria (Porcentagem)") {
+          repassesPrevistos += (Number(t.value) * (staff.commissionPercentage || 0)) / 100
+        }
+      })
 
     const pendente = transactions
       .filter(t => t.status === 'Pendente' && t.type?.includes('Entrada'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    return { entradas, saídas, saldo: entradas - saídas, admin, pendente }
-  }, [transactions])
+    const lucroBanca = entradas - saídas - repassesPrevistos
+
+    return { entradas, saídas, saldo: entradas - saídas, repassesPrevistos, lucroBanca, pendente }
+  }, [transactions, staffMembers])
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return []
@@ -141,8 +159,9 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="glass border-primary/20 bg-primary/5 relative overflow-hidden h-36 flex flex-col justify-center shadow-2xl rounded-2xl">
           <CardContent className="p-8">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><TrendingUp className="h-4 w-4" /> SALDO OPERACIONAL</p>
-            <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><Landmark className="h-4 w-4" /> CARTEIRA DA BANCA</p>
+            <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.lucroBanca >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.lucroBanca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            <p className="text-[8px] font-black text-primary/40 uppercase tracking-widest mt-2">Saldo após deduções e repasses</p>
           </CardContent>
         </Card>
         <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
@@ -154,12 +173,12 @@ export default function BillingPage() {
           <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="glass border-amber-500/20 bg-amber-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><AlertCircle className="h-4 w-4" /> PENDENTE RECEBER</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><Handshake className="h-4 w-4" /> REPASSES PREVISTOS</p>
+          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.repassesPrevistos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="glass border-white/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><Building2 className="h-4 w-4" /> CUSTO ESTRUTURA</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.admin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><AlertCircle className="h-4 w-4" /> PENDENTE RECEBER</p>
+          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
       </div>
 
