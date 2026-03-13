@@ -146,6 +146,19 @@ export default function CasesPage() {
   }, [db, user])
   const { data: staffMembers } = useCollection(staffQuery)
 
+  // Consultas globais para indicadores reativos
+  const hearingsQuery = useMemoFirebase(() => db ? query(collection(db, "hearings")) : null, [db])
+  const { data: allHearings } = useCollection(hearingsQuery)
+
+  const appointmentsQuery = useMemoFirebase(() => db ? query(collection(db, "appointments")) : null, [db])
+  const { data: allAppointments } = useCollection(appointmentsQuery)
+
+  const deadlinesQuery = useMemoFirebase(() => db ? query(collection(db, "deadlines")) : null, [db])
+  const { data: allDeadlines } = useCollection(deadlinesQuery)
+
+  const financialQuery = useMemoFirebase(() => db ? query(collection(db, "financial_titles")) : null, [db])
+  const { data: allFinancial } = useCollection(financialQuery)
+
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
       if (proc.status === "Arquivado") return false
@@ -577,184 +590,230 @@ export default function CasesPage() {
             "grid gap-4 transition-all duration-500",
             viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
           )}>
-            {filteredProcesses.map((proc) => (
-              <Card 
-                key={proc.id} 
-                className={cn(
-                  "glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer",
-                  viewMode === "list" ? "rounded-xl" : "rounded-3xl"
-                )}
-                onClick={(e) => {
-                  if ((e.target as HTMLElement).closest('button')) return;
-                  handleOpenView(proc);
-                }}
-              >
-                <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
-                  {viewMode === "list" ? (
-                    <div className="flex flex-col gap-6">
-                      <div className="flex items-start justify-between">
-                        {/* LADO ESQUERDO: RÉU */}
-                        <div className="space-y-3 flex-1 min-w-0">
-                          <div className="flex items-center gap-4">
-                            <h3 className="text-[#F5D030] font-black text-lg uppercase tracking-tighter leading-none">PROCESSO:</h3>
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black shrink-0">ATIVO</Badge>
+            {filteredProcesses.map((proc) => {
+              // Lógica de Indicadores Reativos por Processo
+              const hasPauta = (allHearings || []).some(h => h.processId === proc.id || h.processNumber === proc.processNumber) || 
+                               (allAppointments || []).some(a => a.processId === proc.id || a.processNumber === proc.processNumber);
+              
+              const hasPrazos = (allDeadlines || []).some(d => d.processId === proc.id || d.processId === proc.processNumber);
+              
+              const hasFinancial = (allFinancial || []).some(f => f.processId === proc.id || f.processNumber === proc.processNumber);
+
+              return (
+                <Card 
+                  key={proc.id} 
+                  className={cn(
+                    "glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer",
+                    viewMode === "list" ? "rounded-xl" : "rounded-3xl"
+                  )}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    handleOpenView(proc);
+                  }}
+                >
+                  <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
+                    {viewMode === "list" ? (
+                      <div className="flex flex-col gap-6">
+                        <div className="flex items-start justify-between">
+                          {/* LADO ESQUERDO: RÉU */}
+                          <div className="space-y-3 flex-1 min-w-0">
+                            <div className="flex items-center gap-4">
+                              <h3 className="text-[#F5D030] font-black text-lg uppercase tracking-tighter leading-none">PROCESSO:</h3>
+                              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black shrink-0">ATIVO</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <span className="text-[10px] font-black uppercase tracking-widest opacity-40">vs</span>
+                              <span className="text-base font-bold text-white uppercase truncate tracking-tight">{proc.defendantName || "NÃO MAPEADO"}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">vs</span>
-                            <span className="text-base font-bold text-white uppercase truncate tracking-tight">{proc.defendantName || "NÃO MAPEADO"}</span>
+                          
+                          {/* LADO DIREITO: CLIENTE (EU) */}
+                          <div className="flex items-center gap-12 shrink-0 ml-8">
+                            <div className="flex flex-col items-end">
+                              <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 text-right w-full">CLIENTE / OUTORGANTE</span>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary shadow-lg">
+                                  <User className="h-5 w-5" />
+                                </div>
+                                <span className="text-xl font-black text-white uppercase tracking-tighter">{proc.clientName}</span>
+                              </div>
+                            </div>
+                            
+                            {/* BOTÕES CIRCULARES INTELIGENTES */}
+                            <div className="flex items-center gap-3">
+                              {/* PAUTA REATIVA */}
+                              <button 
+                                disabled={!hasPauta}
+                                className={cn(
+                                  "flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all duration-500",
+                                  hasPauta 
+                                    ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]" 
+                                    : "border-white/5 bg-white/[0.02] opacity-10 grayscale pointer-events-none"
+                                )}
+                              >
+                                <Calendar className={cn("h-4 w-4", hasPauta ? "text-amber-500" : "text-white/20")} />
+                                <span className={cn("text-[7px] font-black mt-0.5 uppercase", hasPauta ? "text-amber-500" : "text-white/20")}>PAUTA</span>
+                              </button>
+
+                              {/* PRAZOS REATIVOS */}
+                              <button 
+                                disabled={!hasPrazos}
+                                className={cn(
+                                  "flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all duration-500",
+                                  hasPrazos 
+                                    ? "border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)]" 
+                                    : "border-white/5 bg-white/[0.02] opacity-10 grayscale pointer-events-none"
+                                )}
+                              >
+                                <Clock className={cn("h-4 w-4", hasPrazos ? "text-rose-500" : "text-white/20")} />
+                                <span className={cn("text-[7px] font-black mt-0.5 uppercase", hasPrazos ? "text-rose-500" : "text-white/20")}>PRAZOS</span>
+                              </button>
+
+                              {/* FINANCEIRO REATIVO */}
+                              <button 
+                                disabled={!hasFinancial}
+                                className={cn(
+                                  "flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all duration-500",
+                                  hasFinancial 
+                                    ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]" 
+                                    : "border-white/5 bg-white/[0.02] opacity-10 grayscale pointer-events-none"
+                                )}
+                              >
+                                <DollarSign className={cn("h-4 w-4", hasFinancial ? "text-emerald-500" : "text-white/20")} />
+                                <span className={cn("text-[7px] font-black mt-0.5 uppercase", hasFinancial ? "text-emerald-500" : "text-white/20")}>FINANCEIRO</span>
+                              </button>
+
+                              <div className="flex items-center gap-2 pl-4 border-l border-white/5">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <button className="h-10 w-10 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5 shadow-xl">
+                                      <MoreVertical className="h-5 w-5" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <ProcessActionsMenu proc={proc} />
+                                </DropdownMenu>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         
-                        {/* LADO DIREITO: CLIENTE (EU) */}
-                        <div className="flex items-center gap-12 shrink-0 ml-8">
-                          <div className="flex flex-col items-end">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 text-right w-full">CLIENTE / OUTORGANTE</span>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary shadow-lg">
-                                <User className="h-5 w-5" />
-                              </div>
-                              <span className="text-xl font-black text-white uppercase tracking-tighter">{proc.clientName}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner">
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Protocolo CNJ</p>
+                            <div className="bg-black/40 border border-white/5 px-3 py-2 rounded-lg font-mono text-[11px] font-bold text-white tracking-widest w-full truncate">
+                              {proc.processNumber}
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <button className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                              <Calendar className="h-4 w-4 text-amber-500" />
-                              <span className="text-[7px] font-black text-amber-500 mt-0.5 uppercase">PAUTA</span>
-                            </button>
-                            <button className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-all shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-                              <Clock className="h-4 w-4 text-rose-500" />
-                              <span className="text-[7px] font-black text-rose-500 mt-0.5 uppercase">PRAZOS</span>
-                            </button>
-                            <div className="flex items-center gap-2 pl-4 border-l border-white/5">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <button className="h-10 w-10 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5 shadow-xl">
-                                    <MoreVertical className="h-5 w-5" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <ProcessActionsMenu proc={proc} />
-                              </DropdownMenu>
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Área / Matéria</p>
+                            <div className="flex items-center gap-2 text-amber-500 pt-1">
+                              <Scale className="h-4 w-4" />
+                              <span className="text-[11px] font-black uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Comarca</p>
+                            <div className="flex items-center gap-2 text-white/80 pt-1">
+                              <Gavel className="h-4 w-4 text-primary" />
+                              <span className="text-[11px] font-bold uppercase truncate">{proc.vara || "VARA ÚNICA"} — {proc.court || "---"} {proc.city && ` (${proc.city})`}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Valor da Causa</p>
+                            <div className="flex items-center gap-2 text-emerald-500 font-black tabular-nums text-[12px] pt-1">
+                              <TrendingUp className="h-4 w-4" /> R$ {Number(proc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Responsável</p>
+                            <div className="flex items-center gap-2 text-emerald-500 pt-1">
+                              <UserIcon className="h-4 w-4" />
+                              <span className="text-[11px] font-black uppercase tracking-widest truncate">DR(A). {proc.responsibleStaffName || "EQUIPE RGMJ"}</span>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner">
-                        <div className="space-y-1">
-                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Protocolo CNJ</p>
-                          <div className="bg-black/40 border border-white/5 px-3 py-2 rounded-lg font-mono text-[11px] font-bold text-white tracking-widest w-full">
-                            {proc.processNumber}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Área / Matéria</p>
-                          <div className="flex items-center gap-2 text-amber-500 pt-1">
-                            <Scale className="h-4 w-4" />
-                            <span className="text-[11px] font-black uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Comarca</p>
-                          <div className="flex items-center gap-2 text-white/80 pt-1">
-                            <Gavel className="h-4 w-4 text-primary" />
-                            <span className="text-[11px] font-bold uppercase truncate">{proc.vara || "VARA ÚNICA"} — {proc.court || "---"} {proc.city && ` (${proc.city})`}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Valor da Causa</p>
-                          <div className="flex items-center gap-2 text-emerald-500 font-black tabular-nums text-[12px] pt-1">
-                            <TrendingUp className="h-4 w-4" /> R$ {Number(proc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Responsável</p>
-                          <div className="flex items-center gap-2 text-emerald-500 pt-1">
-                            <UserIcon className="h-4 w-4" />
-                            <span className="text-[11px] font-black uppercase tracking-widest truncate">DR(A). {proc.responsibleStaffName || "EQUIPE RGMJ"}</span>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-3">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className={cn(
-                              "h-10 text-[10px] font-black uppercase tracking-widest px-5 rounded-xl transition-all",
-                              proc.driveStatus === 'synced' 
-                                ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10" 
-                                : "border-amber-500/30 text-amber-500 bg-amber-500/5 hover:bg-amber-500/10"
-                            )}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (proc.driveStatus === 'synced') {
-                                window.open(proc.driveUrl || "#", "_blank")
-                              } else {
-                                handleSyncDrive(proc)
-                              }
-                            }}
-                            disabled={syncingDriveId === proc.id}
-                          >
-                            {syncingDriveId === proc.id ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <FolderOpen className={cn("h-4 w-4 mr-2", proc.driveStatus === 'synced' ? "text-emerald-500" : "text-amber-500")} />
-                            )}
-                            {proc.driveStatus === 'synced' ? "ACESSAR PASTA DRIVE" : "SINCRONIZAR DRIVE"}
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-10 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[10px] font-black uppercase tracking-widest px-5 rounded-xl hover:bg-blue-500/10 transition-all">
-                            <ExternalLink className="h-4 w-4 mr-2" /> PORTAL JUDICIÁRIO
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground/20">
-                          <FileText className="h-4 w-4" />
-                          <span className="text-[10px] font-black uppercase tracking-widest">PROTOCOLO: {proc.startDate || "---"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col space-y-6">
-                      <div className="space-y-3 min-w-0 flex-1">
-                        <div className="flex items-center gap-4">
-                          <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary bg-primary/5 uppercase tracking-[0.15em] px-3 h-6">
-                            {proc.caseType?.toUpperCase() || "GERAL"}
-                          </Badge>
-                          <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest truncate">{proc.processNumber}</span>
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight truncate">
-                            {proc.description}
-                          </h3>
-                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1.5 opacity-50 flex items-center gap-2">
-                            <Gavel className="h-3 w-3" /> {proc.court} • {proc.vara}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black uppercase">ATIVO</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white rounded-lg bg-white/5 outline-none">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <ProcessActionsMenu proc={proc} />
-                          </DropdownMenu>
-                          <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-all border border-white/5">
-                            <ChevronRight className="h-4 w-4" />
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                          <div className="flex items-center gap-3">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className={cn(
+                                "h-10 text-[10px] font-black uppercase tracking-widest px-5 rounded-xl transition-all",
+                                proc.driveStatus === 'synced' 
+                                  ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10" 
+                                  : "border-amber-500/30 text-amber-500 bg-amber-500/5 hover:bg-amber-500/10"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (proc.driveStatus === 'synced') {
+                                  window.open(proc.driveUrl || "#", "_blank")
+                                } else {
+                                  handleSyncDrive(proc)
+                                }
+                              }}
+                              disabled={syncingDriveId === proc.id}
+                            >
+                              {syncingDriveId === proc.id ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <FolderOpen className={cn("h-4 w-4 mr-2", proc.driveStatus === 'synced' ? "text-emerald-500" : "text-amber-500")} />
+                              )}
+                              {proc.driveStatus === 'synced' ? "ACESSAR PASTA DRIVE" : "SINCRONIZAR DRIVE"}
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-10 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[10px] font-black uppercase tracking-widest px-5 rounded-xl hover:bg-blue-500/10 transition-all">
+                              <ExternalLink className="h-4 w-4 mr-2" /> PORTAL JUDICIÁRIO
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground/20">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">PROTOCOLO: {proc.startDate || "---"}</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    ) : (
+                      <div className="flex flex-col space-y-6">
+                        <div className="space-y-3 min-w-0 flex-1">
+                          <div className="flex items-center gap-4">
+                            <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary bg-primary/5 uppercase tracking-[0.15em] px-3 h-6">
+                              {proc.caseType?.toUpperCase() || "GERAL"}
+                            </Badge>
+                            <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest truncate">{proc.processNumber}</span>
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight truncate">
+                              {proc.description}
+                            </h3>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1.5 opacity-50 flex items-center gap-2">
+                              <Gavel className="h-3 w-3" /> {proc.court} • {proc.vara}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black uppercase">ATIVO</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white rounded-lg bg-white/5 outline-none">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <ProcessActionsMenu proc={proc} />
+                            </DropdownMenu>
+                            <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-all border border-white/5">
+                              <ChevronRight className="h-4 w-4" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         ) : (
           <div className="py-40 flex flex-col items-center justify-center space-y-8 glass rounded-3xl border-dashed border-2 border-white/5 opacity-20">
