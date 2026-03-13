@@ -378,12 +378,9 @@ export default function StaffPage() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pr-8">
               <Button onClick={() => handleOpenEdit(viewingStaff)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-primary hover:text-background transition-all">
                 <Settings2 className="h-4 w-4 mr-2" /> EDITAR
-              </Button>
-              <Button onClick={() => setIsViewOpen(false)} variant="ghost" className="h-11 w-11 rounded-xl text-muted-foreground hover:text-white">
-                <X className="h-6 w-6" />
               </Button>
             </div>
           </div>

@@ -490,10 +490,9 @@ Documento gerado via Inteligência Artificial RGMJ.
                       </SheetDescription>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 pr-8">
                     <Button onClick={() => handleDeleteLead(activeLead.id)} variant="outline" className="h-11 text-[10px] font-black uppercase px-5 rounded-xl text-rose-400 border-white/10 hover:bg-rose-500/10"><Trash2 className="h-4 w-4" /></Button>
                     <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-11 text-[10px] font-black uppercase px-6 rounded-xl text-primary border-white/10 hover:bg-primary/5">EDITAR QUALIFICAÇÃO</Button>
-                    <Button onClick={() => setIsSheetOpen(false)} variant="ghost" className="h-11 w-11 rounded-xl text-muted-foreground hover:text-white"><X className="h-6 w-6" /></Button>
                   </div>
                 </div>
               </SheetHeader>
