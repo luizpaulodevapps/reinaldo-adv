@@ -218,6 +218,33 @@ export default function LeadsPage() {
     setActiveDossierTab("overview")
   }
 
+  const handleCreateLead = async (data: any) => {
+    if (!user || !db) return
+    const leadRef = await addDocumentNonBlocking(collection(db!, "leads"), { 
+      ...data, 
+      assignedStaffId: user?.uid, 
+      status: "novo", 
+      driveStatus: "pendente", 
+      createdAt: serverTimestamp(), 
+      updatedAt: serverTimestamp() 
+    });
+
+    // Disparar Notificação de Novo Lead
+    addDocumentNonBlocking(collection(db, "notifications"), {
+      userId: user.uid,
+      title: "Novo Lead na Triagem",
+      message: `O cliente ${data.name.toUpperCase()} iniciou um novo rito de triagem.`,
+      type: "lead",
+      severity: "info",
+      read: false,
+      link: "/leads",
+      createdAt: serverTimestamp()
+    });
+
+    setIsNewEntryOpen(false); 
+    toast({ title: "Atendimento Iniciado" });
+  }
+
   const handleScheduleIntake = async () => {
     if (!db || !activeLead || !intakeData.date || !intakeData.time) return
     const finalLocation = intakeData.type === 'online' ? 'Virtual RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
@@ -311,6 +338,19 @@ export default function LeadsPage() {
     if (!db || !activeLead) return
     await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
     updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
+    
+    // Notificação de Conversão
+    addDocumentNonBlocking(collection(db, "notifications"), {
+      userId: user?.uid,
+      title: "Processo Protocolado",
+      message: `O lead ${activeLead.name.toUpperCase()} foi convertido em processo ativo.`,
+      type: "system",
+      severity: "info",
+      read: false,
+      link: "/cases",
+      createdAt: serverTimestamp()
+    });
+
     setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
   }
 
@@ -847,7 +887,7 @@ Documento gerado via Inteligência Artificial RGMJ.
         </DialogContent>
       </Dialog>
       
-      <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={(data) => { addDocumentNonBlocking(collection(db!, "leads"), { ...data, assignedStaffId: user?.uid, status: "novo", driveStatus: "pendente", createdAt: serverTimestamp(), updatedAt: serverTimestamp() }); setIsNewEntryOpen(false); toast({ title: "Atendimento Iniciado" }) }} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
+      <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={handleCreateLead} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle></SheetHeader><div className="flex-1 min-h-0">{activeLead && (<LeadForm existingLeads={[]} initialData={activeLead} lockMode={true} onSubmit={async (data) => { await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() }); setIsEditModeOpen(false); toast({ title: "Qualificação Atualizada" }) }} onSelectExisting={() => {}} onCancel={() => setIsEditModeOpen(false)} />)}</div></SheetContent></Sheet>
       
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -7,6 +8,7 @@ import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Scale } from "lucide-react";
 import { useRouter } from 'next/navigation';
+import { NotificationCenter } from "@/components/notifications/notification-center";
 
 export function DashboardClientLayout({
   children,
@@ -85,7 +87,8 @@ export function DashboardClientLayout({
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
+              <NotificationCenter />
               <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sincronizado</span>
