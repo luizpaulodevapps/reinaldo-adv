@@ -64,6 +64,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendimento'
 
@@ -74,7 +75,6 @@ export default function MasterAgendaPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>('atendimento')
   const [viewingEvent, setViewingEvent] = useState<any>(null)
-  const [editingEventData, setEditingEventData] = useState<any>(null)
   
   const [newEventData, setNewEventData] = useState({
     title: "",
@@ -115,9 +115,6 @@ export default function MasterAgendaPage() {
 
   const counterpartiesQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "counterparties"), orderBy("name", "asc")) : null, [db, user])
   const { data: counterparties } = useCollection(counterpartiesQuery)
-
-  const clientsQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "clients"), orderBy("name", "asc")) : null, [db, user])
-  const { data: clients } = useCollection(clientsQuery)
 
   const isLoading = loadingHearings || loadingDeadlines || loadingAppointments || loadingDiligences
 
@@ -526,9 +523,8 @@ export default function MasterAgendaPage() {
       </Dialog>
 
       {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA */}
-      <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingEvent(null)}>
+      <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
-          {/* ... (Conteúdo de visualização similar ao anterior, mantido para integridade) */}
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl flex-none">
             <div className="flex items-center gap-6">
               <div className={cn(
