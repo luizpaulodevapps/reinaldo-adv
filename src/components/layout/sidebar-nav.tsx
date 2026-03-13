@@ -78,7 +78,7 @@ const menuGroups = [
     title: "OPERACIONAL",
     items: [
       { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
-      { name: "PAUTA GLOBAL", href: "/agenda", icon: CalendarDays },
+      { name: "AGENDA", href: "/agenda", icon: CalendarDays },
       { name: "MODELOS", href: "/drafting", icon: BookOpen },
     ]
   },
