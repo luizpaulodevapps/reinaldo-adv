@@ -593,6 +593,7 @@ export default function CasesPage() {
                   {viewMode === "list" ? (
                     <div className="flex flex-col gap-6">
                       <div className="flex items-start justify-between">
+                        {/* LADO ESQUERDO: RÉU */}
                         <div className="space-y-3 flex-1 min-w-0">
                           <div className="flex items-center gap-4">
                             <h3 className="text-[#F5D030] font-black text-lg uppercase tracking-tighter leading-none">PROCESSO:</h3>
@@ -604,6 +605,7 @@ export default function CasesPage() {
                           </div>
                         </div>
                         
+                        {/* LADO DIREITO: CLIENTE (EU) */}
                         <div className="flex items-center gap-12 shrink-0 ml-8">
                           <div className="flex flex-col items-end">
                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 text-right w-full">CLIENTE / OUTORGANTE</span>
@@ -617,7 +619,7 @@ export default function CasesPage() {
                           <div className="flex items-center gap-3">
                             <button className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)]">
                               <Calendar className="h-4 w-4 text-amber-500" />
-                              <span className="text-[7px] font-black text-amber-500 mt-0.5">PAUTA</span>
+                              <span className="text-[7px] font-black text-amber-500 mt-0.5 uppercase">PAUTA</span>
                             </button>
                             <button className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-all shadow-[0_0_15px_rgba(239,68,68,0.1)]">
                               <Clock className="h-4 w-4 text-rose-500" />
