@@ -30,7 +30,8 @@ import {
   DollarSign,
   Wallet,
   Building2,
-  ClipboardList
+  ClipboardList,
+  MessageCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -102,7 +103,6 @@ export default function StaffPage() {
 
   const { data: employees, isLoading } = useCollection(staffQuery)
 
-  // Query para financeiro do colaborador visualizado
   const staffFinancialQuery = useMemoFirebase(() => {
     if (!db || !viewingStaff) return null
     return query(
@@ -276,7 +276,7 @@ export default function StaffPage() {
                     <AvatarFallback className="bg-secondary text-primary font-black text-lg uppercase">{staff.name?.substring(0, 2) || "??"}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 py-1">
+                    <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-3 py-1">
                       {staff.role}
                     </Badge>
                     {staff.oabNumber && (
@@ -292,12 +292,26 @@ export default function StaffPage() {
                     {staff.name}
                   </h3>
                   <div className="flex flex-col gap-1 mt-3">
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                      <Mail className="h-3 w-3 opacity-40" /> {staff.email || "NÃO INFORMADO"}
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                      <Phone className="h-3 w-3 opacity-40" /> {staff.phone || "NÃO INFORMADO"}
-                    </div>
+                    {staff.email && (
+                      <a 
+                        href={`mailto:${staff.email}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest hover:text-primary transition-colors"
+                      >
+                        <Mail className="h-3 w-3 opacity-40" /> {staff.email}
+                      </a>
+                    )}
+                    {staff.phone && (
+                      <a 
+                        href={`https://wa.me/55${staff.phone.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest hover:text-emerald-500 transition-colors"
+                      >
+                        <Phone className="h-3 w-3 opacity-40" /> {staff.phone}
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -348,7 +362,6 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO PROFUNDA (VIEW) */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between shadow-xl flex-none">
@@ -399,8 +412,36 @@ export default function StaffPage() {
                             <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">CPF</Label><p className="text-sm font-bold text-white font-mono">{viewingStaff?.cpf || "Não informado"}</p></div>
                             <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">OAB</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.oabNumber ? `${viewingStaff.oabNumber}/${viewingStaff.oabState}` : "Sem registro de ordem"}</p></div>
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Telefone</Label><p className="text-sm font-bold text-white">{viewingStaff?.phone || "---"}</p></div>
-                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">E-mail</Label><p className="text-sm font-bold text-white lowercase">{viewingStaff?.email || "---"}</p></div>
+                              <div>
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Telefone</Label>
+                                {viewingStaff?.phone ? (
+                                  <a 
+                                    href={`https://wa.me/55${viewingStaff.phone.replace(/\D/g, "")}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sm font-bold text-white hover:text-emerald-500 transition-colors flex items-center gap-2 group"
+                                  >
+                                    {viewingStaff.phone}
+                                    <MessageCircle className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </a>
+                                ) : (
+                                  <p className="text-sm font-bold text-white">---</p>
+                                )}
+                              </div>
+                              <div>
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">E-mail</Label>
+                                {viewingStaff?.email ? (
+                                  <a 
+                                    href={`mailto:${viewingStaff.email}`}
+                                    className="text-sm font-bold text-white lowercase hover:text-primary transition-colors flex items-center gap-2 group"
+                                  >
+                                    {viewingStaff.email}
+                                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </a>
+                                ) : (
+                                  <p className="text-sm font-bold text-white">---</p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </Card>
