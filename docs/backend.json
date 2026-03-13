@@ -39,6 +39,25 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
+    "Activity": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Activity",
+      "type": "object",
+      "description": "A CRM activity related to a lead or client.",
+      "properties": {
+        "id": { "type": "string" },
+        "leadId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Lembrete", "Reunião", "Ligação", "E-mail", "WhatsApp", "Nota"] },
+        "responsibleId": { "type": "string" },
+        "responsibleName": { "type": "string" },
+        "subject": { "type": "string" },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["Planejado", "Realizado", "Cancelado"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "StaffProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StaffProfile",
@@ -132,6 +151,7 @@
     "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." },
     "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Legal diligences and tasks." },
     "/financial_titles/{titleId}": { "schema": { "$ref": "#/backend/entities/FinancialTitle" }, "description": "Financial entries." },
+    "/activities/{activityId}": { "schema": { "$ref": "#/backend/entities/Activity" }, "description": "Lead and client CRM activities." },
     "/courts/{courtId}": { "schema": { "$ref": "#/backend/entities/Court" }, "description": "Judicial organs and buildings registry." },
     "/freelancers/{freelancerId}": { "schema": { "$ref": "#/backend/entities/Freelancer" }, "description": "Registry of freelance correspondents." },
     "/counterparties/{counterpartyId}": { "schema": { "$ref": "#/backend/entities/Counterparty" }, "description": "Financial entities involved in freelance requests." },

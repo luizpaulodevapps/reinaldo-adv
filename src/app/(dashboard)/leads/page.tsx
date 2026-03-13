@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -59,7 +60,8 @@ import {
   AlertCircle,
   Scale,
   Copy,
-  FileDown
+  FileDown,
+  History
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -75,7 +77,7 @@ import {
   DialogContent,
   DialogHeader, 
   DialogTitle, 
-  DialogDescription,
+  DialogDescription, 
   DialogFooter
 } from "@/components/ui/dialog"
 import {
@@ -108,6 +110,7 @@ import { aiAnalyzeFullInterview, type AnalyzeInterviewOutput } from "@/ai/flows/
 import { motion, AnimatePresence } from "framer-motion"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ActivityManager } from "@/components/leads/activity-manager"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -116,7 +119,7 @@ const columns = [
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
 
-const DOSSIER_TABS = ["overview", "captura", "dossies", "burocracia", "revisao"]
+const DOSSIER_TABS = ["overview", "atividades", "captura", "dossies", "burocracia", "revisao"]
 
 export default function LeadsPage() {
   const db = useFirestore()
@@ -475,20 +478,23 @@ Documento gerado via Inteligência Artificial RGMJ.
                 <div className="p-10 space-y-10 w-full mx-auto pb-40">
                   <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-10">
                     <TabsList className="bg-white/5 border border-white/10 h-14 p-1.5 gap-1.5 w-full justify-start rounded-2xl shadow-2xl">
-                      <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-10 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
+                      <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
                         <LayoutGrid className="h-4 w-4" /> OVERVIEW
                       </TabsTrigger>
-                      <TabsTrigger value="captura" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-10 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
+                      <TabsTrigger value="atividades" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
+                        <History className="h-4 w-4" /> ATRIBUICÕES & NOTAS
+                      </TabsTrigger>
+                      <TabsTrigger value="captura" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
                         <Zap className="h-4 w-4" /> CAPTURA DNA
                       </TabsTrigger>
-                      <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-10 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <MessageSquare className="h-4 w-4" /> DOSSIÊS TÉCNICOS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 h-5 px-2 text-[10px] font-black">{leadInterviews.length}</Badge>}
+                      <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
+                        <MessageSquare className="h-4 w-4" /> DOSSIÊS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 h-5 px-2 text-[10px] font-black">{leadInterviews.length}</Badge>}
                       </TabsTrigger>
-                      <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-10 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <ClipboardList className="h-4 w-4" /> BUROCRACIA & DRIVE
+                      <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
+                        <ClipboardList className="h-4 w-4" /> BUROCRACIA
                       </TabsTrigger>
-                      <TabsTrigger value="revisao" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-10 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <ShieldCheck className="h-4 w-4" /> REVISÃO FINAL
+                      <TabsTrigger value="revisao" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
+                        <ShieldCheck className="h-4 w-4" /> REVISÃO
                       </TabsTrigger>
                     </TabsList>
 
@@ -509,6 +515,10 @@ Documento gerado via Inteligência Artificial RGMJ.
                           <p className="text-base text-white/80 leading-relaxed italic font-medium text-justify">{activeLead.aiSummary || "Aguardando capturas de DNA jurídico para consolidar a tese."}</p>
                         </Card>
                       </div>
+                    </TabsContent>
+
+                    <TabsContent value="atividades" className="w-full">
+                      <ActivityManager leadId={activeLead.id} />
                     </TabsContent>
 
                     <TabsContent value="captura" className="w-full space-y-10 animate-in fade-in duration-700 outline-none">
