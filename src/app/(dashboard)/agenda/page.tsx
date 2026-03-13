@@ -24,7 +24,9 @@ import {
   Target,
   User,
   History,
-  Info
+  Info,
+  Trash2,
+  Edit3
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
@@ -59,6 +61,7 @@ export default function MasterAgendaPage() {
   const [syncing, setSyncing] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [viewingEvent, setViewingEvent] = useState<any>(null)
+  const [editingEventData, setEditingEventData] = useState<any>(null)
   
   const [newEventData, setNewEventData] = useState({
     title: "",
@@ -148,24 +151,66 @@ export default function MasterAgendaPage() {
     }, 1500)
   }
 
-  const handleCreateEvent = () => {
+  const handleSaveEvent = () => {
     if (!db || !newEventData.title || !newEventData.date || !newEventData.time) return
     const startDateTime = `${newEventData.date}T${newEventData.time}:00`
+    
+    // Na criação ou edição, o tipo define a coleção apenas na criação inicial se não estiver definido
     const collectionName = newEventData.type === 'Audiência' ? 'hearings' : 'appointments'
-    const payload = {
+    
+    const payload: any = {
       title: newEventData.title.toUpperCase(),
       type: newEventData.type,
-      startDateTime,
       location: newEventData.location,
       notes: newEventData.notes,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      status: "Agendado"
+      updatedAt: serverTimestamp()
     }
-    addDocumentNonBlocking(collection(db, collectionName), payload)
+
+    // Mapeia data/hora corretamente dependendo da coleção
+    if (collectionName === 'hearings' || collectionName === 'appointments') {
+      payload.startDateTime = startDateTime
+    } else {
+      payload.dueDate = newEventData.date
+    }
+
+    if (editingEventData) {
+      updateDocumentNonBlocking(doc(db!, editingEventData.collection, editingEventData.id), payload)
+      toast({ title: "Compromisso Atualizado" })
+    } else {
+      addDocumentNonBlocking(collection(db, collectionName), {
+        ...payload,
+        createdAt: serverTimestamp(),
+        status: "Agendado"
+      })
+      toast({ title: "Compromisso Registrado" })
+    }
+
     setIsCreateOpen(false)
+    setEditingEventData(null)
     setNewEventData({ title: "", type: "Atendimento", date: "", time: "", location: "", notes: "" })
-    toast({ title: "Compromisso Registrado" })
+  }
+
+  const handleDeleteEvent = (event: any) => {
+    if (!db || !event.id || !event.collection) return
+    if (confirm("Deseja remover este ato da pauta definitivamente?")) {
+      deleteDocumentNonBlocking(doc(db, event.collection, event.id))
+      setViewingEvent(null)
+      toast({ variant: "destructive", title: "Ato Removido" })
+    }
+  }
+
+  const handleOpenEdit = (event: any) => {
+    setEditingEventData(event)
+    setNewEventData({
+      title: event.title,
+      type: event.type || (event.eventType === 'audiencia' ? 'Audiência' : 'Atendimento'),
+      date: event.date ? format(event.date, 'yyyy-MM-dd') : "",
+      time: event.date ? format(event.date, 'HH:mm') : "",
+      location: event.location || "",
+      notes: event.notes || event.description || ""
+    })
+    setIsCreateOpen(true)
+    setViewingEvent(null)
   }
 
   const handleCopyText = (text: string) => {
@@ -281,16 +326,19 @@ export default function MasterAgendaPage() {
           </div>
         </ScrollArea>
 
-        <Button onClick={() => setIsCreateOpen(true)} className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-[11px] tracking-[0.2em] hover:scale-[1.02] transition-all">
+        <Button onClick={() => { setEditingEventData(null); setIsCreateOpen(true); }} className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-[11px] tracking-[0.2em] hover:scale-[1.02] transition-all">
           <Plus className="h-5 w-5" /> Agendar Novo Ato
         </Button>
       </div>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      {/* DIALOG DE CRIAÇÃO / EDIÇÃO */}
+      <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if(!open) setEditingEventData(null); }}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
             <DialogHeader className="text-left">
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Injetar Ato na Pauta</DialogTitle>
+              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                {editingEventData ? "Retificar Ato na Pauta" : "Injetar Ato na Pauta"}
+              </DialogTitle>
             </DialogHeader>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
               <CalendarIcon className="h-6 w-6" />
@@ -340,14 +388,15 @@ export default function MasterAgendaPage() {
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Abortar</Button>
-            <Button onClick={handleCreateEvent} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02]">
-              CONFIRMAR AGENDA
+            <Button variant="ghost" onClick={() => { setIsCreateOpen(false); setEditingEventData(null); }} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Abortar</Button>
+            <Button onClick={handleSaveEvent} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02]">
+              {editingEventData ? "SALVAR ALTERAÇÕES" : "CONFIRMAR AGENDA"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* DIALOG DE VISUALIZAÇÃO / DETALHES */}
       <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl flex-none">
@@ -443,13 +492,18 @@ export default function MasterAgendaPage() {
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
-            <div className="flex items-center gap-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-              <Info className="h-4 w-4 text-primary" /> Auditado em {viewingEvent?.createdAt?.toDate ? format(viewingEvent.createdAt.toDate(), "dd/MM/yy") : '---'}
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => handleDeleteEvent(viewingEvent)} className="h-12 w-12 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-2">
+                <Info className="h-4 w-4 text-primary" /> Criado em {viewingEvent?.createdAt?.toDate ? format(viewingEvent.createdAt.toDate(), "dd/MM/yy") : '---'}
+              </div>
             </div>
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">FECHAR</Button>
-              <Button className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl">
-                REABRIR ATO
+              <Button onClick={() => handleOpenEdit(viewingEvent)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl flex items-center gap-3">
+                <Edit3 className="h-4 w-4" /> EDITAR / REAGENDAR
               </Button>
             </div>
           </DialogFooter>
