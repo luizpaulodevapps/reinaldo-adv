@@ -30,6 +30,7 @@ export default function AgendaLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
+      {/* Header de Comando */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
@@ -55,20 +56,21 @@ export default function AgendaLayout({ children }: { children: React.ReactNode }
         </div>
       </div>
 
-      <div className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl overflow-x-auto scrollbar-hide flex items-center shadow-2xl">
+      {/* Container de Abas Estilo Imagem de Referência */}
+      <div className="bg-[#0d1117]/80 border border-white/5 p-1.5 flex items-center rounded-2xl overflow-x-auto scrollbar-hide shadow-2xl backdrop-blur-xl">
         {tabs.map((tab) => {
           const isActive = pathname === tab.href
           return (
-            <Link key={tab.href} href={tab.href} className="flex-1 min-w-[180px] h-full">
+            <Link key={tab.href} href={tab.href} className="flex-1 min-w-[200px]">
               <button
                 className={cn(
-                  "w-full h-full rounded-lg text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all",
+                  "w-full h-12 rounded-[0.8rem] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-300",
                   isActive 
-                    ? "gold-gradient text-background shadow-[0_0_20px_rgba(245,208,48,0.3)]" 
+                    ? "gold-gradient text-background shadow-[0_0_25px_rgba(245,208,48,0.25)] scale-[1.02]" 
                     : "text-muted-foreground hover:text-white hover:bg-white/5"
                 )}
               >
-                <tab.icon className={cn("h-4 w-4", isActive ? "text-background" : "text-primary/40")} />
+                <tab.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-background" : "text-primary/40")} />
                 {tab.name}
               </button>
             </Link>
@@ -76,7 +78,8 @@ export default function AgendaLayout({ children }: { children: React.ReactNode }
         })}
       </div>
 
-      <div className="min-h-[60vh]">
+      {/* Conteúdo da Subpágina */}
+      <div className="min-h-[60vh] animate-in fade-in slide-in-from-bottom-2 duration-1000">
         {children}
       </div>
     </div>
