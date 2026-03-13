@@ -27,14 +27,20 @@ import {
   DollarSign,
   Wallet,
   Landmark,
-  Percent
+  Percent,
+  Share2,
+  Copy,
+  Lock,
+  Smartphone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -44,15 +50,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 
 const STAFF_ROLES = [
-  { id: "Sócio", label: "SÓCIO(A)", isLegal: true },
-  { id: "Advogado", label: "ADVOGADO(A)", isLegal: true, oabRequired: true },
-  { id: "Estagiário", label: "ESTAGIÁRIO(A)", isLegal: true, oabRequired: false },
-  { id: "Secretária", label: "SECRETÁRIA(O)", isLegal: false },
-  { id: "Auxiliar Administrativo", label: "AUX. ADMINISTRATIVO", isLegal: false },
-  { id: "Copeiro", label: "COPEIRO(A)", isLegal: false },
-  { id: "Faxineiro", label: "FAXINEIRO(A)", isLegal: false },
-  { id: "Recepcionista", label: "RECEPCIONISTA", isLegal: false },
-  { id: "Contabilidade", label: "CONTABILIDADE", isLegal: false },
+  { id: "Sócio", label: "SÓCIO(A)", isLegal: true, defaultSystemRole: 'admin' },
+  { id: "Advogado", label: "ADVOGADO(A)", isLegal: true, oabRequired: true, defaultSystemRole: 'lawyer' },
+  { id: "Estagiário", label: "ESTAGIÁRIO(A)", isLegal: true, oabRequired: false, defaultSystemRole: 'assistant' },
+  { id: "Secretária", label: "SECRETÁRIA(O)", isLegal: false, defaultSystemRole: 'assistant' },
+  { id: "Auxiliar Administrativo", label: "AUX. ADMINISTRATIVO", isLegal: false, defaultSystemRole: 'assistant' },
+  { id: "Financeiro", label: "FINANCEIRO", isLegal: false, defaultSystemRole: 'financial' },
 ]
 
 const PAYMENT_TYPES = [
@@ -69,8 +72,11 @@ export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
+  
   const [viewingStaff, setViewingStaff] = useState<any>(null)
   const [editingStaff, setEditingStaff] = useState<any>(null)
+  const [invitedMember, setInvitedMember] = useState<any>(null)
   const [loadingCep, setLoadingCep] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -92,7 +98,8 @@ export default function StaffPage() {
     state: "",
     paymentType: "Mensalista",
     commissionPercentage: 0,
-    baseSalary: 0
+    baseSalary: 0,
+    createSystemAccess: false
   })
 
   const db = useFirestore()
@@ -112,7 +119,7 @@ export default function StaffPage() {
     if (!db || !viewingStaff) return null
     return query(
       collection(db, "financial_titles"),
-      where("entityName", "==", viewingStaff.name),
+      where("responsibleStaffId", "==", viewingStaff.id),
       orderBy("dueDate", "desc")
     )
   }, [db, viewingStaff])
@@ -154,14 +161,9 @@ export default function StaffPage() {
     }
   }
 
-  const handleSave = () => {
-    if (!db || !formData.name || !formData.role) {
-      toast({ variant: "destructive", title: "Dados Incompletos", description: "Nome e cargo são fundamentais." })
-      return
-    }
-
-    if (currentRoleConfig?.oabRequired && !formData.oabNumber) {
-      toast({ variant: "destructive", title: "OAB Obrigatória", description: "Advogados devem possuir registro na ordem." })
+  const handleSave = async () => {
+    if (!db || !formData.name || !formData.role || !formData.email) {
+      toast({ variant: "destructive", title: "Dados Incompletos", description: "Nome, cargo e e-mail são fundamentais." })
       return
     }
 
@@ -172,22 +174,48 @@ export default function StaffPage() {
       updatedAt: serverTimestamp()
     }
 
-    if (editingStaff) {
-      updateDocumentNonBlocking(doc(db!, "employees", editingStaff.id), payload)
-      toast({ title: "Dossiê Atualizado" })
-    } else {
-      addDocumentNonBlocking(collection(db!, "employees"), { ...payload, createdAt: serverTimestamp() })
-      toast({ title: "Colaborador Admitido na Base" })
+    try {
+      let memberId = editingStaff?.id || crypto.randomUUID()
+      
+      // 1. Salva na coleção de EMPLOYEES (D.P.)
+      await setDocumentNonBlocking(doc(db!, "employees", memberId), {
+        ...payload,
+        id: memberId,
+        createdAt: editingStaff?.createdAt || serverTimestamp()
+      }, { merge: true })
+
+      // 2. Se habilitado, cria/atualiza na coleção de STAFF_PROFILES (Acesso ao Sistema)
+      if (formData.createSystemAccess) {
+        const systemRole = currentRoleConfig?.defaultSystemRole || 'lawyer'
+        
+        await setDocumentNonBlocking(doc(db!, "staff_profiles", memberId), {
+          id: memberId,
+          name: payload.name,
+          email: payload.email,
+          role: systemRole,
+          isActive: payload.status === 'Ativo',
+          updatedAt: serverTimestamp(),
+          createdAt: editingStaff?.createdAt || serverTimestamp()
+        }, { merge: true })
+
+        setInvitedMember({ name: payload.name, email: payload.email })
+        setIsInviteOpen(true)
+      }
+
+      toast({ title: editingStaff ? "Dossiê Atualizado" : "Colaborador Admitido" })
+      setIsDialogOpen(false)
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro ao salvar dados" })
     }
-    setIsDialogOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    if (!db || !canManage) return
-    if (confirm("Confirmar a remoção permanente deste colaborador dos registros da banca?")) {
-      deleteDocumentNonBlocking(doc(db, "employees", id))
-      toast({ variant: "destructive", title: "Colaborador Removido" })
-    }
+  const handleCopyInvite = () => {
+    if (!invitedMember) return
+    const appUrl = window.location.origin
+    const message = `Olá ${invitedMember.name}! \n\nVocê foi convidado para acessar o Ecossistema RGMJ.\n\nSeu acesso foi liberado com o e-mail: ${invitedMember.email}\n\nPara entrar, acesse o link abaixo e utilize o botão "Entrar com Google":\n${appUrl}/login\n\nSucesso no comando!`
+    
+    navigator.clipboard.writeText(message)
+    toast({ title: "Convite Copiado!", description: "Envie agora para o colaborador via WhatsApp." })
   }
 
   const handleOpenEdit = (staff: any) => {
@@ -195,7 +223,7 @@ export default function StaffPage() {
     setFormData({
       ...formData,
       ...staff,
-      hiringDate: staff.hiringDate || new Date().toISOString().split('T')[0]
+      createSystemAccess: false // Por padrão não re-abre o modal de convite ao editar a ficha
     })
     setIsDialogOpen(true)
   }
@@ -209,7 +237,7 @@ export default function StaffPage() {
     setEditingStaff(null)
     setFormData({
       name: "",
-      role: "Secretária",
+      role: "Advogado",
       email: "",
       phone: "",
       cpf: "",
@@ -226,7 +254,8 @@ export default function StaffPage() {
       state: "",
       paymentType: "Mensalista",
       commissionPercentage: 0,
-      baseSalary: 0
+      baseSalary: 0,
+      createSystemAccess: true
     })
     setIsDialogOpen(true)
   }
@@ -244,15 +273,15 @@ export default function StaffPage() {
             <ChevronRight className="h-2 w-2" />
             <span className="text-white uppercase tracking-tighter">Corpo Técnico & Administrativo</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter">Equipe RGMJ</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">ADMINISTRAÇÃO DE CAPITAL HUMANO DA BANCA.</p>
+          <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter leading-none">Equipe RGMJ</h1>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Gestão de Capital Humano e Acessos.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar por nome ou cargo..." 
+              placeholder="Pesquisar..." 
               className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -298,11 +327,9 @@ export default function StaffPage() {
                     {staff.name}
                   </h3>
                   <div className="flex flex-col gap-1 mt-3">
-                    {staff.email && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                        <Mail className="h-3 w-3 opacity-40" /> {staff.email}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                      <Mail className="h-3 w-3 opacity-40" /> {staff.email}
+                    </div>
                     {staff.phone && (
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
                         <Phone className="h-3 w-3 opacity-40" /> {staff.phone}
@@ -313,20 +340,10 @@ export default function StaffPage() {
 
                 <div className="flex justify-between items-center pt-6 border-t border-white/5 mt-4">
                   <div className="flex gap-3">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                      onClick={(e) => { e.stopPropagation(); handleOpenView(staff); }}
-                    >
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-white/20 hover:text-white" onClick={(e) => { e.stopPropagation(); handleOpenView(staff); }}>
                       <Eye className="h-4.5 w-4.5" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                      onClick={(e) => { e.stopPropagation(); handleOpenEdit(staff); }}
-                    >
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-white/20 hover:text-primary" onClick={(e) => { e.stopPropagation(); handleOpenEdit(staff); }}>
                       <Settings2 className="h-4.5 w-4.5" />
                     </Button>
                   </div>
@@ -340,171 +357,10 @@ export default function StaffPage() {
         ) : (
           <div className="col-span-full py-40 flex flex-col items-center justify-center space-y-8 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
             <Users2 className="h-20 w-20 text-muted-foreground" />
-            <div className="text-center space-y-2">
-              <p className="text-base font-black text-white uppercase tracking-[0.4em]">Quadro de Pessoal Vazio</p>
-              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Nenhum colaborador registrado na base RGMJ.</p>
-            </div>
+            <p className="text-base font-black text-white uppercase tracking-[0.4em]">Quadro de Pessoal Vazio</p>
           </div>
         )}
       </div>
-
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between shadow-xl flex-none">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-16 w-16 border-2 border-primary/20">
-                <AvatarFallback className="bg-secondary text-primary font-black text-xl uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
-                <div className="flex items-center gap-3 mt-2">
-                  <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingStaff?.role}</Badge>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Dossiê Técnico RGMJ</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 pr-8">
-              <Button onClick={() => handleOpenEdit(viewingStaff)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-primary hover:text-background transition-all">
-                <Settings2 className="h-4 w-4 mr-2" /> EDITAR
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-hidden">
-            <Tabs defaultValue="ficha" className="h-full flex flex-col">
-              <div className="px-8 bg-[#0a0f1e]/50 border-b border-white/5 flex-none">
-                <TabsList className="bg-transparent h-12 gap-8 p-0">
-                  <TabsTrigger value="ficha" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest gap-2"><UserCheck className="h-3.5 w-3.5" /> DOSSIÊ GERAL</TabsTrigger>
-                  <TabsTrigger value="financeiro" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest gap-2"><DollarSign className="h-3.5 w-3.5" /> REMUNERAÇÃO & REPASSES</TabsTrigger>
-                </TabsList>
-              </div>
-
-              <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="p-10 space-y-10">
-                    
-                    <TabsContent value="ficha" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
-                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                            <Fingerprint className="h-4 w-4 text-primary" />
-                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Identidade e Qualificação</h4>
-                          </div>
-                          <div className="grid grid-cols-1 gap-4">
-                            <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">CPF</Label><p className="text-sm font-bold text-white font-mono">{viewingStaff?.cpf || "Não informado"}</p></div>
-                            <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">OAB</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.oabNumber ? `${viewingStaff.oabNumber}/${viewingStaff.oabState}` : "Sem registro de ordem"}</p></div>
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Telefone</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.phone || "---"}</p></div>
-                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">E-mail</Label><p className="text-sm font-bold text-white lowercase">{viewingStaff?.email || "---"}</p></div>
-                            </div>
-                          </div>
-                        </Card>
-
-                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
-                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                            <MapPin className="h-4 w-4 text-primary" />
-                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Endereço Residencial</h4>
-                          </div>
-                          <div className="space-y-4">
-                            <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Logradouro</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.address || "Não informado"}{viewingStaff?.number && `, ${viewingStaff.number}`}</p></div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Bairro</Label><p className="text-xs font-bold text-white uppercase">{viewingStaff?.neighborhood || "---"}</p></div>
-                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Cidade/UF</Label><p className="text-xs font-bold text-white uppercase">{viewingStaff?.city} / {viewingStaff?.state}</p></div>
-                            </div>
-                            <div className="pt-4 border-t border-white/5"><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">CEP</Label><p className="text-sm font-mono text-white/60">{viewingStaff?.zipCode || "---"}</p></div>
-                          </div>
-                        </Card>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="financeiro" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-3xl space-y-4 shadow-xl">
-                          <div className="flex items-center gap-3">
-                            <Landmark className="h-5 w-5 text-primary" />
-                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Rito de Contrato</h4>
-                          </div>
-                          <p className="text-2xl font-black text-white uppercase tracking-tighter">{viewingStaff?.paymentType || "MENSALISTA"}</p>
-                        </Card>
-
-                        {viewingStaff?.paymentType?.includes("Parceria") && (
-                          <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-3xl space-y-4 shadow-xl">
-                            <div className="flex items-center gap-3">
-                              <Percent className="h-5 w-5 text-emerald-500" />
-                              <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">Comissão em Honorários</h4>
-                            </div>
-                            <p className="text-4xl font-black text-white tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
-                          </Card>
-                        )}
-
-                        {(viewingStaff?.paymentType === "Mensalista" || viewingStaff?.baseSalary > 0) && (
-                          <Card className="glass border-blue-500/20 bg-blue-500/5 p-8 rounded-3xl space-y-4 shadow-xl">
-                            <div className="flex items-center gap-3">
-                              <DollarSign className="h-5 w-5 text-blue-400" />
-                              <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Valor Base / Salário</h4>
-                            </div>
-                            <p className="text-2xl font-black text-white tabular-nums">R$ {Number(viewingStaff?.baseSalary || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          </Card>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between border-b border-white/5 pb-4 mt-10">
-                        <div className="flex items-center gap-4">
-                          <Wallet className="h-6 w-6 text-primary" />
-                          <h3 className="text-base font-bold text-white uppercase tracking-widest">Extrato de Pagamentos Realizados</h3>
-                        </div>
-                      </div>
-
-                      {isLoadingFinance ? (
-                        <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                      ) : staffTransactions && staffTransactions.length > 0 ? (
-                        <div className="divide-y divide-white/5 glass border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-                          {staffTransactions.map(t => (
-                            <div key={t.id} className="p-6 flex items-center justify-between hover:bg-white/[0.02] transition-all group">
-                              <div className="flex items-center gap-6">
-                                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-lg">
-                                  <DollarSign className="h-6 w-6" />
-                                </div>
-                                <div>
-                                  <h4 className="text-sm font-bold text-white uppercase tracking-tight">{t.description}</h4>
-                                  <div className="flex items-center gap-4 mt-1.5">
-                                    <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase">{t.category}</Badge>
-                                    <span className="text-[9px] text-muted-foreground font-mono">PAGO EM: {t.dueDate}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-lg font-black text-white tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black uppercase mt-1">LIQUIDADO</Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-6 glass rounded-3xl border-dashed border-2 border-white/5">
-                          <DollarSign className="h-16 w-16 text-muted-foreground" />
-                          <p className="text-[10px] font-black uppercase tracking-[0.4em]">Nenhum histórico financeiro registrado</p>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                  </div>
-                </ScrollArea>
-              </div>
-            </Tabs>
-          </div>
-
-          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
-            <div className="flex items-center gap-4">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Base de Dados Permanente RGMJ</span>
-            </div>
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">
-              FECHAR DOSSIÊ
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
@@ -514,7 +370,7 @@ export default function StaffPage() {
                 {editingStaff ? "Gestão de Colaborador" : "Admissão Digital"}
               </DialogTitle>
               <DialogDescription className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-60">
-                REGISTRO TÉCNICO DE CAPITAL HUMANO RGMJ.
+                REGISTRO TÉCNICO E CONTROLE DE ACESSO RGMJ.
               </DialogDescription>
             </DialogHeader>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
@@ -533,23 +389,14 @@ export default function StaffPage() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                   <div className="md:col-span-8 space-y-2">
                     <Label className={labelMini}>Nome Completo *</Label>
-                    <Input 
-                      value={formData.name} 
-                      onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} 
-                      className={cn(inputClass, "h-14 text-sm")}
-                      placeholder="EX: REINALDO GONÇALVES"
-                    />
+                    <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className={cn(inputClass, "h-14 text-sm")} placeholder="EX: REINALDO GONÇALVES" />
                   </div>
                   <div className="md:col-span-4 space-y-2">
                     <Label className={labelMini}>Cargo na Banca *</Label>
                     <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
-                      <SelectTrigger className={cn(inputClass, "h-14")}>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#0d121f] text-white">
-                        {STAFF_ROLES.map(role => (
-                          <SelectItem key={role.id} value={role.id}>{role.label}</SelectItem>
-                        ))}
+                        {STAFF_ROLES.map(role => <SelectItem key={role.id} value={role.id}>{role.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -557,84 +404,67 @@ export default function StaffPage() {
               </div>
 
               <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
-                <div className="flex items-center gap-3 border-primary/10 pb-4">
-                  <Landmark className="h-5 w-5 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Modelo de Remuneração</h4>
+                <div className="flex items-center justify-between border-primary/10 pb-4 border-b">
+                  <div className="flex items-center gap-3">
+                    <Lock className="h-5 w-5 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania de Acesso (Sistema)</h4>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Checkbox id="system-access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} />
+                    <Label htmlFor="system-access" className="text-[10px] font-black text-white uppercase tracking-widest cursor-pointer">Habilitar Acesso ao Ecossistema</Label>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label className={labelMini}>Tipo de Contrato / Repasse</Label>
-                    <Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}>
-                      <SelectTrigger className="bg-black/60 border-primary/30 h-12 text-white font-black"><SelectValue /></SelectTrigger>
+                    <Label className={labelMini}>E-mail Institucional (Google) *</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                      <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={cn(inputClass, "pl-12 lowercase h-14")} placeholder="usuario@gmail.com" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Status Operacional</Label>
+                    <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+                      <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#0d121f] text-white">
-                        {PAYMENT_TYPES.map(type => (
-                          <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
-                        ))}
+                        <SelectItem value="Ativo">✅ ATIVO / EM EXERCÍCIO</SelectItem>
+                        <SelectItem value="Inativo">❌ INATIVO / DESLIGADO</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <p className="text-[9px] text-muted-foreground uppercase font-bold italic">* SE HABILITADO, O SISTEMA LIBERARÁ LOGIN VIA GOOGLE PARA ESTE E-MAIL.</p>
+              </div>
 
+              <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
+                <div className="flex items-center gap-3 border-white/5 pb-4 border-b">
+                  <Landmark className="h-5 w-5 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Modelo de Remuneração</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Tipo de Contrato</Label>
+                    <Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}>
+                      <SelectTrigger className="bg-black/60 border-white/10 h-12 text-white font-black"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] text-white">
+                        {PAYMENT_TYPES.map(type => <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {formData.paymentType === "Parceria (Porcentagem)" ? (
-                    <div className="space-y-2 animate-in slide-in-from-right-2 duration-300">
-                      <Label className={labelMini}>Porcentagem sobre Honorários (%)</Label>
-                      <div className="relative">
-                        <Input 
-                          type="number"
-                          value={formData.commissionPercentage} 
-                          onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} 
-                          className="bg-black/60 border-emerald-500/30 h-12 text-white font-black text-center pr-10"
-                        />
-                        <Percent className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
-                      </div>
+                    <div className="space-y-2">
+                      <Label className={labelMini}>Comissão sobre Honorários (%)</Label>
+                      <Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 border-emerald-500/30 h-12 text-white font-black text-center" />
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Label className={labelMini}>Valor Fixo (Salário ou Base)</Label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-xs">R$</span>
-                        <Input 
-                          type="number"
-                          value={formData.baseSalary} 
-                          onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} 
-                          className="bg-black/60 border-primary/30 h-12 text-white font-black pl-10"
-                        />
-                      </div>
+                      <Label className={labelMini}>Valor Fixo (Salário / Base)</Label>
+                      <Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 border-white/10 h-12 text-white font-black" />
                     </div>
                   )}
                 </div>
               </div>
-
-              {(currentRoleConfig?.isLegal) && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                    <div className="flex items-center gap-3">
-                      <Scale className="h-5 w-5 text-primary" />
-                      <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Habilitação Profissional</h4>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                      <Label className={labelMini}>Número da OAB {currentRoleConfig.oabRequired && "*"}</Label>
-                      <Input 
-                        value={formData.oabNumber} 
-                        onChange={(e) => setFormData({...formData, oabNumber: e.target.value})} 
-                        className="bg-black/40 border-white/10 h-12 text-white font-mono text-lg font-black"
-                        placeholder="000.000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className={labelMini}>Seccional (UF)</Label>
-                      <Select value={formData.oabState} onValueChange={(v) => setFormData({...formData, oabState: v})}>
-                        <SelectTrigger className="bg-black/40 border-white/10 h-12 text-white font-black"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-[#0d121f] text-white">
-                          {BRAZIL_STATES.map(state => <SelectItem key={state} value={state}>{state}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
@@ -644,59 +474,15 @@ export default function StaffPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label className={labelMini}>CPF</Label>
-                    <Input 
-                      value={formData.cpf} 
-                      onChange={(e) => setFormData({...formData, cpf: maskCPF(e.target.value)})} 
-                      className={cn(inputClass, "font-mono")}
-                      placeholder="000.000.000-00"
-                    />
+                    <Input value={formData.cpf} onChange={(e) => setFormData({...formData, cpf: maskCPF(e.target.value)})} className={cn(inputClass, "font-mono")} placeholder="000.000.000-00" />
                   </div>
                   <div className="space-y-2">
                     <Label className={labelMini}>WhatsApp Direct</Label>
-                    <Input 
-                      value={formData.phone} 
-                      onChange={(e) => setFormData({...formData, phone: maskPhone(e.target.value)})} 
-                      className={inputClass}
-                      placeholder="(00) 00000-0000"
-                    />
+                    <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: maskPhone(e.target.value)})} className={inputClass} placeholder="(00) 00000-0000" />
                   </div>
                   <div className="space-y-2">
-                    <Label className={labelMini}>E-mail Institucional</Label>
-                    <Input 
-                      value={formData.email} 
-                      onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} 
-                      className={cn(inputClass, "lowercase")}
-                      placeholder="usuario@rgmj.com.br"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Vínculo com a Banca</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Data de Admissão</Label>
-                    <Input 
-                      type="date"
-                      value={formData.hiringDate} 
-                      onChange={(e) => setFormData({...formData, hiringDate: e.target.value})} 
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Status Operacional</Label>
-                    <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
-                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] text-white">
-                        <SelectItem value="Ativo">✅ ATIVO / EM EXERCÍCIO</SelectItem>
-                        <SelectItem value="Inativo">❌ INATIVO / DESLIGADO</SelectItem>
-                        <SelectItem value="Afastado">⌛ AFASTADO TEMPORARIAMENTE</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className={labelMini}>Registro OAB (Se houver)</Label>
+                    <Input value={formData.oabNumber} onChange={(e) => setFormData({...formData, oabNumber: e.target.value})} className={inputClass} placeholder="000.000" />
                   </div>
                 </div>
               </div>
@@ -705,20 +491,89 @@ export default function StaffPage() {
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsDialogOpen(false)} 
-              className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white"
-            >
-              DESCARTAR
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3"
-            >
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button>
+            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3">
               <Save className="h-5 w-5" /> {editingStaff ? "ATUALIZAR DOSSIÊ" : "CONFIRMAR ADMISSÃO"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE CONVITE (SISTEMA) */}
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl animate-in zoom-in-95">
+          <div className="p-10 text-center space-y-6">
+            <div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl">
+              <CheckCircle2 className="h-10 w-10 animate-bounce" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</h3>
+              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed px-4">
+                O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO ECOSSISTEMA RGMJ.
+              </p>
+            </div>
+            
+            <div className="p-6 rounded-2xl bg-black/40 border border-white/5 text-left space-y-4 shadow-inner">
+              <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                <Share2 className="h-4 w-4 text-primary" />
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Script de Boas-vindas</span>
+              </div>
+              <p className="text-[10px] text-white/60 leading-relaxed italic">
+                "Olá {invitedMember?.name}! Você foi convidado para acessar o LexFlow ERP... Seu acesso foi liberado com o e-mail: {invitedMember?.email}"
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 pt-2">
+              <Button onClick={handleCopyInvite} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] tracking-widest gap-3 shadow-xl hover:scale-105 active:scale-95">
+                <Copy className="h-4 w-4" /> COPIAR PARA WHATSAPP
+              </Button>
+              <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12">CONCLUIR RITO</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE VISUALIZAÇÃO (SIMPLIFICADO) */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between shadow-xl flex-none">
+            <div className="flex items-center gap-6">
+              <Avatar className="h-16 w-16 border-2 border-primary/20">
+                <AvatarFallback className="bg-secondary text-primary font-black text-xl uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
+                <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase mt-2">{viewingStaff?.role}</Badge>
+              </div>
+            </div>
+            <Button onClick={() => handleOpenEdit(viewingStaff)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-white/5 transition-all">
+              <Settings2 className="h-4 w-4 mr-2" /> EDITAR
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-10 space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-white/5 pb-2">Informações Técnicas</h4>
+                  <div><Label className={labelMini}>CPF</Label><p className="text-sm font-bold text-white font-mono">{viewingStaff?.cpf || "---"}</p></div>
+                  <div><Label className={labelMini}>E-mail de Acesso</Label><p className="text-sm font-bold text-white lowercase">{viewingStaff?.email}</p></div>
+                  <div><Label className={labelMini}>WhatsApp</Label><p className="text-sm font-bold text-white">{viewingStaff?.phone || "---"}</p></div>
+                </Card>
+                <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-white/5 pb-2">Remuneração</h4>
+                  <div><Label className={labelMini}>Modelo de Contrato</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.paymentType}</p></div>
+                  {viewingStaff?.paymentType === 'Parceria (Porcentagem)' ? (
+                    <div><Label className={labelMini}>Comissão</Label><p className="text-xl font-black text-emerald-400">{viewingStaff?.commissionPercentage}%</p></div>
+                  ) : (
+                    <div><Label className={labelMini}>Valor Base</Label><p className="text-xl font-black text-white">R$ {Number(viewingStaff?.baseSalary || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p></div>
+                  )}
+                </Card>
+              </div>
+            </div>
+          </ScrollArea>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end flex-none">
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">FECHAR DOSSIÊ</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
