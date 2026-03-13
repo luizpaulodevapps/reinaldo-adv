@@ -64,7 +64,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
   
   const courtSearchRef = useRef<HTMLDivElement>(null)
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -89,6 +89,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     courtAddress: "",
     city: "",
     responsibleStaffId: user?.uid || "",
+    responsibleStaffName: profile?.name || user?.displayName || "MEMBRO DA EQUIPE",
     description: "",
     strategyNotes: ""
   })
@@ -98,6 +99,12 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     return query(collection(db!, "clients"), orderBy("name", "asc"))
   }, [db, user])
   const { data: clients } = useCollection(clientsQuery)
+
+  const staffQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
+  const { data: staffMembers } = useCollection(staffQuery)
 
   const courtsQuery = useMemoFirebase(() => {
     if (!db) return null
@@ -117,7 +124,6 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     }
   }, [initialData])
 
-  // Efeito para sincronizar varas quando dbCourts carrega ou quando o court do formulário muda
   useEffect(() => {
     if (dbCourts && (formData.court || initialData?.court)) {
       const targetCourt = formData.court || initialData?.court
@@ -157,7 +163,6 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       const matchesCity = c.city ? normalize(c.city).includes(term) : false
       
       const areas = c.legalAreas || []
-      // Se não tiver áreas, mostra em todos. Se tiver, filtra pela área da demanda
       const matchesArea = areas.length === 0 || areas.includes(formData.caseType)
       
       return (matchesName || matchesCity) && matchesArea
@@ -174,6 +179,15 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSelectStaff = (id: string) => {
+    const selected = staffMembers?.find(s => s.id === id)
+    setFormData(prev => ({
+      ...prev,
+      responsibleStaffId: id,
+      responsibleStaffName: selected?.name || "MEMBRO DA EQUIPE"
+    }))
   }
 
   const handleSelectCourt = (court: any) => {
@@ -570,10 +584,21 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
                 <div className="space-y-3">
                   <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ADVOGADO DE FRENTE *</Label>
-                  <Select value={formData.responsibleStaffId} onValueChange={(v) => handleInputChange("responsibleStaffId", v)}>
-                    <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
+                  <Select value={formData.responsibleStaffId} onValueChange={handleSelectStaff}>
+                    <SelectTrigger className="bg-black/20 border-white/10 h-14 text-white font-bold uppercase"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                      <SelectItem value={user?.uid || "current"}>{user?.displayName?.toUpperCase() || "MEMBRO DA EQUIPE"}</SelectItem>
+                      {staffMembers ? (
+                        staffMembers.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            <div className="flex flex-col items-start gap-0.5">
+                              <span className="font-bold uppercase text-xs">{member.name}</span>
+                              <span className="text-[9px] opacity-40 font-black uppercase tracking-widest">{member.role}</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value={user?.uid || "current"}>{user?.displayName?.toUpperCase() || "MEMBRO DA EQUIPE"}</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
