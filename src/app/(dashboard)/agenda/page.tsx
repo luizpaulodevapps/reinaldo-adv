@@ -32,7 +32,9 @@ import {
   Handshake,
   DollarSign,
   Car,
-  Receipt
+  Receipt,
+  Library,
+  Users
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -92,7 +94,13 @@ export default function MasterAgendaPage() {
     solicitorName: "",
     valueToPay: 0,
     valueToCharge: 0,
-    extraExpenses: 0
+    extraExpenses: 0,
+    // Campos de Cadastro Rápido Freelance
+    plaintiffName: "",
+    defendantName: "",
+    representedSide: "Autor",
+    partyContact: "",
+    courtName: ""
   })
 
   const db = useFirestore()
@@ -118,6 +126,9 @@ export default function MasterAgendaPage() {
 
   const counterpartiesQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "counterparties"), orderBy("name", "asc")) : null, [db, user])
   const { data: counterparties } = useCollection(counterpartiesQuery)
+
+  const courtsQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "courts"), orderBy("name", "asc")) : null, [db, user])
+  const { data: courts } = useCollection(courtsQuery)
 
   const isLoading = loadingHearings || loadingDeadlines || loadingAppointments || loadingDiligences
 
@@ -178,13 +189,18 @@ export default function MasterAgendaPage() {
       solicitorName: "",
       valueToPay: 0,
       valueToCharge: 0,
-      extraExpenses: 0
+      extraExpenses: 0,
+      plaintiffName: "",
+      defendantName: "",
+      representedSide: "Autor",
+      partyContact: "",
+      courtName: ""
     })
     setIsCreateOpen(true)
   }
 
   const handleSaveEvent = async () => {
-    if (!db || !newEventData.title || !newEventData.date) return
+    if (!db || !newEventData.date) return
     const dateTime = `${newEventData.date}T${newEventData.time || '09:00'}:00`
     
     let targetCollection = "appointments"
@@ -216,7 +232,7 @@ export default function MasterAgendaPage() {
       payload.location = newEventData.location
       payload.status = "Pendente"
     } else if (createMode === 'freelance') {
-      // Rito Especial: Salva em freelance_diligences e injeta em hearings
+      // Rito Especial Freelance
       const flDoc = await addDocumentNonBlocking(collection(db, "freelance_diligences"), {
         type: "Audiência Freelance",
         freelancerId: newEventData.freelancerId,
@@ -229,15 +245,22 @@ export default function MasterAgendaPage() {
         valueToPay: newEventData.valueToPay,
         valueToCharge: newEventData.valueToCharge,
         extraExpenses: newEventData.extraExpenses || 0,
+        // Novos Campos de Cadastro Rápido
+        plaintiffName: newEventData.plaintiffName.toUpperCase(),
+        defendantName: newEventData.defendantName.toUpperCase(),
+        representedSide: newEventData.representedSide,
+        partyContact: newEventData.partyContact,
+        court: newEventData.courtName.toUpperCase(),
         status: "Criada",
         createdAt: serverTimestamp()
       })
 
       targetCollection = 'hearings'
       payload.isFreelance = true
-      payload.title = `[FREELANCE] ${newEventData.title.toUpperCase()}`
+      payload.title = `[FREELANCE] ${newEventData.plaintiffName || 'ATO'} vs ${newEventData.defendantName || 'PARTE'}`
       payload.startDateTime = dateTime
       payload.diligenceId = (flDoc as any).id
+      payload.location = newEventData.courtName || newEventData.location
       payload.status = "Agendado"
     }
 
@@ -414,7 +437,7 @@ export default function MasterAgendaPage() {
 
       {/* DIÁLOGO DE CRIAÇÃO MULTIMODAL */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div className={cn(
@@ -437,12 +460,14 @@ export default function MasterAgendaPage() {
             </div>
           </div>
           
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="max-h-[75vh]">
             <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Identificação do Ato *</Label>
-                <Input value={newEventData.title} onChange={(e) => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO TÁTICA / INICIAL TRABALHISTA" className="bg-black/20 border-white/10 h-12 text-white font-bold" />
-              </div>
+              {createMode !== 'freelance' && (
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Identificação do Ato *</Label>
+                  <Input value={newEventData.title} onChange={(e) => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO TÁTICA / INICIAL TRABALHISTA" className="bg-black/20 border-white/10 h-12 text-white font-bold" />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -456,46 +481,114 @@ export default function MasterAgendaPage() {
               </div>
 
               {createMode === 'freelance' && (
-                <div className="space-y-8 p-6 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 shadow-inner">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Correspondente *</Label>
-                      <Select value={newEventData.freelancerId} onValueChange={(v) => {
-                        const f = freelancers?.find(i => i.id === v)
-                        setNewEventData({...newEventData, freelancerId: v, freelancerName: f?.name || ""})
-                      }}>
-                        <SelectTrigger className="bg-black/40 border-cyan-500/20 h-12 text-white text-[10px] font-black uppercase"><SelectValue placeholder="SELECIONE O PROFISSIONAL" /></SelectTrigger>
-                        <SelectContent className="bg-[#0d121f] text-white">
-                          {freelancers?.map(f => <SelectItem key={f.id} value={f.id}>{f.name.toUpperCase()}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                <div className="space-y-10 animate-in fade-in duration-500">
+                  <div className="p-8 rounded-[2rem] bg-cyan-500/5 border border-cyan-500/20 space-y-8 shadow-inner">
+                    <div className="flex items-center gap-3 border-b border-cyan-500/10 pb-3">
+                      <Handshake className="h-5 w-5 text-cyan-400" />
+                      <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Logística & Repasse</h4>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Solicitante *</Label>
-                      <Select value={newEventData.solicitorId} onValueChange={(v) => {
-                        const c = counterparties?.find(i => i.id === v)
-                        setNewEventData({...newEventData, solicitorId: v, solicitorName: c?.name || ""})
-                      }}>
-                        <SelectTrigger className="bg-black/40 border-cyan-500/20 h-12 text-white text-[10px] font-black uppercase"><SelectValue placeholder="QUEM CONTRATOU?" /></SelectTrigger>
-                        <SelectContent className="bg-[#0d121f] text-white">
-                          {counterparties?.map(c => <SelectItem key={c.id} value={c.id}>{c.name.toUpperCase()}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Correspondente *</Label>
+                        <Select value={newEventData.freelancerId} onValueChange={(v) => {
+                          const f = freelancers?.find(i => i.id === v)
+                          setNewEventData({...newEventData, freelancerId: v, freelancerName: f?.name || ""})
+                        }}>
+                          <SelectTrigger className="bg-black/40 border-cyan-500/20 h-12 text-white text-[10px] font-black uppercase"><SelectValue placeholder="SELECIONE O PROFISSIONAL" /></SelectTrigger>
+                          <SelectContent className="bg-[#0d121f] text-white">
+                            {freelancers?.map(f => <SelectItem key={f.id} value={f.id}>{f.name.toUpperCase()}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Solicitante *</Label>
+                        <Select value={newEventData.solicitorId} onValueChange={(v) => {
+                          const c = counterparties?.find(i => i.id === v)
+                          setNewEventData({...newEventData, solicitorId: v, solicitorName: c?.name || ""})
+                        }}>
+                          <SelectTrigger className="bg-black/40 border-cyan-500/20 h-12 text-white text-[10px] font-black uppercase"><SelectValue placeholder="QUEM CONTRATOU?" /></SelectTrigger>
+                          <SelectContent className="bg-[#0d121f] text-white">
+                            {counterparties?.map(c => <SelectItem key={c.id} value={c.id}>{c.name.toUpperCase()}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Honorário (Pagar)</Label>
+                        <Input type="number" value={newEventData.valueToPay} onChange={e => setNewEventData({...newEventData, valueToPay: Number(e.target.value)})} className="bg-black/40 border-rose-500/20 h-12 text-white font-black" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Extras (KM/Cópia)</Label>
+                        <Input type="number" value={newEventData.extraExpenses} onChange={e => setNewEventData({...newEventData, extraExpenses: Number(e.target.value)})} className="bg-black/40 border-amber-500/20 h-12 text-white font-black" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Receita (Cobrar)</Label>
+                        <Input type="number" value={newEventData.valueToCharge} onChange={e => setNewEventData({...newEventData, valueToCharge: Number(e.target.value)})} className="bg-black/40 border-emerald-500/20 h-12 text-white font-black" />
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Honorário (Pagar)</Label>
-                      <Input type="number" value={newEventData.valueToPay} onChange={e => setNewEventData({...newEventData, valueToPay: Number(e.target.value)})} className="bg-black/40 border-rose-500/20 h-12 text-white font-black" />
+
+                  <div className="space-y-8 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-2xl">
+                    <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                      <Users className="h-5 w-5 text-primary" />
+                      <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Dossiê Rápido da Audiência</h4>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Extras (KM/Cópia)</Label>
-                      <Input type="number" value={newEventData.extraExpenses} onChange={e => setNewEventData({...newEventData, extraExpenses: Number(e.target.value)})} className="bg-black/40 border-amber-500/20 h-12 text-white font-black" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Autor / Reclamante *</Label>
+                        <Input value={newEventData.plaintiffName} onChange={(e) => setNewEventData({...newEventData, plaintiffName: e.target.value.toUpperCase()})} className="bg-black/20 h-12 text-white font-bold" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Réu / Reclamada *</Label>
+                        <Input value={newEventData.defendantName} onChange={(e) => setNewEventData({...newEventData, defendantName: e.target.value.toUpperCase()})} className="bg-black/20 h-12 text-white font-bold" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Parte Representada</Label>
+                        <Select value={newEventData.representedSide} onValueChange={(v) => setNewEventData({...newEventData, representedSide: v})}>
+                          <SelectTrigger className="bg-black/20 h-12 text-white font-black text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-[#0d121f] text-white">
+                            <SelectItem value="Autor">⚖️ PELO AUTOR</SelectItem>
+                            <SelectItem value="Réu">🏢 PELO RÉU</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Contato da Parte (WhatsApp)</Label>
+                        <Input value={newEventData.partyContact} onChange={(e) => setNewEventData({...newEventData, partyContact: e.target.value})} className="bg-black/20 h-12 text-white font-mono" placeholder="(00) 00000-0000" />
+                      </div>
+                      <div className="md:col-span-2 space-y-2">
+                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo (CNJ)</Label>
+                        <Input value={newEventData.processNumber} onChange={(e) => setNewEventData({...newEventData, processNumber: e.target.value})} className="bg-black/20 h-12 text-white font-mono text-sm" placeholder="0000000-00.0000.0.00.0000" />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Receita (Cobrar)</Label>
-                      <Input type="number" value={newEventData.valueToCharge} onChange={e => setNewEventData({...newEventData, valueToCharge: Number(e.target.value)})} className="bg-black/40 border-emerald-500/20 h-12 text-white font-black" />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-3">
+                      <Library className="h-4 w-4" /> Localização / Juízo
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        value={newEventData.courtName} 
+                        onChange={(e) => setNewEventData({...newEventData, courtName: e.target.value.toUpperCase()})} 
+                        placeholder="PESQUISAR FÓRUM OU INSERIR MANUALMENTE..." 
+                        className="bg-black/20 border-white/10 h-14 text-white font-bold pr-12 uppercase" 
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20">
+                        <Navigation className="h-5 w-5" />
+                      </div>
                     </div>
+                    {/* Lista rápida de sugestões de fóruns */}
+                    {newEventData.courtName.length > 1 && courts && (
+                      <div className="p-2 bg-black/40 border border-white/5 rounded-xl space-y-1">
+                        {courts.filter(c => c.name.includes(newEventData.courtName)).slice(0, 3).map(c => (
+                          <button key={c.id} onClick={() => setNewEventData({...newEventData, courtName: c.name})} className="w-full text-left p-3 hover:bg-primary/10 rounded-lg text-[10px] font-black text-white uppercase transition-colors">
+                            {c.name} — {c.city}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -507,13 +600,15 @@ export default function MasterAgendaPage() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Dossiê Vinculado (Cliente/Processo)</Label>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                  <Input value={newEventData.clientName} onChange={(e) => setNewEventData({...newEventData, clientName: e.target.value.toUpperCase()})} placeholder="VINCULAR CLIENTE OU PROCESSO..." className="bg-black/20 border-white/10 h-12 pl-12 text-white font-bold" />
+              {createMode !== 'freelance' && (
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Dossiê Vinculado (Cliente/Processo)</Label>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                    <Input value={newEventData.clientName} onChange={(e) => setNewEventData({...newEventData, clientName: e.target.value.toUpperCase()})} placeholder="VINCULAR CLIENTE OU PROCESSO..." className="bg-black/20 border-white/10 h-12 pl-12 text-white font-bold" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Notas Estratégicas</Label>

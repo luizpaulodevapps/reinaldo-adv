@@ -25,7 +25,8 @@ import {
   Gavel,
   Car,
   Receipt,
-  Layers
+  Layers,
+  Library
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -52,6 +53,11 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     copyExpense: 0,
     miscExpense: 0,
     extraExpenses: 0,
+    // Cadastro Rápido de Partes
+    plaintiffName: "",
+    defendantName: "",
+    representedSide: "Autor",
+    partyContact: "",
     status: "Criada",
     notes: ""
   })
@@ -151,6 +157,37 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                   <Label className={labelMini}>Horário do Ato</Label>
                   <Input type="time" value={formData.serviceTime} onChange={e => setFormData({...formData, serviceTime: e.target.value})} className={cn(inputClass, "h-14")} />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-8 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+              <Users className="h-5 w-5 text-primary" />
+              <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Dossiê Rápido das Partes</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className={labelMini}>Autor / Reclamante</Label>
+                <Input value={formData.plaintiffName} onChange={e => setFormData({...formData, plaintiffName: e.target.value.toUpperCase()})} className={inputClass} />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelMini}>Réu / Reclamada</Label>
+                <Input value={formData.defendantName} onChange={e => setFormData({...formData, defendantName: e.target.value.toUpperCase()})} className={inputClass} />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelMini}>Parte Representada</Label>
+                <Select value={formData.representedSide} onValueChange={v => setFormData({...formData, representedSide: v})}>
+                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    <SelectItem value="Autor">AUTOR</SelectItem>
+                    <SelectItem value="Réu">RÉU</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className={labelMini}>Contato da Parte</Label>
+                <Input value={formData.partyContact} onChange={e => setFormData({...formData, partyContact: e.target.value})} className={inputClass} placeholder="(00) 00000-0000" />
               </div>
             </div>
           </div>
