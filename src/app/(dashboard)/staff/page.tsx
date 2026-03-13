@@ -167,13 +167,23 @@ export default function StaffPage() {
   }
 
   const handleDeleteStaff = (id: string) => {
-    if (!db || !canManage) return
+    if (!db) return
+    
+    if (!canManage) {
+      toast({ 
+        variant: "destructive", 
+        title: "Acesso Negado", 
+        description: "Somente o Sócio Fundador detém soberania para revogar acessos." 
+      })
+      return
+    }
+
     if (confirm("Revogar este acesso permanentemente? O usuário será bloqueado no sistema.")) {
       deleteDocumentNonBlocking(doc(db!, "employees", id))
       deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
       toast({ 
         title: "Acesso Revogado", 
-        description: "O membro foi removido das bases RGMJ. Lembre-se de remover o usuário no Firebase Console para exclusão total do Auth." 
+        description: "Membro removido. Para exclusão total do banco de identidades, utilize o Console RGMJ." 
       })
       setIsViewOpen(false)
     }

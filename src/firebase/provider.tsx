@@ -71,9 +71,16 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     role: null,
   });
 
+  const OWNERS = [
+    'luizao16@gmail.com', 
+    'luizpaulo.dev.apps@gmail.com', 
+    'rgmj.adv@gmail.com',
+    'reinaldo.g.m.dejesus@gmail.com'
+  ];
+
   const setProfile = (profile: any) => {
     setUserAuthState(prev => {
-      const isOwner = prev.user?.email === 'luizao16@gmail.com' || prev.user?.email === 'luizpaulo.dev.apps@gmail.com';
+      const isOwner = OWNERS.includes(prev.user?.email || '') || profile?.isOwner;
       return { 
         ...prev, 
         profile, 
@@ -91,7 +98,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
-        const isOwner = firebaseUser?.email === 'luizao16@gmail.com' || firebaseUser?.email === 'luizpaulo.dev.apps@gmail.com';
+        const isOwner = OWNERS.includes(firebaseUser?.email || '');
         setUserAuthState(prev => ({ 
           ...prev, 
           user: firebaseUser, 

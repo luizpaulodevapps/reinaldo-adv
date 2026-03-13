@@ -6,9 +6,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Scale, ShieldCheck } from "lucide-react";
+import { Scale, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { NotificationCenter } from "@/components/notifications/notification-center";
+import { signOut } from "firebase/auth";
+import { Button } from "@/components/ui/button";
 
 export function DashboardClientLayout({
   children,
@@ -16,7 +18,14 @@ export function DashboardClientLayout({
   children: React.ReactNode
 }) {
   const router = useRouter();
-  const { user, isUserLoading, firestore: db, setProfile, profile } = useFirebase();
+  const { user, isUserLoading, firestore: db, setProfile, profile, auth } = useFirebase();
+
+  const OWNERS = [
+    'luizao16@gmail.com', 
+    'luizpaulo.dev.apps@gmail.com', 
+    'rgmj.adv@gmail.com',
+    'reinaldo.g.m.dejesus@gmail.com'
+  ];
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -37,19 +46,25 @@ export function DashboardClientLayout({
     }
   }, [profileData, profile, setProfile]);
 
+  // Bloqueio de usuários inativos ou sem perfil
   useEffect(() => {
-    if (user && db && profileData === null && !isProfileLoading) {
+    if (user && profileData && profileData.isActive === false && auth) {
+      signOut(auth).then(() => router.push('/login'));
+    }
+  }, [user, profileData, auth, router]);
+
+  useEffect(() => {
+    // Auto-criação de perfil APENAS para os Owners mestres
+    if (user && db && profileData === null && !isProfileLoading && OWNERS.includes(user.email || '')) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
-      // Lista de e-mails com soberania total (Donos da Banca)
-      const owners = ['luizao16@gmail.com', 'luizpaulo.dev.apps@gmail.com', 'rgmj.adv@gmail.com'];
-      const isOwner = owners.includes(user?.email || '');
+      const isOwner = true;
       
       const initialProfile = {
         id: user.uid,
         googleId: user.uid,
-        name: user.displayName || 'Membro da Equipe',
+        name: user.displayName || 'Sócio Fundador',
         email: user.email || '',
-        role: isOwner ? 'admin' : 'lawyer',
+        role: 'admin',
         isOwner: isOwner,
         isActive: true,
         createdAt: serverTimestamp(),
@@ -70,6 +85,26 @@ export function DashboardClientLayout({
         <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">
           {!user ? 'Redirecionando...' : 'Ecossistema RGMJ'}
         </p>
+      </div>
+    );
+  }
+
+  // Se não for owner e não tiver perfil, é um intruso ou acesso revogado
+  if (!isProfileLoading && profileData === null && !OWNERS.includes(user.email || '')) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-8 font-sans p-10 text-center">
+        <div className="w-24 h-24 rounded-[2rem] bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-2xl">
+          <ShieldAlert className="h-12 w-12" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Não Autorizado</h2>
+          <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest max-w-md mx-auto leading-relaxed">
+            Seu e-mail não possui soberania de acesso neste ecossistema. Contate o Sócio Fundador para liberação.
+          </p>
+        </div>
+        <Button onClick={() => auth && signOut(auth).then(() => router.push('/'))} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[10px]">
+          Sair do Portal
+        </Button>
       </div>
     );
   }
