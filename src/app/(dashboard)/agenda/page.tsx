@@ -18,7 +18,13 @@ import {
   Zap,
   Plus,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Copy,
+  ExternalLink,
+  Target,
+  User,
+  History,
+  Info
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
@@ -39,7 +45,7 @@ import {
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -52,6 +58,7 @@ export default function MasterAgendaPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [syncing, setSyncing] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [viewingEvent, setViewingEvent] = useState<any>(null)
   
   const [newEventData, setNewEventData] = useState({
     title: "",
@@ -161,6 +168,11 @@ export default function MasterAgendaPage() {
     toast({ title: "Compromisso Registrado" })
   }
 
+  const handleCopyText = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast({ title: "Copiado para o clipboard" })
+  }
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-10 animate-in fade-in duration-1000">
       <div className="xl:col-span-3 space-y-6">
@@ -234,7 +246,11 @@ export default function MasterAgendaPage() {
               <div className="py-20 flex flex-col items-center justify-center opacity-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : selectedDayEvents.length > 0 ? (
               selectedDayEvents.map((event, idx) => (
-                <Card key={idx} className="glass border-l-4 border-l-primary/50 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02]">
+                <Card 
+                  key={idx} 
+                  className="glass border-l-4 border-l-primary/50 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer"
+                  onClick={() => setViewingEvent(event)}
+                >
                   <CardContent className="p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <Badge className={cn(
@@ -273,7 +289,7 @@ export default function MasterAgendaPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
-            <DialogHeader>
+            <DialogHeader className="text-left">
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Injetar Ato na Pauta</DialogTitle>
             </DialogHeader>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
@@ -328,6 +344,114 @@ export default function MasterAgendaPage() {
             <Button onClick={handleCreateEvent} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02]">
               CONFIRMAR AGENDA
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl flex-none">
+            <div className="flex items-center gap-6">
+              <div className={cn(
+                "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-2xl",
+                viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-primary/10 border-primary/20 text-primary"
+              )}>
+                {viewingEvent?.eventType === 'audiencia' ? <Gavel className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-3">
+                  <Badge className={cn(
+                    "text-[9px] font-black uppercase tracking-widest px-2 h-5 border-0",
+                    viewingEvent?.eventType === 'audiencia' ? 'bg-rose-500 text-white' : 'bg-primary text-background'
+                  )}>
+                    {viewingEvent?.type || 'COMPROMISSO'}
+                  </Badge>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DETALHES DO ATO</span>
+                </div>
+                <DialogTitle className="text-xl font-black text-white uppercase tracking-tighter mt-1 leading-none">
+                  {viewingEvent?.title}
+                </DialogTitle>
+              </div>
+            </div>
+          </div>
+
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-10 space-y-10 bg-[#05070a]">
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data do Evento</Label>
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
+                    <CalendarIcon className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-bold text-white uppercase">{viewingEvent?.date ? format(viewingEvent.date, "dd 'de' MMMM", { locale: ptBR }) : '---'}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Horário</Label>
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-bold text-white font-mono">{viewingEvent?.date ? format(viewingEvent.date, "HH:mm") : '--:--'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Localização / Juízo</Label>
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
+                  <div className="flex items-center gap-4">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-bold text-white uppercase">{viewingEvent?.location || "NÃO INFORMADO"}</span>
+                  </div>
+                  {viewingEvent?.location && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={() => handleCopyText(viewingEvent.location)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {(viewingEvent?.clientName || viewingEvent?.processNumber) && (
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Dossiê Vinculado</Label>
+                  <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 space-y-3">
+                    <div className="flex items-center gap-4">
+                      <User className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-black text-white uppercase tracking-tight">{viewingEvent.clientName || 'CLIENTE NÃO VINCULADO'}</span>
+                    </div>
+                    {viewingEvent.processNumber && (
+                      <div className="flex items-center gap-4 pt-3 border-t border-white/5">
+                        <Scale className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-mono font-bold text-white/60">{viewingEvent.processNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Inteligência Tática (Notas)</Label>
+                <div className="p-6 rounded-2xl bg-black/40 border border-white/5 min-h-[120px] shadow-inner">
+                  <div className="flex items-center gap-3 mb-4 opacity-40">
+                    <Target className="h-4 w-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Notas de Comando</span>
+                  </div>
+                  <p className="text-sm text-white/80 leading-relaxed italic whitespace-pre-wrap">
+                    {viewingEvent?.notes || viewingEvent?.description || "Nenhuma nota estratégica registrada para este ato."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
+            <div className="flex items-center gap-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+              <Info className="h-4 w-4 text-primary" /> Auditado em {viewingEvent?.createdAt?.toDate ? format(viewingEvent.createdAt.toDate(), "dd/MM/yy") : '---'}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">FECHAR</Button>
+              <Button className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl">
+                REABRIR ATO
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

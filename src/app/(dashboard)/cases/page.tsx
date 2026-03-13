@@ -337,7 +337,6 @@ export default function CasesPage() {
     setSyncingDriveId(proc.id)
     try {
       // Simulação de criação de infraestrutura
-      // Em produção, isso chamaria uma Cloud Function ou Server Action com Auth do Google
       const driveUrl = `https://drive.google.com/drive/u/0/folders/${googleConfig.rootFolderId}`
       
       await updateDocumentNonBlocking(doc(db, "processes", proc.id), {
@@ -775,15 +774,15 @@ export default function CasesPage() {
               </div>
               <DialogHeader className="space-y-0 text-left">
                 <DialogTitle className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</DialogTitle>
-                <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-2 flex items-center gap-3">
+                <div className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-2 flex items-center gap-3">
                   <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge>
                   <span className="text-[11px] font-mono font-bold text-muted-foreground tracking-widest">{viewingProcess?.processNumber}</span>
-                </DialogDescription>
+                </div>
               </DialogHeader>
             </div>
             <div className="flex gap-3 pr-8">
               <Button onClick={() => handleOpenEdit(viewingProcess)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl gap-2 hover:bg-primary hover:text-background transition-all">
-                <Edit3 className="h-4 w-4" /> EDITAR PROCESSO
+                <Edit3 className="h-4 w-4 mr-2" /> EDITAR PROCESSO
               </Button>
             </div>
           </div>
@@ -916,7 +915,7 @@ export default function CasesPage() {
             </Tabs>
           </div>
 
-          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
             <div className="flex items-center gap-6">
               <div className="flex flex-col">
                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Responsável Técnico</span>
@@ -969,7 +968,7 @@ export default function CasesPage() {
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
               <CalendarDays className="h-6 w-6 text-emerald-500" />
-              <div>
+              <div className="text-left">
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Reunião</DialogTitle>
                 <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure os detalhes da reunião estratégica.</DialogDescription>
               </div>
@@ -1019,7 +1018,7 @@ export default function CasesPage() {
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
               <AlarmClock className="h-6 w-6 text-rose-500" />
-              <div>
+              <div className="text-left">
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Lançar Prazo Fatal</DialogTitle>
                 <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Registro de prazo judicial preclusivo.</DialogDescription>
               </div>
@@ -1053,7 +1052,7 @@ export default function CasesPage() {
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
             <DialogHeader className="flex flex-row items-center gap-4 space-y-0">
               <Gavel className="h-6 w-6 text-amber-500" />
-              <div>
+              <div className="text-left">
                 <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Audiência</DialogTitle>
                 <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Cadastro de pauta judiciária para o caso.</DialogDescription>
               </div>
@@ -1104,7 +1103,7 @@ export default function CasesPage() {
             <DialogHeader className="flex flex-row items-center justify-between space-y-0">
               <div className="flex items-center gap-4">
                 <ListTodo className="h-6 w-6 text-blue-400" />
-                <div>
+                <div className="text-left">
                   <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Diligência (Task)</DialogTitle>
                   <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground mt-1">Atribuição de tarefa operacional ou externa.</DialogDescription>
                 </div>
@@ -1182,7 +1181,7 @@ export default function CasesPage() {
 
       <Dialog open={isAiDocOpen} onOpenChange={setIsAiDocOpen}>
         <DialogContent className="glass border-primary/20 sm:max-w-[1100px] bg-[#0a0f1e] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0">
+          <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-4 space-y-0 text-left">
             <Brain className="h-7 w-7 text-primary" />
             <div>
               <DialogTitle className="text-white font-bold uppercase tracking-widest text-xl">Minuta Estratégica IA</DialogTitle>
@@ -1197,7 +1196,7 @@ export default function CasesPage() {
 
       <Dialog open={isFinancialOpen} onOpenChange={setIsFinancialOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
-          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
+          <DialogHeader className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl text-left">
             <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Evento Financeiro</DialogTitle>
             <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Lançamento de honorários ou custas para o processo.</DialogDescription>
           </DialogHeader>

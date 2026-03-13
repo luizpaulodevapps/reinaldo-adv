@@ -380,7 +380,7 @@ export default function CourtsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
-            <DialogHeader>
+            <DialogHeader className="text-left">
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
                 {editingCourt ? "Retificar Órgão" : "Novo Fórum / Tribunal"}
               </DialogTitle>
@@ -559,20 +559,19 @@ export default function CourtsPage() {
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
                 <Building2 className="h-8 w-8" />
               </div>
-              <div className="space-y-1">
+              <div className="text-left space-y-1">
                 <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingCourt?.name}</DialogTitle>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase bg-primary/5 px-3">ÓRGÃO JUDICIÁRIO</Badge>
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{viewingCourt?.city} - {viewingCourt?.state}</span>
-                </div>
+                <DialogDescription asChild className="text-[10px] font-black tracking-widest mt-2">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase bg-primary/5 px-3">ÓRGÃO JUDICIÁRIO</Badge>
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{viewingCourt?.city} - {viewingCourt?.state}</span>
+                  </div>
+                </DialogDescription>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pr-8">
               <Button onClick={() => handleOpenEdit(viewingCourt)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-white/5 transition-all">
                 <Edit3 className="h-4 w-4 mr-2" /> EDITAR
-              </Button>
-              <Button onClick={() => setIsViewOpen(false)} variant="ghost" className="h-11 w-11 rounded-xl text-muted-foreground hover:text-white">
-                <X className="h-6 w-6" />
               </Button>
             </div>
           </div>
