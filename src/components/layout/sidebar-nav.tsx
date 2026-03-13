@@ -23,7 +23,9 @@ import {
   ArrowDownRight,
   TrendingUp,
   CalendarDays,
-  User as UserIcon
+  User as UserIcon,
+  Receipt,
+  BookOpen
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -79,6 +81,7 @@ const menuGroups = [
     title: "FINANCEIRO",
     items: [
       { name: "CENTRAL", href: "/billing", icon: Calculator },
+      { name: "REEMBOLSOS", href: "/reimbursements", icon: Receipt },
       { name: "CONTAS A RECEBER", href: "/receivables", icon: ArrowUpRight },
       { name: "CONTAS A PAGAR", href: "/payables", icon: ArrowDownRight },
       { name: "REPASSES", href: "/financial", icon: Wallet },
@@ -100,8 +103,6 @@ const menuGroups = [
     ]
   }
 ]
-
-import { BookOpen } from "lucide-react"
 
 export function SidebarNav() {
   const pathname = usePathname()
