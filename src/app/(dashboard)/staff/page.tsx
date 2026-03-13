@@ -31,7 +31,8 @@ import {
   Wallet,
   Building2,
   ClipboardList,
-  MessageCircle
+  MessageCircle,
+  ExternalLink
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -685,7 +686,7 @@ export default function StaffPage() {
                         className={cn(inputClass, "font-mono")}
                         placeholder="00000-000"
                       />
-                      {loadingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                      {loadingCep === 'client' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
                     </div>
                   </div>
                   <div className="md:col-span-2 space-y-2">
