@@ -26,6 +26,7 @@ import {
   History,
   AlarmClock,
   FilePlus,
+  FolderPlus,
   DollarSign,
   Brain,
   Sparkles,
@@ -33,7 +34,8 @@ import {
   Trash2,
   Target,
   Building2,
-  ListTodo
+  ListTodo,
+  ExternalLink
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -440,7 +442,7 @@ export default function CasesPage() {
                         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner">
                           <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Protocolo CNJ</p><div className="bg-black/40 border border-white/5 px-3 py-2 rounded-lg font-mono text-[11px] font-bold text-white tracking-widest truncate">{proc.processNumber}</div></div>
                           <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Área / Matéria</p><div className="flex items-center gap-2 text-amber-500 pt-1"><Scale className="h-4 w-4" /><span className="text-[11px] font-black uppercase">{proc.caseType}</span></div></div>
-                          <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Comarca</p><div className="flex items-center gap-2 text-white/80 pt-1"><Gavel className="h-4 w-4 text-primary" /><span className="text-[11px] font-bold uppercase truncate">{proc.vara || "VARA ÚNICA"} — {proc.court} {proc.city && `(${proc.city})`}</span></div></div>
+                          <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Juízo / Comarca</p><div className="flex items-center gap-2 text-primary pt-1"><Gavel className="h-4 w-4 text-primary" /><span className="text-[11px] font-bold uppercase truncate">{proc.vara || "VARA ÚNICA"} — {proc.court} {proc.city && `(${proc.city})`}</span></div></div>
                           <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Valor da Causa</p><div className="flex items-center gap-2 text-emerald-500 font-black tabular-nums text-[12px] pt-1"><TrendingUp className="h-4 w-4" /> R$ {Number(proc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>
                           <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Responsável</p><div className="flex items-center gap-2 text-emerald-500 pt-1"><UserIcon className="h-4 w-4" /><span className="text-[11px] font-black uppercase truncate">{proc.responsibleStaffName}</span></div></div>
                         </div>

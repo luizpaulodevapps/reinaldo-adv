@@ -16,7 +16,7 @@ import {
   Scale
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy } from "firebase/firestore"
+import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { format, parseISO, isBefore, startOfDay, isAfter, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"

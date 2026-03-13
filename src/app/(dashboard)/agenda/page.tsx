@@ -22,7 +22,8 @@ import {
   Gavel,
   Target,
   Info,
-  Copy
+  Copy,
+  User as UserIcon
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
