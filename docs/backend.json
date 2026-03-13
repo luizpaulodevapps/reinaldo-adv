@@ -78,7 +78,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StaffProfile",
       "type": "object",
-      "description": "Represents a legal team member.",
+      "description": "Represents a legal team member including DP and System Access info.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
@@ -88,7 +88,9 @@
         "paymentType": { "type": "string", "enum": ["Mensalista", "Por Demanda", "Parceria (Porcentagem)"] },
         "commissionPercentage": { "type": "number" },
         "baseSalary": { "type": "number" },
-        "themePreferences": { "type": "object" }
+        "oabNumber": { "type": "string" },
+        "phone": { "type": "string" },
+        "cpf": { "type": "string" }
       }
     },
     "Process": {
@@ -106,37 +108,9 @@
         "description": { "type": "string" },
         "court": { "type": "string" },
         "vara": { "type": "string" },
-        "courtAddress": { "type": "string" },
         "defendantName": { "type": "string" },
-        "defendantDocument": { "type": "string" },
-        "defendantAddress": { "type": "string" },
         "responsibleStaffId": { "type": "string" },
         "responsibleStaffName": { "type": "string" },
-        "strategyNotes": { "type": "string" },
-        "startDate": { "type": "string", "format": "date" },
-        "value": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "Diligence": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Diligence",
-      "type": "object",
-      "description": "A task or diligence to be performed by a staff member.",
-      "properties": {
-        "id": { "type": "string" },
-        "processId": { "type": "string" },
-        "processNumber": { "type": "string" },
-        "clientName": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "dueDate": { "type": "string", "format": "date-time" },
-        "assigneeId": { "type": "string" },
-        "assigneeName": { "type": "string" },
-        "status": { "type": "string", "enum": ["Pendente", "Em Andamento", "Concluída"] },
-        "type": { "type": "string", "enum": ["Física", "Virtual"] },
-        "location": { "type": "string" },
-        "requiresSubestabelecimento": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
@@ -151,13 +125,12 @@
         "description": { "type": "string" },
         "value": { "type": "number" },
         "dueDate": { "type": "string", "format": "date" },
-        "status": { "type": "string", "enum": ["Pendente", "Pago", "Recebido", "Cancelado"] },
-        "clientId": { "type": "string" },
-        "clientName": { "type": "string" },
-        "entityName": { "type": "string" },
-        "processNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pendente", "Pago", "Recebido", "Liquidado", "Cancelado"] },
+        "originBank": { "type": "string" },
+        "destinationBank": { "type": "string" },
         "responsibleStaffId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "clientName": { "type": "string" },
+        "processNumber": { "type": "string" }
       }
     }
   },
@@ -166,17 +139,17 @@
   },
   "firestore": {
     "/notifications/{notificationId}": { "schema": { "$ref": "#/backend/entities/Notification" }, "description": "User notifications." },
-    "/staff_profiles/{staffId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff profiles." },
+    "/staff_profiles/{staffId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff access and roles." },
+    "/employees/{employeeId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Detailed DP records." },
     "/clients/{clientId}": { "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." },
     "/processes/{processId}": { "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." },
     "/interviews/{interviewId}": { "schema": { "$ref": "#/backend/entities/Interview" }, "description": "Client intake interviews." },
-    "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Legal diligences and tasks." },
+    "/diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/Diligence" }, "description": "Internal staff tasks." },
     "/financial_titles/{titleId}": { "schema": { "$ref": "#/backend/entities/FinancialTitle" }, "description": "Financial entries." },
-    "/activities/{activityId}": { "schema": { "$ref": "#/backend/entities/Activity" }, "description": "Lead and client CRM activities." },
-    "/courts/{courtId}": { "schema": { "$ref": "#/backend/entities/Court" }, "description": "Judicial organs and buildings registry." },
-    "/freelancers/{freelancerId}": { "schema": { "$ref": "#/backend/entities/Freelancer" }, "description": "Registry of freelance correspondents." },
-    "/counterparties/{counterpartyId}": { "schema": { "$ref": "#/backend/entities/Counterparty" }, "description": "Financial entities involved in freelance requests." },
-    "/freelance_diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/FreelanceDiligence" }, "description": "Task management for freelance services." },
-    "/employees/{employeeId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Detailed employee records for D.P." }
+    "/activities/{activityId}": { "schema": { "$ref": "#/backend/entities/Activity" }, "description": "CRM activities." },
+    "/courts/{courtId}": { "schema": { "$ref": "#/backend/entities/Court" }, "description": "Registry of courts." },
+    "/freelancers/{freelancerId}": { "schema": { "$ref": "#/backend/entities/Freelancer" }, "description": "Registry of freelancers." },
+    "/counterparties/{counterpartyId}": { "schema": { "$ref": "#/backend/entities/Counterparty" }, "description": "Entities requesting acts." },
+    "/freelance_diligences/{diligenceId}": { "schema": { "$ref": "#/backend/entities/FreelanceDiligence" }, "description": "Freelance tasks." }
   }
 }

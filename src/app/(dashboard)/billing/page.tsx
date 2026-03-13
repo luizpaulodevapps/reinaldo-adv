@@ -12,7 +12,6 @@ import {
   ArrowUpRight, 
   ArrowDownRight,
   Loader2,
-  TrendingUp,
   Building2,
   Users,
   Wallet,
@@ -22,20 +21,18 @@ import {
   DollarSign,
   ArrowRight,
   Landmark,
-  Handshake,
-  Percent
+  Handshake
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, doc } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
-import { addMonths, format, parseISO } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function BillingPage() {
@@ -63,205 +60,64 @@ export default function BillingPage() {
   const isLoading = isUserLoading || isLoadingTransactions
 
   const stats = useMemo(() => {
-    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, repassesPrevistos: 0, lucroBanca: 0, pendente: 0 }
+    if (!transactions) return { entradas: 0, saídas: 0, repassesPrevistos: 0, lucroBanca: 0, pendente: 0 }
     
-    const entradas = transactions
-      .filter(t => t.type?.includes('Entrada'))
-      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+    const entradas = transactions.filter(t => t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+    const saídas = transactions.filter(t => t.type?.includes('Saída')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const saídas = transactions
-      .filter(t => t.type?.includes('Saída'))
-      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-
-    // Lógica de Repasse: Se a entrada for honorário e tiver staff vinculado com parceria
     let repassesPrevistos = 0
-    transactions
-      .filter(t => t.type?.includes('Entrada') && t.category?.includes('Honorários'))
-      .forEach(t => {
-        const staff = staffMembers?.find(s => s.id === t.responsibleStaffId)
-        if (staff && staff.paymentType === "Parceria (Porcentagem)") {
-          repassesPrevistos += (Number(t.value) * (staff.commissionPercentage || 0)) / 100
-        }
-      })
+    transactions.filter(t => t.type?.includes('Entrada') && t.category?.includes('Honorários')).forEach(t => {
+      const staff = staffMembers?.find(s => s.id === t.responsibleStaffId)
+      if (staff && staff.paymentType === "Parceria (Porcentagem)") {
+        repassesPrevistos += (Number(t.value) * (staff.commissionPercentage || 0)) / 100
+      }
+    })
 
-    const pendente = transactions
-      .filter(t => t.status === 'Pendente' && t.type?.includes('Entrada'))
-      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-
+    const pendente = transactions.filter(t => t.status === 'Pendente' && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
     const lucroBanca = entradas - saídas - repassesPrevistos
 
-    return { entradas, saídas, saldo: entradas - saídas, repassesPrevistos, lucroBanca, pendente }
+    return { entradas, saídas, repassesPrevistos, lucroBanca, pendente }
   }, [transactions, staffMembers])
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return []
     return transactions.filter(t => 
       t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.processNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [transactions, searchTerm])
-
-  const handleSaveTitle = (data: any) => {
-    if (!user || !db) return
-    if (editingTitle) {
-      updateDocumentNonBlocking(doc(db!, "financial_titles", editingTitle.id), {
-        ...data,
-        value: data.numericValue,
-        updatedAt: serverTimestamp(),
-      })
-      toast({ title: "Registro Atualizado" })
-    } else {
-      addDocumentNonBlocking(collection(db!, "financial_titles"), {
-        ...data,
-        value: data.numericValue,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
-      toast({ title: "Lançamento Concluído" })
-    }
-    setIsTitleDialogOpen(false)
-  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
-            <Calculator className="h-3.5 w-3.5" />
-            <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
-            <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">CENTRAL FINANCEIRA</span>
-          </div>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4"><Calculator className="h-3.5 w-3.5" /><Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link><ChevronRight className="h-2 w-2" /><span className="text-white uppercase tracking-tighter">CENTRAL FINANCEIRA</span></div>
           <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Comando Financeiro</h1>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-60">
-            DASHBOARD CONSOLIDADO: HONORÁRIOS E FLUXO OPERACIONAL RGMJ.
-          </p>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-60">DASHBOARD CONSOLIDADO RGMJ.</p>
         </div>
-        
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Pesquisar em toda a base financeira..." 
-              className="pl-12 glass border-white/10 h-14 text-sm text-white focus:ring-primary/50 rounded-xl font-bold"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button onClick={() => { setEditingTitle(null); setIsTitleDialogOpen(true); }} className="gold-gradient text-background font-black gap-3 px-10 h-14 uppercase text-[11px] rounded-xl shadow-xl hover:scale-[1.02] transition-all">
-            <Plus className="h-5 w-5" /> NOVO LANÇAMENTO
-          </Button>
-        </div>
+        <div className="flex items-center gap-4 w-full md:w-auto"><Input placeholder="Pesquisar..." className="glass border-white/10 h-14 text-sm text-white md:w-96 rounded-xl font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /><Button onClick={() => { setEditingTitle(null); setIsTitleDialogOpen(true); }} className="gold-gradient text-background font-black gap-3 px-10 h-14 uppercase text-[11px] rounded-xl shadow-xl hover:scale-[1.02] transition-all"><Plus className="h-5 w-5" /> NOVO LANÇAMENTO</Button></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card className="glass border-primary/20 bg-primary/5 relative overflow-hidden h-36 flex flex-col justify-center shadow-2xl rounded-2xl">
-          <CardContent className="p-8">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><Landmark className="h-4 w-4" /> CARTEIRA DA BANCA</p>
-            <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.lucroBanca >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.lucroBanca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-            <p className="text-[8px] font-black text-primary/40 uppercase tracking-widest mt-2">Saldo após deduções e repasses</p>
-          </CardContent>
-        </Card>
-        <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><ArrowUpRight className="h-4 w-4" /> RECEITA BRUTA</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-        </Card>
-        <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><ArrowDownRight className="h-4 w-4" /> TOTAL DESPESAS</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-        </Card>
-        <Card className="glass border-amber-500/20 bg-amber-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><Handshake className="h-4 w-4" /> REPASSES PREVISTOS</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.repassesPrevistos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-        </Card>
-        <Card className="glass border-white/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-3 flex items-center gap-3"><AlertCircle className="h-4 w-4" /> PENDENTE RECEBER</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-2xl"><p className="text-[10px] font-black text-primary uppercase mb-3 flex items-center gap-3"><Landmark className="h-4 w-4" /> CARTEIRA DA BANCA</p><div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.lucroBanca >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.lucroBanca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
+        <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-emerald-500 uppercase mb-3 flex items-center gap-3"><ArrowUpRight className="h-4 w-4" /> RECEITA BRUTA</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
+        <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-rose-500 uppercase mb-3 flex items-center gap-3"><ArrowDownRight className="h-4 w-4" /> TOTAL DESPESAS</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
+        <Card className="glass border-amber-500/20 bg-amber-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-amber-500 uppercase mb-3 flex items-center gap-3"><Handshake className="h-4 w-4" /> REPASSES PREVISTOS</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.repassesPrevistos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
+        <Card className="glass border-white/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-muted-foreground uppercase mb-3 flex items-center gap-3"><AlertCircle className="h-4 w-4" /> PENDENTE RECEBER</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="glass border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
-          <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3"><ArrowUpRight className="h-5 w-5 text-emerald-500" /> Atividade de Receitas</h3>
-            <Button asChild variant="ghost" className="text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 h-10 px-6 rounded-lg">
-              <Link href="/receivables">Gerenciar Contas <ArrowRight className="h-4 w-4 ml-2" /></Link>
-            </Button>
-          </div>
-          <div className="min-h-[400px]">
-            {isLoading ? (
-              <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-            ) : filteredTransactions.filter(t => t.type?.includes('Entrada')).slice(0, 5).map(t => (
-              <div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500"><DollarSign className="h-5 w-5" /></div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white uppercase">{t.description}</h4>
-                    <p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.clientName || "GERAL"}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-emerald-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  <Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between"><h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3"><ArrowUpRight className="h-5 w-5 text-emerald-500" /> Atividade de Receitas</h3><Button asChild variant="ghost" className="text-primary font-black uppercase text-[10px] h-10 px-6 rounded-lg"><Link href="/receivables">Gerenciar Contas <ArrowRight className="h-4 w-4 ml-2" /></Link></Button></div>
+          <div className="min-h-[400px]">{isLoading ? <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredTransactions.filter(t => t.type?.includes('Entrada')).slice(0, 5).map(t => (<div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500"><DollarSign className="h-5 w-5" /></div><div><h4 className="text-sm font-bold text-white uppercase">{t.description}</h4><p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.clientName || "GERAL"}</p></div></div><div className="text-right"><p className="text-sm font-black text-emerald-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge></div></div>))}</div>
         </Card>
-
         <Card className="glass border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
-          <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3"><ArrowDownRight className="h-5 w-5 text-rose-500" /> Atividade de Despesas</h3>
-            <Button asChild variant="ghost" className="text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 h-10 px-6 rounded-lg">
-              <Link href="/payables">Gerenciar Obrigações <ArrowRight className="h-4 w-4 ml-2" /></Link>
-            </Button>
-          </div>
-          <div className="min-h-[400px]">
-            {isLoading ? (
-              <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-            ) : filteredTransactions.filter(t => t.type?.includes('Saída')).slice(0, 5).map(t => (
-              <div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500"><Wallet className="h-5 w-5" /></div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white uppercase">{t.description}</h4>
-                    <p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.entityName || "GERAL"}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-rose-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  <Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between"><h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3"><ArrowDownRight className="h-5 w-5 text-rose-500" /> Atividade de Despesas</h3><Button asChild variant="ghost" className="text-primary font-black uppercase text-[10px] h-10 px-6 rounded-lg"><Link href="/payables">Gerenciar Obrigações <ArrowRight className="h-4 w-4 ml-2" /></Link></Button></div>
+          <div className="min-h-[400px]">{isLoading ? <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredTransactions.filter(t => t.type?.includes('Saída')).slice(0, 5).map(t => (<div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500"><Wallet className="h-5 w-5" /></div><div><h4 className="text-sm font-bold text-white uppercase">{t.description}</h4><p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.entityName || "GERAL"}</p></div></div><div className="text-right"><p className="text-sm font-black text-rose-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge></div></div>))}</div>
         </Card>
       </div>
 
-      <Dialog open={isTitleDialogOpen} onOpenChange={setIsTitleDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
-            <DialogHeader>
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                  <Wallet className="h-6 w-6" />
-                </div>
-                <div>
-                  <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Lançamento Financeiro</DialogTitle>
-                  <DialogDescription className="text-muted-foreground text-[10px] uppercase font-black tracking-[0.2em] mt-1.5 opacity-60">REGISTRO DE MOVIMENTAÇÃO DE CAIXA RGMJ.</DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-          </div>
-          <ScrollArea className="max-h-[75vh]">
-            <div className="p-10 bg-[#0a0f1e]/50">
-              <FinancialTitleForm initialData={editingTitle} onSubmit={handleSaveTitle} onCancel={() => setIsTitleDialogOpen(false)} />
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={isTitleDialogOpen} onOpenChange={setIsTitleDialogOpen}><DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl"><DialogHeader><DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Lançamento Financeiro</DialogTitle></DialogHeader></div><ScrollArea className="max-h-[75vh]"><div className="p-10 bg-[#0a0f1e]/50"><FinancialTitleForm initialData={editingTitle} onSubmit={(data) => { if(editingTitle) updateDocumentNonBlocking(doc(db!, "financial_titles", editingTitle.id), {...data, value: data.numericValue, updatedAt: serverTimestamp()}); else addDocumentNonBlocking(collection(db!, "financial_titles"), {...data, value: data.numericValue, createdAt: serverTimestamp(), updatedAt: serverTimestamp()}); setIsTitleDialogOpen(false); toast({title: "Lançamento Concluído"}); }} onCancel={() => setIsTitleDialogOpen(false)} /></div></ScrollArea></DialogContent></Dialog>
     </div>
   )
 }

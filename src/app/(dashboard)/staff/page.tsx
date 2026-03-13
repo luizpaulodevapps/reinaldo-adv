@@ -17,21 +17,17 @@ import {
   Fingerprint,
   Phone,
   Mail,
-  Calendar,
-  Scale,
   UserCheck,
   X,
   Save,
   MapPin,
   Eye,
-  DollarSign,
-  Wallet,
   Landmark,
-  Percent,
   Share2,
   Copy,
   Lock,
-  Smartphone
+  Smartphone,
+  CheckCircle2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,32 +36,26 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn, maskPhone, maskCPF, maskCEP } from "@/lib/utils"
+import { cn, maskPhone, maskCPF } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 
 const STAFF_ROLES = [
-  { id: "Sócio", label: "SÓCIO(A)", isLegal: true, defaultSystemRole: 'admin' },
-  { id: "Advogado", label: "ADVOGADO(A)", isLegal: true, oabRequired: true, defaultSystemRole: 'lawyer' },
-  { id: "Estagiário", label: "ESTAGIÁRIO(A)", isLegal: true, oabRequired: false, defaultSystemRole: 'assistant' },
-  { id: "Secretária", label: "SECRETÁRIA(O)", isLegal: false, defaultSystemRole: 'assistant' },
-  { id: "Auxiliar Administrativo", label: "AUX. ADMINISTRATIVO", isLegal: false, defaultSystemRole: 'assistant' },
-  { id: "Financeiro", label: "FINANCEIRO", isLegal: false, defaultSystemRole: 'financial' },
+  { id: "Sócio", label: "SÓCIO(A)", defaultSystemRole: 'admin' },
+  { id: "Advogado", label: "ADVOGADO(A)", defaultSystemRole: 'lawyer' },
+  { id: "Estagiário", label: "ESTAGIÁRIO(A)", defaultSystemRole: 'assistant' },
+  { id: "Secretária", label: "SECRETÁRIA(O)", defaultSystemRole: 'assistant' },
+  { id: "Financeiro", label: "FINANCEIRO", defaultSystemRole: 'financial' },
 ]
 
 const PAYMENT_TYPES = [
   { id: "Mensalista", label: "MENSALISTA (FIXO)" },
   { id: "Por Demanda", label: "POR DEMANDA (VALOR POR ATO)" },
   { id: "Parceria (Porcentagem)", label: "PARCERIA (PORCENTAGEM)" },
-]
-
-const BRAZIL_STATES = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ]
 
 export default function StaffPage() {
@@ -77,25 +67,16 @@ export default function StaffPage() {
   const [viewingStaff, setViewingStaff] = useState<any>(null)
   const [editingStaff, setEditingStaff] = useState<any>(null)
   const [invitedMember, setInvitedMember] = useState<any>(null)
-  const [loadingCep, setLoadingCep] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
-    role: "Secretária",
+    role: "Advogado",
     email: "",
     phone: "",
     cpf: "",
     oabNumber: "",
-    oabState: "SP",
     hiringDate: new Date().toISOString().split('T')[0],
     status: "Ativo",
-    zipCode: "",
-    address: "",
-    number: "",
-    complement: "",
-    neighborhood: "",
-    city: "",
-    state: "",
     paymentType: "Mensalista",
     commissionPercentage: 0,
     baseSalary: 0,
@@ -115,16 +96,6 @@ export default function StaffPage() {
 
   const { data: employees, isLoading } = useCollection(staffQuery)
 
-  const staffFinancialQuery = useMemoFirebase(() => {
-    if (!db || !viewingStaff) return null
-    return query(
-      collection(db, "financial_titles"),
-      where("responsibleStaffId", "==", viewingStaff.id),
-      orderBy("dueDate", "desc")
-    )
-  }, [db, viewingStaff])
-  const { data: staffTransactions, isLoading: isLoadingFinance } = useCollection(staffFinancialQuery)
-
   const filtered = useMemo(() => {
     if (!employees) return []
     return employees.filter(e => 
@@ -133,37 +104,9 @@ export default function StaffPage() {
     )
   }, [employees, searchTerm])
 
-  const currentRoleConfig = useMemo(() => {
-    return STAFF_ROLES.find(r => r.id === formData.role)
-  }, [formData.role])
-
-  const handleCepBlur = async () => {
-    const cep = formData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
-
-    setLoadingCep(true)
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await response.json()
-      if (!data.erro) {
-        setFormData(prev => ({
-          ...prev,
-          address: data.logradouro.toUpperCase(),
-          neighborhood: data.bairro.toUpperCase(),
-          city: data.localidade.toUpperCase(),
-          state: data.uf.toUpperCase()
-        }))
-      }
-    } catch (error) {
-      console.error("CEP error")
-    } finally {
-      setLoadingCep(false)
-    }
-  }
-
   const handleSave = async () => {
     if (!db || !formData.name || !formData.role || !formData.email) {
-      toast({ variant: "destructive", title: "Dados Incompletos", description: "Nome, cargo e e-mail são fundamentais." })
+      toast({ variant: "destructive", title: "Dados Incompletos" })
       return
     }
 
@@ -176,17 +119,15 @@ export default function StaffPage() {
 
     try {
       let memberId = editingStaff?.id || crypto.randomUUID()
-      
-      // 1. Salva na coleção de EMPLOYEES (D.P.)
       await setDocumentNonBlocking(doc(db!, "employees", memberId), {
         ...payload,
         id: memberId,
         createdAt: editingStaff?.createdAt || serverTimestamp()
       }, { merge: true })
 
-      // 2. Se habilitado, cria/atualiza na coleção de STAFF_PROFILES (Acesso ao Sistema)
       if (formData.createSystemAccess) {
-        const systemRole = currentRoleConfig?.defaultSystemRole || 'lawyer'
+        const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
+        const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
         
         await setDocumentNonBlocking(doc(db!, "staff_profiles", memberId), {
           id: memberId,
@@ -194,70 +135,26 @@ export default function StaffPage() {
           email: payload.email,
           role: systemRole,
           isActive: payload.status === 'Ativo',
-          updatedAt: serverTimestamp(),
-          createdAt: editingStaff?.createdAt || serverTimestamp()
+          updatedAt: serverTimestamp()
         }, { merge: true })
 
         setInvitedMember({ name: payload.name, email: payload.email })
         setIsInviteOpen(true)
       }
 
-      toast({ title: editingStaff ? "Dossiê Atualizado" : "Colaborador Admitido" })
+      toast({ title: editingStaff ? "Registro Atualizado" : "Membro Admitido" })
       setIsDialogOpen(false)
     } catch (e) {
-      toast({ variant: "destructive", title: "Erro ao salvar dados" })
+      toast({ variant: "destructive", title: "Erro no processamento" })
     }
   }
 
   const handleCopyInvite = () => {
     if (!invitedMember) return
     const appUrl = window.location.origin
-    const message = `Olá ${invitedMember.name}! \n\nVocê foi convidado para acessar o Ecossistema RGMJ.\n\nSeu acesso foi liberado com o e-mail: ${invitedMember.email}\n\nPara entrar, acesse o link abaixo e utilize o botão "Entrar com Google":\n${appUrl}/login\n\nSucesso no comando!`
-    
+    const message = `Olá ${invitedMember.name}! \n\nVocê foi convidado para o Ecossistema RGMJ.\n\nE-mail liberado: ${invitedMember.email}\n\nPara entrar, acesse:\n${appUrl}/login\n\nUtilize o botão "Entrar com Google".`
     navigator.clipboard.writeText(message)
-    toast({ title: "Convite Copiado!", description: "Envie agora para o colaborador via WhatsApp." })
-  }
-
-  const handleOpenEdit = (staff: any) => {
-    setEditingStaff(staff)
-    setFormData({
-      ...formData,
-      ...staff,
-      createSystemAccess: false // Por padrão não re-abre o modal de convite ao editar a ficha
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleOpenView = (staff: any) => {
-    setViewingStaff(staff)
-    setIsViewOpen(true)
-  }
-
-  const handleOpenCreate = () => {
-    setEditingStaff(null)
-    setFormData({
-      name: "",
-      role: "Advogado",
-      email: "",
-      phone: "",
-      cpf: "",
-      oabNumber: "",
-      oabState: "SP",
-      hiringDate: new Date().toISOString().split('T')[0],
-      status: "Ativo",
-      zipCode: "",
-      address: "",
-      number: "",
-      complement: "",
-      neighborhood: "",
-      city: "",
-      state: "",
-      paymentType: "Mensalista",
-      commissionPercentage: 0,
-      baseSalary: 0,
-      createSystemAccess: true
-    })
-    setIsDialogOpen(true)
+    toast({ title: "Convite Copiado!" })
   }
 
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 block"
@@ -268,313 +165,62 @@ export default function StaffPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
-            <Users2 className="h-3.5 w-3.5" />
-            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
-            <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Corpo Técnico & Administrativo</span>
+            <Users2 className="h-3.5 w-3.5" /><Link href="/" className="hover:text-primary transition-colors">Início</Link><ChevronRight className="h-2 w-2" /><span className="text-white uppercase tracking-tighter">Gestão de Equipe</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter leading-none">Equipe RGMJ</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">Gestão de Capital Humano e Acessos.</p>
+          <h1 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">Corpo Técnico RGMJ</h1>
         </div>
-        
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Pesquisar..." 
-              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          {canManage && (
-            <button 
-              onClick={handleOpenCreate} 
-              className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(245,208,48,0.2)] hover:scale-105 active:scale-95 transition-all"
-            >
-              <Plus className="h-6 w-6 text-background" />
-            </button>
-          )}
+          <Input placeholder="Pesquisar..." className="pl-12 glass border-white/5 h-12 text-xs text-white md:w-80" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          {canManage && <button onClick={() => { setEditingStaff(null); setIsDialogOpen(true); }} className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all"><Plus className="h-6 w-6 text-background" /></button>}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {isLoading ? (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sincronizando Equipe...</span>
-          </div>
+          <div className="col-span-full py-32 flex flex-col items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
         ) : filtered.length > 0 ? (
           filtered.map((staff) => (
-            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all group overflow-hidden shadow-2xl rounded-2xl cursor-pointer" onClick={() => handleOpenView(staff)}>
+            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all group rounded-2xl shadow-2xl cursor-pointer overflow-hidden" onClick={() => { setViewingStaff(staff); setIsViewOpen(true); }}>
               <CardContent className="p-8 space-y-6">
                 <div className="flex items-start justify-between">
-                  <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-xl">
-                    <AvatarFallback className="bg-secondary text-primary font-black text-lg uppercase">{staff.name?.substring(0, 2) || "??"}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-3 py-1">
-                      {staff.role}
-                    </Badge>
-                    <Badge className="bg-white/5 text-white/40 border-0 text-[8px] font-black uppercase tracking-widest px-2">
-                      {staff.paymentType || "Mensalista"}
-                    </Badge>
-                  </div>
+                  <Avatar className="h-14 w-14 border-2 border-primary/20"><AvatarFallback className="bg-secondary text-primary font-black uppercase">{staff.name?.substring(0, 2)}</AvatarFallback></Avatar>
+                  <div className="flex flex-col items-end gap-2"><Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary">{staff.role}</Badge><Badge className="bg-white/5 text-white/40 text-[8px] font-black uppercase">{staff.paymentType}</Badge></div>
                 </div>
-                
-                <div className="space-y-1">
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors leading-tight truncate">
-                    {staff.name}
-                  </h3>
-                  <div className="flex flex-col gap-1 mt-3">
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                      <Mail className="h-3 w-3 opacity-40" /> {staff.email}
-                    </div>
-                    {staff.phone && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                        <Phone className="h-3 w-3 opacity-40" /> {staff.phone}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-6 border-t border-white/5 mt-4">
-                  <div className="flex gap-3">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-white/20 hover:text-white" onClick={(e) => { e.stopPropagation(); handleOpenView(staff); }}>
-                      <Eye className="h-4.5 w-4.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-white/20 hover:text-primary" onClick={(e) => { e.stopPropagation(); handleOpenEdit(staff); }}>
-                      <Settings2 className="h-4.5 w-4.5" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                    <ShieldCheck className="h-3.5 w-3.5" /> {staff.status || "ATIVO"}
-                  </div>
-                </div>
+                <div className="space-y-1"><h3 className="text-xl font-black text-white uppercase truncate group-hover:text-primary transition-colors">{staff.name}</h3><div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase"><Mail className="h-3 w-3 opacity-40" /> {staff.email}</div></div>
+                <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-4"><div className="flex gap-2"><Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white"><Eye className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={(e) => { e.stopPropagation(); setEditingStaff(staff); setFormData({...formData, ...staff, createSystemAccess: false}); setIsDialogOpen(true); }}><Settings2 className="h-4 w-4" /></Button></div><span className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> {staff.status}</span></div>
               </CardContent>
             </Card>
           ))
         ) : (
-          <div className="col-span-full py-40 flex flex-col items-center justify-center space-y-8 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
-            <Users2 className="h-20 w-20 text-muted-foreground" />
-            <p className="text-base font-black text-white uppercase tracking-[0.4em]">Quadro de Pessoal Vazio</p>
-          </div>
+          <div className="col-span-full py-40 text-center opacity-20"><Users2 className="h-20 w-20 mx-auto mb-6" /><p className="text-base font-black uppercase tracking-[0.4em]">Quadro de Pessoal Vazio</p></div>
         )}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl">
-            <DialogHeader className="text-left space-y-1">
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                {editingStaff ? "Gestão de Colaborador" : "Admissão Digital"}
-              </DialogTitle>
-              <DialogDescription className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-60">
-                REGISTRO TÉCNICO E CONTROLE DE ACESSO RGMJ.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-              <UserCheck className="h-6 w-6" />
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between"><DialogHeader className="text-left space-y-1"><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}</DialogTitle><p className="text-[10px] text-muted-foreground font-black uppercase opacity-60">REGISTRO DE DADOS E NÍVEIS DE ACESSO.</p></DialogHeader><div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><UserCheck className="h-6 w-6" /></div></div>
+          <ScrollArea className="max-h-[70vh]"><div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+            <div className="space-y-6"><div className="flex items-center gap-3 pb-2 border-b border-white/5"><Briefcase className="h-4 w-4 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Contrato & Função</h4></div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="md:col-span-8 space-y-2"><Label className={labelMini}>Nome Completo *</Label><Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className={inputClass} /></div>
+                <div className="md:col-span-4 space-y-2"><Label className={labelMini}>Cargo *</Label><Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white">{STAFF_ROLES.map(r => <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>)}</SelectContent></Select></div>
+              </div>
             </div>
-          </div>
-
-          <ScrollArea className="max-h-[70vh]">
-            <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
-              
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                  <Briefcase className="h-4 w-4 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Função e Identidade</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  <div className="md:col-span-8 space-y-2">
-                    <Label className={labelMini}>Nome Completo *</Label>
-                    <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className={cn(inputClass, "h-14 text-sm")} placeholder="EX: REINALDO GONÇALVES" />
-                  </div>
-                  <div className="md:col-span-4 space-y-2">
-                    <Label className={labelMini}>Cargo na Banca *</Label>
-                    <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
-                      <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] text-white">
-                        {STAFF_ROLES.map(role => <SelectItem key={role.id} value={role.id}>{role.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
-                <div className="flex items-center justify-between border-primary/10 pb-4 border-b">
-                  <div className="flex items-center gap-3">
-                    <Lock className="h-5 w-5 text-primary" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania de Acesso (Sistema)</h4>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Checkbox id="system-access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} />
-                    <Label htmlFor="system-access" className="text-[10px] font-black text-white uppercase tracking-widest cursor-pointer">Habilitar Acesso ao Ecossistema</Label>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <Label className={labelMini}>E-mail Institucional (Google) *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                      <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={cn(inputClass, "pl-12 lowercase h-14")} placeholder="usuario@gmail.com" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Status Operacional</Label>
-                    <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
-                      <SelectTrigger className={cn(inputClass, "h-14")}><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] text-white">
-                        <SelectItem value="Ativo">✅ ATIVO / EM EXERCÍCIO</SelectItem>
-                        <SelectItem value="Inativo">❌ INATIVO / DESLIGADO</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <p className="text-[9px] text-muted-foreground uppercase font-bold italic">* SE HABILITADO, O SISTEMA LIBERARÁ LOGIN VIA GOOGLE PARA ESTE E-MAIL.</p>
-              </div>
-
-              <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
-                <div className="flex items-center gap-3 border-white/5 pb-4 border-b">
-                  <Landmark className="h-5 w-5 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Modelo de Remuneração</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Tipo de Contrato</Label>
-                    <Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}>
-                      <SelectTrigger className="bg-black/60 border-white/10 h-12 text-white font-black"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] text-white">
-                        {PAYMENT_TYPES.map(type => <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {formData.paymentType === "Parceria (Porcentagem)" ? (
-                    <div className="space-y-2">
-                      <Label className={labelMini}>Comissão sobre Honorários (%)</Label>
-                      <Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 border-emerald-500/30 h-12 text-white font-black text-center" />
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label className={labelMini}>Valor Fixo (Salário / Base)</Label>
-                      <Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 border-white/10 h-12 text-white font-black" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                  <Fingerprint className="h-4 w-4 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Documentação e Contato</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label className={labelMini}>CPF</Label>
-                    <Input value={formData.cpf} onChange={(e) => setFormData({...formData, cpf: maskCPF(e.target.value)})} className={cn(inputClass, "font-mono")} placeholder="000.000.000-00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className={labelMini}>WhatsApp Direct</Label>
-                    <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: maskPhone(e.target.value)})} className={inputClass} placeholder="(00) 00000-0000" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Registro OAB (Se houver)</Label>
-                    <Input value={formData.oabNumber} onChange={(e) => setFormData({...formData, oabNumber: e.target.value})} className={inputClass} placeholder="000.000" />
-                  </div>
-                </div>
-              </div>
-
+            <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
+              <div className="flex items-center justify-between border-primary/10 pb-4 border-b"><div className="flex items-center gap-3"><Lock className="h-5 w-5 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania de Acesso</h4></div><div className="flex items-center gap-3"><Checkbox id="access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} /><Label htmlFor="access" className="text-[10px] font-black text-white uppercase cursor-pointer">Habilitar Acesso ao Sistema</Label></div></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><Label className={labelMini}>E-mail Google Corporativo *</Label><Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} /></div><div className="space-y-2"><Label className={labelMini}>Status Atual</Label><Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="Ativo">✅ ATIVO</SelectItem><SelectItem value="Inativo">❌ INATIVO</SelectItem></SelectContent></Select></div></div>
             </div>
-          </ScrollArea>
-
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button>
-            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center gap-3">
-              <Save className="h-5 w-5" /> {editingStaff ? "ATUALIZAR DOSSIÊ" : "CONFIRMAR ADMISSÃO"}
-            </Button>
-          </DialogFooter>
+            <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
+              <div className="flex items-center gap-3 border-white/5 pb-4 border-b"><Landmark className="h-5 w-5 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Remuneração & Repasses</h4></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><Label className={labelMini}>Modelo de Contrato</Label><Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white">{PAYMENT_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select></div>{formData.paymentType === "Parceria (Porcentagem)" ? <div className="space-y-2"><Label className={labelMini}>Comissão (%)</Label><Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 h-12 text-white text-center font-black" /></div> : <div className="space-y-2"><Label className={labelMini}>Valor Fixo / Salário</Label><Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 h-12 text-white font-black" /></div>}</div>
+            </div>
+          </div></ScrollArea>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between"><Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12">ABORTAR</Button><Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">SALVAR REGISTRO</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE CONVITE (SISTEMA) */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl animate-in zoom-in-95">
-          <div className="p-10 text-center space-y-6">
-            <div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl">
-              <CheckCircle2 className="h-10 w-10 animate-bounce" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</h3>
-              <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed px-4">
-                O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO ECOSSISTEMA RGMJ.
-              </p>
-            </div>
-            
-            <div className="p-6 rounded-2xl bg-black/40 border border-white/5 text-left space-y-4 shadow-inner">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                <Share2 className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">Script de Boas-vindas</span>
-              </div>
-              <p className="text-[10px] text-white/60 leading-relaxed italic">
-                "Olá {invitedMember?.name}! Você foi convidado para acessar o LexFlow ERP... Seu acesso foi liberado com o e-mail: {invitedMember?.email}"
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 pt-2">
-              <Button onClick={handleCopyInvite} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] tracking-widest gap-3 shadow-xl hover:scale-105 active:scale-95">
-                <Copy className="h-4 w-4" /> COPIAR PARA WHATSAPP
-              </Button>
-              <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12">CONCLUIR RITO</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* DIÁLOGO DE VISUALIZAÇÃO (SIMPLIFICADO) */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[900px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between shadow-xl flex-none">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-16 w-16 border-2 border-primary/20">
-                <AvatarFallback className="bg-secondary text-primary font-black text-xl uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
-                <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase mt-2">{viewingStaff?.role}</Badge>
-              </div>
-            </div>
-            <Button onClick={() => handleOpenEdit(viewingStaff)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-white/5 transition-all">
-              <Settings2 className="h-4 w-4 mr-2" /> EDITAR
-            </Button>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-10 space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-4">
-                  <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-white/5 pb-2">Informações Técnicas</h4>
-                  <div><Label className={labelMini}>CPF</Label><p className="text-sm font-bold text-white font-mono">{viewingStaff?.cpf || "---"}</p></div>
-                  <div><Label className={labelMini}>E-mail de Acesso</Label><p className="text-sm font-bold text-white lowercase">{viewingStaff?.email}</p></div>
-                  <div><Label className={labelMini}>WhatsApp</Label><p className="text-sm font-bold text-white">{viewingStaff?.phone || "---"}</p></div>
-                </Card>
-                <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-4">
-                  <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-white/5 pb-2">Remuneração</h4>
-                  <div><Label className={labelMini}>Modelo de Contrato</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.paymentType}</p></div>
-                  {viewingStaff?.paymentType === 'Parceria (Porcentagem)' ? (
-                    <div><Label className={labelMini}>Comissão</Label><p className="text-xl font-black text-emerald-400">{viewingStaff?.commissionPercentage}%</p></div>
-                  ) : (
-                    <div><Label className={labelMini}>Valor Base</Label><p className="text-xl font-black text-white">R$ {Number(viewingStaff?.baseSalary || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p></div>
-                  )}
-                </Card>
-              </div>
-            </div>
-          </ScrollArea>
-          <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end flex-none">
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">FECHAR DOSSIÊ</Button>
-          </div>
-        </DialogContent>
+        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-3xl text-center"><div className="p-10 space-y-6"><div className="w-20 h-20 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl"><CheckCircle2 className="h-10 w-10 animate-bounce" /></div><div className="space-y-2"><h3 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</h3><p className="text-muted-foreground text-[11px] font-bold uppercase tracking-widest leading-relaxed">O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO SISTEMA.</p></div><div className="grid grid-cols-1 gap-3 pt-2"><Button onClick={handleCopyInvite} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] gap-3 shadow-xl hover:scale-105 transition-all"><Copy className="h-4 w-4" /> COPIAR CONVITE WHATSAPP</Button><Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12">FECHAR</Button></div></div></DialogContent>
       </Dialog>
     </div>
   )

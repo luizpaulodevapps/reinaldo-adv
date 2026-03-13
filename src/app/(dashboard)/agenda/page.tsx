@@ -15,23 +15,16 @@ import {
   RefreshCw,
   ChevronRight,
   Video,
-  Zap,
   Plus,
-  CheckCircle2,
-  ArrowRight,
-  Copy,
-  ExternalLink,
-  Target,
-  User,
-  History,
-  Info,
+  Navigation,
   Trash2,
   Edit3,
   Gavel,
-  Navigation,
-  MessageCircle
+  Target,
+  Info,
+  Copy
 } from "lucide-react"
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
 import { 
   format, 
@@ -44,13 +37,11 @@ import {
   eachDayOfInterval, 
   isSameMonth, 
   addMonths, 
-  subMonths,
-  isAfter,
-  startOfDay
+  subMonths
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -218,7 +209,7 @@ export default function MasterAgendaPage() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-10 animate-in fade-in duration-1000">
       <div className="xl:col-span-3 space-y-6">
-        <div className="flex flex-col md:flex-row items-center justify-between bg-white/[0.02] p-6 rounded-2xl border border-white/5 gap-6">
+        <div className="flex flex-col md:flex-row items-center justify-between bg-white/[0.02] p-6 rounded-2xl border border-white/5 gap-6 shadow-xl">
           <div className="flex items-center gap-6">
             <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
@@ -345,7 +336,6 @@ export default function MasterAgendaPage() {
                         )}
                       </div>
                       
-                      {/* Ações Rápidas em Hover */}
                       <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         {event.location && (
                           <Button 
@@ -373,7 +363,6 @@ export default function MasterAgendaPage() {
                             <Video className="h-3 w-3" />
                           </Button>
                         )}
-                        {/* BOTÕES DE REAGENDAR E CANCELAR SOLICITADOS */}
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -382,7 +371,7 @@ export default function MasterAgendaPage() {
                             e.stopPropagation();
                             handleOpenEdit(event);
                           }}
-                          title="Reagendar / Editar"
+                          title="Reagendar"
                         >
                           <Edit3 className="h-3 w-3" />
                         </Button>
@@ -394,7 +383,7 @@ export default function MasterAgendaPage() {
                             e.stopPropagation();
                             handleDeleteEvent(event);
                           }}
-                          title="Remover da Pauta"
+                          title="Cancelar"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -404,7 +393,10 @@ export default function MasterAgendaPage() {
                 </Card>
               ))
             ) : (
-              <div className="py-32 flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-3xl"><CalendarIcon className="h-12 w-12 mb-4" /><p className="text-[10px] font-black uppercase tracking-[0.4em]">Pauta Limpa</p></div>
+              <div className="py-32 flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-3xl shadow-inner">
+                <CalendarIcon className="h-12 w-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-[0.4em]">Pauta Limpa</p>
+              </div>
             )}
           </div>
         </ScrollArea>
@@ -414,7 +406,6 @@ export default function MasterAgendaPage() {
         </Button>
       </div>
 
-      {/* DIALOG DE CRIAÇÃO / EDIÇÃO */}
       <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if(!open) setEditingEventData(null); }}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
@@ -479,7 +470,6 @@ export default function MasterAgendaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG DE VISUALIZAÇÃO / DETALHES */}
       <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl flex-none">
@@ -528,7 +518,7 @@ export default function MasterAgendaPage() {
 
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Localização / Juízo</Label>
-                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all">
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-inner">
                   <div className="flex items-center gap-4">
                     <MapPin className="h-5 w-5 text-primary" />
                     <span className="text-sm font-bold text-white uppercase">{viewingEvent?.location || "NÃO INFORMADO"}</span>
@@ -551,9 +541,9 @@ export default function MasterAgendaPage() {
               {(viewingEvent?.clientName || viewingEvent?.processNumber) && (
                 <div className="space-y-2">
                   <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Dossiê Vinculado</Label>
-                  <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 space-y-3">
+                  <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 space-y-3 shadow-lg">
                     <div className="flex items-center gap-4">
-                      <User className="h-4 w-4 text-primary" />
+                      <UserIcon className="h-4 w-4 text-primary" />
                       <span className="text-xs font-black text-white uppercase tracking-tight">{viewingEvent.clientName || 'CLIENTE NÃO VINCULADO'}</span>
                     </div>
                     {viewingEvent.processNumber && (
@@ -583,7 +573,7 @@ export default function MasterAgendaPage() {
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => handleDeleteEvent(viewingEvent)} className="h-12 w-12 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl">
+              <Button variant="ghost" onClick={() => handleDeleteEvent(viewingEvent)} className="h-12 w-12 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all">
                 <Trash2 className="h-5 w-5" />
               </Button>
               <div className="flex items-center gap-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-2">
@@ -591,9 +581,9 @@ export default function MasterAgendaPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">FECHAR</Button>
-              <Button onClick={() => handleOpenEdit(viewingEvent)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl flex items-center gap-3">
-                <Edit3 className="h-4 w-4" /> EDITAR / REAGENDAR
+              <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 rounded-xl transition-colors">FECHAR</Button>
+              <Button onClick={() => handleOpenEdit(viewingEvent)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl flex items-center gap-3 transition-all hover:scale-[1.02]">
+                <Edit3 className="h-4 w-4" /> REAGENDAR
               </Button>
             </div>
           </DialogFooter>
