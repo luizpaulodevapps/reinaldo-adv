@@ -19,7 +19,9 @@ import {
   Loader2,
   Handshake,
   DollarSign,
-  Tag
+  Tag,
+  ArrowRightLeft,
+  Landmark
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
@@ -43,14 +45,24 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     processNumber: "",
     clientId: "",
     clientName: "",
-    entityName: "", // Para fornecedores ou freelancers
+    responsibleStaffId: "",
+    responsibleStaffName: "",
+    entityName: "", 
     description: "",
     value: "0,00",
     dueDate: new Date().toISOString().split('T')[0],
+    originBank: "CONTA CORRENTE RGMJ",
+    destinationBank: "",
     isRecurring: false,
     recurrenceMonths: 1,
     status: "Pendente"
   })
+
+  const staffQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user])
+  const { data: staffMembers } = useCollection(staffQuery)
 
   useEffect(() => {
     if (initialData) {
@@ -75,7 +87,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     onSubmit({
       ...formData,
       numericValue: parseFloat(formData.value.replace(/\./g, '').replace(',', '.')),
-      status: formData.status || (formData.type.includes("Entrada") ? "Pendente" : "Pendente")
+      status: formData.status || "Pendente"
     })
   }
 
@@ -108,7 +120,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
           <Select value={formData.type} onValueChange={(v) => {
             setFormData({...formData, type: v, category: v.includes("Entrada") ? "Honorários Contratuais" : "Folha de Pagamento"})
           }}>
-            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white focus:ring-primary/50 text-sm font-bold uppercase">
+            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white focus:ring-1 focus:ring-primary/50 text-sm font-bold uppercase">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#0d121f] border-white/10 text-white">
@@ -121,7 +133,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
         <div className="space-y-2">
           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Classificação Técnica *</Label>
           <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}>
-            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white focus:ring-primary/50 text-sm font-bold uppercase">
+            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white focus:ring-1 focus:ring-primary/50 text-sm font-bold uppercase">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#0d121f] border-white/10 text-white">
@@ -151,22 +163,50 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Entidade (Cliente/Fornecedor)</Label>
-            <Input 
-              value={formData.clientName || formData.entityName} 
-              onChange={(e) => setFormData({...formData, entityName: e.target.value.toUpperCase(), clientName: e.target.value.toUpperCase()})}
-              className="bg-black/40 border-white/10 h-12 text-white text-xs font-bold"
-              placeholder="VINCULAR ENTIDADE..."
-            />
+            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Vincular Profissional (Repasse)</Label>
+            <Select value={formData.responsibleStaffId} onValueChange={(v) => {
+              const s = staffMembers?.find(sm => sm.id === v)
+              setFormData({...formData, responsibleStaffId: v, responsibleStaffName: s?.name || ""})
+            }}>
+              <SelectTrigger className="bg-black/40 border-white/10 h-12 text-white text-[10px] uppercase font-bold"><SelectValue placeholder="SELECIONE O ADVOGADO" /></SelectTrigger>
+              <SelectContent className="bg-[#0d121f] text-white">
+                {staffMembers?.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name.toUpperCase()}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo (Opcional)</Label>
+            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Número do Processo (CNJ)</Label>
             <Input 
               value={formData.processNumber} 
               onChange={(e) => setFormData({...formData, processNumber: e.target.value})}
               className="bg-black/40 border-white/10 h-12 text-white font-mono text-xs"
               placeholder="0000000-00.0000.0.00.0000"
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="p-8 rounded-3xl border border-white/5 bg-white/[0.02] space-y-6">
+        <div className="flex items-center gap-3">
+          <ArrowRightLeft className="h-4 w-4 text-primary" />
+          <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Telemetria Bancária</h4>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black text-muted-foreground uppercase">Conta de Origem (Debitado de)</Label>
+            <div className="relative">
+              <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+              <Input value={formData.originBank} onChange={(e) => setFormData({...formData, originBank: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 pl-12 text-white text-[10px] font-black" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black text-muted-foreground uppercase">Conta de Destino (Creditado em)</Label>
+            <div className="relative">
+              <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+              <Input value={formData.destinationBank} onChange={(e) => setFormData({...formData, destinationBank: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 pl-12 text-white text-[10px] font-black" placeholder="EX: PIX SANTANDER" />
+            </div>
           </div>
         </div>
       </div>
@@ -204,8 +244,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
             </SelectTrigger>
             <SelectContent className="bg-[#0d121f] text-white">
               <SelectItem value="Pendente">⌛ AGUARDANDO (PENDENTE)</SelectItem>
-              <SelectItem value="Pago">✅ LIQUIDADO / PAGO</SelectItem>
-              <SelectItem value="Recebido">💵 CONCLUÍDO / RECEBIDO</SelectItem>
+              <SelectItem value="Liquidado">✅ CONCLUÍDO / TRANSFERIDO</SelectItem>
               <SelectItem value="Cancelado">❌ CANCELADO</SelectItem>
             </SelectContent>
           </Select>
@@ -213,7 +252,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
         <div className="flex items-center justify-between px-6 border-l border-white/5">
           <div className="space-y-0.5">
             <Label className="text-[10px] font-black text-white uppercase tracking-widest">Lançamento Recorrente?</Label>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold">Repetir operação mensalmente.</p>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold">Repetir mensalmente.</p>
           </div>
           <Input 
             type="number" 

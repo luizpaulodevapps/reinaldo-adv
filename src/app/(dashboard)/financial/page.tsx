@@ -22,7 +22,9 @@ import {
   Scale,
   Calendar,
   AlertCircle,
-  Zap
+  Zap,
+  ArrowRightLeft,
+  Landmark
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,39 +43,44 @@ export default function FinancialPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isNewTitleOpen, setIsNewTitleOpen] = useState(false)
   const db = useFirestore()
-  const { user, isUserLoading } = useUser()
+  const { user, role, profile } = useUser()
   const { toast } = useToast()
+
+  const isAdmin = role === 'admin'
 
   const financialQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    // Filtramos por categorias que geralmente envolvem repasses ou honorários de equipe
-    return query(collection(db!, "financial_titles"), orderBy("dueDate", "desc"))
-  }, [db, user])
+    if (isAdmin) {
+      return query(collection(db!, "financial_titles"), orderBy("dueDate", "desc"))
+    }
+    // Para advogados, mostra apenas os títulos onde ele é o responsável
+    return query(
+      collection(db!, "financial_titles"), 
+      where("responsibleStaffId", "==", user.uid),
+      orderBy("dueDate", "desc")
+    )
+  }, [db, user, isAdmin])
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
 
-  const isLoading = isUserLoading || isLoadingTransactions
+  const isLoading = isLoadingTransactions
 
   const stats = useMemo(() => {
-    if (!transactions) return { honorarios: 0, acordos: 0, repasses: 0, pendentes: 0 }
+    if (!transactions) return { entradas: 0, saidas: 0, saldo: 0, pendentes: 0 }
     
-    const honorarios = transactions
-      .filter(t => t.category?.includes('Honorários'))
+    const entradas = transactions
+      .filter(t => t.type?.includes('Entrada'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const acordos = transactions
-      .filter(t => t.category?.includes('Acordo'))
-      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-
-    const repasses = transactions
-      .filter(t => t.category?.includes('Diligência') || t.category?.includes('Folha'))
+    const saidas = transactions
+      .filter(t => t.type?.includes('Saída'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
     const pendentes = transactions
       .filter(t => t.status === 'Pendente')
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    return { honorarios, acordos, repasses, pendentes }
+    return { entradas, saidas, saldo: entradas - saidas, pendentes }
   }, [transactions])
 
   const filteredTransactions = useMemo(() => {
@@ -110,40 +117,53 @@ export default function FinancialPage() {
     }
 
     setIsNewTitleOpen(false)
-    toast({ title: "Distribuição Registrada" })
+    toast({ title: "Operação Registrada" })
   }
 
   const RepasseCard = ({ t }: { t: any }) => (
-    <div className="p-6 flex items-center justify-between hover:bg-white/[0.02] transition-all border-b border-white/5 last:border-0 group">
-      <div className="flex items-center gap-6">
+    <div className="p-8 flex flex-col md:flex-row md:items-center justify-between hover:bg-white/[0.02] transition-all border-b border-white/5 last:border-0 group gap-6">
+      <div className="flex items-start gap-6">
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center border",
+          "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl transition-transform group-hover:scale-110",
           t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
         )}>
-          {t.category?.includes("Honorários") ? <Scale className="h-6 w-6" /> : <Handshake className="h-6 w-6" />}
+          {t.category?.includes("Honorários") ? <Scale className="h-7 w-7" /> : <Handshake className="h-7 w-7" />}
         </div>
-        <div>
-          <h4 className="font-bold text-white uppercase text-sm tracking-tight">{t.description}</h4>
-          <div className="flex items-center gap-4 mt-1.5">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h4 className="font-black text-white uppercase text-base tracking-tight">{t.description}</h4>
+            <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase font-black">{t.category}</Badge>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
             <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 opacity-40" /> {t.dueDate}
+              <Calendar className="h-3.5 w-3.5 opacity-40 text-primary" /> VENC: {t.dueDate}
             </p>
-            <p className="text-[10px] text-primary font-black uppercase tracking-widest">
-              {t.clientName || "CLIENTE GERAL"}
+            <p className="text-[10px] text-primary font-black uppercase tracking-widest flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 opacity-40" /> {t.clientName || "CLIENTE GERAL"}
             </p>
+            {t.originBank && (
+              <p className="text-[9px] text-white/40 uppercase font-bold flex items-center gap-2">
+                <Landmark className="h-3 w-3" /> DE: {t.originBank}
+              </p>
+            )}
+            {t.destinationBank && (
+              <p className="text-[9px] text-white/40 uppercase font-bold flex items-center gap-2">
+                <ArrowRightLeft className="h-3 w-3" /> PARA: {t.destinationBank}
+              </p>
+            )}
           </div>
         </div>
       </div>
-      <div className="text-right">
+      <div className="flex flex-col items-end gap-2">
         <div className={cn(
-          "text-xl font-black tabular-nums",
+          "text-2xl font-black tabular-nums tracking-tighter",
           t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400"
         )}>
-          R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
         </div>
         <Badge className={cn(
-          "text-[8px] font-black uppercase h-5 mt-1",
-          t.status === 'Recebido' || t.status === 'Pago' ? "bg-emerald-500/10 text-emerald-500 border-0" : "bg-amber-500/10 text-amber-500 border-0"
+          "text-[9px] font-black uppercase h-6 px-3 border-0",
+          t.status === 'Liquidado' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
         )}>
           {t.status}
         </Badge>
@@ -156,14 +176,18 @@ export default function FinancialPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
-            <Handshake className="h-3.5 w-3.5" />
+            <Wallet className="h-3.5 w-3.5" />
             <Link href="/" className="hover:text-primary transition-colors uppercase">Início</Link>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">GESTÃO DE REPASSES</span>
+            <span className="text-white uppercase tracking-tighter">
+              {isAdmin ? "GESTOR DE REPASSES" : `CARTEIRA: DR(A). ${profile?.name?.split(' ')[0] || 'ADVOGADO'}`}
+            </span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tighter uppercase">Carteira & Repasses</h1>
+          <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">
+            {isAdmin ? "Controladoria de Repasses" : "Meu Extrato Financeiro"}
+          </h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-70">
-            CONTROLE DE HONORÁRIOS E DISTRIBUIÇÃO ESTRATÉGICA RGMJ.
+            {isAdmin ? "GESTÃO INTEGRADA DE HONORÁRIOS E CRÉDITOS DE EQUIPE." : "HISTÓRICO INDIVIDUAL DE HONORÁRIOS E REMUNERAÇÃO RGMJ."}
           </p>
         </div>
         
@@ -171,18 +195,20 @@ export default function FinancialPage() {
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Pesquisar por ato ou cliente..." 
-              className="pl-12 glass border-white/5 h-14 text-sm text-white focus:ring-primary/50 rounded-xl"
+              placeholder="Pesquisar em meus lançamentos..." 
+              className="pl-12 glass border-white/5 h-14 text-sm text-white focus:ring-primary/50 rounded-xl font-bold"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button 
-            onClick={() => setIsNewTitleOpen(true)}
-            className="gold-gradient text-background font-black gap-2 px-10 h-14 uppercase text-[11px] tracking-widest rounded-xl shadow-xl"
-          >
-            <Plus className="h-5 w-5" /> NOVO CRÉDITO
-          </Button>
+          {isAdmin && (
+            <Button 
+              onClick={() => setIsNewTitleOpen(true)}
+              className="gold-gradient text-background font-black gap-2 px-10 h-14 uppercase text-[11px] tracking-widest rounded-xl shadow-xl hover:scale-105 transition-all"
+            >
+              <Plus className="h-5 w-5" /> LANÇAR REPASSE
+            </Button>
+          )}
         </div>
       </div>
 
@@ -192,25 +218,16 @@ export default function FinancialPage() {
             <Scale className="h-4 w-4" /> HONORÁRIOS TOTAIS
           </p>
           <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
-            R$ {stats.honorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
         </Card>
 
         <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl flex flex-col justify-center shadow-xl">
           <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3">
-            <Zap className="h-4 w-4" /> VERBAS DE ACORDO
+            <CheckCircle2 className="h-4 w-4" /> TOTAL LIQUIDADO
           </p>
           <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
-            R$ {stats.acordos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
-        </Card>
-
-        <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em] mb-3 flex items-center gap-3">
-            <ArrowDownRight className="h-4 w-4" /> REPASSES DE EQUIPE
-          </p>
-          <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
-            R$ {stats.repasses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {(stats.entradas - stats.pendentes).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
         </Card>
 
@@ -222,16 +239,25 @@ export default function FinancialPage() {
             R$ {stats.pendentes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
         </Card>
+
+        <Card className="glass border-white/5 p-8 rounded-2xl flex flex-col justify-center shadow-xl">
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-3 flex items-center gap-3">
+            <Landmark className="h-4 w-4" /> SALDO EM CONTA
+          </p>
+          <div className="text-3xl font-black text-white tracking-tighter tabular-nums">
+            R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </Card>
       </div>
 
       <Card className="glass border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
         <div className="p-8 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Wallet className="h-6 w-6 text-primary" />
-            <h3 className="text-lg font-black text-white uppercase tracking-widest">Extrato de Repasses</h3>
+            <h3 className="text-lg font-black text-white uppercase tracking-widest">Dossiê de Movimentações</h3>
           </div>
-          <Button variant="ghost" className="text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 h-10 px-6 rounded-lg">
-            <Printer className="h-4 w-4 mr-2" /> Exportar Relatório
+          <Button variant="ghost" className="text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 h-10 px-6 rounded-lg border border-primary/20">
+            <Printer className="h-4 w-4 mr-2" /> Gerar Comprovante
           </Button>
         </div>
         <div className="min-h-[500px]">
@@ -247,7 +273,7 @@ export default function FinancialPage() {
           ) : (
             <div className="py-48 flex flex-col items-center justify-center space-y-8 opacity-20">
               <Handshake className="h-20 w-20" />
-              <p className="text-xs font-black uppercase tracking-[0.5em]">Nenhum repasse registrado</p>
+              <p className="text-xs font-black uppercase tracking-[0.5em]">Nenhum lançamento registrado para seu perfil</p>
             </div>
           )}
         </div>
@@ -258,7 +284,7 @@ export default function FinancialPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
             <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Lançamento de Repasse</DialogTitle>
-              <DialogDescription className="text-[10px] uppercase font-black tracking-[0.2em] mt-1.5 opacity-60">DISTRIBUIÇÃO DE HONORÁRIOS E CRÉDITOS DE EQUIPE.</DialogDescription>
+              <DialogDescription className="text-[10px] uppercase font-black tracking-[0.2em] mt-1.5 opacity-60">DISTRIBUIÇÃO TÉCNICA DE HONORÁRIOS E CRÉDITOS.</DialogDescription>
             </DialogHeader>
           </div>
           <ScrollArea className="max-h-[70vh]">
