@@ -22,7 +22,8 @@ import {
   ArrowRight,
   Landmark,
   Handshake,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +41,7 @@ export default function BillingPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isTitleDialogOpen, setIsTitleDialogOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState<any>(null)
+  const [listLimit, setListLimit] = useState(50)
   
   const db = useFirestore()
   const { user, isUserLoading, profile } = useUser()
@@ -47,8 +49,8 @@ export default function BillingPage() {
 
   const financialQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "financial_titles"), orderBy("dueDate", "desc"))
-  }, [db, user])
+    return query(collection(db!, "financial_titles"), orderBy("dueDate", "desc"), limit(listLimit))
+  }, [db, user, listLimit])
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
 
@@ -89,7 +91,7 @@ export default function BillingPage() {
   }, [transactions, searchTerm])
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
@@ -123,13 +125,21 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="glass border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
           <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between"><h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3"><ArrowUpRight className="h-5 w-5 text-emerald-500" /> Atividade de Receitas</h3><Button asChild variant="ghost" className="text-primary font-black uppercase text-[10px] h-10 px-6 rounded-lg"><Link href="/receivables">Gerenciar Contas <ArrowRight className="h-4 w-4 ml-2" /></Link></Button></div>
-          <div className="min-h-[400px]">{isLoading ? <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredTransactions.filter(t => t.type?.includes('Entrada')).slice(0, 5).map(t => (<div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500"><DollarSign className="h-5 w-5" /></div><div><h4 className="text-sm font-bold text-white uppercase">{t.description}</h4><p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.clientName || "GERAL"}</p></div></div><div className="text-right"><p className="text-sm font-black text-emerald-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge></div></div>))}</div>
+          <div className="min-h-[400px]">{isLoading ? <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredTransactions.filter(t => t.type?.includes('Entrada')).slice(0, 10).map(t => (<div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500"><DollarSign className="h-5 w-5" /></div><div><h4 className="text-sm font-bold text-white uppercase">{t.description}</h4><p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.clientName || "GERAL"}</p></div></div><div className="text-right"><p className="text-sm font-black text-emerald-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge></div></div>))}</div>
         </Card>
         <Card className="glass border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
           <div className="p-8 bg-white/[0.02] border-b border-white/5 flex items-center justify-between"><h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3"><ArrowDownRight className="h-5 w-5 text-rose-500" /> Atividade de Despesas</h3><Button asChild variant="ghost" className="text-primary font-black uppercase text-[10px] h-10 px-6 rounded-lg"><Link href="/payables">Gerenciar Obrigações <ArrowRight className="h-4 w-4 ml-2" /></Link></Button></div>
-          <div className="min-h-[400px]">{isLoading ? <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredTransactions.filter(t => t.type?.includes('Saída')).slice(0, 5).map(t => (<div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500"><Wallet className="h-5 w-5" /></div><div><h4 className="text-sm font-bold text-white uppercase">{t.description}</h4><p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.entityName || "GERAL"}</p></div></div><div className="text-right"><p className="text-sm font-black text-rose-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge></div></div>))}</div>
+          <div className="min-h-[400px]">{isLoading ? <div className="py-24 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredTransactions.filter(t => t.type?.includes('Saída')).slice(0, 10).map(t => (<div key={t.id} className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/[0.01] transition-all"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500"><Wallet className="h-5 w-5" /></div><div><h4 className="text-sm font-bold text-white uppercase">{t.description}</h4><p className="text-[10px] text-muted-foreground font-black uppercase mt-1">{t.dueDate} • {t.entityName || "GERAL"}</p></div></div><div className="text-right"><p className="text-sm font-black text-rose-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p><Badge variant="outline" className="text-[8px] h-5 border-white/10 uppercase font-black">{t.status}</Badge></div></div>))}</div>
         </Card>
       </div>
+
+      {transactions && transactions.length >= listLimit && (
+        <div className="flex justify-center pt-10">
+          <Button onClick={() => setListLimit(prev => prev + 50)} variant="outline" className="glass border-white/10 text-muted-foreground hover:text-white font-black uppercase text-[10px] tracking-widest h-12 px-10 rounded-xl">
+            <ChevronDown className="h-4 w-4 mr-2" /> Auditar Lançamentos Antigos
+          </Button>
+        </div>
+      )}
 
       <Dialog open={isTitleDialogOpen} onOpenChange={setIsTitleDialogOpen}><DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl"><DialogHeader><DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Lançamento Financeiro</DialogTitle><DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">SISTEMA INTEGRADO DE CONCILIAÇÃO BANCÁRIA RGMJ.</DialogDescription></DialogHeader></div><ScrollArea className="max-h-[75vh]"><div className="p-10 bg-[#0a0f1e]/50"><FinancialTitleForm initialData={editingTitle} onSubmit={(data) => { if(editingTitle) { const ref = doc(db!, "financial_titles", editingTitle.id); updateDocumentNonBlocking(ref, {...data, value: data.numericValue, updatedAt: serverTimestamp()}); } else { addDocumentNonBlocking(collection(db!, "financial_titles"), {...data, value: data.numericValue, createdAt: serverTimestamp(), updatedAt: serverTimestamp()}); } setIsTitleDialogOpen(false); toast({title: "Lançamento Concluído"}); }} onCancel={() => setIsTitleDialogOpen(false)} /></div></ScrollArea></DialogContent></Dialog>
     </div>

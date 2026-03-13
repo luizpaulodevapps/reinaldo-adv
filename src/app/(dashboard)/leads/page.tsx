@@ -61,7 +61,8 @@ import {
   Scale,
   Copy,
   FileDown,
-  History
+  History,
+  ChevronDown
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -125,11 +126,12 @@ export default function LeadsPage() {
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
+  const [listLimit, setListLimit] = useState(50)
 
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "leads"), orderBy("updatedAt", "desc"), limit(100))
-  }, [db, user])
+    return query(collection(db!, "leads"), orderBy("updatedAt", "desc"), limit(listLimit))
+  }, [db, user, listLimit])
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = useMemo(() => (leadsData || []).filter(l => l.status !== 'arquivado'), [leadsData])
@@ -229,7 +231,6 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp() 
     });
 
-    // Disparar Notificação de Novo Lead
     addDocumentNonBlocking(collection(db, "notifications"), {
       userId: user.uid,
       title: "Novo Lead na Triagem",
@@ -339,7 +340,6 @@ export default function LeadsPage() {
     await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
     updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
     
-    // Notificação de Conversão
     addDocumentNonBlocking(collection(db, "notifications"), {
       userId: user?.uid,
       title: "Processo Protocolado",
@@ -356,41 +356,10 @@ export default function LeadsPage() {
 
   const handleExportToGoogleDocs = () => {
     if (!interviewAnalysis) return
-    
-    const content = `
-REGINALDO GONÇALVES MIGUEL DE JESUS - ADVOCACIA ESTRATÉGICA
-CLIENTE: ${activeLead?.name}
-QUALIFICAÇÃO: ${activeLead?.cpf || 'Não informado'} | ${activeLead?.phone}
-CONTRA: ${activeLead?.defendantName || 'Não informado'}
-ÓRGÃO: ${activeLead?.court || 'Não informado'} | ${activeLead?.vara || 'Não informado'}
-
---------------------------------------------------
-MINUTA ESTRUTURADA DE PETIÇÃO INICIAL
---------------------------------------------------
-
-${interviewAnalysis.draftPetition || `
-1. RESUMO EXECUTIVO DOS FATOS
-${interviewAnalysis.summary}
-
-2. ANÁLISE JURÍDICA E RISCOS
-${interviewAnalysis.legalAnalysis}
-
-3. RECOMENDAÇÕES E PRÓXIMOS PASSOS
-${interviewAnalysis.recommendations}
-`}
-
---------------------------------------------------
-Documento gerado via Inteligência Artificial RGMJ.
-`.trim()
-
+    const content = `REGINALDO GONÇALVES MIGUEL DE JESUS - ADVOCACIA ESTRATÉGICA\nCLIENTE: ${activeLead?.name}\n--------------------------------------------------\n${interviewAnalysis.draftPetition || interviewAnalysis.summary}\n--------------------------------------------------\nDocumento gerado via Inteligência Artificial RGMJ.`.trim()
     navigator.clipboard.writeText(content).then(() => {
-      toast({
-        title: "Peça Preparada",
-        description: "Estrutura copiada! Redirecionando para novo Google Doc. Use Ctrl+V para colar.",
-      })
-      setTimeout(() => {
-        window.open("https://doc.new", "_blank")
-      }, 1500)
+      toast({ title: "Peça Preparada", description: "Copiado! Redirecionando para novo Google Doc." })
+      setTimeout(() => { window.open("https://doc.new", "_blank") }, 1500)
     })
   }
 
@@ -410,7 +379,7 @@ Documento gerado via Inteligência Artificial RGMJ.
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans">
+    <div className="space-y-6 animate-in fade-in duration-500 font-sans pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/40 mb-2">
@@ -423,53 +392,53 @@ Documento gerado via Inteligência Artificial RGMJ.
         </Button>
       </div>
 
-      {isLoading ? (
+      {isLoading && leads.length === 0 ? (
         <div className="py-20 flex flex-col items-center justify-center space-y-6"><Loader2 className="h-10 w-10 animate-spin text-primary" /><span className="text-xs font-bold uppercase tracking-widest">Auditando Banco...</span></div>
       ) : (
-        <div className="flex gap-6 overflow-x-auto pb-12 scrollbar-hide min-h-[700px]">
-          {columns.map((col) => {
-            const leadsInCol = leads.filter(l => (l.status || "novo") === col.id)
-            return (
-              <div key={col.id} className="min-w-[340px] flex-1 flex flex-col" onDragOver={handleDragOver} onDrop={() => handleDrop(col.id)}>
-                <div className="flex items-center justify-between mb-4 px-4 bg-white/[0.02] py-2.5 rounded-xl border border-white/5 shadow-inner">
-                  <div className="flex items-center gap-3"><div className={cn("w-2 h-2 rounded-full", col.color.replace('text-', 'bg-'))} /><h3 className={cn("font-black text-[10px] tracking-[0.25em] uppercase", col.color)}>{col.title}</h3></div>
-                  <Badge variant="secondary" className="bg-white/5 text-[10px] border-white/5 font-black h-6 px-2.5 rounded-lg">{leadsInCol.length}</Badge>
-                </div>
-                <div className={cn("space-y-4 flex-1 bg-white/[0.01] rounded-2xl p-3 border border-white/5 transition-all", draggedLeadId && "ring-1 ring-primary/20")}>
-                  <AnimatePresence>
-                    {leadsInCol.map((lead) => (
-                      <motion.div key={lead.id} layoutId={lead.id} draggable onDragStart={() => handleDragStart(lead.id)}>
-                        <Card 
-                          className={cn(
-                            "glass hover-gold transition-all cursor-grab active:cursor-grabbing border-white/5 shadow-lg rounded-xl overflow-hidden", 
-                            draggedLeadId === lead.id && "opacity-50"
-                          )} 
-                          onClick={() => handleOpenLead(lead)}
-                        >
-                          <CardContent className="p-4 space-y-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 flex-1 min-w-0"><div className="font-bold text-sm text-white group-hover:text-primary uppercase truncate">{lead.name}</div><span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span></div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="h-7 w-7 text-white/20 hover:text-white"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white w-44"><DropdownMenuItem onClick={() => handleOpenLead(lead)}>Ver Dossiê</DropdownMenuItem><DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="text-rose-500">Excluir</DropdownMenuItem></DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                            <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                              <div className="flex gap-1.5">
-                                {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase">CPF OK</Badge>}
-                                {leadInterviews?.filter(i => i.clientId === lead.id).length > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
+        <div className="space-y-10">
+          <div className="flex gap-6 overflow-x-auto pb-12 scrollbar-hide min-h-[600px]">
+            {columns.map((col) => {
+              const leadsInCol = leads.filter(l => (l.status || "novo") === col.id)
+              return (
+                <div key={col.id} className="min-w-[340px] flex-1 flex flex-col" onDragOver={handleDragOver} onDrop={() => handleDrop(col.id)}>
+                  <div className="flex items-center justify-between mb-4 px-4 bg-white/[0.02] py-2.5 rounded-xl border border-white/5 shadow-inner">
+                    <div className="flex items-center gap-3"><div className={cn("w-2 h-2 rounded-full", col.color.replace('text-', 'bg-'))} /><h3 className={cn("font-black text-[10px] tracking-[0.25em] uppercase", col.color)}>{col.title}</h3></div>
+                    <Badge variant="secondary" className="bg-white/5 text-[10px] border-white/5 font-black h-6 px-2.5 rounded-lg">{leadsInCol.length}</Badge>
+                  </div>
+                  <div className={cn("space-y-4 flex-1 bg-white/[0.01] rounded-2xl p-3 border border-white/5 transition-all", draggedLeadId && "ring-1 ring-primary/20")}>
+                    <AnimatePresence>
+                      {leadsInCol.map((lead) => (
+                        <motion.div key={lead.id} layoutId={lead.id} draggable onDragStart={() => handleDragStart(lead.id)}>
+                          <Card className={cn("glass hover-gold transition-all cursor-grab active:cursor-grabbing border-white/5 shadow-lg rounded-xl overflow-hidden", draggedLeadId === lead.id && "opacity-50")} onClick={() => handleOpenLead(lead)}>
+                            <CardContent className="p-4 space-y-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1 flex-1 min-w-0"><div className="font-bold text-sm text-white group-hover:text-primary uppercase truncate">{lead.name}</div><span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {lead.id.substring(0, 8).toUpperCase()}</span></div>
+                                <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="h-7 w-7 text-white/20 hover:text-white"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white w-44"><DropdownMenuItem onClick={() => handleOpenLead(lead)}>Ver Dossiê</DropdownMenuItem><DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="text-rose-500">Excluir</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
                               </div>
-                              <ArrowRight className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-all" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                              <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                <div className="flex gap-1.5">
+                                  {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase">CPF OK</Badge>}
+                                  {leadInterviews?.filter(i => i.clientId === lead.id).length > 0 && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary bg-primary/5 uppercase">DNA CAPTURADO</Badge>}
+                                </div>
+                                <ArrowRight className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+          {leadsData && leadsData.length >= listLimit && (
+            <div className="flex justify-center">
+              <Button onClick={() => setListLimit(prev => prev + 50)} variant="outline" className="glass border-white/10 text-muted-foreground font-black uppercase text-[10px] tracking-widest h-12 px-10 rounded-xl">
+                <ChevronDown className="h-4 w-4 mr-2" /> Expandir Funil de Atendimento
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -517,24 +486,12 @@ Documento gerado via Inteligência Artificial RGMJ.
                 <div className="p-10 space-y-10 w-full mx-auto pb-40">
                   <Tabs value={activeDossierTab} onValueChange={setActiveDossierTab} className="space-y-10">
                     <TabsList className="bg-white/5 border border-white/10 h-14 p-1.5 gap-1.5 w-full justify-start rounded-2xl shadow-2xl">
-                      <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <LayoutGrid className="h-4 w-4" /> OVERVIEW
-                      </TabsTrigger>
-                      <TabsTrigger value="atividades" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <History className="h-4 w-4" /> ATRIBUICÕES & NOTAS
-                      </TabsTrigger>
-                      <TabsTrigger value="captura" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <Zap className="h-4 w-4" /> CAPTURA DNA
-                      </TabsTrigger>
-                      <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <MessageSquare className="h-4 w-4" /> DOSSIÊS {leadInterviews && leadInterviews.length > 0 && <Badge className="bg-emerald-500/20 text-emerald-500 ml-2 border-0 h-5 px-2 text-[10px] font-black">{leadInterviews.length}</Badge>}
-                      </TabsTrigger>
-                      <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <ClipboardList className="h-4 w-4" /> BUROCRACIA
-                      </TabsTrigger>
-                      <TabsTrigger value="revisao" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]">
-                        <ShieldCheck className="h-4 w-4" /> REVISÃO
-                      </TabsTrigger>
+                      <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]"><LayoutGrid className="h-4 w-4" /> OVERVIEW</TabsTrigger>
+                      <TabsTrigger value="atividades" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]"><History className="h-4 w-4" /> ATRIBUICÕES</TabsTrigger>
+                      <TabsTrigger value="captura" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]"><Zap className="h-4 w-4" /> CAPTURA DNA</TabsTrigger>
+                      <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]"><MessageSquare className="h-4 w-4" /> DOSSIÊS</TabsTrigger>
+                      <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]"><ClipboardList className="h-4 w-4" /> BUROCRACIA</TabsTrigger>
+                      <TabsTrigger value="revisao" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 transition-all flex items-center tracking-[0.2em]"><ShieldCheck className="h-4 w-4" /> REVISÃO</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="animate-in fade-in duration-500 outline-none w-full space-y-8">
@@ -570,10 +527,7 @@ Documento gerado via Inteligência Artificial RGMJ.
                           {templates?.map(t => (
                             <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-white/10 text-white font-black uppercase text-xs h-20 gap-6 rounded-2xl justify-start px-8 hover:border-primary/40 hover:bg-primary/5 transition-all group border-2">
                               <Zap className="h-6 w-6 text-primary shrink-0 group-hover:scale-125 transition-transform" />
-                              <div className="flex flex-col items-start min-w-0">
-                                <span className="truncate w-full text-left tracking-tight text-sm">{t.title}</span>
-                                <span className="text-[9px] opacity-40 uppercase tracking-widest mt-1">Iniciar Rito Digital</span>
-                              </div>
+                              <div className="flex flex-col items-start min-w-0"><span className="truncate w-full text-left tracking-tight text-sm">{t.title}</span><span className="text-[9px] opacity-40 uppercase tracking-widest mt-1">Iniciar Rito Digital</span></div>
                             </Button>
                           ))}
                         </div>
@@ -624,10 +578,7 @@ Documento gerado via Inteligência Artificial RGMJ.
                       <div className="flex flex-col lg:flex-row gap-10">
                         <div className="w-full lg:w-96 flex-none space-y-8">
                           <Card className="glass border-primary/20 bg-black/40 rounded-3xl overflow-hidden shadow-2xl">
-                            <div className="p-6 bg-primary/5 border-b border-white/5 flex items-center gap-4">
-                              <ShieldCheck className="h-6 w-6 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
-                              <h4 className="text-xs font-black text-white uppercase tracking-[0.2em]">Integridade de Dados</h4>
-                            </div>
+                            <div className="p-6 bg-primary/5 border-b border-white/5 flex items-center gap-4"><ShieldCheck className="h-6 w-6 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" /><h4 className="text-xs font-black text-white uppercase tracking-[0.2em]">Integridade de Dados</h4></div>
                             <div className="p-6 space-y-5">
                               {[
                                 { label: "Polo Ativo (Qualificação)", ok: !!activeLead.name && !!activeLead.cpf },
@@ -638,115 +589,31 @@ Documento gerado via Inteligência Artificial RGMJ.
                               ].map((audit, i) => (
                                 <div key={i} className="flex items-center justify-between gap-6 p-3 rounded-xl hover:bg-white/5 transition-all group">
                                   <span className="text-xs font-bold text-muted-foreground group-hover:text-white uppercase tracking-wider transition-colors">{audit.label}</span>
-                                  {audit.ok ? (
-                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-6 px-3 text-[10px] font-black uppercase shadow-[0_0_15px_rgba(16,185,129,0.1)]">SANEADO</Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-500 bg-amber-500/5 px-3 h-6 font-black uppercase tracking-widest">PENDENTE</Badge>
-                                  )}
+                                  {audit.ok ? <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-6 px-3 text-[10px] font-black uppercase shadow-[0_0_15px_rgba(16,185,129,0.1)]">SANEADO</Badge> : <Badge variant="outline" className="text-[10px] border-amber-500/20 text-amber-500 bg-amber-500/5 px-3 h-6 font-black uppercase tracking-widest">PENDENTE</Badge>}
                                 </div>
                               ))}
                             </div>
-                          </Card>
-
-                          <Card className="p-8 rounded-3xl border border-white/5 bg-white/[0.01] flex flex-col items-center text-center space-y-6 shadow-2xl">
-                            <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
-                              <FileText className="h-8 w-8 text-muted-foreground opacity-40" />
-                            </div>
-                            <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.25em] leading-relaxed">
-                              O rito de protocolo criará um novo dossiê permanente no acervo de processos ativos RGMJ.
-                            </p>
                           </Card>
                         </div>
 
                         <div className="flex-1 space-y-10">
                           <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 pb-8 gap-6">
-                            <div className="flex items-center gap-6">
-                              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl shadow-primary/5">
-                                <Brain className="h-9 w-9 text-primary animate-pulse" />
-                              </div>
-                              <div>
-                                <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Missão Estratégica</h3>
-                                <p className="text-xs text-muted-foreground uppercase font-black tracking-widest opacity-50">Diagnóstico consolidado via inteligência de elite.</p>
-                              </div>
-                            </div>
-                            <Button 
-                              onClick={handleGenerateStrategicSummary} 
-                              disabled={isGeneratingSummary} 
-                              className="h-16 px-12 gold-gradient text-background font-black uppercase text-sm gap-5 rounded-2xl shadow-[0_20px_50px_rgba(245,208,48,0.2)] transition-all hover:scale-105 active:scale-95 group"
-                            >
-                              {isGeneratingSummary ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6 group-hover:rotate-12 transition-transform" />}
-                              CONSOLIDAR DNA (IA)
-                            </Button>
+                            <div className="flex items-center gap-6"><div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl shadow-primary/5"><Brain className="h-9 w-9 text-primary animate-pulse" /></div><div><h3 className="text-3xl font-black text-white uppercase tracking-tighter">Missão Estratégica</h3><p className="text-xs text-muted-foreground uppercase font-black tracking-widest opacity-50">Diagnóstico consolidado via inteligência de elite.</p></div></div>
+                            <Button onClick={handleGenerateStrategicSummary} disabled={isGeneratingSummary} className="h-16 px-12 gold-gradient text-background font-black uppercase text-sm gap-5 rounded-2xl shadow-[0_20px_50px_rgba(245,208,48,0.2)] transition-all hover:scale-105 active:scale-95 group">{isGeneratingSummary ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6 group-hover:rotate-12 transition-transform" />} CONSOLIDAR DNA (IA)</Button>
                           </div>
 
                           {strategicSummary ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in zoom-in-95 duration-500">
-                              <Card className="glass border-primary/20 bg-primary/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><FileText className="h-16 w-16" /></div>
-                                <div className="flex items-center gap-4">
-                                  <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(245,208,48,0.5)]" />
-                                  <h5 className="text-xs font-black text-primary uppercase tracking-[0.4em]">Fatos Relevantes</h5>
-                                </div>
-                                <p className="text-base text-white/90 leading-relaxed font-serif text-justify italic whitespace-pre-wrap">{strategicSummary.keyFacts}</p>
-                              </Card>
-
-                              <Card className="glass border-emerald-500/20 bg-emerald-500/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp className="h-16 w-16" /></div>
-                                <div className="flex items-center gap-4">
-                                  <div className="w-1.5 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
-                                  <h5 className="text-xs font-black text-emerald-400 uppercase tracking-[0.4em]">Próximos Passos</h5>
-                                </div>
-                                <p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.potentialNextSteps}</p>
-                              </Card>
-
-                              <Card className="glass border-rose-500/20 bg-rose-500/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><AlertCircle className="h-16 w-16" /></div>
-                                <div className="flex items-center gap-4">
-                                  <div className="w-1.5 h-8 bg-rose-500 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
-                                  <h5 className="text-xs font-black text-rose-400 uppercase tracking-[0.4em]">Riscos & Desafios</h5>
-                                </div>
-                                <p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.risksAndChallenges}</p>
-                              </Card>
-
-                              <Card className="glass border-blue-500/20 bg-blue-500/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-16 w-16" /></div>
-                                <div className="flex items-center gap-4">
-                                  <div className="w-1.5 h-8 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
-                                  <h5 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.4em]">Análise Tática Final</h5>
-                                </div>
-                                <p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.strategicAnalysis}</p>
-                              </Card>
+                              <Card className="glass border-primary/20 bg-primary/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group"><div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><FileText className="h-16 w-16" /></div><div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(245,208,48,0.5)]" /><h5 className="text-xs font-black text-primary uppercase tracking-[0.4em]">Fatos Relevantes</h5></div><p className="text-base text-white/90 leading-relaxed font-serif text-justify italic whitespace-pre-wrap">{strategicSummary.keyFacts}</p></Card>
+                              <Card className="glass border-emerald-500/20 bg-emerald-500/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group"><div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp className="h-16 w-16" /></div><div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" /><h5 className="text-xs font-black text-emerald-400 uppercase tracking-[0.4em]">Próximos Passos</h5></div><p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.potentialNextSteps}</p></Card>
+                              <Card className="glass border-rose-500/20 bg-rose-500/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group"><div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><AlertCircle className="h-16 w-16" /></div><div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-rose-500 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)]" /><h5 className="text-xs font-black text-rose-400 uppercase tracking-[0.4em]">Riscos & Desafios</h5></div><p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.risksAndChallenges}</p></Card>
+                              <Card className="glass border-blue-500/20 bg-blue-500/[0.03] p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden group"><div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-16 w-16" /></div><div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]" /><h5 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.4em]">Análise Tática Final</h5></div><p className="text-base text-white/90 leading-relaxed font-medium whitespace-pre-wrap">{strategicSummary.strategicAnalysis}</p></Card>
                             </div>
                           ) : (
-                            <div className="py-56 flex flex-col items-center justify-center space-y-10 glass rounded-[4rem] border-dashed border-2 border-white/5 opacity-30 shadow-inner group">
-                              <div className="relative">
-                                <Brain className="h-24 w-24 text-muted-foreground group-hover:text-primary transition-colors duration-700" />
-                                <div className="absolute -top-4 -right-4"><Sparkles className="h-10 w-10 text-primary animate-pulse" /></div>
-                              </div>
-                              <p className="text-sm font-black uppercase tracking-[0.6em] text-center max-w-[450px] leading-loose">Aguardando comando de inteligência para consolidar os dossiês técnicos da banca.</p>
-                            </div>
+                            <div className="py-56 flex flex-col items-center justify-center space-y-10 glass rounded-[4rem] border-dashed border-2 border-white/5 opacity-30 shadow-inner group"><div className="relative"><Brain className="h-24 w-24 text-muted-foreground group-hover:text-primary transition-colors duration-700" /><div className="absolute -top-4 -right-4"><Sparkles className="h-10 w-10 text-primary animate-pulse" /></div></div><p className="text-sm font-black uppercase tracking-[0.6em] text-center max-w-[450px] leading-loose">Aguardando comando de inteligência para consolidar os dossiês técnicos da banca.</p></div>
                           )}
 
-                          <div className="p-12 rounded-[4rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-12 w-full shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-16 opacity-5 group-hover:opacity-10 transition-all duration-1000 -rotate-12 group-hover:rotate-0"><Scale className="h-72 w-72 text-white" /></div>
-                            <div className="flex-1 space-y-6 w-full relative z-10">
-                              <Label className="text-sm font-black text-purple-400 uppercase tracking-[0.3em] flex items-center gap-5">
-                                <FileCheck className="h-8 w-8" /> PROTOCOLO CNJ (ESTRUTURAÇÃO) *
-                              </Label>
-                              <Input 
-                                placeholder="0000000-00.0000.0.00.0000" 
-                                className="bg-black/60 border-purple-500/30 h-24 text-white font-mono text-4xl font-black w-full tracking-[0.25em] px-12 rounded-3xl focus:ring-4 focus:ring-purple-500/30 shadow-inner transition-all" 
-                                value={activeLead.processNumber || ""} 
-                                onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} 
-                              />
-                            </div>
-                            <Button 
-                              onClick={() => setIsConversionOpen(true)} 
-                              className="gold-gradient text-background font-black h-24 px-20 rounded-3xl uppercase text-lg tracking-[0.4em] shadow-2xl hover:scale-[1.03] transition-all relative z-10 w-full md:w-auto active:scale-95 group"
-                            >
-                              PROTOCOLAR <ChevronRight className="ml-4 h-7 w-7 group-hover:translate-x-3 transition-transform" />
-                            </Button>
-                          </div>
+                          <div className="p-12 rounded-[4rem] bg-purple-500/5 border border-purple-500/20 flex flex-col md:flex-row items-end gap-12 w-full shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative overflow-hidden group"><div className="absolute top-0 right-0 p-16 opacity-5 group-hover:opacity-10 transition-all duration-1000 -rotate-12 group-hover:rotate-0"><Scale className="h-72 w-72 text-white" /></div><div className="flex-1 space-y-6 w-full relative z-10"><Label className="text-sm font-black text-purple-400 uppercase tracking-[0.3em] flex items-center gap-5"><FileCheck className="h-8 w-8" /> PROTOCOLO CNJ (ESTRUTURAÇÃO) *</Label><Input placeholder="0000000-00.0000.0.00.0000" className="bg-black/60 border-purple-500/30 h-24 text-white font-mono text-4xl font-black w-full tracking-[0.25em] px-12 rounded-3xl focus:ring-4 focus:ring-purple-500/30 shadow-inner transition-all" value={activeLead.processNumber || ""} onChange={(e) => setSelectedLead({...activeLead, processNumber: e.target.value})} /></div><Button onClick={() => setIsConversionOpen(true)} className="gold-gradient text-background font-black h-24 px-20 rounded-3xl uppercase text-lg tracking-[0.4em] shadow-2xl hover:scale-[1.03] transition-all relative z-10 w-full md:w-auto active:scale-95 group">PROTOCOLAR <ChevronRight className="ml-4 h-7 w-7 group-hover:translate-x-3 transition-transform" /></Button></div>
                         </div>
                       </div>
                     </TabsContent>
@@ -767,169 +634,28 @@ Documento gerado via Inteligência Artificial RGMJ.
       <Dialog open={!!viewingInterview} onOpenChange={(open) => !open && setViewingInterview(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh]">
           <DialogHeader className="p-6 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none shadow-xl space-y-0 text-left">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><FileSearch className="h-6 w-6 text-primary" /></div>
-              <div>
-                <DialogTitle className="text-white text-xl font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle>
-                <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {interviewAnalysis && (
-                <Button onClick={handleExportToGoogleDocs} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] gap-2.5 h-11 px-6 rounded-lg shadow-lg hover:bg-primary/10">
-                  <FileDown className="h-4 w-4" /> EXPORTAR DOC.NEW
-                </Button>
-              )}
-              <Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button>
-            </div>
+            <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20"><FileSearch className="h-6 w-6 text-primary" /></div><div><DialogTitle className="text-white text-xl font-bold uppercase tracking-widest">{viewingInterview?.interviewType}</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 flex items-center gap-2"><span>DR(A). {viewingInterview?.interviewerName}</span></DialogDescription></div></div>
+            <div className="flex items-center gap-3">{interviewAnalysis && (<Button onClick={handleExportToGoogleDocs} variant="outline" className="glass border-primary/30 text-primary font-black uppercase text-[10px] gap-2.5 h-11 px-6 rounded-lg shadow-lg hover:bg-primary/10"><FileDown className="h-4 w-4" /> EXPORTAR DOC.NEW</Button>)}<Button onClick={() => handleRunInterviewAnalysis(viewingInterview)} disabled={isAiAnalyzing} className="h-11 px-6 gold-gradient text-background font-black uppercase text-[10px] gap-2.5 rounded-lg shadow-lg">{isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} ANALISAR IA</Button></div>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
             <Tabs defaultValue="transcricao" className="h-full flex flex-col">
               <div className="px-6 bg-black/20 border-b border-white/5 flex-none"><TabsList className="bg-transparent h-12 gap-8 p-0"><TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full tracking-widest">Transcrição Técnica</TabsTrigger><TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full tracking-widest">Diagnóstico IA</TabsTrigger></TabsList></div>
               <div className="flex-1 overflow-hidden">
-                <TabsContent value="transcricao" className="h-full mt-0">
-                  <ScrollArea className="h-full">
-                    <div className="p-10 space-y-8 max-w-4xl mx-auto pb-20">
-                      {(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => {
-                        const label = typeof item === 'string' ? item : item.label; 
-                        const answer = viewingInterview?.responses?.[label]; 
-                        if (!answer) return null;
-                        return (
-                          <div key={i} className="space-y-2 group">
-                            <h5 className="text-[9px] font-black text-primary uppercase tracking-[0.2em] group-hover:text-white transition-colors">{label}</h5>
-                            <p className="text-base text-white/90 font-serif leading-relaxed text-justify border-l-2 border-white/5 pl-6 py-1">{String(answer)}</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-                <TabsContent value="analise" className="h-full mt-0">
-                  {isAiAnalyzing ? (
-                    <div className="h-full flex flex-col items-center justify-center space-y-6">
-                      <div className="relative">
-                        <Brain className="h-16 w-16 text-primary animate-pulse" />
-                        <div className="absolute -top-2 -right-2"><Sparkles className="h-6 w-6 text-primary animate-bounce" /></div>
-                      </div>
-                      <p className="text-[11px] font-black text-white uppercase tracking-[0.4em] animate-pulse">Processando Inteligência RGMJ...</p>
-                    </div>
-                  ) : interviewAnalysis ? (
-                    <ScrollArea className="h-full">
-                      <div className="p-10 space-y-10 max-w-5xl mx-auto pb-20">
-                        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-20 w-20" /></div>
-                          <div className="flex items-center gap-3 mb-6">
-                            <div className="w-1.5 h-6 bg-primary rounded-full" />
-                            <h5 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Resumo Executivo dos Fatos</h5>
-                          </div>
-                          <p className="text-lg text-white font-serif leading-loose text-justify italic whitespace-pre-wrap">
-                            {interviewAnalysis.summary}
-                          </p>
-                        </Card>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-xl">
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-1.5 h-6 bg-rose-500 rounded-full" />
-                              <h5 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em]">Teses & Riscos Processuais</h5>
-                            </div>
-                            <p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">
-                              {interviewAnalysis.legalAnalysis}
-                            </p>
-                          </Card>
-
-                          <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl shadow-xl">
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
-                              <h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em]">Recomendações & Provas</h5>
-                            </div>
-                            <p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">
-                              {interviewAnalysis.recommendations}
-                            </p>
-                          </Card>
-                        </div>
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4">
-                      <Sparkles className="h-16 w-16" />
-                      <p className="text-[11px] font-black uppercase tracking-[0.5em]">Aguardando Comando de Inteligência</p>
-                    </div>
-                  )}
-                </TabsContent>
+                <TabsContent value="transcricao" className="h-full mt-0"><ScrollArea className="h-full"><div className="p-10 space-y-8 max-w-4xl mx-auto pb-20">{(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => { const label = typeof item === 'string' ? item : item.label; const answer = viewingInterview?.responses?.[label]; if (!answer) return null; return (<div key={i} className="space-y-2 group"><h5 className="text-[9px] font-black text-primary uppercase tracking-[0.2em] group-hover:text-white transition-colors">{label}</h5><p className="text-base text-white/90 font-serif leading-relaxed text-justify border-l-2 border-white/5 pl-6 py-1">{String(answer)}</p></div>) })}</div></ScrollArea></TabsContent>
+                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-6"><div className="relative"><Brain className="h-16 w-16 text-primary animate-pulse" /><div className="absolute -top-2 -right-2"><Sparkles className="h-6 w-6 text-primary animate-bounce" /></div></div><p className="text-[11px] font-black text-white uppercase tracking-[0.4em] animate-pulse">Processando Inteligência RGMJ...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full"><div className="p-10 space-y-10 max-w-5xl mx-auto pb-20"><Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden"><div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-20 w-20" /></div><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-primary rounded-full" /><h5 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Resumo Executivo dos Fatos</h5></div><p className="text-lg text-white font-serif leading-loose text-justify italic whitespace-pre-wrap">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-xl"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-rose-500 rounded-full" /><h5 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em]">Teses & Riscos Processuais</h5></div><p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl shadow-xl"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-emerald-500 rounded-full" /><h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em]">Recomendações & Provas</h5></div><p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4"><Sparkles className="h-16 w-16" /><p className="text-[11px] font-black uppercase tracking-[0.5em]">Aguardando Comando de Inteligência</p></div>)}</TabsContent>
               </div>
             </Tabs>
           </div>
-          <DialogFooter className="p-6 bg-black/40 border-t border-white/5 flex-none">
-            <Button onClick={() => setViewingInterview(null)} className="h-12 px-10 glass border-white/10 text-white font-black uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5 transition-all">FECHAR DOSSIÊ</Button>
-          </DialogFooter>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5 flex-none"><Button onClick={() => setViewingInterview(null)} className="h-12 px-10 glass border-white/10 text-white font-black uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5 transition-all">FECHAR DOSSIÊ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 text-left">
-            <DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle>
-            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Rito de captura de DNA jurídico RGMJ.</DialogDescription>
-          </DialogHeader>
-          {executingTemplate && (<DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />)}
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]">
-          <DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none text-left">
-            <DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle>
-            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Conversão estratégica de Lead em Processo Judicial.</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 min-h-0">{activeLead && (<ProcessForm initialData={{ clientName: activeLead.name, clientId: activeLead.id, defendantName: activeLead.defendantName, caseType: activeLead.type, court: activeLead.court, vara: activeLead.vara, processNumber: activeLead.processNumber || "", responsibleStaffId: user?.uid }} onSubmit={handleConvertProcess} onCancel={() => setIsConversionOpen(false)} />)}</div>
-        </DialogContent>
-      </Dialog>
-      
+      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 text-left"><DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Rito de captura de DNA jurídico RGMJ.</DialogDescription></DialogHeader>{executingTemplate && (<DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />)}</DialogContent></Dialog>
+      <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none text-left"><DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Conversão estratégica de Lead em Processo Judicial.</DialogDescription></DialogHeader><div className="flex-1 min-h-0">{activeLead && (<ProcessForm initialData={{ clientName: activeLead.name, clientId: activeLead.id, defendantName: activeLead.defendantName, caseType: activeLead.type, court: activeLead.court, vara: activeLead.vara, processNumber: activeLead.processNumber || "", responsibleStaffId: user?.uid }} onSubmit={handleConvertProcess} onCancel={() => setIsConversionOpen(false)} />)}</div></DialogContent></Dialog>
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={handleCreateLead} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle></SheetHeader><div className="flex-1 min-h-0">{activeLead && (<LeadForm existingLeads={[]} initialData={activeLead} lockMode={true} onSubmit={async (data) => { await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() }); setIsEditModeOpen(false); toast({ title: "Qualificação Atualizada" }) }} onSelectExisting={() => {}} onCancel={() => setIsEditModeOpen(false)} />)}</div></SheetContent></Sheet>
       
-      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5">
-            <DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left">
-              <Clock className="h-6 w-6 text-amber-500" />
-              <div>
-                <DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle>
-                <DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure a data e hora do rito de triagem.</DialogDescription>
-              </div>
-            </DialogHeader>
-          </div>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label>
-                  <Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label>
-                  <Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label>
-                <Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}>
-                  <SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[#0d121f] text-white">
-                    <SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem>
-                    <SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </ScrollArea>
-          <DialogFooter className="p-6 bg-black/40 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button>
-            <Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}><DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl"><div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Clock className="h-6 w-6 text-amber-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle><DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure a data e hora do rito de triagem.</DialogDescription></div></DialogHeader></div><ScrollArea className="max-h-[60vh]"><div className="p-8 space-y-6"><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} /></div></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label><Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}><SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem><SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem></SelectContent></Select></div></div></ScrollArea><DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button></DialogFooter></DialogContent></Dialog>
     </div>
   )
 }

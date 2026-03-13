@@ -37,6 +37,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
+    "AuditLog": {
+      "title": "AuditLog",
+      "type": "object",
+      "description": "Security log for traceability of all critical actions.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string", "enum": ["create", "update", "delete", "login", "export"] },
+        "collection": { "type": "string" },
+        "docId": { "type": "string" },
+        "ip": { "type": "string" },
+        "metadata": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "Interview": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Interview",
@@ -139,6 +155,7 @@
   },
   "firestore": {
     "/notifications/{notificationId}": { "schema": { "$ref": "#/backend/entities/Notification" }, "description": "User notifications." },
+    "/audit_logs/{logId}": { "schema": { "$ref": "#/backend/entities/AuditLog" }, "description": "Security audit logs." },
     "/staff_profiles/{staffId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff access and roles." },
     "/employees/{employeeId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Detailed DP records." },
     "/clients/{clientId}": { "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." },
