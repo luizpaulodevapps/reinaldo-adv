@@ -28,7 +28,12 @@ import {
   Lock,
   Smartphone,
   CheckCircle2,
-  Crown
+  Crown,
+  Calendar,
+  Wallet,
+  Scale,
+  CreditCard,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -160,6 +165,14 @@ export default function StaffPage() {
     toast({ title: "Convite Copiado!" })
   }
 
+  const handleDeleteStaff = (id: string) => {
+    if (!db || !confirm("Revogar este acesso permanentemente?")) return
+    deleteDocumentNonBlocking(doc(db!, "employees", id))
+    deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
+    toast({ variant: "destructive", title: "Acesso Revogado" })
+    setIsViewOpen(false)
+  }
+
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 block"
   const inputClass = "bg-black/40 border-white/10 h-12 text-white font-bold uppercase focus:ring-primary/50 rounded-xl"
 
@@ -178,7 +191,7 @@ export default function StaffPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {isLoading ? (
           <div className="col-span-full py-32 flex flex-col items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
         ) : filtered.length > 0 ? (
@@ -196,7 +209,13 @@ export default function StaffPage() {
                   </div>
                 </div>
                 <div className="space-y-1"><h3 className="text-xl font-black text-white uppercase truncate group-hover:text-primary transition-colors">{staff.name}</h3><div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase"><Mail className="h-3 w-3 opacity-40" /> {staff.email}</div></div>
-                <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-4"><div className="flex gap-2"><Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white"><Eye className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={(e) => { e.stopPropagation(); setEditingStaff(staff); setFormData({...formData, ...staff, createSystemAccess: false}); setIsDialogOpen(true); }}><Settings2 className="h-4 w-4" /></Button></div><span className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> {staff.status}</span></div>
+                <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-4">
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-white rounded-xl bg-white/5" onClick={(e) => { e.stopPropagation(); setViewingStaff(staff); setIsViewOpen(true); }}><Eye className="h-5 w-5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-primary rounded-xl bg-white/5" onClick={(e) => { e.stopPropagation(); setEditingStaff(staff); setFormData({...formData, ...staff, createSystemAccess: false}); setIsDialogOpen(true); }}><Settings2 className="h-5 w-5" /></Button>
+                  </div>
+                  <span className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> {staff.status}</span>
+                </div>
               </CardContent>
             </Card>
           ))
@@ -207,7 +226,15 @@ export default function StaffPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between"><DialogHeader className="text-left space-y-1"><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-60">REGISTRO DE DADOS E NÍVEIS DE ACESSO.</DialogDescription></DialogHeader><div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><UserCheck className="h-6 w-6" /></div></div>
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+            <DialogHeader className="text-left space-y-1">
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}</DialogTitle>
+              <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-60">REGISTRO DE DADOS E NÍVEIS DE ACESSO.</DialogDescription>
+            </DialogHeader>
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+              <UserCheck className="h-6 w-6" />
+            </div>
+          </div>
           <ScrollArea className="max-h-[70vh]"><div className="p-10 space-y-10 bg-[#0a0f1e]/50">
             <div className="space-y-6"><div className="flex items-center gap-3 pb-2 border-b border-white/5"><Briefcase className="h-4 w-4 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Contrato & Função</h4></div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -237,6 +264,121 @@ export default function StaffPage() {
             </div>
           </div></ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between"><Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button><Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">SALVAR REGISTRO</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] font-sans rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-xl">
+            <div className="flex items-center gap-6">
+              <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-2xl">
+                <AvatarFallback className="bg-secondary text-2xl font-black text-primary uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="text-left space-y-1">
+                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
+                <div className="flex items-center gap-3 pt-2">
+                  <Badge className="bg-primary text-background font-black uppercase text-[9px] px-3">{viewingStaff?.role}</Badge>
+                  {viewingStaff?.isOwner && <Badge className="bg-emerald-500 text-white font-black uppercase text-[9px] px-3">SÓCIO FUNDADOR</Badge>}
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">• {viewingStaff?.status}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 pr-8">
+              <Button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff}); setIsDialogOpen(true); setIsViewOpen(false); }} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-white/5">
+                <Settings2 className="h-4 w-4 mr-2" /> EDITAR
+              </Button>
+              <Button onClick={() => handleDeleteStaff(viewingStaff.id)} variant="ghost" className="h-11 w-11 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-10 space-y-10 pb-32">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                    <Fingerprint className="h-4 w-4 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Identidade & Contato</h4>
+                  </div>
+                  <Card className="glass border-white/5 p-6 rounded-2xl bg-white/[0.01] space-y-6 shadow-lg">
+                    <div className="space-y-1">
+                      <Label className={labelMini}>E-mail de Acesso</Label>
+                      <p className="text-sm font-bold text-white lowercase flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-primary/40" /> {viewingStaff?.email}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className={labelMini}>WhatsApp</Label>
+                        <p className="text-sm font-bold text-white">{viewingStaff?.phone || '---'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className={labelMini}>CPF</Label>
+                        <p className="text-sm font-mono font-bold text-white">{viewingStaff?.cpf || '---'}</p>
+                      </div>
+                    </div>
+                    {viewingStaff?.oabNumber && (
+                      <div className="space-y-1">
+                        <Label className={labelMini}>Inscrição OAB</Label>
+                        <p className="text-sm font-bold text-white uppercase">{viewingStaff.oabNumber}</p>
+                      </div>
+                    )}
+                  </Card>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                    <Wallet className="h-4 w-4 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Dossiê Financeiro</h4>
+                  </div>
+                  <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl space-y-6 shadow-xl">
+                    <div className="space-y-1">
+                      <Label className={labelMini}>Modalidade de Contrato</Label>
+                      <p className="text-sm font-black text-white uppercase">{viewingStaff?.paymentType}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className={labelMini}>Remuneração Base</Label>
+                        <p className="text-lg font-black text-white tabular-nums">R$ {Number(viewingStaff?.baseSalary || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className={labelMini}>Participação %</Label>
+                        <p className="text-lg font-black text-primary tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-white/10">
+                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-tight">O sistema projeta honorários automaticamente com base nestes parâmetros.</p>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Cronologia RGMJ</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="glass border-white/5 p-5 rounded-xl bg-white/[0.01] flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground"><Plus className="h-5 w-5" /></div>
+                    <div><Label className={labelMini}>Admissão</Label><p className="text-xs font-bold text-white">{viewingStaff?.hiringDate || '---'}</p></div>
+                  </Card>
+                  <Card className="glass border-white/5 p-5 rounded-xl bg-white/[0.01] flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground"><Settings2 className="h-5 w-5" /></div>
+                    <div><Label className={labelMini}>Última Alteração</Label><p className="text-xs font-bold text-white">{viewingStaff?.updatedAt?.toDate ? new Date(viewingStaff.updatedAt.toDate()).toLocaleDateString() : '---'}</p></div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-3">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" /> Perfil Técnico Auditado
+            </span>
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">
+              FECHAR DOSSIÊ
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
