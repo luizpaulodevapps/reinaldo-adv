@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
-import { format, parseISO, isBefore, startOfDay } from "date-fns"
+import { format, parseISO, isBefore, startOfDay, isAfter, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -35,7 +35,13 @@ export default function DiligenciasSubpage() {
 
   const activeDiligences = useMemo(() => {
     if (!diligences) return []
-    return diligences.filter(d => d.status !== "Concluída")
+    const today = startOfDay(new Date())
+    return diligences
+      .filter(d => d.status !== "Concluída")
+      .filter(d => {
+        const date = d.dueDate ? parseISO(d.dueDate) : null
+        return date && (isSameDay(date, today) || isAfter(date, today) || isBefore(date, today))
+      })
   }, [diligences])
 
   const handleComplete = (id: string) => {
@@ -50,6 +56,13 @@ export default function DiligenciasSubpage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Pauta de Atos Externos</h2>
+        <Badge variant="outline" className="text-[10px] font-black border-blue-500/30 text-blue-400 bg-blue-500/5 px-4 h-8 uppercase tracking-widest">
+          {activeDiligences.length} Atribuições Ativas
+        </Badge>
+      </div>
+
       {isLoading ? (
         <div className="py-32 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />

@@ -26,7 +26,8 @@ import {
   History,
   Info,
   Trash2,
-  Edit3
+  Edit3,
+  Gavel
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
@@ -75,10 +76,6 @@ export default function MasterAgendaPage() {
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
-
-  // Sincronismo Real com Google Settings
-  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
-  const { data: googleConfig } = useDoc(googleSettingsRef)
 
   const hearingsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -155,7 +152,6 @@ export default function MasterAgendaPage() {
     if (!db || !newEventData.title || !newEventData.date || !newEventData.time) return
     const startDateTime = `${newEventData.date}T${newEventData.time}:00`
     
-    // Na criação ou edição, o tipo define a coleção apenas na criação inicial se não estiver definido
     const collectionName = newEventData.type === 'Audiência' ? 'hearings' : 'appointments'
     
     const payload: any = {
@@ -166,7 +162,6 @@ export default function MasterAgendaPage() {
       updatedAt: serverTimestamp()
     }
 
-    // Mapeia data/hora corretamente dependendo da coleção
     if (collectionName === 'hearings' || collectionName === 'appointments') {
       payload.startDateTime = startDateTime
     } else {
@@ -221,7 +216,7 @@ export default function MasterAgendaPage() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-10 animate-in fade-in duration-1000">
       <div className="xl:col-span-3 space-y-6">
-        <div className="flex items-center justify-between bg-white/[0.02] p-6 rounded-2xl border border-white/5">
+        <div className="flex flex-col md:flex-row items-center justify-between bg-white/[0.02] p-6 rounded-2xl border border-white/5 gap-6">
           <div className="flex items-center gap-6">
             <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
@@ -232,6 +227,22 @@ export default function MasterAgendaPage() {
               <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-primary/10 hover:text-primary" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-6 w-6" /></Button>
             </div>
           </div>
+
+          <div className="flex items-center gap-8 bg-black/20 px-6 py-3 rounded-xl border border-white/5 shadow-inner">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Audiências</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,208,48,0.6)]" />
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Prazos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Atendimentos</span>
+            </div>
+          </div>
+
           <Button onClick={handleManualSync} disabled={syncing} variant="outline" className="glass border-white/10 h-10 px-6 gap-3 text-[10px] font-black uppercase tracking-widest">
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 text-primary" />} Sincronizar
           </Button>
@@ -262,13 +273,16 @@ export default function MasterAgendaPage() {
                     isSelected && "bg-primary/[0.03] ring-1 ring-inset ring-primary/30"
                   )}
                 >
-                  <span className={cn("text-xs font-black transition-colors", isSelected ? "text-primary scale-125 inline-block" : "text-muted-foreground group-hover:text-white")}>
+                  <span className={cn(
+                    "text-xs font-black transition-all", 
+                    isSelected ? "text-primary scale-125 inline-block" : "text-muted-foreground group-hover:text-white"
+                  )}>
                     {format(day, "d")}
                   </span>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {hasHearing && <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />}
-                    {hasDeadline && <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,208,48,0.6)]" />}
-                    {hasAppointment && <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />}
+                    {hasHearing && <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />}
+                    {hasDeadline && <div className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_rgba(245,208,48,0.8)]" />}
+                    {hasAppointment && <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]" />}
                   </div>
                 </div>
               )
@@ -293,14 +307,17 @@ export default function MasterAgendaPage() {
               selectedDayEvents.map((event, idx) => (
                 <Card 
                   key={idx} 
-                  className="glass border-l-4 border-l-primary/50 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer"
+                  className={cn(
+                    "glass border-l-4 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer",
+                    event.eventType === 'audiencia' ? 'border-l-rose-500' : event.eventType === 'atendimento' ? 'border-l-amber-500' : 'border-l-primary'
+                  )}
                   onClick={() => setViewingEvent(event)}
                 >
                   <CardContent className="p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <Badge className={cn(
                         "text-[8px] font-black uppercase tracking-widest px-2 h-5 border-0",
-                        event.eventType === 'audiencia' ? 'bg-rose-500 text-white' : event.eventType === 'atendimento' ? 'bg-amber-500 text-background' : 'bg-white/10 text-white'
+                        event.eventType === 'audiencia' ? 'bg-rose-500 text-white' : event.eventType === 'atendimento' ? 'bg-amber-500 text-background' : 'bg-primary text-background'
                       )}>
                         {event.eventType === 'audiencia' ? 'Audiência' : event.eventType === 'atendimento' ? 'Atendimento' : 'Prazo'}
                       </Badge>

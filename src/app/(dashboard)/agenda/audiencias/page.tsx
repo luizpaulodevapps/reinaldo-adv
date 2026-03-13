@@ -15,7 +15,8 @@ import {
   ExternalLink,
   MoreVertical,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Scale
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
@@ -36,14 +37,23 @@ export default function AudienciasSubpage() {
   const upcomingHearings = useMemo(() => {
     if (!hearings) return []
     const today = startOfDay(new Date())
-    return hearings.filter(h => {
-      const date = h.startDateTime ? parseISO(h.startDateTime) : null
-      return date && (isSameDay(date, today) || isAfter(date, today))
-    })
+    return hearings
+      .filter(h => {
+        const date = h.startDateTime ? parseISO(h.startDateTime) : null
+        return date && (isSameDay(date, today) || isAfter(date, today))
+      })
+      .filter(h => h.status !== "Realizada")
   }, [hearings])
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Pauta de Audiências Futuras</h2>
+        <Badge variant="outline" className="text-[10px] font-black border-rose-500/30 text-rose-500 bg-rose-500/5 px-4 h-8 uppercase tracking-widest">
+          {upcomingHearings.length} Atos Pendentes
+        </Badge>
+      </div>
+
       {isLoading ? (
         <div className="py-32 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -52,14 +62,14 @@ export default function AudienciasSubpage() {
       ) : upcomingHearings.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           {upcomingHearings.map((h) => {
-            const date = parseISO(h.startDateTime)
+            const date = h.startDateTime ? parseISO(h.startDateTime) : null
             return (
               <Card key={h.id} className="glass border-white/5 hover-gold transition-all group overflow-hidden rounded-2xl">
                 <CardContent className="p-0 flex flex-col md:flex-row">
                   <div className="p-8 md:w-40 flex flex-col items-center justify-center bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/5 group-hover:bg-primary/5 transition-all">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase mb-1">{format(date, "MMM", { locale: ptBR }).toUpperCase()}</span>
-                    <span className="text-3xl font-black text-white">{format(date, "dd")}</span>
-                    <span className="text-[10px] font-mono font-bold text-primary mt-2">{format(date, "HH:mm")}</span>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase mb-1">{date ? format(date, "MMM", { locale: ptBR }).toUpperCase() : "---"}</span>
+                    <span className="text-3xl font-black text-white">{date ? format(date, "dd") : "--"}</span>
+                    <span className="text-[10px] font-mono font-bold text-primary mt-2">{date ? format(date, "HH:mm") : "--:--"}</span>
                   </div>
                   
                   <div className="flex-1 p-8 space-y-4">

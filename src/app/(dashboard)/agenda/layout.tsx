@@ -18,10 +18,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 const tabs = [
-  { name: "CALENDÁRIO", href: "/agenda", icon: CalendarDays },
-  { name: "AUDIÊNCIAS", href: "/agenda/audiencias", icon: Gavel },
-  { name: "PRAZOS", href: "/agenda/prazos", icon: Clock },
-  { name: "DILIGÊNCIAS", href: "/agenda/diligencias", icon: Navigation },
+  { name: "AGENDA GERAL", href: "/agenda", icon: CalendarDays },
+  { name: "PRÓXIMAS AUDIÊNCIAS", href: "/agenda/audiencias", icon: Gavel },
+  { name: "PRÓXIMOS PRAZOS", href: "/agenda/prazos", icon: Clock },
+  { name: "PRÓXIMAS DILIGÊNCIAS", href: "/agenda/diligencias", icon: Navigation },
   { name: "ROTINAS", href: "/agenda/rotinas", icon: ClipboardList },
 ]
 
@@ -59,7 +59,7 @@ export default function AgendaLayout({ children }: { children: React.ReactNode }
         {tabs.map((tab) => {
           const isActive = pathname === tab.href
           return (
-            <Link key={tab.href} href={tab.href} className="flex-1 min-w-[140px] h-full">
+            <Link key={tab.href} href={tab.href} className="flex-1 min-w-[180px] h-full">
               <button
                 className={cn(
                   "w-full h-full rounded-lg text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all",

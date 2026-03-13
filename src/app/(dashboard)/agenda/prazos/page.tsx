@@ -16,8 +16,8 @@ import {
   Scale
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
-import { format, parseISO, isBefore, startOfDay } from "date-fns"
+import { collection, query, orderBy } from "firebase/firestore"
+import { format, parseISO, isBefore, startOfDay, isAfter, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -35,7 +35,13 @@ export default function PrazosSubpage() {
 
   const activeDeadlines = useMemo(() => {
     if (!deadlines) return []
-    return deadlines.filter(d => d.status === "Aberto")
+    const today = startOfDay(new Date())
+    return deadlines
+      .filter(d => d.status === "Aberto")
+      .filter(d => {
+        const date = d.dueDate ? parseISO(d.dueDate) : null
+        return date && (isSameDay(date, today) || isAfter(date, today) || isBefore(date, today))
+      })
   }, [deadlines])
 
   const handleMarkAsDone = (id: string) => {
@@ -49,6 +55,13 @@ export default function PrazosSubpage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Radar de Prazos Fatais</h2>
+        <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary bg-primary/5 px-4 h-8 uppercase tracking-widest">
+          {activeDeadlines.length} Termos em Aberto
+        </Badge>
+      </div>
+
       {isLoading ? (
         <div className="py-32 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
