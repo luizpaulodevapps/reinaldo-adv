@@ -24,7 +24,13 @@ import {
   Save,
   AlertCircle,
   MapPin,
-  Home
+  Home,
+  Eye,
+  History,
+  DollarSign,
+  Wallet,
+  Building2,
+  ClipboardList
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,11 +38,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn, maskPhone, maskCPF, maskCEP } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 
 const STAFF_ROLES = [
@@ -58,6 +65,8 @@ const BRAZIL_STATES = [
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isViewOpen, setIsViewOpen] = useState(false)
+  const [viewingStaff, setViewingStaff] = useState<any>(null)
   const [editingStaff, setEditingStaff] = useState<any>(null)
   const [loadingCep, setLoadingCep] = useState(false)
 
@@ -92,6 +101,17 @@ export default function StaffPage() {
   }, [db, user])
 
   const { data: employees, isLoading } = useCollection(staffQuery)
+
+  // Query para financeiro do colaborador visualizado
+  const staffFinancialQuery = useMemoFirebase(() => {
+    if (!db || !viewingStaff) return null
+    return query(
+      collection(db, "financial_titles"),
+      where("entityName", "==", viewingStaff.name),
+      orderBy("dueDate", "desc")
+    )
+  }, [db, viewingStaff])
+  const { data: staffTransactions, isLoading: isLoadingFinance } = useCollection(staffFinancialQuery)
 
   const filtered = useMemo(() => {
     if (!employees) return []
@@ -135,7 +155,6 @@ export default function StaffPage() {
       return
     }
 
-    // Validação OAB
     if (currentRoleConfig?.oabRequired && !formData.oabNumber) {
       toast({ variant: "destructive", title: "OAB Obrigatória", description: "Advogados devem possuir registro na ordem." })
       return
@@ -174,6 +193,11 @@ export default function StaffPage() {
       hiringDate: staff.hiringDate || new Date().toISOString().split('T')[0]
     })
     setIsDialogOpen(true)
+  }
+
+  const handleOpenView = (staff: any) => {
+    setViewingStaff(staff)
+    setIsViewOpen(true)
   }
 
   const handleOpenCreate = () => {
@@ -245,7 +269,7 @@ export default function StaffPage() {
           </div>
         ) : filtered.length > 0 ? (
           filtered.map((staff) => (
-            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all group overflow-hidden shadow-2xl rounded-2xl">
+            <Card key={staff.id} className="glass border-primary/10 hover-gold transition-all group overflow-hidden shadow-2xl rounded-2xl cursor-pointer" onClick={() => handleOpenView(staff)}>
               <CardContent className="p-8 space-y-6">
                 <div className="flex items-start justify-between">
                   <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-xl">
@@ -283,7 +307,15 @@ export default function StaffPage() {
                       variant="ghost" 
                       size="icon" 
                       className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                      onClick={() => handleOpenEdit(staff)}
+                      onClick={(e) => { e.stopPropagation(); handleOpenView(staff); }}
+                    >
+                      <Eye className="h-4.5 w-4.5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
+                      onClick={(e) => { e.stopPropagation(); handleOpenEdit(staff); }}
                     >
                       <Settings2 className="h-4.5 w-4.5" />
                     </Button>
@@ -292,7 +324,7 @@ export default function StaffPage() {
                         variant="ghost" 
                         size="icon" 
                         className="h-9 w-9 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-white/20"
-                        onClick={() => handleDelete(staff.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(staff.id); }}
                       >
                         <Trash2 className="h-4.5 w-4.5" />
                       </Button>
@@ -316,6 +348,166 @@ export default function StaffPage() {
         )}
       </div>
 
+      {/* DIÁLOGO DE VISUALIZAÇÃO PROFUNDA (VIEW) */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between shadow-xl flex-none">
+            <div className="flex items-center gap-6">
+              <Avatar className="h-16 w-16 border-2 border-primary/20">
+                <AvatarFallback className="bg-secondary text-primary font-black text-xl uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
+                <div className="flex items-center gap-3 mt-2">
+                  <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingStaff?.role}</Badge>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Dossiê Técnico RGMJ</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={() => handleOpenEdit(viewingStaff)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-primary hover:text-background transition-all">
+                <Settings2 className="h-4 w-4 mr-2" /> EDITAR
+              </Button>
+              <Button onClick={() => setIsViewOpen(false)} variant="ghost" className="h-11 w-11 rounded-xl text-muted-foreground hover:text-white">
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            <Tabs defaultValue="ficha" className="h-full flex flex-col">
+              <div className="px-8 bg-[#0a0f1e]/50 border-b border-white/5 flex-none">
+                <TabsList className="bg-transparent h-12 gap-8 p-0">
+                  <TabsTrigger value="ficha" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest gap-2"><UserCheck className="h-3.5 w-3.5" /> DOSSIÊ GERAL</TabsTrigger>
+                  <TabsTrigger value="historico" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest gap-2"><History className="h-3.5 w-3.5" /> CARREIRA</TabsTrigger>
+                  <TabsTrigger value="financeiro" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary tracking-widest gap-2"><DollarSign className="h-3.5 w-3.5" /> FINANCEIRO</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-10 space-y-10">
+                    
+                    <TabsContent value="ficha" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
+                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                            <Fingerprint className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Identidade e Qualificação</h4>
+                          </div>
+                          <div className="grid grid-cols-1 gap-4">
+                            <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">CPF</Label><p className="text-sm font-bold text-white font-mono">{viewingStaff?.cpf || "Não informado"}</p></div>
+                            <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">OAB</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.oabNumber ? `${viewingStaff.oabNumber}/${viewingStaff.oabState}` : "Sem registro de ordem"}</p></div>
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Telefone</Label><p className="text-sm font-bold text-white">{viewingStaff?.phone || "---"}</p></div>
+                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">E-mail</Label><p className="text-sm font-bold text-white lowercase">{viewingStaff?.email || "---"}</p></div>
+                            </div>
+                          </div>
+                        </Card>
+
+                        <Card className="glass bg-white/[0.01] border-white/5 p-6 rounded-2xl space-y-6">
+                          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Endereço Residencial</h4>
+                          </div>
+                          <div className="space-y-4">
+                            <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Logradouro</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.address || "Não informado"}{viewingStaff?.number && `, ${viewingStaff.number}`}</p></div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Bairro</Label><p className="text-xs font-bold text-white uppercase">{viewingStaff?.neighborhood || "---"}</p></div>
+                              <div><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">Cidade/UF</Label><p className="text-xs font-bold text-white uppercase">{viewingStaff?.city} / {viewingStaff?.state}</p></div>
+                            </div>
+                            <div className="pt-4 border-t border-white/5"><Label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block">CEP</Label><p className="text-sm font-mono text-white/60">{viewingStaff?.zipCode || "---"}</p></div>
+                          </div>
+                        </Card>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="historico" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                      <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-3xl space-y-8 shadow-xl">
+                        <div className="flex items-center gap-4">
+                          <ClipboardList className="h-6 w-6 text-primary" />
+                          <h3 className="text-lg font-bold text-white uppercase tracking-widest">Informações Contratuais</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Data de Admissão</Label>
+                            <p className="text-2xl font-black text-white">{viewingStaff?.hiringDate ? new Date(viewingStaff.hiringDate).toLocaleDateString('pt-BR') : "---"}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Cargo Atual</Label>
+                            <p className="text-2xl font-black text-white uppercase">{viewingStaff?.role}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Status Operacional</Label>
+                            <Badge className="bg-emerald-500/20 text-emerald-500 border-0 h-8 px-4 text-[11px] font-black uppercase tracking-widest">{viewingStaff?.status}</Badge>
+                          </div>
+                        </div>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="financeiro" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-4">
+                          <Wallet className="h-6 w-6 text-primary" />
+                          <h3 className="text-base font-bold text-white uppercase tracking-widest">Extrato de Honorários e Repasses</h3>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] font-black border-emerald-500/30 text-emerald-500 bg-emerald-500/5 uppercase">SINC. FINANCEIRA OK</Badge>
+                      </div>
+
+                      {isLoadingFinance ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                      ) : staffTransactions && staffTransactions.length > 0 ? (
+                        <div className="divide-y divide-white/5 glass border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+                          {staffTransactions.map(t => (
+                            <div key={t.id} className="p-6 flex items-center justify-between hover:bg-white/[0.02] transition-all group">
+                              <div className="flex items-center gap-6">
+                                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-lg">
+                                  <DollarSign className="h-6 w-6" />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-white uppercase tracking-tight">{t.description}</h4>
+                                  <div className="flex items-center gap-4 mt-1.5">
+                                    <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase">{t.category}</Badge>
+                                    <span className="text-[9px] text-muted-foreground font-mono">VENC: {t.dueDate}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-black text-emerald-400 tabular-nums">R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                <Badge className={cn(
+                                  "text-[8px] font-black uppercase mt-1",
+                                  t.status === 'Pago' || t.status === 'Recebido' ? "bg-emerald-500/10 text-emerald-500 border-0" : "bg-amber-500/10 text-amber-500 border-0"
+                                )}>{t.status}</Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-32 flex flex-col items-center justify-center opacity-20 space-y-6 glass rounded-3xl border-dashed border-2 border-white/5">
+                          <DollarSign className="h-16 w-16 text-muted-foreground" />
+                          <p className="text-[10px] font-black uppercase tracking-[0.4em]">Nenhum repasse registrado para este nome</p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                  </div>
+                </ScrollArea>
+              </div>
+            </Tabs>
+          </div>
+
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
+            <div className="flex items-center gap-4">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Base de Dados Permanente RGMJ</span>
+            </div>
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">
+              FECHAR DOSSIÊ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl">
@@ -335,7 +527,6 @@ export default function StaffPage() {
           <ScrollArea className="max-h-[70vh]">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
               
-              {/* Seção 1: Identificação e Cargo */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Briefcase className="h-4 w-4 text-primary" />
@@ -367,7 +558,6 @@ export default function StaffPage() {
                 </div>
               </div>
 
-              {/* Seção 2: Dados de Ordem (Condicional) */}
               {(currentRoleConfig?.isLegal) && (
                 <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 shadow-inner animate-in slide-in-from-top-4 duration-500">
                   <div className="flex items-center justify-between">
@@ -402,7 +592,6 @@ export default function StaffPage() {
                 </div>
               )}
 
-              {/* Seção 3: Identificação e Contato */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Fingerprint className="h-4 w-4 text-primary" />
@@ -439,7 +628,6 @@ export default function StaffPage() {
                 </div>
               </div>
 
-              {/* Seção 4: Endereço Residencial (Opcional) */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Home className="h-4 w-4 text-primary" />
@@ -511,7 +699,6 @@ export default function StaffPage() {
                 </div>
               </div>
 
-              {/* Seção 5: Dados Contratuais */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Calendar className="h-4 w-4 text-primary" />
