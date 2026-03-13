@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -22,20 +22,12 @@ import {
   UserCheck,
   X,
   Save,
-  AlertCircle,
   MapPin,
-  Home,
   Eye,
-  History,
   DollarSign,
   Wallet,
-  Building2,
-  ClipboardList,
-  MessageCircle,
-  ExternalLink,
-  TrendingUp,
-  Percent,
-  Landmark
+  Landmark,
+  Percent
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -250,10 +242,10 @@ export default function StaffPage() {
             <Users2 className="h-3.5 w-3.5" />
             <Link href="/" className="hover:text-primary transition-colors">Início</Link>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Departamento Pessoal</span>
+            <span className="text-white uppercase tracking-tighter">Corpo Técnico & Administrativo</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter">Gestão de Equipe</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">ADMINISTRAÇÃO DE CAPITAL HUMANO RGMJ.</p>
+          <h1 className="text-5xl font-black text-white tracking-tight uppercase tracking-tighter">Equipe RGMJ</h1>
+          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">ADMINISTRAÇÃO DE CAPITAL HUMANO DA BANCA.</p>
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
@@ -281,7 +273,7 @@ export default function StaffPage() {
         {isLoading ? (
           <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando D.P...</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sincronizando Equipe...</span>
           </div>
         ) : filtered.length > 0 ? (
           filtered.map((staff) => (
@@ -565,7 +557,7 @@ export default function StaffPage() {
               </div>
 
               <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
-                <div className="flex items-center gap-3 border-b border-primary/10 pb-4">
+                <div className="flex items-center gap-3 border-primary/10 pb-4">
                   <Landmark className="h-5 w-5 text-primary" />
                   <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Modelo de Remuneração</h4>
                 </div>

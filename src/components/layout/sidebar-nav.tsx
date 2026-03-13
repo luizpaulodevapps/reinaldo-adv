@@ -11,26 +11,19 @@ import {
   Zap, 
   Users, 
   FolderOpen, 
-  Clock, 
-  Gavel, 
-  BookOpen, 
   Settings,
   Scale,
-  UserCheck,
   LogOut,
-  ClipboardList,
-  DollarSign,
   Wallet,
   Users2,
-  Navigation,
-  User as UserIcon,
   Building2,
   Handshake,
   Calculator,
   ArrowUpRight,
   ArrowDownRight,
   TrendingUp,
-  CalendarDays
+  CalendarDays,
+  User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -102,12 +95,13 @@ const menuGroups = [
     title: "GESTÃO",
     items: [
       { name: "FÓRUNS", href: "/courts", icon: Building2 },
-      { name: "D.P. INTERNO", href: "/staff", icon: Users2 },
-      { name: "EQUIPE", href: "/team", icon: UserCheck },
+      { name: "EQUIPE", href: "/staff", icon: Users2 },
       { name: "AJUSTES", href: "/settings", icon: Settings },
     ]
   }
 ]
+
+import { BookOpen } from "lucide-react"
 
 export function SidebarNav() {
   const pathname = usePathname()
@@ -232,7 +226,7 @@ export function SidebarNav() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isCollapsed ? "center" : "end"} side={isCollapsed ? "right" : "bottom"} className="w-64 bg-[#0d1117] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
             <DropdownMenuItem asChild className="rounded-xl h-11 px-4 mb-1">
-              <Link href="/settings?tab=perfil" className="flex items-center gap-4 text-xs uppercase font-bold text-white">
+              <Link href="/settings?tab=geral" className="flex items-center gap-4 text-xs uppercase font-bold text-white">
                 <UserIcon className="h-5 w-5 text-primary" /> Perfil de Usuário
               </Link>
             </DropdownMenuItem>
