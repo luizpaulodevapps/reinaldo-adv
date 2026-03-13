@@ -30,7 +30,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   TrendingUp,
-  LineChart
+  CalendarDays
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -78,10 +78,7 @@ const menuGroups = [
     title: "OPERACIONAL",
     items: [
       { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
-      { name: "DILIGÊNCIAS", href: "/tasks", icon: Navigation },
-      { name: "ROTINAS", href: "/checklists/execucao", icon: ClipboardList },
-      { name: "PRAZOS", href: "/deadlines", icon: Clock },
-      { name: "AUDIÊNCIAS", href: "/agenda", icon: Gavel },
+      { name: "PAUTA GLOBAL", href: "/agenda", icon: CalendarDays },
       { name: "MODELOS", href: "/drafting", icon: BookOpen },
     ]
   },
@@ -168,7 +165,7 @@ export function SidebarNav() {
               <SidebarMenu className="gap-1.5">
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
-                  const isActive = pathname === item.href
+                  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
                   
                   return (
                     <SidebarMenuItem key={item.href}>
