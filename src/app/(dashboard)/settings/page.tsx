@@ -71,7 +71,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
+import { cn, maskPhone, maskCEP } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -482,6 +482,8 @@ function SettingsContent() {
     toast({ title: "Perfil de Notificação Salvo" })
   }
 
+  const tabTriggerClass = "data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-[0_0_20px_rgba(245,208,48,0.3)] text-muted-foreground font-black text-[10px] uppercase h-full px-10 rounded-full transition-all tracking-[0.1em] border border-transparent data-[state=active]:border-black/10"
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="space-y-2">
@@ -492,17 +494,19 @@ function SettingsContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white/5 border border-white/5 h-14 p-1 gap-1 w-full justify-start rounded-xl overflow-x-auto scrollbar-hide mb-10">
-          <TabsTrigger value="geral" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Geral</TabsTrigger>
-          <TabsTrigger value="seo" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Google Hub</TabsTrigger>
-          <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Usuarios</TabsTrigger>
-          <TabsTrigger value="financeiro" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Financeiro</TabsTrigger>
-          <TabsTrigger value="tags" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Dicionário de Tags</TabsTrigger>
-          <TabsTrigger value="kit" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Kit Cliente</TabsTrigger>
-          <TabsTrigger value="modelos" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Modelos</TabsTrigger>
-          <TabsTrigger value="backup" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Backup</TabsTrigger>
-          <TabsTrigger value="licenca" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-lg transition-all">Licença</TabsTrigger>
-        </TabsList>
+        <div className="bg-[#0d1117]/80 border border-white/5 p-1.5 rounded-full overflow-x-auto scrollbar-hide shadow-2xl mb-12 backdrop-blur-xl w-fit">
+          <TabsList className="bg-transparent h-12 p-0 gap-1 justify-start">
+            <TabsTrigger value="geral" className={tabTriggerClass}>Geral</TabsTrigger>
+            <TabsTrigger value="seo" className={tabTriggerClass}>Google Hub</TabsTrigger>
+            <TabsTrigger value="usuarios" className={tabTriggerClass}>Usuarios</TabsTrigger>
+            <TabsTrigger value="financeiro" className={tabTriggerClass}>Financeiro</TabsTrigger>
+            <TabsTrigger value="tags" className={tabTriggerClass}>Dicionário de Tags</TabsTrigger>
+            <TabsTrigger value="kit" className={tabTriggerClass}>Kit Cliente</TabsTrigger>
+            <TabsTrigger value="modelos" className={tabTriggerClass}>Modelos</TabsTrigger>
+            <TabsTrigger value="backup" className={tabTriggerClass}>Backup</TabsTrigger>
+            <TabsTrigger value="licenca" className={tabTriggerClass}>Licença</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="geral" className="mt-0 space-y-10">
           <Card className="glass border-white/5 overflow-hidden shadow-2xl">
@@ -749,7 +753,7 @@ function SettingsContent() {
               </div>
             ) : filteredTeam.length > 0 ? (
               filteredTeam.map((member) => (
-                <Card key={member.id} className="glass border-white/5 hover:border-primary/30 transition-all group shadow-2xl rounded-2xl overflow-hidden flex flex-col">
+                <Card key={member.id} className="glass border-white/5 hover-border-primary/30 transition-all group shadow-2xl rounded-2xl overflow-hidden flex flex-col">
                   <CardContent className="p-8 space-y-6 flex-1">
                     <div className="flex items-start justify-between">
                       <Avatar className="h-14 w-14 border-2 border-primary/20">
