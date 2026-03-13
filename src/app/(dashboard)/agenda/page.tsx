@@ -30,7 +30,9 @@ import {
   Search,
   CheckCircle2,
   Handshake,
-  DollarSign
+  DollarSign,
+  Car,
+  Receipt
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -89,7 +91,8 @@ export default function MasterAgendaPage() {
     solicitorId: "",
     solicitorName: "",
     valueToPay: 0,
-    valueToCharge: 0
+    valueToCharge: 0,
+    extraExpenses: 0
   })
 
   const db = useFirestore()
@@ -174,7 +177,8 @@ export default function MasterAgendaPage() {
       solicitorId: "",
       solicitorName: "",
       valueToPay: 0,
-      valueToCharge: 0
+      valueToCharge: 0,
+      extraExpenses: 0
     })
     setIsCreateOpen(true)
   }
@@ -224,6 +228,7 @@ export default function MasterAgendaPage() {
         processNumber: newEventData.processNumber,
         valueToPay: newEventData.valueToPay,
         valueToCharge: newEventData.valueToCharge,
+        extraExpenses: newEventData.extraExpenses || 0,
         status: "Criada",
         createdAt: serverTimestamp()
       })
@@ -478,10 +483,14 @@ export default function MasterAgendaPage() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Custo (Pagar)</Label>
+                      <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Honorário (Pagar)</Label>
                       <Input type="number" value={newEventData.valueToPay} onChange={e => setNewEventData({...newEventData, valueToPay: Number(e.target.value)})} className="bg-black/40 border-rose-500/20 h-12 text-white font-black" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Extras (KM/Cópia)</Label>
+                      <Input type="number" value={newEventData.extraExpenses} onChange={e => setNewEventData({...newEventData, extraExpenses: Number(e.target.value)})} className="bg-black/40 border-amber-500/20 h-12 text-white font-black" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Receita (Cobrar)</Label>
@@ -571,6 +580,26 @@ export default function MasterAgendaPage() {
                   </div>
                 </div>
               </div>
+              
+              {viewingEvent?.isFreelance && (
+                <Card className="glass border-cyan-500/20 bg-cyan-500/5 p-6 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Handshake className="h-5 w-5 text-cyan-400" />
+                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Dossiê Logístico Freelance</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase">Repasse Honorário</p>
+                      <p className="text-sm font-black text-white">R$ {Number(viewingEvent.valueToPay || 0).toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase">Reembolsos Extras</p>
+                      <p className="text-sm font-black text-amber-400">R$ {Number(viewingEvent.extraExpenses || 0).toLocaleString('pt-BR')}</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {viewingEvent?.location && (
                 <div className="space-y-2">
                   <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Localização / Juízo</Label>

@@ -22,7 +22,10 @@ import {
   Landmark,
   FileText,
   ShieldCheck,
-  Gavel
+  Gavel,
+  Car,
+  Receipt,
+  Layers
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -43,14 +46,36 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     solicitorName: "",
     valueToPay: 0,
     valueToCharge: 0,
+    // Sub-detalhamento de despesas
+    fuelExpense: 0,
+    parkingExpense: 0,
+    copyExpense: 0,
+    miscExpense: 0,
     extraExpenses: 0,
     status: "Criada",
     notes: ""
   })
 
   useEffect(() => {
-    if (initialData) setFormData({ ...formData, ...initialData })
+    if (initialData) {
+      setFormData({ 
+        ...formData, 
+        ...initialData,
+        fuelExpense: initialData.fuelExpense || 0,
+        parkingExpense: initialData.parkingExpense || 0,
+        copyExpense: initialData.copyExpense || 0,
+        miscExpense: initialData.miscExpense || 0,
+      })
+    }
   }, [initialData])
+
+  // Sincroniza o total de extraExpenses
+  useEffect(() => {
+    const totalExtras = Number(formData.fuelExpense) + Number(formData.parkingExpense) + Number(formData.copyExpense) + Number(formData.miscExpense)
+    if (totalExtras !== formData.extraExpenses) {
+      setFormData(prev => ({ ...prev, extraExpenses: totalExtras }))
+    }
+  }, [formData.fuelExpense, formData.parkingExpense, formData.copyExpense, formData.miscExpense])
 
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
   const inputClass = "bg-black/40 border-white/10 h-12 text-white text-xs font-bold uppercase focus:ring-1 focus:ring-primary/50"
@@ -76,7 +101,8 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     }))
   }
 
-  const margin = Number(formData.valueToCharge) - (Number(formData.valueToPay) + (Number(formData.extraExpenses) || 0))
+  const totalCost = Number(formData.valueToPay) + Number(formData.extraExpenses)
+  const margin = Number(formData.valueToCharge) - totalCost
 
   return (
     <div className="space-y-10 font-sans pb-20">
@@ -176,6 +202,31 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
             </div>
           </div>
 
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+              <Receipt className="h-5 w-5 text-primary" />
+              <h4 className="text-sm font-black text-white uppercase tracking-widest">Reembolsos e Custos Adicionais</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <Label className={labelMini}><Car className="h-3 w-3 inline mr-1" /> Deslocamento</Label>
+                <Input type="number" value={formData.fuelExpense} onChange={e => setFormData({...formData, fuelExpense: Number(e.target.value)})} className={inputClass} />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelMini}><MapPin className="h-3 w-3 inline mr-1" /> Estac. / Pedágio</Label>
+                <Input type="number" value={formData.parkingExpense} onChange={e => setFormData({...formData, parkingExpense: Number(e.target.value)})} className={inputClass} />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelMini}><Layers className="h-3 w-3 inline mr-1" /> Cópias / Dig.</Label>
+                <Input type="number" value={formData.copyExpense} onChange={e => setFormData({...formData, copyExpense: Number(e.target.value)})} className={inputClass} />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelMini}><Tag className="h-3 w-3 inline mr-1" /> Diversos</Label>
+                <Input type="number" value={formData.miscExpense} onChange={e => setFormData({...formData, miscExpense: Number(e.target.value)})} className={inputClass} />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <Label className={labelMini}>Instruções para o Freelancer</Label>
             <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="bg-black/40 border-white/10 min-h-[150px] text-white text-xs resize-none p-6 rounded-2xl" placeholder="DETALHES DA PAUTA, LINKS DE ACESSO OU PROCEDIMENTOS..." />
@@ -193,7 +244,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
             <div className="space-y-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                  <Landmark className="h-3 w-3" /> Valor Freelance (Custo) *
+                  <Landmark className="h-3 w-3" /> Valor Freelance (Honorário) *
                 </Label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-400 font-black text-sm">R$</span>
@@ -203,6 +254,14 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                     onChange={e => setFormData({...formData, valueToPay: Number(e.target.value)})} 
                     className="bg-rose-500/5 border-rose-500/20 h-16 pl-12 text-white text-xl font-black rounded-xl"
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total de Reembolsos</Label>
+                <div className="bg-black/40 border border-white/5 h-12 rounded-xl flex items-center px-4 justify-between">
+                  <span className="text-[10px] font-mono text-white/40">SOMA DOS ADICIONAIS</span>
+                  <span className="text-sm font-black text-white">R$ {formData.extraExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
               
@@ -219,16 +278,6 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                     className="bg-emerald-500/5 border-emerald-500/20 h-16 pl-12 text-white text-xl font-black rounded-xl"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Despesas Adicionais (KM/Estac.)</Label>
-                <Input 
-                  type="number" 
-                  value={formData.extraExpenses} 
-                  onChange={e => setFormData({...formData, extraExpenses: Number(e.target.value)})} 
-                  className="bg-white/5 border-white/10 h-12 text-white font-bold"
-                />
               </div>
             </div>
 
