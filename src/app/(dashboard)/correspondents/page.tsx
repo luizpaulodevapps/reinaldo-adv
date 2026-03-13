@@ -90,8 +90,34 @@ export default function CorrespondentsModule() {
 
   const handleSaveDiligence = async (data: any) => {
     if (!db) return
-    if (editingItem) updateDocumentNonBlocking(doc(db, "freelance_diligences", editingItem.id), { ...data, updatedAt: serverTimestamp() })
-    else addDocumentNonBlocking(collection(db, "freelance_diligences"), { ...data, createdAt: serverTimestamp() })
+    let docRefId = "";
+    if (editingItem) {
+      docRefId = editingItem.id;
+      updateDocumentNonBlocking(doc(db, "freelance_diligences", docRefId), { ...data, updatedAt: serverTimestamp() })
+    } else {
+      const result = await addDocumentNonBlocking(collection(db, "freelance_diligences"), { ...data, createdAt: serverTimestamp() })
+      docRefId = (result as any).id;
+    }
+
+    // Injeção na Agenda se for Audiência Freelance
+    if (data.type === 'Audiência Freelance') {
+      const agendaPayload = {
+        title: `[FREELANCE] ${data.processNumber || 'ATO'} - ${data.city}`,
+        type: "Audiência Freelance",
+        startDateTime: `${data.serviceDate}T${data.serviceTime || '09:00'}:00`,
+        processNumber: data.processNumber,
+        clientName: data.solicitorName,
+        location: `${data.city}${data.court ? ' - ' + data.court : ''}`,
+        status: "Agendado",
+        isFreelance: true,
+        diligenceId: docRefId,
+        updatedAt: serverTimestamp()
+      }
+      addDocumentNonBlocking(collection(db, "hearings"), {
+        ...agendaPayload,
+        createdAt: serverTimestamp()
+      })
+    }
 
     if (data.status === 'Faturada' && !editingItem?.financialSynced) {
       addDocumentNonBlocking(collection(db, "financial_titles"), { 
@@ -115,7 +141,7 @@ export default function CorrespondentsModule() {
         clientName: data.solicitorName, 
         createdAt: serverTimestamp() 
       })
-      if (editingItem) updateDocumentNonBlocking(doc(db, "freelance_diligences", editingItem.id), { financialSynced: true })
+      if (editingItem) updateDocumentNonBlocking(doc(db, "freelance_diligences", docRefId), { financialSynced: true })
     }
     setIsDiligenceOpen(false); setEditingItem(null); toast({ title: "Registro Concluído" })
   }
@@ -187,7 +213,7 @@ export default function CorrespondentsModule() {
                       <div className="flex items-center gap-8">
                         <div className={cn(
                           "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl transition-all group-hover:scale-110",
-                          d.type === 'Audiência Freelance' ? "bg-primary/10 border-primary/20 text-primary" : "bg-white/5 border-white/10 text-muted-foreground"
+                          d.type === 'Audiência Freelance' ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" : "bg-white/5 border-white/10 text-muted-foreground"
                         )}>
                           {d.type === 'Audiência Freelance' ? <Gavel className="h-7 w-7" /> : <FileText className="h-7 w-7" />}
                         </div>
@@ -202,7 +228,7 @@ export default function CorrespondentsModule() {
                             </Badge>
                           </div>
                           <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-60">
-                            PROFISSIONAL: {d.freelancerName} • DATA: {d.serviceDate}
+                            PROFISSIONAL: {d.freelancerName} • DATA: {d.serviceDate} {d.serviceTime || ''}
                           </p>
                         </div>
                       </div>
@@ -348,6 +374,3 @@ export default function CorrespondentsModule() {
     </div>
   )
 }
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Mail } from "lucide-react"

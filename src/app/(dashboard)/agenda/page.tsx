@@ -23,7 +23,8 @@ import {
   Target,
   Info,
   Copy,
-  User as UserIcon
+  User as UserIcon,
+  CloudLightning
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore"
@@ -109,9 +110,24 @@ export default function MasterAgendaPage() {
   }, [currentMonth])
 
   const allEvents = useMemo(() => {
-    const h = (hearings || []).map(h => ({ ...h, eventType: 'audiencia', collection: 'hearings', date: parseDate(h.startDateTime) }))
-    const d = (deadlines || []).map(d => ({ ...d, eventType: 'prazo', collection: 'deadlines', date: parseDate(d.dueDate) }))
-    const a = (appointments || []).map(a => ({ ...a, eventType: 'atendimento', collection: 'appointments', date: parseDate(a.startDateTime) }))
+    const h = (hearings || []).map(h => ({ 
+      ...h, 
+      eventType: h.isFreelance ? 'freelance' : 'audiencia', 
+      collection: 'hearings', 
+      date: parseDate(h.startDateTime) 
+    }))
+    const d = (deadlines || []).map(d => ({ 
+      ...d, 
+      eventType: 'prazo', 
+      collection: 'deadlines', 
+      date: parseDate(d.dueDate) 
+    }))
+    const a = (appointments || []).map(a => ({ 
+      ...a, 
+      eventType: 'atendimento', 
+      collection: 'appointments', 
+      date: parseDate(a.startDateTime) 
+    }))
     return [...h, ...d, ...a]
   }, [hearings, deadlines, appointments])
 
@@ -122,16 +138,12 @@ export default function MasterAgendaPage() {
   }, [selectedDate, allEvents])
 
   const hasEventsOnDay = (day: Date) => {
-    const hasHearing = (hearings || []).some(h => {
-      const date = parseDate(h.startDateTime); return date && isSameDay(date, day)
-    })
-    const hasDeadline = (deadlines || []).some(dl => {
-      const date = parseDate(dl.dueDate); return date && isSameDay(date, day)
-    })
-    const hasAppointment = (appointments || []).some(a => {
-      const date = parseDate(a.startDateTime); return date && isSameDay(date, day)
-    })
-    return { hasHearing, hasDeadline, hasAppointment }
+    const dayEvents = allEvents.filter(e => e.date && isSameDay(e.date, day))
+    const hasHearing = dayEvents.some(e => e.eventType === 'audiencia')
+    const hasFreelance = dayEvents.some(e => e.eventType === 'freelance')
+    const hasDeadline = dayEvents.some(e => e.eventType === 'prazo')
+    const hasAppointment = dayEvents.some(e => e.eventType === 'atendimento')
+    return { hasHearing, hasDeadline, hasAppointment, hasFreelance }
   }
 
   const handleManualSync = () => {
@@ -228,6 +240,10 @@ export default function MasterAgendaPage() {
               <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Audiências</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Freelance</span>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,208,48,0.6)]" />
               <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Prazos</span>
             </div>
@@ -253,7 +269,7 @@ export default function MasterAgendaPage() {
 
           <div className="grid grid-cols-7">
             {calendarDays.map((day, i) => {
-              const { hasHearing, hasDeadline, hasAppointment } = hasEventsOnDay(day)
+              const { hasHearing, hasDeadline, hasAppointment, hasFreelance } = hasEventsOnDay(day)
               const isSelected = isSameDay(day, selectedDate)
               const isCurrentMonth = isSameMonth(day, currentMonth)
 
@@ -275,6 +291,7 @@ export default function MasterAgendaPage() {
                   </span>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {hasHearing && <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />}
+                    {hasFreelance && <div className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />}
                     {hasDeadline && <div className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_rgba(245,208,48,0.8)]" />}
                     {hasAppointment && <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]" />}
                   </div>
@@ -303,7 +320,10 @@ export default function MasterAgendaPage() {
                   key={idx} 
                   className={cn(
                     "glass border-white/5 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer group relative",
-                    event.eventType === 'audiencia' ? 'border-l-4 border-l-rose-500' : event.eventType === 'atendimento' ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'
+                    event.eventType === 'audiencia' ? 'border-l-4 border-l-rose-500' : 
+                    event.eventType === 'freelance' ? 'border-l-4 border-l-cyan-400' :
+                    event.eventType === 'atendimento' ? 'border-l-4 border-l-amber-500' : 
+                    'border-l-4 border-l-primary'
                   )}
                   onClick={() => setViewingEvent(event)}
                 >
@@ -311,9 +331,14 @@ export default function MasterAgendaPage() {
                     <div className="flex items-center justify-between">
                       <Badge className={cn(
                         "text-[8px] font-black uppercase tracking-widest px-2 h-5 border-0",
-                        event.eventType === 'audiencia' ? 'bg-rose-500 text-white' : event.eventType === 'atendimento' ? 'bg-amber-500 text-background' : 'bg-primary text-background'
+                        event.eventType === 'audiencia' ? 'bg-rose-500 text-white' : 
+                        event.eventType === 'freelance' ? 'bg-cyan-500 text-black' :
+                        event.eventType === 'atendimento' ? 'bg-amber-500 text-background' : 
+                        'bg-primary text-background'
                       )}>
-                        {event.eventType === 'audiencia' ? 'Audiência' : event.eventType === 'atendimento' ? 'Atendimento' : 'Prazo'}
+                        {event.eventType === 'audiencia' ? 'Audiência' : 
+                         event.eventType === 'freelance' ? 'Freelance' :
+                         event.eventType === 'atendimento' ? 'Atendimento' : 'Prazo'}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground font-mono font-bold flex items-center gap-2">
                         <Clock className="h-3 w-3" /> {event.date ? format(event.date, "HH:mm") : "--:--"}
@@ -452,7 +477,7 @@ export default function MasterAgendaPage() {
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Localização / Juízo</Label>
-                <Input value={newEventData.location} onChange={(e) => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} placeholder="SEDE RGMJ OU LINK DO MEET" className="glass border-white/10 h-12 text-white font-bold" />
+                <Input value={newEventData.location} onChange={(e) => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} placeholder="SEDE RGMJ OR LINK DO MEET" className="glass border-white/10 h-12 text-white font-bold" />
               </div>
 
               <div className="space-y-2">
@@ -477,15 +502,19 @@ export default function MasterAgendaPage() {
             <div className="flex items-center gap-6">
               <div className={cn(
                 "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-2xl",
-                viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-primary/10 border-primary/20 text-primary"
+                viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : 
+                viewingEvent?.eventType === 'freelance' ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" :
+                "bg-primary/10 border-primary/20 text-primary"
               )}>
-                {viewingEvent?.eventType === 'audiencia' ? <Gavel className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
+                {viewingEvent?.eventType === 'audiencia' || viewingEvent?.eventType === 'freelance' ? <Gavel className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-3">
                   <Badge className={cn(
                     "text-[9px] font-black uppercase tracking-widest px-2 h-5 border-0",
-                    viewingEvent?.eventType === 'audiencia' ? 'bg-rose-500 text-white' : 'bg-primary text-background'
+                    viewingEvent?.eventType === 'audiencia' ? 'bg-rose-500 text-white' : 
+                    viewingEvent?.eventType === 'freelance' ? 'bg-cyan-500 text-black' :
+                    'bg-primary text-background'
                   )}>
                     {viewingEvent?.type || 'COMPROMISSO'}
                   </Badge>
@@ -557,6 +586,16 @@ export default function MasterAgendaPage() {
                 </div>
               )}
 
+              {viewingEvent?.isFreelance && (
+                <div className="p-6 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 space-y-3">
+                  <div className="flex items-center gap-3 text-cyan-400">
+                    <CloudLightning className="h-4 w-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Origem: Correspondência Externa</span>
+                  </div>
+                  <p className="text-[10px] text-white/60 font-bold uppercase leading-relaxed">Este ato foi gerado via módulo de Correspondentes. Toda a liquidação financeira deve ser auditada no painel de logística.</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Inteligência Tática (Notas)</Label>
                 <div className="p-6 rounded-2xl bg-black/40 border border-white/5 min-h-[120px] shadow-inner">
@@ -583,9 +622,11 @@ export default function MasterAgendaPage() {
             </div>
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 rounded-xl transition-colors">FECHAR</Button>
-              <Button onClick={() => handleOpenEdit(viewingEvent)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl flex items-center gap-3 transition-all hover:scale-[1.02]">
-                <Edit3 className="h-4 w-4" /> REAGENDAR
-              </Button>
+              {!viewingEvent?.isFreelance && (
+                <Button onClick={() => handleOpenEdit(viewingEvent)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl shadow-xl flex items-center gap-3 transition-all hover:scale-[1.02]">
+                  <Edit3 className="h-4 w-4" /> REAGENDAR
+                </Button>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>

@@ -34,6 +34,7 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     court: "",
     city: "",
     serviceDate: new Date().toISOString().split('T')[0],
+    serviceTime: "09:00",
     deadline: "",
     freelancerId: "",
     freelancerName: "",
@@ -58,7 +59,6 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
     const f = freelancers.find((item: any) => item.id === id)
     if (!f) return
     
-    // Mapeia o preço base do freelancer seguindo a nomenclatura exclusiva
     const actType = formData.type.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     let defaultValue = 0
     if (actType.includes('audiencia')) defaultValue = f.prices?.audiencia || 0
@@ -116,13 +116,15 @@ export function FreelanceDiligenceForm({ initialData, freelancers, counterpartie
                 <Label className={labelMini}>Comarca / Cidade</Label>
                 <Input value={formData.city} onChange={e => setFormData({...formData, city: e.target.value.toUpperCase()})} className={cn(inputClass, "h-14")} />
               </div>
-              <div className="space-y-2">
-                <Label className={labelMini}>Data do Serviço</Label>
-                <Input type="date" value={formData.serviceDate} onChange={e => setFormData({...formData, serviceDate: e.target.value})} className={cn(inputClass, "h-14")} />
-              </div>
-              <div className="space-y-2">
-                <Label className={labelMini}>Prazo Limite para Entrega</Label>
-                <Input type="datetime-local" value={formData.deadline} onChange={e => setFormData({...formData, deadline: e.target.value})} className={cn(inputClass, "h-14")} />
+              <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                <div className="space-y-2">
+                  <Label className={labelMini}>Data do Serviço</Label>
+                  <Input type="date" value={formData.serviceDate} onChange={e => setFormData({...formData, serviceDate: e.target.value})} className={cn(inputClass, "h-14")} />
+                </div>
+                <div className="space-y-2">
+                  <Label className={labelMini}>Horário do Ato</Label>
+                  <Input type="time" value={formData.serviceTime} onChange={e => setFormData({...formData, serviceTime: e.target.value})} className={cn(inputClass, "h-14")} />
+                </div>
               </div>
             </div>
           </div>
