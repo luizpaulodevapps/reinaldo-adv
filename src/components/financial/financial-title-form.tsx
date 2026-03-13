@@ -51,7 +51,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     description: "",
     value: "0,00",
     dueDate: new Date().toISOString().split('T')[0],
-    originBank: "CONTA CORRENTE RGMJ",
+    originBank: "CONTA MESTRE RGMJ (DR. REINALDO)",
     destinationBank: "",
     isRecurring: false,
     recurrenceMonths: 1,
@@ -107,6 +107,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
     { id: "Marketing & Comercial", label: "Marketing & Leads", icon: Zap },
     { id: "Impostos & Tributos", label: "Impostos & Taxas", icon: ShieldCheck },
     { id: "Diligência Terceirizada", label: "Correspondente / Atos", icon: Handshake },
+    { id: "Retirada Sócio", label: "Pró-Labore / Retirada", icon: Wallet },
     { id: "Outros", label: "Suprimentos / Diversos", icon: Tag },
   ]
 
@@ -205,7 +206,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
             <Label className="text-[10px] font-black text-muted-foreground uppercase">Conta de Destino (Creditado em)</Label>
             <div className="relative">
               <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-              <Input value={formData.destinationBank} onChange={(e) => setFormData({...formData, destinationBank: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 pl-12 text-white text-[10px] font-black" placeholder="EX: PIX SANTANDER" />
+              <Input value={formData.destinationBank} onChange={(e) => setFormData({...formData, destinationBank: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 pl-12 text-white text-[10px] font-black" placeholder="EX: CONTA MESTRE RGMJ" />
             </div>
           </div>
         </div>

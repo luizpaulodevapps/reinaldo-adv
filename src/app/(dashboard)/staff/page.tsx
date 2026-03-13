@@ -27,7 +27,8 @@ import {
   Copy,
   Lock,
   Smartphone,
-  CheckCircle2
+  CheckCircle2,
+  Crown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,7 +46,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
 
 const STAFF_ROLES = [
-  { id: "Sócio", label: "SÓCIO(A)", defaultSystemRole: 'admin' },
+  { id: "Sócio", label: "SÓCIO(A) FUNDADOR", defaultSystemRole: 'admin' },
   { id: "Advogado", label: "ADVOGADO(A)", defaultSystemRole: 'lawyer' },
   { id: "Estagiário", label: "ESTAGIÁRIO(A)", defaultSystemRole: 'assistant' },
   { id: "Secretária", label: "SECRETÁRIA(O)", defaultSystemRole: 'assistant' },
@@ -80,7 +81,8 @@ export default function StaffPage() {
     paymentType: "Mensalista",
     commissionPercentage: 0,
     baseSalary: 0,
-    createSystemAccess: false
+    createSystemAccess: false,
+    isOwner: false
   })
 
   const db = useFirestore()
@@ -134,6 +136,7 @@ export default function StaffPage() {
           name: payload.name,
           email: payload.email,
           role: systemRole,
+          isOwner: payload.isOwner,
           isActive: payload.status === 'Ativo',
           updatedAt: serverTimestamp()
         }, { merge: true })
@@ -171,7 +174,7 @@ export default function StaffPage() {
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
           <Input placeholder="Pesquisar..." className="pl-12 glass border-white/5 h-12 text-xs text-white md:w-80" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          {canManage && <button onClick={() => { setEditingStaff(null); setIsDialogOpen(true); }} className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all"><Plus className="h-6 w-6 text-background" /></button>}
+          {canManage && <button onClick={() => { setEditingStaff(null); setFormData({...formData, isOwner: false}); setIsDialogOpen(true); }} className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all"><Plus className="h-6 w-6 text-background" /></button>}
         </div>
       </div>
 
@@ -184,7 +187,13 @@ export default function StaffPage() {
               <CardContent className="p-8 space-y-6">
                 <div className="flex items-start justify-between">
                   <Avatar className="h-14 w-14 border-2 border-primary/20"><AvatarFallback className="bg-secondary text-primary font-black uppercase">{staff.name?.substring(0, 2)}</AvatarFallback></Avatar>
-                  <div className="flex flex-col items-end gap-2"><Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary">{staff.role}</Badge><Badge className="bg-white/5 text-white/40 text-[8px] font-black uppercase">{staff.paymentType}</Badge></div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className={cn("text-[9px] font-black uppercase border-primary/30 text-primary", staff.isOwner && "bg-primary text-background border-0")}>
+                      {staff.isOwner ? <Crown className="h-2.5 w-2.5 mr-1.5" /> : null}
+                      {staff.role}
+                    </Badge>
+                    <Badge className="bg-white/5 text-white/40 text-[8px] font-black uppercase">{staff.paymentType}</Badge>
+                  </div>
                 </div>
                 <div className="space-y-1"><h3 className="text-xl font-black text-white uppercase truncate group-hover:text-primary transition-colors">{staff.name}</h3><div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase"><Mail className="h-3 w-3 opacity-40" /> {staff.email}</div></div>
                 <div className="pt-6 border-t border-white/5 flex justify-between items-center mt-4"><div className="flex gap-2"><Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white"><Eye className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={(e) => { e.stopPropagation(); setEditingStaff(staff); setFormData({...formData, ...staff, createSystemAccess: false}); setIsDialogOpen(true); }}><Settings2 className="h-4 w-4" /></Button></div><span className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> {staff.status}</span></div>
@@ -203,7 +212,19 @@ export default function StaffPage() {
             <div className="space-y-6"><div className="flex items-center gap-3 pb-2 border-b border-white/5"><Briefcase className="h-4 w-4 text-primary" /><h4 className="text-[11px] font-black text-white uppercase tracking-widest">Contrato & Função</h4></div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 <div className="md:col-span-8 space-y-2"><Label className={labelMini}>Nome Completo *</Label><Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className={inputClass} /></div>
-                <div className="md:col-span-4 space-y-2"><Label className={labelMini}>Cargo *</Label><Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}><SelectTrigger className={inputClass}><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white">{STAFF_ROLES.map(r => <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>)}</SelectContent></Select></div>
+                <div className="md:col-span-4 space-y-2"><Label className={labelMini}>Cargo *</Label><Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
+                  <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#0d121f] text-white">
+                    {STAFF_ROLES.map(r => <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>)}
+                  </SelectContent>
+                </Select></div>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                <Checkbox id="isOwner" checked={formData.isOwner} onCheckedChange={(v) => setFormData({...formData, isOwner: !!v})} />
+                <div className="space-y-0.5">
+                  <Label htmlFor="isOwner" className="text-[10px] font-black text-white uppercase cursor-pointer">Sócio Fundador / Dono da Banca</Label>
+                  <p className="text-[8px] text-primary/60 font-bold uppercase">Habilita soberania financeira total e selo de distinção.</p>
+                </div>
               </div>
             </div>
             <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">

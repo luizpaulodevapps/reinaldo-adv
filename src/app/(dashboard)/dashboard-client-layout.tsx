@@ -6,7 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { Scale } from "lucide-react";
+import { Scale, ShieldCheck } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { NotificationCenter } from "@/components/notifications/notification-center";
 
@@ -40,7 +40,9 @@ export function DashboardClientLayout({
   useEffect(() => {
     if (user && db && profileData === null && !isProfileLoading) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
-      const isOwner = user?.email === 'luizao16@gmail.com' || user?.email === 'luizpaulo.dev.apps@gmail.com';
+      // Lista de e-mails com soberania total (Donos da Banca)
+      const owners = ['luizao16@gmail.com', 'luizpaulo.dev.apps@gmail.com', 'rgmj.adv@gmail.com'];
+      const isOwner = owners.includes(user?.email || '');
       
       const initialProfile = {
         id: user.uid,
@@ -48,6 +50,7 @@ export function DashboardClientLayout({
         name: user.displayName || 'Membro da Equipe',
         email: user.email || '',
         role: isOwner ? 'admin' : 'lawyer',
+        isOwner: isOwner,
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -88,6 +91,12 @@ export function DashboardClientLayout({
             </div>
             
             <div className="flex items-center gap-6">
+              {profile?.isOwner && (
+                <div className="hidden xl:flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                  <ShieldCheck className="h-3 w-3 text-primary" />
+                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Sócio Fundador</span>
+                </div>
+              )}
               <NotificationCenter />
               <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

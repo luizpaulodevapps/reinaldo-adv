@@ -21,7 +21,8 @@ import {
   DollarSign,
   ArrowRight,
   Landmark,
-  Handshake
+  Handshake,
+  ShieldCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,7 +42,7 @@ export default function BillingPage() {
   const [editingTitle, setEditingTitle] = useState<any>(null)
   
   const db = useFirestore()
-  const { user, isUserLoading } = useUser()
+  const { user, isUserLoading, profile } = useUser()
   const { toast } = useToast()
 
   const financialQuery = useMemoFirebase(() => {
@@ -53,7 +54,7 @@ export default function BillingPage() {
 
   const staffQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "employees"))
+    return query(collection(db!, "staff_profiles"))
   }, [db, user])
   const { data: staffMembers } = useCollection(staffQuery)
 
@@ -91,15 +92,28 @@ export default function BillingPage() {
     <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4"><Calculator className="h-3.5 w-3.5" /><Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link><ChevronRight className="h-2 w-2" /><span className="text-white uppercase tracking-tighter">CENTRAL FINANCEIRA</span></div>
-          <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Comando Financeiro</h1>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
+            <Calculator className="h-3.5 w-3.5" />
+            <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
+            <ChevronRight className="h-2 w-2" />
+            <span className="text-white uppercase tracking-tighter">CENTRAL FINANCEIRA</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Comando Financeiro</h1>
+            {profile?.isOwner && <Badge className="bg-primary text-background font-black text-[10px] uppercase h-6 px-3">CONTA MESTRE</Badge>}
+          </div>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em] opacity-60">DASHBOARD CONSOLIDADO RGMJ.</p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto"><Input placeholder="Pesquisar..." className="glass border-white/10 h-14 text-sm text-white md:w-96 rounded-xl font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /><Button onClick={() => { setEditingTitle(null); setIsTitleDialogOpen(true); }} className="gold-gradient text-background font-black gap-3 px-10 h-14 uppercase text-[11px] rounded-xl shadow-xl hover:scale-[1.02] transition-all"><Plus className="h-5 w-5" /> NOVO LANÇAMENTO</Button></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-2xl"><p className="text-[10px] font-black text-primary uppercase mb-3 flex items-center gap-3"><Landmark className="h-4 w-4" /> CARTEIRA DA BANCA</p><div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.lucroBanca >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.lucroBanca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
+        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl h-36 flex flex-col justify-center shadow-2xl group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Landmark className="h-16 w-16" /></div>
+          <p className="text-[10px] font-black text-primary uppercase mb-3 flex items-center gap-3"><Landmark className="h-4 w-4" /> PATRIMÔNIO DA BANCA</p>
+          <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.lucroBanca >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.lucroBanca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[8px] text-primary/40 font-bold uppercase mt-1 tracking-widest">Lucro líquido projetado</p>
+        </Card>
         <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-emerald-500 uppercase mb-3 flex items-center gap-3"><ArrowUpRight className="h-4 w-4" /> RECEITA BRUTA</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
         <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-rose-500 uppercase mb-3 flex items-center gap-3"><ArrowDownRight className="h-4 w-4" /> TOTAL DESPESAS</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
         <Card className="glass border-amber-500/20 bg-amber-500/5 p-8 rounded-2xl h-36 flex flex-col justify-center"><p className="text-[10px] font-black text-amber-500 uppercase mb-3 flex items-center gap-3"><Handshake className="h-4 w-4" /> REPASSES PREVISTOS</p><div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.repassesPrevistos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></Card>
@@ -117,7 +131,7 @@ export default function BillingPage() {
         </Card>
       </div>
 
-      <Dialog open={isTitleDialogOpen} onOpenChange={setIsTitleDialogOpen}><DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl"><DialogHeader><DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Lançamento Financeiro</DialogTitle></DialogHeader></div><ScrollArea className="max-h-[75vh]"><div className="p-10 bg-[#0a0f1e]/50"><FinancialTitleForm initialData={editingTitle} onSubmit={(data) => { if(editingTitle) updateDocumentNonBlocking(doc(db!, "financial_titles", editingTitle.id), {...data, value: data.numericValue, updatedAt: serverTimestamp()}); else addDocumentNonBlocking(collection(db!, "financial_titles"), {...data, value: data.numericValue, createdAt: serverTimestamp(), updatedAt: serverTimestamp()}); setIsTitleDialogOpen(false); toast({title: "Lançamento Concluído"}); }} onCancel={() => setIsTitleDialogOpen(false)} /></div></ScrollArea></DialogContent></Dialog>
+      <Dialog open={isTitleDialogOpen} onOpenChange={setIsTitleDialogOpen}><DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl"><DialogHeader><DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Lançamento Financeiro</DialogTitle><DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-1">SISTEMA INTEGRADO DE CONCILIAÇÃO BANCÁRIA RGMJ.</DialogDescription></DialogHeader></div><ScrollArea className="max-h-[75vh]"><div className="p-10 bg-[#0a0f1e]/50"><FinancialTitleForm initialData={editingTitle} onSubmit={(data) => { if(editingTitle) { const ref = doc(db!, "financial_titles", editingTitle.id); updateDocumentNonBlocking(ref, {...data, value: data.numericValue, updatedAt: serverTimestamp()}); } else { addDocumentNonBlocking(collection(db!, "financial_titles"), {...data, value: data.numericValue, createdAt: serverTimestamp(), updatedAt: serverTimestamp()}); } setIsTitleDialogOpen(false); toast({title: "Lançamento Concluído"}); }} onCancel={() => setIsTitleDialogOpen(false)} /></div></ScrollArea></DialogContent></Dialog>
     </div>
   )
 }
