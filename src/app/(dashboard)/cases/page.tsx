@@ -118,7 +118,6 @@ export default function CasesPage() {
     locationType: "sede",
     notes: "",
     autoMeet: true,
-    // Novos campos de endereço
     zipCode: "",
     address: "",
     number: "",
@@ -705,7 +704,7 @@ export default function CasesPage() {
                           <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeActionProcess?.clientName}</h4>
                           <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(meetingData.date).toLocaleDateString()} às {meetingData.time}</p>
                         </div>
-                        <div className="p-4 bg-black/40 border border-white/5 rounded-xl shadow-inner">
+                        <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
                           <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
                             O rito de sincronismo disparará o convite Google e preparará o disparo WhatsApp com o link tático.
                           </p>
