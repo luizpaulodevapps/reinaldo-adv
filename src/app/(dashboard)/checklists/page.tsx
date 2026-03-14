@@ -54,7 +54,9 @@ import {
   Calculator,
   Save,
   Library,
-  CloudLightning
+  CloudLightning,
+  Tag,
+  ShieldAlert
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -145,6 +147,17 @@ const PRESET_MATRICES = [
       { label: "FATOS: RESUMO DO OCORRIDO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "summary", reusePriority: "alta", balizaObrigatoria: true },
       { label: "DANO: VALOR DO PREJUIZO MATERIAL", type: "number", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "materialDamage", reusePriority: "media", balizaObrigatoria: false },
       { label: "REU: DADOS DA EMPRESA/PESSOA", type: "text", required: true, reuseEnabled: true, reuseTarget: "distribution", targetField: "defendantName", reusePriority: "alta", balizaObrigatoria: true },
+    ]
+  },
+  {
+    title: "EXECUCAO FISCAL TRIBUTARIA",
+    category: "Entrevista de Triagem",
+    legalArea: "Tributário",
+    description: "Análise de nulidades em Certidões de Dívida Ativa (CDA), prescrição e teses de defesa em execuções fiscais.",
+    items: [
+      { label: "DEBITO: ORIGEM DA DIVIDA", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "DEBITO: VALOR CONSOLIDADO", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "DEFESA: EXISTE PRESCRIÇÃO?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
     ]
   }
 ]
@@ -411,7 +424,7 @@ export default function LaboratorioChecklistsPage() {
             <Table>
               <TableHeader className="bg-[#05070a]">
                 <TableRow className="border-white/5 hover:bg-transparent">
-                  <TableHead className="text-[10px] font-black text-primary uppercase py-10 pl-10">Minuta Estratégica</TableHead>
+                  <TableHead className="text-[10px] font-black text-[#F5D030] uppercase py-10 pl-10">Minuta Estratégica</TableHead>
                   <TableHead className="text-[10px] font-black text-[#F5D030] uppercase py-10 text-center">ESFERA JURÍDICA</TableHead>
                   <TableHead className="text-[10px] font-black text-[#F5D030] uppercase py-10 text-center">TAGS MAPEADAS</TableHead>
                   <TableHead className="text-[10px] font-black text-[#F5D030] uppercase py-10 text-center">SINCRONISMO</TableHead>
