@@ -107,7 +107,7 @@ import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
-import { cn } from "@/lib/utils"
+import { cn, maskCEP } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { BurocraciaView } from "@/components/leads/burocracia-view"
 import { ProcessForm } from "@/components/cases/process-form"
@@ -175,8 +175,24 @@ export default function LeadsPage() {
   // Step Wizard para Agendamento de Intake
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeStep, setIntakeStep] = useState(1)
-  const [intakeData, setIntakeData] = useState({ date: "", time: "09:00", type: "online", locationType: "sede", customAddress: "", observations: "", autoMeet: true })
+  const [intakeData, setIntakeData] = useState({ 
+    date: "", 
+    time: "09:00", 
+    type: "online", 
+    locationType: "sede", 
+    customAddress: "", 
+    observations: "", 
+    autoMeet: true,
+    // Novos campos de endereço
+    zipCode: "",
+    address: "",
+    number: "",
+    neighborhood: "",
+    city: "",
+    state: ""
+  })
   const [isSyncingIntake, setIsSyncingIntake] = useState(false)
+  const [loadingIntakeCep, setLoadingIntakeCep] = useState(false)
 
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
   const canGoBack = currentTabIndex > 0
@@ -217,10 +233,39 @@ export default function LeadsPage() {
         locationType: activeLead.locationType || "sede", 
         customAddress: activeLead.customAddress || "", 
         observations: activeLead.intakeObservations || "",
-        autoMeet: true
+        autoMeet: true,
+        zipCode: activeLead.zipCode || "",
+        address: activeLead.address || "",
+        number: activeLead.number || "",
+        neighborhood: activeLead.neighborhood || "",
+        city: activeLead.city || "",
+        state: activeLead.state || ""
       })
     }
   }, [activeLead?.id])
+
+  const handleIntakeCepBlur = async () => {
+    const cep = intakeData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+    setLoadingIntakeCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setIntakeData(prev => ({
+          ...prev,
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }))
+      }
+    } catch (e) {
+      console.error("CEP error")
+    } finally {
+      setLoadingIntakeCep(false)
+    }
+  }
 
   const handleOpenLead = (lead: any) => { 
     setSelectedLead(lead)
@@ -231,7 +276,17 @@ export default function LeadsPage() {
   const handleScheduleIntake = async () => {
     if (!db || !activeLead || !intakeData.date || !intakeData.time) return
     setIsSyncingIntake(true)
-    const finalLocation = intakeData.type === 'online' ? 'GOOGLE MEET RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
+    
+    let finalLocation = ""
+    if (intakeData.type === 'online') {
+      finalLocation = 'GOOGLE MEET RGMJ'
+    } else {
+      if (intakeData.locationType === 'sede') {
+        finalLocation = 'Sede RGMJ'
+      } else {
+        finalLocation = `${intakeData.address}, ${intakeData.number} - ${intakeData.neighborhood}, ${intakeData.city}/${intakeData.state}`
+      }
+    }
     
     // 1. Salva no Firestore
     const payload = { 
@@ -239,6 +294,12 @@ export default function LeadsPage() {
       scheduledTime: intakeData.time, 
       meetingType: intakeData.type, 
       meetingLocation: finalLocation, 
+      zipCode: intakeData.zipCode,
+      address: intakeData.address,
+      number: intakeData.number,
+      neighborhood: intakeData.neighborhood,
+      city: intakeData.city,
+      state: intakeData.state,
       updatedAt: serverTimestamp() 
     }
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
@@ -443,7 +504,7 @@ export default function LeadsPage() {
                     <div className="space-y-1">
                       <SheetTitle className="text-2xl font-black uppercase text-white tracking-tight leading-none">{activeLead.name}</SheetTitle>
                       <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-widest opacity-50">
-                        {activeLead.scheduledDate ? `TRIAGEM AGENDADA: ${new Date(activeLead.scheduledDate).toLocaleDateString()}` : 'AGUARDANDO AGENDAMENTO'}
+                        {activeLead.scheduledDate ? `TRIAGEM AGENDADA: ${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : 'AGUARDANDO AGENDAMENTO'}
                       </SheetDescription>
                     </div>
                   </div>
@@ -484,7 +545,6 @@ export default function LeadsPage() {
                       </div>
                     </TabsContent>
 
-                    {/* Outras Abas omitidas para brevidade, mas mantendo a estrutura geral */}
                     <TabsContent value="atividades" className="w-full"><ActivityManager leadId={activeLead.id} /></TabsContent>
                     <TabsContent value="captura" className="w-full">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -529,10 +589,10 @@ export default function LeadsPage() {
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={intakeData.type} onValueChange={(v: any) => setIntakeData({...intakeData, type: v})} className="grid grid-cols-2 gap-6">
-                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5")} onClick={() => setIntakeData({...intakeData, type: 'online'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'online'})}>
                       <Video className={cn("h-8 w-8", intakeData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase">Virtual</span>
                     </div>
-                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setIntakeData({...intakeData, type: 'presencial'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'presencial'})}>
                       <MapPin className={cn("h-8 w-8", intakeData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase">Presencial</span>
                     </div>
                   </RadioGroup>
@@ -542,7 +602,7 @@ export default function LeadsPage() {
               {intakeStep === 2 && (
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">2. Cronograma de Triagem</Label>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-2xl shadow-xl">
                     <div className="space-y-2"><Label className={labelMini}>Data</Label><Input type="date" className="bg-black/40 h-14 text-white font-bold rounded-xl" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} /></div>
                     <div className="space-y-2"><Label className={labelMini}>Hora</Label><Input type="time" className="bg-black/40 h-14 text-white font-bold rounded-xl" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} /></div>
                   </div>
@@ -563,7 +623,7 @@ export default function LeadsPage() {
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística de Atendimento</Label>
                   {intakeData.type === 'online' ? (
-                    <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6">
+                    <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                       <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase">Google Meet RGMJ</h4>
                       <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
                         <Switch checked={intakeData.autoMeet} onCheckedChange={v => setIntakeData({...intakeData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
@@ -573,64 +633,104 @@ export default function LeadsPage() {
                   ) : (
                     <div className="space-y-6">
                       <RadioGroup value={intakeData.locationType} onValueChange={v => setIntakeData({...intakeData, locationType: v})} className="grid grid-cols-2 gap-4">
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3", intakeData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20")} onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}>
                           <Building className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Sede RGMJ</span>
                         </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3", intakeData.locationType === 'custom' ? "bg-primary/10 border-primary" : "bg-black/20")} onClick={() => setIntakeData({...intakeData, locationType: 'custom'})}>
-                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Customizado</span>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'custom' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'custom'})}>
+                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
                         </div>
                       </RadioGroup>
-                      {intakeData.locationType === 'custom' && (
+                      {intakeData.locationType === 'sede' ? (
                         <div className="space-y-2 animate-in fade-in">
                           <Label className={labelMini}>Endereço do Atendimento</Label>
-                          <Input value={intakeData.customAddress} onChange={e => setIntakeData({...intakeData, customAddress: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="PESQUISE OU INSIRA O LOCAL..." />
+                          <Input value="SEDE RGMJ" disabled className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl border-primary/20 opacity-50" />
+                        </div>
+                      ) : (
+                        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="space-y-2">
+                              <Label className={labelMini}>CEP</Label>
+                              <div className="relative">
+                                <Input 
+                                  value={intakeData.zipCode} 
+                                  onChange={e => setIntakeData({...intakeData, zipCode: maskCEP(e.target.value)})} 
+                                  onBlur={handleIntakeCepBlur}
+                                  className="bg-black/40 h-12 text-white font-mono rounded-xl" 
+                                  placeholder="00000-000"
+                                />
+                                {loadingIntakeCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                              </div>
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                              <Label className={labelMini}>Logradouro</Label>
+                              <Input value={intakeData.address} onChange={e => setIntakeData({...intakeData, address: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className={labelMini}>Nº</Label>
+                              <Input value={intakeData.number} onChange={e => setIntakeData({...intakeData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label className={labelMini}>Bairro</Label>
+                              <Input value={intakeData.neighborhood} onChange={e => setIntakeData({...intakeData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className={labelMini}>Cidade</Label>
+                              <Input value={intakeData.city} onChange={e => setIntakeData({...intakeData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className={labelMini}>UF</Label>
+                              <Input value={intakeData.state} onChange={e => setIntakeData({...intakeData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
                   )}
+
+                  {intakeStep === 5 && (
+                    <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Consolidação de Triagem</Label>
+                      <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl">
+                          <ShieldCheck className="h-8 w-8" />
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeLead?.name}</h4>
+                          <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(intakeData.date).toLocaleDateString()} às {intakeData.time}</p>
+                        </div>
+                        <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
+                          <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
+                            {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : `Atendimento Presencial em: ${intakeData.locationType === 'sede' ? 'Sede RGMJ' : `${intakeData.address}, ${intakeData.number}`}`}
+                          </p>
+                        </div>
+                      </Card>
+                    </div>
+                  )}
+
                 </div>
-              )}
+              </ScrollArea>
 
-              {intakeStep === 5 && (
-                <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Consolidação de Triagem</Label>
-                  <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl">
-                      <ShieldCheck className="h-8 w-8" />
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeLead?.name}</h4>
-                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(intakeData.date).toLocaleDateString()} às {intakeData.time}</p>
-                    </div>
-                    <div className="p-4 bg-black/40 rounded-xl border border-white/5">
-                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                        {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : `Atendimento Presencial em: ${intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress}`}
-                      </p>
-                    </div>
-                  </Card>
-                </div>
-              )}
-
-            </div>
-          </ScrollArea>
-
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-            <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">
-              {intakeStep > 1 ? "ANTERIOR" : "CANCELAR"}
-            </Button>
-            {intakeStep < 5 ? (
-              <Button onClick={() => setIntakeStep(intakeStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 gap-3">
-                PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 gap-4">
-                {isSyncingIntake ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-                CONFIRMAR E SINCRONIZAR
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
+                <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">
+                  {intakeStep > 1 ? "ANTERIOR" : "CANCELAR"}
+                </Button>
+                {intakeStep < 5 ? (
+                  <Button onClick={() => setIntakeStep(intakeStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 gap-3">
+                    PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 gap-4">
+                    {isSyncingIntake ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                    CONFIRMAR E SINCRONIZAR
+                  </Button>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
     </div>
   )
 }

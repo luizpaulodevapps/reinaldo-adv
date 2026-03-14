@@ -68,7 +68,7 @@ import {
   addBusinessDays
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { cn } from "@/lib/utils"
+import { cn, maskCEP } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -105,6 +105,7 @@ export default function MasterAgendaPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deadlineDuration, setDeadlineDuration] = useState("")
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false)
+  const [loadingMeetingCep, setLoadingMeetingCep] = useState(false)
 
   const [newEventData, setNewEventData] = useState<any>({
     title: "",
@@ -121,12 +122,42 @@ export default function MasterAgendaPage() {
     pubDate: format(new Date(), 'yyyy-MM-dd'),
     publicationText: "",
     partyContact: "",
-    assigneeId: ""
+    assigneeId: "",
+    // Campos de Endereço Completo
+    zipCode: "",
+    address: "",
+    number: "",
+    neighborhood: "",
+    city: "",
+    state: ""
   })
 
   const db = useFirestore()
   const { user, profile } = useUser()
   const { toast } = useToast()
+
+  const handleMeetingCepBlur = async () => {
+    const cep = newEventData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+    setLoadingMeetingCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setNewEventData((prev: any) => ({
+          ...prev,
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }))
+      }
+    } catch (e) {
+      console.error("CEP error")
+    } finally {
+      setLoadingMeetingCep(false)
+    }
+  }
 
   // Queries da Pauta
   const staffQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "staff_profiles"), orderBy("name", "asc")) : null, [db, user])
@@ -198,7 +229,13 @@ export default function MasterAgendaPage() {
         meetingType: existingEvent.meetingType || "online",
         locationType: existingEvent.locationType || "sede",
         autoMeet: existingEvent.autoMeet ?? true,
-        calculationType: existingEvent.calculationType || "Dias Úteis (CPC/CLT)"
+        calculationType: existingEvent.calculationType || "Dias Úteis (CPC/CLT)",
+        zipCode: existingEvent.zipCode || "",
+        address: existingEvent.address || "",
+        number: existingEvent.number || "",
+        neighborhood: existingEvent.neighborhood || "",
+        city: existingEvent.city || "",
+        state: existingEvent.state || ""
       })
     } else {
       setEditingEventId(null)
@@ -218,7 +255,13 @@ export default function MasterAgendaPage() {
         pubDate: format(date, 'yyyy-MM-dd'),
         publicationText: "",
         partyContact: "",
-        assigneeId: user?.uid || ""
+        assigneeId: user?.uid || "",
+        zipCode: "",
+        address: "",
+        number: "",
+        neighborhood: "",
+        city: "",
+        state: ""
       })
     }
     setIsCreateOpen(true)
@@ -230,11 +273,28 @@ export default function MasterAgendaPage() {
     
     const dateTime = `${newEventData.date}T${newEventData.time || '09:00'}:00`
     let targetCollection = "appointments"
+    
+    let finalLocation = ""
+    if (createMode === 'atendimento') {
+      if (newEventData.meetingType === 'online') {
+        finalLocation = newEventData.location || 'Google Meet'
+      } else {
+        if (newEventData.locationType === 'sede') {
+          finalLocation = 'Sede RGMJ'
+        } else {
+          finalLocation = `${newEventData.address}, ${newEventData.number} - ${newEventData.neighborhood}, ${newEventData.city}/${newEventData.state}`
+        }
+      }
+    } else {
+      finalLocation = newEventData.location
+    }
+
     const payload: any = {
       title: newEventData.title.toUpperCase(),
       notes: newEventData.notes,
       clientName: newEventData.clientName,
       processNumber: newEventData.processNumber,
+      location: finalLocation,
       updatedAt: serverTimestamp()
     }
 
@@ -243,7 +303,6 @@ export default function MasterAgendaPage() {
     if (createMode === 'audiencia') {
       targetCollection = 'hearings'
       payload.startDateTime = dateTime
-      payload.location = newEventData.location
       payload.status = "Agendado"
       typeForGoogle = 'audiencia'
     } else if (createMode === 'atendimento') {
@@ -251,8 +310,13 @@ export default function MasterAgendaPage() {
       payload.startDateTime = dateTime
       payload.meetingType = newEventData.meetingType
       payload.locationType = newEventData.locationType
-      payload.location = newEventData.meetingType === 'online' ? (newEventData.location || 'Google Meet') : (newEventData.locationType === 'sede' ? 'Sede RGMJ' : newEventData.location)
       payload.status = "Agendado"
+      payload.zipCode = newEventData.zipCode
+      payload.address = newEventData.address
+      payload.number = newEventData.number
+      payload.neighborhood = newEventData.neighborhood
+      payload.city = newEventData.city
+      payload.state = newEventData.state
       typeForGoogle = 'atendimento'
     } else if (createMode === 'prazo') {
       targetCollection = 'deadlines'
@@ -264,7 +328,6 @@ export default function MasterAgendaPage() {
     } else if (createMode === 'diligencia') {
       targetCollection = 'diligences'
       payload.dueDate = dateTime
-      payload.location = newEventData.location
       payload.assigneeId = newEventData.assigneeId
       payload.status = "Pendente"
       typeForGoogle = 'diligencia'
@@ -632,13 +695,56 @@ export default function MasterAgendaPage() {
                               <Building2 className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Sede RGMJ</span>
                             </div>
                             <div className={cn("p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
-                              <MapPin className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Endereço Custom</span>
+                              <MapPin className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Endereço Externo</span>
                             </div>
                           </RadioGroup>
-                          <div className="space-y-3">
-                            <Label className={labelMini}>Localização do Atendimento</Label>
-                            <Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-16 text-white font-black text-lg px-8 rounded-2xl" placeholder="DIGITE O ENDEREÇO OU NOME DO LOCAL..." />
-                          </div>
+                          
+                          {newEventData.locationType === 'sede' ? (
+                            <div className="space-y-3 animate-in fade-in">
+                              <Label className={labelMini}>Localização do Atendimento</Label>
+                              <Input value="SEDE RGMJ" disabled className="bg-black/40 border-white/10 h-16 text-white font-black text-lg px-8 rounded-2xl opacity-50" />
+                            </div>
+                          ) : (
+                            <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>CEP</Label>
+                                  <div className="relative">
+                                    <Input 
+                                      value={newEventData.zipCode} 
+                                      onChange={e => setNewEventData({...newEventData, zipCode: maskCEP(e.target.value)})} 
+                                      onBlur={handleMeetingCepBlur}
+                                      className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" 
+                                      placeholder="00000-000"
+                                    />
+                                    {loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                                  </div>
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                  <Label className={labelMini}>Logradouro</Label>
+                                  <Input value={newEventData.address} onChange={e => setNewEventData({...newEventData, address: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Nº</Label>
+                                  <Input value={newEventData.number} onChange={e => setNewEventData({...newEventData, number: e.target.value})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Bairro</Label>
+                                  <Input value={newEventData.neighborhood} onChange={e => setNewEventData({...newEventData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Cidade</Label>
+                                  <Input value={newEventData.city} onChange={e => setNewEventData({...newEventData, city: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>UF</Label>
+                                  <Input value={newEventData.state} onChange={e => setNewEventData({...newEventData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -665,7 +771,7 @@ export default function MasterAgendaPage() {
                           <div className="space-y-1 col-span-2">
                             <p className="text-[9px] font-black text-primary uppercase">Logística</p>
                             <p className="text-base font-bold text-white uppercase flex items-center gap-3">
-                              <MapPin className="h-4 w-4 text-primary" /> {newEventData.location}
+                              <MapPin className="h-4 w-4 text-primary" /> {newEventData.meetingType === 'online' ? 'GOOGLE MEET' : (newEventData.locationType === 'sede' ? 'SEDE RGMJ' : `${newEventData.address}, ${newEventData.number}`)}
                             </p>
                           </div>
                         </div>
@@ -685,7 +791,6 @@ export default function MasterAgendaPage() {
               {/* OUTROS FORMULÁRIOS (PRAZO / AUDIÊNCIA / DILIGÊNCIA) - MANTER SIMPLICIDADE OU ADAPTAR SE NECESSÁRIO */}
               {createMode !== 'atendimento' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
-                   {/* ... Lógica anterior simplificada para os demais ... */}
                    <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
                    <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12" /></div>
@@ -731,7 +836,7 @@ export default function MasterAgendaPage() {
                 disabled={isSyncingWorkspace || !newEventData.title || !newEventData.date}
                 className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
               >
-                {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 mr-3" />}
                 {editingEventId ? "ATUALIZAR REGISTRO" : "CONFIRMAR E SINCRONIZAR"}
               </Button>
             )}
