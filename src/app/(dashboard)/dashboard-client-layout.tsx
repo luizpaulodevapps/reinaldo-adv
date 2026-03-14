@@ -143,7 +143,8 @@ export function DashboardClientLayout({
           </header>
 
           <main className="flex-1 overflow-x-hidden">
-            <div className="py-8 px-6 lg:py-10 lg:px-12 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
+            {/* VISÃO ULTRA-WIDE: Largura expandida para 1800px / 95% do viewport */}
+            <div className="py-8 px-6 lg:py-10 lg:px-12 max-w-[1800px] w-[95%] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
               {children}
             </div>
           </main>

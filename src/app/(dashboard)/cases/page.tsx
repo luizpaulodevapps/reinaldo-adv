@@ -78,12 +78,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ProcessForm } from "@/components/cases/process-form"
-import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { pushActToGoogleCalendar } from "@/services/google-calendar"
@@ -115,10 +112,9 @@ export default function CasesPage() {
   const [isHearingOpen, setIsHearingOpen] = useState(false)
   const [isFinancialOpen, setIsFinancialOpen] = useState(false)
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
-  const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
   const [isSyncingAct, setIsSyncingAct] = useState(false)
 
-  // Estados para Atendimento Wizard
+  // Estados para Atendimento Wizard (Rito de 5 Passos)
   const [meetingData, setMeetingData] = useState({ 
     title: "", 
     date: format(new Date(), 'yyyy-MM-dd'), 
@@ -146,12 +142,6 @@ export default function CasesPage() {
 
   const { data: processesData, isLoading } = useCollection(processesQuery)
   const processes = processesData || []
-
-  const staffQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
-  }, [db, user])
-  const { data: staffMembers } = useCollection(staffQuery)
 
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
@@ -255,7 +245,7 @@ export default function CasesPage() {
     setIsAnalyzing(true); 
     try { 
       const result = await aiParseDjePublication({ publicationText }); 
-      setDeadlineData({ ...deadlineData, title: result.deadlineType || "PRAZO JUDICIAL", fatalDate: result.dueDate || "", description: result.summary || "" }); 
+      setDeadlineData({ ...deadlineData, title: result.deadlineType?.toUpperCase() || "PRAZO JUDICIAL", fatalDate: result.dueDate || "", description: result.summary?.toUpperCase() || "" }); 
       toast({ title: "Inteligência RGMJ Concluída" }); 
     } catch (e) { toast({ variant: "destructive", title: "Erro na Análise IA" }); } finally { setIsAnalyzing(false); } 
   }
@@ -303,10 +293,11 @@ export default function CasesPage() {
               <div className="flex items-center gap-6 flex-1 min-w-0">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-lg"><UserIcon className="h-6 w-6" /></div>
                 <div className="space-y-1 flex-1 min-w-0">
+                  {/* VISUALIZAÇÃO DE ELITE: CLIENTE vs RÉU */}
                   <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-black text-white uppercase truncate">{proc.clientName}</h3>
+                    <h3 className="text-lg font-black text-white uppercase truncate max-w-[45%]">{proc.clientName}</h3>
                     <span className="text-[10px] font-black text-muted-foreground/40 uppercase">vs</span>
-                    <h3 className="text-sm font-bold text-white/60 uppercase truncate">{proc.defendantName || "NÃO MAPEADO"}</h3>
+                    <h3 className="text-sm font-bold text-white/60 uppercase truncate max-w-[45%]">{proc.defendantName || "NÃO MAPEADO"}</h3>
                   </div>
                   <div className="flex items-center gap-4">
                     <Badge variant="outline" className="text-[8px] border-primary/20 text-primary uppercase">{proc.caseType}</Badge>
@@ -360,11 +351,11 @@ export default function CasesPage() {
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={meetingData.type} onValueChange={(v: any) => setMeetingData({...meetingData, type: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
-                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
                       <Video className={cn("h-8 w-8", meetingData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase">Virtual</span>
                     </div>
-                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
                       <MapPin className={cn("h-8 w-8", meetingData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase">Presencial</span>
                     </div>
@@ -375,7 +366,7 @@ export default function CasesPage() {
               {meetingStep === 2 && (
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">2. Cronograma do Atendimento</Label>
-                  <div className="grid grid-cols-2 gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-2xl">
+                  <div className="grid grid-cols-2 gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-2xl shadow-xl">
                     <div className="space-y-2"><Label className={labelMini}>Data</Label><Input type="date" className="bg-black/40 h-14 text-white font-bold rounded-xl" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} /></div>
                     <div className="space-y-2"><Label className={labelMini}>Hora</Label><Input type="time" className="bg-black/40 h-14 text-white font-bold rounded-xl" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} /></div>
                   </div>
@@ -396,7 +387,7 @@ export default function CasesPage() {
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística do Encontro</Label>
                   {meetingData.type === 'online' ? (
-                    <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6">
+                    <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                       <Video className="h-12 w-12 text-emerald-500 mx-auto" />
                       <h4 className="text-xl font-black text-white uppercase">Google Meet Hub</h4>
                       <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
@@ -407,15 +398,18 @@ export default function CasesPage() {
                   ) : (
                     <div className="space-y-6">
                       <RadioGroup value={meetingData.locationType} onValueChange={v => setMeetingData({...meetingData, locationType: v})} className="grid grid-cols-2 gap-4">
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
                           <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Sede RGMJ</span>
                         </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
                           <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
                         </div>
                       </RadioGroup>
-                      {meetingData.locationType === 'externo' && (
-                        <div className="space-y-2"><Label className={labelMini}>Endereço do Atendimento</Label><Input value={meetingData.location} onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl" placeholder="DIGITE O LOCAL..." /></div>
+                      {meetingStep === 4 && meetingData.locationType === 'externo' && (
+                        <div className="space-y-2 animate-in fade-in">
+                          <Label className={labelMini}>Endereço do Atendimento</Label>
+                          <Input value={meetingData.location} onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl" placeholder="DIGITE O LOCAL..." />
+                        </div>
                       )}
                     </div>
                   )}
@@ -427,10 +421,15 @@ export default function CasesPage() {
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Resumo do Protocolo</Label>
                   <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
-                    <div className="space-y-2"><h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeActionProcess?.clientName}</h4><p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(meetingData.date).toLocaleDateString()} às {meetingData.time}</p></div>
-                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                      O rito de sincronismo disparará o convite Google e o disparo WhatsApp com o link tático.
-                    </p>
+                    <div className="space-y-2">
+                      <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeActionProcess?.clientName}</h4>
+                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(meetingData.date).toLocaleDateString()} às {meetingData.time}</p>
+                    </div>
+                    <div className="p-4 bg-black/40 border border-white/5 rounded-xl shadow-inner">
+                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
+                        O rito de sincronismo disparará o convite Google e preparará o disparo WhatsApp com o link tático.
+                      </p>
+                    </div>
                   </Card>
                 </div>
               )}
@@ -438,8 +437,8 @@ export default function CasesPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
-            <Button variant="ghost" onClick={() => meetingStep > 1 ? setMeetingStep(meetingStep - 1) : setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
+            <Button variant="ghost" onClick={() => meetingStep > 1 ? setMeetingStep(meetingStep - 1) : setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">
               {meetingStep > 1 ? "ANTERIOR" : "CANCELAR"}
             </Button>
             {meetingStep < 5 ? (
@@ -447,7 +446,7 @@ export default function CasesPage() {
                 PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleScheduleMeeting} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] gap-4">
+              <Button onClick={handleScheduleMeeting} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.02] gap-4">
                 {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
                 CONFIRMAR E SINCRONIZAR
               </Button>
@@ -487,6 +486,35 @@ export default function CasesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-4xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
+            <SheetHeader>
+              <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                {editingProcess ? "Retificar Dossiê" : "Novo Processo"}
+              </SheetTitle>
+              <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
+                {editingProcess ? "Ajuste de metadados processuais." : "Injeção estratégica de novo feito no acervo."}
+              </SheetDescription>
+            </SheetHeader>
+          </div>
+          <ProcessForm 
+            initialData={editingProcess}
+            onSubmit={(data) => {
+              if (editingProcess) {
+                updateDocumentNonBlocking(doc(db!, "processes", editingProcess.id), { ...data, updatedAt: serverTimestamp() })
+                toast({ title: "Processo Atualizado" })
+              } else {
+                addDocumentNonBlocking(collection(db!, "processes"), { ...data, status: "Em Andamento", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+                toast({ title: "Processo Protocolado" })
+              }
+              setIsSheetOpen(false)
+            }}
+            onCancel={() => setIsSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
