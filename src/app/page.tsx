@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from 'next/link'
@@ -20,7 +21,9 @@ import {
   Gavel,
   ShieldAlert,
   X,
-  CheckCircle2
+  CheckCircle2,
+  MapPin,
+  ArrowRight
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { 
@@ -58,7 +61,7 @@ function WhatsAppWidget() {
       
       setTimeout(() => {
         setIsTyping(false)
-      }, 2500) // Tempo de digitação mais realista
+      }, 2500)
     }, 3000)
 
     const minimizeTimer = setTimeout(() => {
@@ -93,7 +96,6 @@ function WhatsAppWidget() {
             transition={{ type: "spring", damping: 20, stiffness: 200 }}
             className="mb-8 w-[360px] bg-white rounded-[2rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-emerald-500/10 pointer-events-auto"
           >
-            {/* Header Verde Esmeralda (Conforme Imagem) */}
             <div className="bg-[#075e54] p-6 flex items-center gap-4">
               <div className="relative">
                 <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
@@ -115,7 +117,6 @@ function WhatsAppWidget() {
               </button>
             </div>
             
-            {/* Área de Mensagem com Background do WhatsApp */}
             <div className="p-8 bg-[#e5ddd5] space-y-6 relative min-h-[160px] flex flex-col justify-end overflow-hidden">
               <div className="absolute inset-0 opacity-[0.08] pointer-events-none grayscale" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }} />
               
@@ -140,7 +141,6 @@ function WhatsAppWidget() {
                     className="bg-white p-5 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl shadow-lg max-w-[95%] relative z-10 border border-white/50"
                   >
                     <div className="absolute -left-2 top-0 w-0 h-0 border-t-[12px] border-t-white border-l-[12px] border-l-transparent" />
-                    
                     <p className="text-[#111b21] text-[14px] leading-relaxed font-medium">
                       Olá! Sou o Dr. Reinaldo. Vi que você está navegando em nosso portal. Já estou disponível para uma triagem inicial do seu caso. Podemos conversar?
                     </p>
@@ -156,7 +156,6 @@ function WhatsAppWidget() {
               </AnimatePresence>
             </div>
 
-            {/* Botão de Ação Estilo Iniciar Atendimento */}
             <button 
               onClick={handleOpenWhatsApp}
               className="w-full py-6 bg-white text-[#075e54] font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-4 group pointer-events-auto"
@@ -209,125 +208,102 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-[#020617] text-white selection:bg-[#F5D030] selection:text-black overflow-x-hidden font-sans">
       
+      {/* NAVEGAÇÃO MINIMALISTA */}
       <nav className={`fixed top-0 w-full z-50 py-8 px-10 lg:px-20 transition-all duration-500 ${isScrolled ? 'bg-[#020617]/95 backdrop-blur-xl border-b border-white/5 py-5' : 'bg-transparent'}`}>
         <div className="max-w-[1800px] mx-auto flex justify-between items-center">
           <div className="flex items-center gap-6 group cursor-pointer">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F5D030] to-[#B8860B] flex items-center justify-center shadow-[0_0_30px_rgba(245,208,48,0.3)] group-hover:scale-110 transition-transform duration-500">
-              <Scale className="h-8 w-8 text-[#020617]" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#F5D030] to-[#B8860B] flex items-center justify-center shadow-[0_0_30px_rgba(245,208,48,0.3)] group-hover:scale-110 transition-transform duration-500">
+              <Scale className="h-6 w-6 text-[#020617]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-3xl font-bold tracking-widest uppercase leading-none">RGMJ</span>
-              <span className="text-xs font-black tracking-[0.4em] text-[#F5D030] uppercase mt-2">Advocacia Estratégica</span>
+              <span className="text-2xl font-black tracking-widest uppercase leading-none font-serif">RGMJ</span>
+              <span className="text-[8px] font-black tracking-[0.5em] text-[#F5D030] uppercase mt-1.5">Advocacia de Elite</span>
             </div>
           </div>
           
-          <div className="hidden md:flex items-center gap-16 text-xs font-black tracking-[0.3em] uppercase text-muted-foreground">
-            <Link href="#sobre" className="hover:text-[#F5D030] transition-colors">A BANCA</Link>
-            <Link href="#areas" className="hover:text-[#F5D030] transition-colors">ESPECIALIDADES</Link>
-            <Link href="#metodo" className="hover:text-[#F5D030] transition-colors">MÉTODO</Link>
-            <Link href="#contato" className="hover:text-[#F5D030] transition-colors">CONTATO</Link>
+          <div className="hidden md:flex items-center gap-12 text-[10px] font-black tracking-[0.3em] uppercase text-muted-foreground">
+            <Link href="#sobre" className="hover:text-[#F5D030] transition-colors">A Banca</Link>
+            <Link href="#areas" className="hover:text-[#F5D030] transition-colors">Especialidades</Link>
+            <Link href="#metodo" className="hover:text-[#F5D030] transition-colors">Estratégia</Link>
             <Link href="/login">
-              <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-xl px-8 h-12 text-sm font-bold uppercase tracking-widest transition-all">
-                <Lock className="h-5 w-5 mr-3" /> ACESSO RESTRITO
+              <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-full px-8 h-10 text-[9px] font-black uppercase tracking-widest transition-all">
+                <Lock className="h-3 w-3 mr-2.5" /> ACESSO RESTRITO
               </Button>
             </Link>
           </div>
 
           <Link href="/login" className="md:hidden">
-            <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-xl p-4 h-14">
-              <Lock className="h-6 w-6" />
+            <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary hover:text-background rounded-full p-3 h-10">
+              <Lock className="h-4 w-4" />
             </Button>
           </Link>
         </div>
       </nav>
 
-      <section className="relative min-h-screen flex items-center overflow-hidden pt-32">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070')" }} />
-        <div className="absolute inset-0 bg-[#020617]/85 backdrop-blur-[2px]" />
+      {/* HERO SECTION - FIDELIDADE À IMAGEM DE REFERÊNCIA */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Imagem de Fundo Estilo Escritório de Elite com Vidro */}
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-[10s] hover:scale-110" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069')" }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/95 via-[#020617]/80 to-[#020617]/95" />
         
-        <div className="max-w-[1800px] mx-auto px-10 lg:px-20 relative z-10 w-full">
-          <div className="max-w-6xl">
-            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-              <motion.div variants={itemVariants} className="flex items-center gap-6 mb-16">
-                <div className="w-20 h-1 bg-[#F5D030]" />
-                <span className="text-[#F5D030] font-bold text-sm tracking-[0.5em] uppercase">Excelência Jurídica & Resultados</span>
-              </motion.div>
-
-              <motion.h1 variants={itemVariants} className="font-serif text-7xl md:text-9xl lg:text-[10rem] text-white leading-[0.9] mb-16 font-medium tracking-tighter">
-                Engenharia de <br />
-                <span className="text-gradient-gold italic">Resultados </span> Jurídicos
-              </motion.h1>
-
-              <motion.p variants={itemVariants} className="text-white/70 text-xl md:text-3xl max-w-4xl mb-20 leading-relaxed font-light">
-                Defesa tática incisiva e consultoria de alta performance para clientes que exigem o padrão máximo de rigor técnico e visão estratégica.
-              </motion.p>
-
-              <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-10">
-                <Button className="bg-[#F5D030] text-[#020617] hover:scale-105 font-black rounded-2xl px-16 h-28 text-base uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(245,208,48,0.3)] transition-all border-0 group">
-                  <Calendar className="w-6 h-6 mr-5 group-hover:rotate-12 transition-transform" /> AGENDAR CONSULTA
-                </Button>
-                <Button variant="outline" className="border-white/10 hover:border-primary hover:text-primary text-white font-black rounded-2xl px-16 h-28 text-base uppercase tracking-[0.3em] bg-white/5 backdrop-blur-md transition-all group">
-                  <MessageCircle className="w-6 h-6 mr-5 group-hover:scale-110 transition-transform" /> WHATSAPP DIRECT
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-40 bg-white/[0.01] border-y border-white/5 relative overflow-hidden">
-        <div className="max-w-[1800px] mx-auto px-10 lg:px-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 relative z-10">
-          {[
-            { label: "Anos de Atuação", value: "15+", icon: Clock },
-            { label: "Processos de Êxito", value: "2.5k+", icon: Award },
-            { label: "Valor Recuperado", value: "R$ 45M", icon: TrendingUp },
-            { label: "Clientes Atendidos", value: "3.2k", icon: Users },
-          ].map((stat, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="flex flex-col items-center text-center space-y-8">
-              <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
-                <stat.icon className="h-9 w-9 text-primary" />
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-6xl font-serif font-bold text-white tracking-tighter">{stat.value}</h4>
-                <p className="text-sm font-black text-muted-foreground uppercase tracking-[0.4em]">{stat.label}</p>
+        {/* Conteúdo Centralizado Estilo Logotipo Institucional */}
+        <div className="relative z-10 w-full max-w-[1800px] px-10 text-center space-y-16">
+          <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-12">
+            
+            <motion.div variants={itemVariants} className="flex flex-col items-center">
+              <h1 className="font-serif text-[10rem] md:text-[14rem] lg:text-[18rem] text-gradient-gold leading-none font-medium tracking-tighter opacity-90 mb-4">
+                RGMJ
+              </h1>
+              <div className="flex items-center gap-10 w-full max-w-4xl mx-auto">
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#F5D030]/40" />
+                <h2 className="text-white font-black text-xl md:text-3xl lg:text-4xl uppercase tracking-[0.4em] whitespace-nowrap leading-none">
+                  Advocacia e Consultoria Jurídica
+                </h2>
+                <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#F5D030]/40" />
               </div>
             </motion.div>
-          ))}
+
+            <motion.p variants={itemVariants} className="text-white/50 text-base md:text-xl max-w-3xl mx-auto leading-relaxed font-light uppercase tracking-[0.25em]">
+              Soberania técnica, ética inabalável e engenharia de resultados para demandas de alta complexidade.
+            </motion.p>
+
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-8 justify-center pt-8">
+              <Button className="bg-[#F5D030] text-[#020617] hover:scale-105 font-black rounded-2xl px-12 h-20 text-xs uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(245,208,48,0.3)] transition-all border-0 group">
+                <Calendar className="w-5 h-5 mr-4 group-hover:rotate-12 transition-transform" /> INICIAR TRIAGEM
+              </Button>
+              <Button variant="outline" className="border-white/10 hover:border-primary hover:text-primary text-white font-black rounded-2xl px-12 h-20 text-xs uppercase tracking-[0.3em] bg-white/5 backdrop-blur-md transition-all group">
+                <MessageCircle className="w-5 h-5 mr-4 group-hover:scale-110 transition-transform" /> CONSULTORIA DIRETA
+              </Button>
+            </motion.div>
+          </motion.div>
         </div>
+
+        {/* Scroll Indicator */}
+        <motion.div 
+          animate={{ y: [0, 10, 0] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 opacity-30"
+        >
+          <span className="text-[8px] font-black uppercase tracking-[0.5em]">Explore a Banca</span>
+          <div className="w-[1px] h-12 bg-gradient-to-b from-[#F5D030] to-transparent" />
+        </motion.div>
       </section>
 
-      <section id="areas" className="py-48 bg-[#020617]">
+      {/* STATS SECTION - MINIMALISTA E PRESTIGIADO */}
+      <section className="py-32 bg-white/[0.01] border-y border-white/5">
         <div className="max-w-[1800px] mx-auto px-10 lg:px-20">
-          <div className="text-center mb-40 space-y-8">
-            <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black text-sm tracking-[0.4em] px-8 py-3 rounded-full">Especialidades Estratégicas</Badge>
-            <h2 className="text-6xl md:text-8xl font-serif font-medium uppercase tracking-tighter">Frentes de Atuação <span className="text-gradient-gold italic">Estratégica</span></h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             {[
-              { title: "Direito do Trabalho", icon: Briefcase, desc: "Foco total na proteção de direitos do empregado e execuções de alta complexidade." },
-              { title: "Defesa Civil", icon: ShieldCheck, desc: "Ações indenizatórias, responsabilidade civil e contratos de alta sofisticação." },
-              { title: "Previdenciário", icon: Users, desc: "Planejamento de aposentadorias e revisões de benefícios com rigor matemático." },
-              { title: "Assessoria Comercial", icon: Zap, desc: "Suporte jurídico para parcerias táticas e blindagem de negócios." },
-              { title: "Recursos em Tribunais", icon: Scale, desc: "Atuação técnica em tribunais superiores para reverter decisões críticas." },
-              { title: "Compliance Ético", icon: Gavel, desc: "Gestão de risco e consultoria preventiva para prevenção de litígios." },
-            ].map((area, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, scale: 0.95 }} 
-                whileInView={{ opacity: 1, scale: 1 }} 
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="group p-16 border border-white/5 bg-white/[0.02] hover:border-primary/30 transition-all duration-700 relative overflow-hidden rounded-[2.5rem] shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-20 transition-opacity">
-                  <area.icon className="h-32 w-32 text-white" />
-                </div>
-                <area.icon className="h-12 w-12 text-primary mb-12" />
-                <h3 className="text-3xl font-serif font-bold uppercase tracking-widest text-white mb-8">{area.title}</h3>
-                <p className="text-white/60 text-lg leading-relaxed font-light uppercase tracking-widest">{area.desc}</p>
-                <div className="mt-12 flex items-center text-sm font-black text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-                  Consultar Tese <ChevronRight className="ml-4 h-5 w-5" />
+              { label: "Anos de Soberania", value: "15+", desc: "Atuação ininterrupta" },
+              { label: "Casos Resolvidos", value: "2.5k", desc: "Êxito operacional" },
+              { label: "Patrimônio Gerido", value: "R$ 45M", desc: "Valores recuperados" },
+              { label: "Clientes Ativos", value: "3.2k", desc: "Confiança estabelecida" },
+            ].map((stat, i) => (
+              <motion.div key={i} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="space-y-4 border-l border-white/5 pl-8">
+                <h4 className="text-5xl font-serif font-bold text-white tracking-tighter">{stat.value}</h4>
+                <div>
+                  <p className="text-[10px] font-black text-[#F5D030] uppercase tracking-[0.3em]">{stat.label}</p>
+                  <p className="text-[9px] text-muted-foreground uppercase mt-1 tracking-widest opacity-40">{stat.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -335,29 +311,74 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ÁREAS DE ATUAÇÃO - CARDS GLASS DE ALTA DENSIDADE */}
+      <section id="areas" className="py-48 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        
+        <div className="max-w-[1800px] mx-auto px-10 lg:px-20">
+          <div className="text-left mb-32 space-y-6">
+            <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black text-[10px] tracking-[0.4em] px-6 py-2 rounded-full">Inteligência Jurídica</Badge>
+            <h2 className="text-6xl md:text-8xl font-serif font-medium uppercase tracking-tighter leading-none">Frentes de <br/><span className="text-gradient-gold italic">Atuação Estratégica</span></h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              { title: "Direito do Trabalho", icon: Briefcase, desc: "Proteção de direitos do empregado em execuções de alta complexidade e reversão de injustiças." },
+              { title: "Defesa Cível", icon: ShieldCheck, desc: "Ações indenizatórias, responsabilidade civil e estruturação de contratos de alto valor." },
+              { title: "Previdenciário de Elite", icon: Users, desc: "Planejamento tático de aposentadorias e revisões de benefícios com rigor matemático." },
+              { title: "Consultoria Comercial", icon: Zap, desc: "Blindagem de negócios e assessoria estratégica para parcerias e expansão." },
+              { title: "Tribunais Superiores", icon: Scale, desc: "Atuação técnica cirúrgica em recursos para reverter decisões críticas de mérito." },
+              { title: "Compliance Ético", icon: Gavel, desc: "Gestão preventiva de riscos e auditoria jurídica para evitar litígios desnecessários." },
+            ].map((area, i) => (
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, y: 30 }} 
+                whileInView={{ opacity: 1, y: 0 }} 
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="group p-12 border border-white/5 bg-white/[0.02] hover:border-primary/30 transition-all duration-700 rounded-[2.5rem] shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <area.icon className="h-32 w-32 text-white" />
+                </div>
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 mb-10 group-hover:scale-110 transition-transform">
+                  <area.icon className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-2xl font-serif font-bold uppercase tracking-widest text-white mb-6 leading-tight">{area.title}</h3>
+                <p className="text-white/40 text-sm leading-relaxed uppercase tracking-widest font-light">{area.desc}</p>
+                <div className="mt-10 flex items-center text-[9px] font-black text-primary uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
+                  CONSULTAR TESE <ArrowRight className="ml-3 h-3 w-3" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* MÉTODO - ENGENHARIA DE RESULTADOS */}
       <section id="metodo" className="py-48 bg-white/[0.01] border-y border-white/5">
         <div className="max-w-[1800px] mx-auto px-10 lg:px-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
             <div className="space-y-16">
               <div className="space-y-8">
-                <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black text-sm tracking-[0.4em] px-8 py-3 rounded-full">O Método RGMJ</Badge>
+                <Badge variant="outline" className="border-primary/30 text-primary uppercase font-black text-[10px] tracking-[0.4em] px-6 py-2 rounded-full">O Método RGMJ</Badge>
                 <h2 className="text-6xl md:text-8xl font-serif font-medium uppercase tracking-tighter leading-tight">Engenharia de <br/><span className="text-gradient-gold italic">Resultados</span></h2>
               </div>
-              <p className="text-white/70 text-2xl uppercase tracking-widest font-light leading-relaxed">
-                Nossa abordagem não é baseada em volume, mas em precisão cirúrgica. Cada caso é tratado como uma operação de alta inteligência jurídica e estratégica.
+              <p className="text-white/60 text-xl uppercase tracking-widest font-light leading-relaxed">
+                Nossa abordagem ignora o volume para focar na precisão cirúrgica. Cada caso é tratado como uma operação de alta inteligência.
               </p>
               
               <div className="space-y-16">
                 {[
-                  { step: "01", title: "Triagem Estratégica", desc: "Análise profunda dos fatos através de inteligência de dados e experiência de banca de elite." },
-                  { step: "02", title: "Desenvolvimento de Tese", desc: "Construção de narrativas jurídicas inabaláveis baseadas em jurisprudência de ponta." },
-                  { step: "03", title: "Execução Incisiva", desc: "Protocolo e acompanhamento agressivo para garantir a celeridade e o êxito operacional." },
+                  { step: "01", title: "Triagem Estratégica", desc: "Análise profunda de DNA jurídico para identificar a melhor rota tática." },
+                  { step: "02", title: "Desenvolvimento de Tese", desc: "Construção de narrativas inabaláveis baseadas em jurisprudência de vanguarda." },
+                  { step: "03", title: "Execução Incisiva", desc: "Protocolo e acompanhamento agressivo para garantir a celeridade do êxito." },
                 ].map((item, i) => (
-                  <div key={i} className="flex gap-10">
-                    <span className="text-5xl font-serif font-bold text-primary/40 italic">{item.step}</span>
-                    <div className="space-y-4">
-                      <h4 className="text-2xl font-bold uppercase tracking-widest text-white">{item.title}</h4>
-                      <p className="text-lg text-white/50 font-light uppercase tracking-widest leading-relaxed">{item.desc}</p>
+                  <div key={i} className="flex gap-10 group">
+                    <span className="text-5xl font-serif font-bold text-primary/20 italic group-hover:text-primary transition-colors duration-500">{item.step}</span>
+                    <div className="space-y-3">
+                      <h4 className="text-xl font-bold uppercase tracking-[0.2em] text-white">{item.title}</h4>
+                      <p className="text-sm text-white/30 uppercase tracking-widest leading-relaxed font-light">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -366,12 +387,12 @@ export default function HomePage() {
 
             <div className="relative">
               <div className="aspect-[4/5] bg-cover bg-center border border-white/10 grayscale hover:grayscale-0 transition-all duration-1000 rounded-[3rem] shadow-[0_40px_100px_rgba(0,0,0,0.6)]" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1505664194779-8beaceb93744?q=80&w=2070')" }} />
-              <div className="absolute -bottom-16 -left-16 bg-[#020617] border border-primary/20 p-16 hidden md:block rounded-[2.5rem] shadow-2xl">
+              <div className="absolute -bottom-16 -left-16 bg-[#020617] border border-primary/20 p-16 hidden md:block rounded-[2.5rem] shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center gap-8">
-                  <ShieldAlert className="h-20 w-20 text-primary" />
+                  <ShieldAlert className="h-16 w-16 text-primary" />
                   <div>
-                    <p className="text-sm font-black text-muted-foreground uppercase tracking-widest mb-3">Status de Operação</p>
-                    <p className="text-3xl font-serif font-bold text-white uppercase tracking-widest">Blindagem Total</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Protocolo de Operação</p>
+                    <p className="text-2xl font-serif font-bold text-white uppercase tracking-widest">Soberania Total</p>
                   </div>
                 </div>
               </div>
@@ -380,41 +401,48 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="contato" className="py-48 bg-gradient-to-b from-[#020617] to-[#050a19]">
+      {/* CTA - CONVITE À CONSULTORIA DE ELITE */}
+      <section id="contato" className="py-48">
         <div className="max-w-[1800px] mx-auto px-10 lg:px-20">
-          <div className="relative p-20 md:p-40 bg-white/[0.02] border border-primary/20 overflow-hidden group rounded-[4rem] shadow-2xl">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-24 text-center lg:text-left">
-              <div className="max-w-4xl space-y-10">
-                <h2 className="text-6xl md:text-[7rem] font-serif font-medium uppercase tracking-tighter leading-[0.95]">Inicie sua Defesa <span className="text-gradient-gold italic">Especializada</span> Agora</h2>
-                <p className="text-white/60 text-xl md:text-3xl uppercase tracking-widest font-light leading-relaxed">
-                  Não deixe seus direitos expostos à incerteza. Coloque seu caso nas mãos de quem domina a engenharia jurídica de resultados.
-                </p>
-              </div>
-              <div className="flex flex-col gap-8 w-full lg:w-auto">
-                <Button className="bg-[#F5D030] text-[#020617] hover:scale-105 font-black rounded-3xl px-20 h-32 text-xl uppercase tracking-[0.3em] shadow-[0_30px_70px_rgba(245,208,48,0.4)] transition-all border-0">
-                  FALAR COM ESPECIALISTA
+          <div className="relative p-20 md:p-32 bg-[#0d1117] border border-primary/20 overflow-hidden group rounded-[4rem] shadow-2xl text-center">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+            
+            <div className="max-w-4xl mx-auto space-y-12 relative z-10">
+              <h2 className="text-5xl md:text-[6rem] font-serif font-medium uppercase tracking-tighter leading-[0.95]">Inicie sua Defesa <br/><span className="text-gradient-gold italic">Especializada</span> Agora</h2>
+              <p className="text-white/40 text-lg md:text-2xl uppercase tracking-widest font-light leading-relaxed">
+                Não deixe seus direitos expostos à incerteza. Coloque seu caso nas mãos de quem domina a engenharia jurídica de resultados.
+              </p>
+              <div className="pt-10 flex flex-col items-center gap-8">
+                <Button className="bg-[#F5D030] text-[#020617] hover:scale-105 font-black rounded-3xl px-20 h-28 text-sm uppercase tracking-[0.4em] shadow-[0_30px_70px_rgba(245,208,48,0.4)] transition-all border-0">
+                  FALAR COM ESTRATEGISTA
                 </Button>
-                <p className="text-sm font-bold text-center text-muted-foreground uppercase tracking-widest mt-6">Resposta em até 15 minutos.</p>
+                <div className="flex items-center gap-4 text-emerald-500 animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Resposta Prioritária em 15 Minutos</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* FOOTER INSTITUCIONAL */}
       <footer className="py-32 bg-[#01040a] border-t border-white/5 px-10">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-16">
           <div className="flex items-center gap-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F5D030] to-[#B8860B] flex items-center justify-center shadow-xl">
-              <Scale className="h-9 w-9 text-[#020617]" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#F5D030] to-[#B8860B] flex items-center justify-center shadow-xl">
+              <Scale className="h-6 w-6 text-[#020617]" />
             </div>
-            <span className="text-3xl font-bold tracking-widest uppercase">RGMJ</span>
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold tracking-widest uppercase font-serif">RGMJ</span>
+              <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">Advocacia e Consultoria Jurídica</span>
+            </div>
           </div>
-          <div className="flex flex-col items-center md:items-end gap-6">
-            <p className="text-sm font-bold text-white/40 uppercase tracking-[0.4em]">© 2024 RGMJ ADVOGADOS • TODOS OS DIREITOS RESERVADOS</p>
+          <div className="flex flex-col items-center md:items-end gap-6 text-center md:text-right">
+            <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">© 2024 RGMJ ADVOGADOS • SOBERANIA, ÉTICA E TECNOLOGIA</p>
             <div className="flex gap-12">
-              <Link href="#" className="text-xs font-black text-white/20 uppercase tracking-widest hover:text-primary transition-colors">Termos de Uso</Link>
-              <Link href="#" className="text-xs font-black text-white/20 uppercase tracking-widest hover:text-primary transition-colors">Privacidade</Link>
+              <Link href="#" className="text-[9px] font-black text-white/10 uppercase tracking-widest hover:text-primary transition-colors">Termos de Operação</Link>
+              <Link href="#" className="text-[9px] font-black text-white/10 uppercase tracking-widest hover:text-primary transition-colors">Privacidade Digital</Link>
             </div>
           </div>
         </div>
