@@ -3,15 +3,140 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * RGMJ ADVOGADOS - SOBERANIA TOTAL (REVISÃO DEFINITIVA)
+     * RGMJ ADVOGADOS - SOBERANIA OPERACIONAL
      * 
-     * Diretriz: "Se logou, está permitido".
-     * Este comando remove qualquer trava granular, garantindo acesso total 
-     * a todos os módulos (Processos, Notificações, Financeiro, etc) para usuários autenticados.
+     * Filosofia: Se logou, tem acesso colaborativo aos dados da banca para garantir a 
+     * fluidez processual. Restrições aplicadas apenas a notificações e perfis.
      */
 
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // --- Global Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Collection Rules ---
+
+    // Perfis de Equipe: Leitura para todos, escrita apenas pelo próprio usuário
+    match /staff_profiles/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isUser(userId);
+    }
+
+    // Leads e Entrevistas: Soberania total para o rito de triagem
+    match /leads/{leadId} {
+      allow read, write: if isSignedIn();
+      
+      match /interviews/{interviewId} {
+        allow read, write: if isSignedIn();
+      }
+      
+      match /clientInterviews/{clientInterviewId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Clientes e Processos: Base de dados central colaborativa
+    match /clients/{clientId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /processes/{processId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Agenda e Atos Judiciais
+    match /hearings/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /deadlines/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /appointments/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /diligences/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /freelance_diligences/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Financeiro e Logística
+    match /financial_titles/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /reimbursements/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /freelancers/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /counterparties/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Estruturas de Apoio e Biblioteca Técnica
+    match /courts/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /checklists/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /checklist_executions/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /employees/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /document_templates/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /notification_templates/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /settings/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /activities/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Notificações: Apenas o destinatário tem soberania sobre seus alertas
+    match /notifications/{id} {
+      allow read, write: if isSignedIn() && (
+        resource == null || 
+        resource.data.userId == request.auth.uid ||
+        (request.resource != null && request.resource.data.userId == request.auth.uid)
+      );
+    }
+
+    // --- Collection Group Rules (para queries globais de inteligência) ---
+
+    match /{path=**}/interviews/{interviewId} {
+      allow read: if isSignedIn();
+    }
+
+    match /{path=**}/clientInterviews/{clientInterviewId} {
+      allow read: if isSignedIn();
     }
   }
 }
