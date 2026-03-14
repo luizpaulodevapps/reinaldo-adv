@@ -58,19 +58,21 @@ function WhatsAppWidget() {
       
       setTimeout(() => {
         setIsTyping(false)
-      }, 1500)
+      }, 2500) // Tempo de digitação mais realista
     }, 3000)
 
     const minimizeTimer = setTimeout(() => {
-      setIsPopupOpen(false)
-      setHasNotification(true)
-    }, 12000)
+      if (isPopupOpen) {
+        setIsPopupOpen(false)
+        setHasNotification(true)
+      }
+    }, 15000)
 
     return () => {
       clearTimeout(showTimer)
       clearTimeout(minimizeTimer)
     }
-  }, [])
+  }, [isPopupOpen])
 
   const handleOpenWhatsApp = () => {
     setHasNotification(false)
@@ -85,66 +87,68 @@ function WhatsAppWidget() {
       <AnimatePresence>
         {isPopupOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: 50, scale: 0.5, originX: 1, originY: 1 }}
+            initial={{ opacity: 0, y: 40, scale: 0.8, originX: 1, originY: 1 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="mb-8 w-[380px] bg-white rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] overflow-hidden border border-emerald-500/20 pointer-events-auto"
+            exit={{ opacity: 0, scale: 0.8, y: 40, transition: { duration: 0.2 } }}
+            transition={{ type: "spring", damping: 20, stiffness: 200 }}
+            className="mb-8 w-[360px] bg-white rounded-[2rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-emerald-500/10 pointer-events-auto"
           >
-            <div className="bg-emerald-600 p-6 flex items-center gap-5">
-              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center border border-white/10 relative">
-                <Scale className="h-7 w-7 text-white" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 rounded-full border-2 border-emerald-600" />
+            {/* Header Verde Esmeralda (Conforme Imagem) */}
+            <div className="bg-[#075e54] p-6 flex items-center gap-4">
+              <div className="relative">
+                <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+                  <Scale className="h-7 w-7 text-white" />
+                </div>
+                <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 rounded-full border-2 border-[#075e54] shadow-sm animate-pulse" />
               </div>
               <div className="flex-1">
-                <p className="text-white text-base font-bold uppercase tracking-wider">Dr. Reinaldo Gonçalves</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-white/70 text-sm font-medium">
-                    {isTyping ? 'Digitando...' : 'Online Agora'}
-                  </p>
-                </div>
+                <p className="text-white text-base font-black uppercase tracking-widest leading-none">Dr. Reinaldo Gonçalves</p>
+                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                  Online Agora
+                </p>
               </div>
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsPopupOpen(false); setHasNotification(true); }}
                 className="text-white/40 hover:text-white transition-colors p-2"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
             
-            <div className="p-8 bg-[#f0f2f5] space-y-6 relative min-h-[180px] flex flex-col justify-end">
-              <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }} />
+            {/* Área de Mensagem com Background do WhatsApp */}
+            <div className="p-8 bg-[#e5ddd5] space-y-6 relative min-h-[160px] flex flex-col justify-end overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.08] pointer-events-none grayscale" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }} />
               
               <AnimatePresence mode="wait">
                 {isTyping ? (
                   <motion.div 
                     key="typing"
-                    initial={{ opacity: 0, y: 5 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-white p-5 rounded-2xl shadow-sm max-w-[80px] flex justify-center items-center gap-1 relative z-10"
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="bg-white p-4 rounded-2xl shadow-md max-w-[80px] flex justify-center items-center gap-1 relative z-10"
                   >
-                    <div className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <div className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <div className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" />
                   </motion.div>
                 ) : (
                   <motion.div 
                     key="message"
-                    initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                    initial={{ opacity: 0, scale: 0.9, x: -10 }}
                     animate={{ opacity: 1, scale: 1, x: 0 }}
-                    className="bg-white p-6 rounded-tr-3xl rounded-bl-3xl rounded-br-3xl shadow-lg max-w-[95%] relative z-10"
+                    className="bg-white p-5 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl shadow-lg max-w-[95%] relative z-10 border border-white/50"
                   >
-                    <div className="absolute -left-3 top-0 w-0 h-0 border-t-[15px] border-t-white border-l-[15px] border-l-transparent" />
+                    <div className="absolute -left-2 top-0 w-0 h-0 border-t-[12px] border-t-white border-l-[12px] border-l-transparent" />
                     
-                    <p className="text-[#111b21] text-base font-normal leading-relaxed">
+                    <p className="text-[#111b21] text-[14px] leading-relaxed font-medium">
                       Olá! Sou o Dr. Reinaldo. Vi que você está navegando em nosso portal. Já estou disponível para uma triagem inicial do seu caso. Podemos conversar?
                     </p>
-                    <div className="flex items-center justify-end gap-1.5 mt-3">
-                      <span className="text-xs text-gray-400 font-medium">10:42</span>
+                    <div className="flex items-center justify-end gap-1 mt-2">
+                      <span className="text-[10px] text-gray-400 font-bold">{new Date().getHours()}:{new Date().getMinutes().toString().padStart(2, '0')}</span>
                       <div className="flex">
-                        <CheckCircle2 className="w-4 h-4 text-sky-400 -mr-2" />
-                        <CheckCircle2 className="w-4 h-4 text-sky-400" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 -mr-1.5" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
                       </div>
                     </div>
                   </motion.div>
@@ -152,12 +156,13 @@ function WhatsAppWidget() {
               </AnimatePresence>
             </div>
 
+            {/* Botão de Ação Estilo Iniciar Atendimento */}
             <button 
               onClick={handleOpenWhatsApp}
-              className="w-full py-6 bg-white text-emerald-600 font-bold text-base uppercase tracking-widest hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-4 group pointer-events-auto"
+              className="w-full py-6 bg-white text-[#075e54] font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-50 transition-all border-t border-gray-100 flex items-center justify-center gap-4 group pointer-events-auto"
             >
-              <MessageCircle className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />
-              Iniciar Atendimento
+              <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform fill-current" />
+              INICIAR ATENDIMENTO
             </button>
           </motion.div>
         )}
@@ -168,19 +173,19 @@ function WhatsAppWidget() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={handleOpenWhatsApp}
-          className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_20px_50px_rgba(16,185,129,0.5)] transition-all group"
+          className="w-20 h-20 rounded-full bg-[#25d366] flex items-center justify-center shadow-[0_20px_50px_rgba(37,211,102,0.4)] transition-all group border-4 border-[#020617]"
         >
-          <MessageCircle className="h-12 w-12 text-white fill-current" />
+          <MessageCircle className="h-10 w-10 text-white fill-current" />
           
           <AnimatePresence>
             {hasNotification && (
               <motion.span 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 flex h-10 w-10"
+                className="absolute -top-1 -right-1 flex h-8 w-8"
               >
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-10 w-10 bg-rose-500 items-center justify-center text-sm font-bold text-white border-2 border-[#020617]">1</span>
+                <span className="relative inline-flex rounded-full h-8 w-8 bg-rose-500 items-center justify-center text-xs font-black text-white border-2 border-[#020617]">1</span>
               </motion.span>
             )}
           </AnimatePresence>
