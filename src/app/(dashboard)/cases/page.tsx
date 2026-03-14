@@ -157,18 +157,6 @@ export default function CasesPage() {
   }, [db, user])
   const { data: staffMembers } = useCollection(staffQuery)
 
-  const hearingsQuery = useMemoFirebase(() => db ? query(collection(db, "hearings")) : null, [db])
-  const { data: allHearings } = useCollection(hearingsQuery)
-
-  const appointmentsQuery = useMemoFirebase(() => db ? query(collection(db, "appointments")) : null, [db])
-  const { data: allAppointments } = useCollection(appointmentsQuery)
-
-  const deadlinesQuery = useMemoFirebase(() => db ? query(collection(db, "deadlines")) : null, [db])
-  const { data: allDeadlines } = useCollection(deadlinesQuery)
-
-  const financialQuery = useMemoFirebase(() => db ? query(collection(db, "financial_titles")) : null, [db])
-  const { data: allFinancial } = useCollection(financialQuery)
-
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
       if (proc.status === "Arquivado") return false
@@ -254,7 +242,7 @@ export default function CasesPage() {
     if (!db || !activeActionProcess) return
     const payload = {
       title: deadlineData.title.toUpperCase(),
-      dueDate: deadlineData.fatalDate, // Salvamos a data fatal como data do compromisso
+      dueDate: deadlineData.fatalDate,
       pubDate: deadlineData.pubDate,
       description: deadlineData.description.toUpperCase(),
       priority: deadlineData.priority,
@@ -299,7 +287,6 @@ export default function CasesPage() {
     const baseDate = parseISO(deadlineData.pubDate)
     let calculatedDate: Date
     
-    // O rito exclui o dia da publicação (começa a contar no próximo)
     if (deadlineData.calculationType.includes("Úteis")) {
       calculatedDate = addBusinessDays(baseDate, days)
     } else {
@@ -592,7 +579,7 @@ export default function CasesPage() {
 
       {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] h-[95vh] sm:h-auto sm:max-h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
             <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
@@ -610,8 +597,8 @@ export default function CasesPage() {
             <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
-          <ScrollArea className="flex-1 w-full">
-            <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+          <ScrollArea className="flex-1 w-full h-full">
+            <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
               
               {/* SEÇÃO DESPACHO IA */}
               <div className="space-y-4">
