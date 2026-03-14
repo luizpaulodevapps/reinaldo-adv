@@ -3,138 +3,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * Core Philosophy: This ruleset enforces access based on authentication status.
-     * Most operational data is accessible to all signed-in staff members to ensure 
-     * collaborative productivity, while user-specific data like profiles and 
-     * notifications are restricted to their respective owners.
+     * RGMJ ADVOGADOS - POLÍTICA DE SOBERANIA TOTAL
+     * 
+     * Conforme diretriz da cúpula: "Se logou, está permitido".
+     * Este ecossistema opera em regime de confiança total entre os membros autenticados.
+     * Toda a base de dados (Processos, Prazos, Financeiro, Triagem e Notificações) 
+     * é acessível para leitura e escrita por qualquer colaborador com login ativo.
      */
 
-    // --- Global Helper Functions ---
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // --- Collection Rules ---
-
-    // Perfis de Equipe: Permite que o usuário leia seu próprio perfil e que admin/staff leiam outros para fins de atribuição
-    match /staff_profiles/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isUser(userId);
-    }
-
-    // Leads e Entrevistas: Acesso operacional para triagem
-    match /leads/{leadId} {
-      allow read, write: if isSignedIn();
-      
-      match /interviews/{interviewId} {
-        allow read, write: if isSignedIn();
-      }
-      
-      match /clientInterviews/{clientInterviewId} {
-        allow read, write: if isSignedIn();
-      }
-    }
-
-    // Clientes e Processos: Base de dados central da banca
-    match /clients/{clientId} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /processes/{processId} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Agenda: Audiências, Prazos, Compromissos e Atos Externos
-    match /hearings/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /deadlines/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /appointments/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /diligences/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /freelance_diligences/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Financeiro e Logística
-    match /financial_titles/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /reimbursements/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /freelancers/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /counterparties/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Estruturas de Apoio: Órgãos, Modelos, Checklists e Equipe
-    match /courts/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /checklists/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /checklist_executions/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /employees/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /document_templates/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /notification_templates/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /settings/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /activities/{id} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Notificações: Apenas o destinatário pode ler e gerenciar
-    match /notifications/{id} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-    }
-
-    // --- Collection Group Rules (para queries globais) ---
-
-    match /{path=**}/interviews/{interviewId} {
-      allow read: if isSignedIn();
-    }
-
-    match /{path=**}/clientInterviews/{clientInterviewId} {
-      allow read: if isSignedIn();
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
