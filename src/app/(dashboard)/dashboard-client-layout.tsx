@@ -1,4 +1,3 @@
-
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -143,7 +142,7 @@ export function DashboardClientLayout({
           </header>
 
           <main className="flex-1 overflow-x-hidden">
-            {/* VISÃO ULTRA-WIDE: Largura expandida para 1800px / 95% do viewport */}
+            {/* VISÃO ULTRA-WIDE: Largura expandida para 1800px / 95% do viewport para evitar truncamentos */}
             <div className="py-8 px-6 lg:py-10 lg:px-12 max-w-[1800px] w-[95%] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
               {children}
             </div>

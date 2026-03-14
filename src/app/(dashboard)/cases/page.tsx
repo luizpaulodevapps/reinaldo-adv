@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -54,7 +53,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, limit, doc } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc, limit } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { 
   Sheet, 
@@ -114,7 +113,7 @@ export default function CasesPage() {
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
   const [isSyncingAct, setIsSyncingAct] = useState(false)
 
-  // Estados para Atendimento Wizard (Rito de 5 Passos)
+  // Estados para Atendimento Wizard (Rito de 5 Passos conforme solicitado)
   const [meetingData, setMeetingData] = useState({ 
     title: "", 
     date: format(new Date(), 'yyyy-MM-dd'), 
@@ -290,26 +289,29 @@ export default function CasesPage() {
         ) : filteredProcesses.map((proc) => (
           <Card key={proc.id} className="glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer rounded-xl" onClick={() => setViewingProcess(proc)}>
             <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-6 flex-1 min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-lg"><UserIcon className="h-6 w-6" /></div>
-                <div className="space-y-1 flex-1 min-w-0">
-                  {/* VISUALIZAÇÃO DE ELITE: CLIENTE vs RÉU */}
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-black text-white uppercase truncate max-w-[45%]">{proc.clientName}</h3>
-                    <span className="text-[10px] font-black text-muted-foreground/40 uppercase">vs</span>
-                    <h3 className="text-sm font-bold text-white/60 uppercase truncate max-w-[45%]">{proc.defendantName || "NÃO MAPEADO"}</h3>
+              <div className="flex items-center gap-8 flex-1 min-w-0">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-lg flex-none"><UserIcon className="h-7 w-7" /></div>
+                <div className="space-y-2 flex-1 min-w-0">
+                  {/* VISUALIZAÇÃO DE ELITE: CLIENTE vs RÉU - HIERARQUIA COMPLETA */}
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight truncate max-w-[40%]">{proc.clientName}</h3>
+                    <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest shrink-0">vs</span>
+                    <h3 className="text-base font-bold text-white/60 uppercase truncate max-w-[40%]">{proc.defendantName || "NÃO MAPEADO"}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="text-[8px] border-primary/20 text-primary uppercase">{proc.caseType}</Badge>
-                    <span className="text-[10px] font-mono text-muted-foreground/40">{proc.processNumber}</span>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase h-6 px-3 rounded-full bg-primary/5">{proc.caseType}</Badge>
+                      <span className="text-[11px] font-mono font-bold text-muted-foreground/40 tracking-widest">{proc.processNumber}</span>
+                    </div>
+                    {proc.court && <span className="text-[10px] font-black text-muted-foreground/20 uppercase tracking-widest truncate">| {proc.court}</span>}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="h-10 px-4 rounded-lg bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center gap-2"><Video className="h-3.5 w-3.5" /> ATENDIMENTO</button>
+                <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="h-12 px-6 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center gap-3 border border-emerald-500/20 shadow-lg"><Video className="h-4 w-4" /> ATENDIMENTO</button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-white/20 hover:text-white border border-white/5"><MoreVertical className="h-5 w-5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl text-white/20 hover:text-white border border-white/5 bg-white/[0.02]"><MoreVertical className="h-6 w-6" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
                     <DropdownMenuLabel className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
@@ -456,7 +458,7 @@ export default function CasesPage() {
       </Dialog>
 
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-5 flex-none shadow-xl">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><Clock className="h-6 w-6" /></div>
             <div className="text-left"><DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo Judicial</DialogTitle></div>
