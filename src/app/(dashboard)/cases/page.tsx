@@ -44,7 +44,10 @@ import {
   Library,
   Star,
   TriangleAlert,
-  CalendarDays
+  CalendarDays,
+  Video,
+  MapPin,
+  Globe
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -115,7 +118,15 @@ export default function CasesPage() {
   const [publicationText, setPublicationText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deadlineDuration, setDeadlineDuration] = useState("")
-  const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
+  const [meetingData, setMeetingData] = useState({ 
+    title: "", 
+    date: "", 
+    time: "", 
+    type: "online" as "online" | "presencial", 
+    location: "",
+    notes: "",
+    autoMeet: true
+  })
   const [deadlineData, setDeadlineData] = useState({ 
     title: "", 
     pubDate: format(new Date(), 'yyyy-MM-dd'),
@@ -220,22 +231,24 @@ export default function CasesPage() {
 
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
+    const finalLocation = meetingData.type === 'online' ? (meetingData.location || 'MEETING VIRTUAL RGMJ') : (meetingData.location || 'SEDE RGMJ')
+    
     const payload = {
-      title: `REUNIÃO: ${activeActionProcess.clientName}`,
+      title: meetingData.title.toUpperCase() || `REUNIÃO: ${activeActionProcess.clientName}`,
       type: "Atendimento",
       startDateTime: `${meetingData.date}T${meetingData.time}:00`,
-      clientId: activeActionProcess.clientId,
+      clientId: activeActionProcess.clientId || "",
       clientName: activeActionProcess.clientName,
       processId: activeActionProcess.id,
       meetingType: meetingData.type,
-      location: meetingData.type === 'online' ? 'VIRTUAL RGMJ' : 'SEDE RGMJ',
+      location: finalLocation,
       notes: meetingData.notes,
       status: "Agendado",
       createdAt: serverTimestamp()
     }
     await addDocumentNonBlocking(collection(db, "appointments"), payload)
     setIsMeetingOpen(false)
-    toast({ title: "Reunião Agendada" })
+    toast({ title: "Reunião Agendada", description: "O compromisso foi injetado na pauta." })
   }
 
   const handleLaunchDeadline = async () => {
@@ -378,7 +391,7 @@ export default function CasesPage() {
       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <History className="h-4 w-4 text-muted-foreground" /> Ver Processo Completo
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setMeetingData({...meetingData, title: `REUNIÃO: ${proc.clientName}`}); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <Calendar className="h-4 w-4" /> Agendar Reunião/Atend.
       </DropdownMenuItem>
       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
@@ -568,12 +581,127 @@ export default function CasesPage() {
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}><SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-4xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl"><SheetHeader><div className="flex items-center gap-5 mb-4"><div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><FileText className="h-6 w-6" /></div><div><SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}</SheetTitle><SheetDescription asChild className="text-muted-foreground text-[10px] font-black uppercase mt-1.5 opacity-60"><div>{editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}</div></SheetDescription></div></div></SheetHeader></div><ProcessForm initialData={editingProcess} onSubmit={handleSaveProcess} onCancel={() => setIsSheetOpen(false)} /></SheetContent></Sheet>
 
-      {/* MODAIS DE OPERAÇÃO */}
+      {/* MODAL AGENDAR REUNIÃO - SOBERANIA LOGÍSTICA */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Calendar className="h-6 w-6 text-emerald-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Agendar Reunião</DialogTitle></div></DialogHeader></div>
-          <div className="p-8 space-y-6"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Título</Label><Input className="glass h-12 text-white font-bold" value={meetingData.title} onChange={e => setMeetingData({...meetingData, title: e.target.value})} /></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} /></div></div></div>
-          <DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar</Button></DialogFooter>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
+            <div className="flex items-center gap-6">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 shadow-xl">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <div className="text-left">
+                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Reunião</DialogTitle>
+                <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-50 tracking-widest">
+                  CLIENTE: <span className="text-primary">{activeActionProcess?.clientName}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
+            <div className="p-10 space-y-8">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Identificação da Pauta *</Label>
+                <Input 
+                  value={meetingData.title} 
+                  onChange={e => setMeetingData({...meetingData, title: e.target.value.toUpperCase()})} 
+                  className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase" 
+                  placeholder="EX: REUNIÃO TÁTICA DE ALINHAMENTO"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data do Compromisso</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                    <Input type="date" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} className="bg-black/40 border-white/10 h-12 pl-12 text-white font-bold" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                    <Input type="time" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} className="bg-black/40 border-white/10 h-12 pl-12 text-white font-bold" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Modalidade do Atendimento</Label>
+                <RadioGroup 
+                  value={meetingData.type} 
+                  onValueChange={(v: any) => setMeetingData({...meetingData, type: v, location: v === 'online' ? 'Google Meet' : ''})}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className={cn(
+                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
+                    meetingData.type === "online" ? "bg-emerald-500/5 border-emerald-500 shadow-lg shadow-emerald-500/10" : "bg-black/20 border-white/5"
+                  )} onClick={() => setMeetingData({...meetingData, type: "online", location: "Google Meet"})}>
+                    <RadioGroupItem value="online" className="border-emerald-500 text-emerald-500" />
+                    <div className="flex items-center gap-3">
+                      <Video className="h-5 w-5 text-emerald-500" />
+                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Virtual</span>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
+                    meetingData.type === "presencial" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
+                  )} onClick={() => setMeetingData({...meetingData, type: "presencial", location: "Sede RGMJ"})}>
+                    <RadioGroupItem value="presencial" className="border-primary text-primary" />
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Presencial</span>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                    {meetingData.type === 'online' ? 'Link do Atendimento (Google Meet)' : 'Localização da Reunião'}
+                  </Label>
+                  <div className="relative">
+                    {meetingData.type === 'online' ? <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500/40" /> : <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />}
+                    <Input 
+                      value={meetingData.location} 
+                      onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})} 
+                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold" 
+                      placeholder={meetingData.type === 'online' ? "MEET.GOOGLE.COM/..." : "SEDE RGMJ, CAFÉ X, ETC..."}
+                    />
+                  </div>
+                </div>
+
+                {meetingData.type === 'online' && (
+                  <div className="flex items-center justify-between p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="h-4 w-4 text-emerald-500" />
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest">Gerar Meet Link via Workspace?</span>
+                    </div>
+                    <Switch checked={meetingData.autoMeet} onCheckedChange={v => setMeetingData({...meetingData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Pauta / Notas Estratégicas</Label>
+                <Textarea 
+                  value={meetingData.notes} 
+                  onChange={e => setMeetingData({...meetingData, notes: e.target.value})} 
+                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs resize-none p-5 rounded-2xl" 
+                  placeholder="DESCREVA OS ASSUNTOS A SEREM TRATADOS NO ATENDIMENTO..."
+                />
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+            <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">Cancelar</Button>
+            <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95">
+              Confirmar Agendamento
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
