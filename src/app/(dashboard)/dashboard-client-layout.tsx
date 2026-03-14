@@ -1,3 +1,4 @@
+
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -32,10 +33,10 @@ export function DashboardClientLayout({
     }
   }, [user, isUserLoading, router]);
 
-  // Rito de busca direta pelo e-mail (Document ID = email)
+  // Rito de busca direta pelo e-mail (Identidade Única RGMJ)
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return doc(db, 'staff_profiles', user.email?.toLowerCase() || 'unauthorized');
+    return doc(db, 'staff_profiles', user.email?.toLowerCase().trim() || 'unauthorized');
   }, [user, db]);
 
   const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
@@ -55,8 +56,8 @@ export function DashboardClientLayout({
 
   // Auto-criação de perfil para Sócios Fundadores (Whitelisted)
   useEffect(() => {
-    if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email || '')) {
-      const emailId = user.email?.toLowerCase() || '';
+    if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email?.toLowerCase() || '')) {
+      const emailId = user.email?.toLowerCase().trim() || '';
       const newProfileRef = doc(db, 'staff_profiles', emailId);
       
       const initialProfile = {
@@ -83,14 +84,14 @@ export function DashboardClientLayout({
           <Scale className="text-gold-100 h-8 w-8" />
         </div>
         <p className="text-gold-100/40 font-bold tracking-[0.3em] uppercase text-[10px]">
-          Sincronizando Ecossistema RGMJ
+          Sincronizando Soberania RGMJ
         </p>
       </div>
     );
   }
 
-  // Se não tem perfil e não é um owner autorizado na lista, bloqueia.
-  if (!isProfileLoading && profileData === null && !OWNERS.includes(user?.email || '')) {
+  // Bloqueio de Acesso Não Autorizado
+  if (!isProfileLoading && profileData === null && !OWNERS.includes(user?.email?.toLowerCase() || '')) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0D1422] flex-col gap-8 font-sans p-10 text-center">
         <div className="w-24 h-24 rounded-[2rem] bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-2xl">
@@ -99,8 +100,8 @@ export function DashboardClientLayout({
         <div className="space-y-2">
           <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Não Autorizado</h2>
           <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest max-w-md mx-auto leading-relaxed">
-            Seu e-mail Google (<span className="text-white">{user?.email}</span>) não possui soberania de acesso neste ecossistema. 
-            Contate o Sócio Fundador para liberação no módulo de Equipe.
+            Seu e-mail Google (<span className="text-white">{user?.email}</span>) não possui autorização neste ecossistema. 
+            Certifique-se de que este é o e-mail cadastrado na pauta de soberania pelo Sócio Fundador.
           </p>
         </div>
         <Button onClick={() => auth && signOut(auth).then(() => router.push('/'))} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[10px]">

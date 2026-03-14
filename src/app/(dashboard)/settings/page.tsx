@@ -150,7 +150,7 @@ function SettingsContent() {
     // Saneamento de Duplicidade: Garante unicidade por E-mail
     const seenEmails = new Set();
     return searchResult.filter(m => {
-      const email = m.email?.toLowerCase();
+      const email = m.email?.toLowerCase().trim();
       if (!email || seenEmails.has(email)) return false;
       seenEmails.add(email);
       return true;
@@ -279,7 +279,7 @@ function SettingsContent() {
     const payload = {
       ...userFormData,
       name: userFormData.name.toUpperCase(),
-      email: userFormData.email.toLowerCase(),
+      email: userFormData.email.toLowerCase().trim(),
       updatedAt: serverTimestamp()
     }
     const emailId = payload.email
@@ -526,128 +526,6 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="financeiro" className="mt-0 space-y-8">
-          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
-            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 shadow-xl"><CreditCard className="h-7 w-7" /></div>
-                <div>
-                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Parâmetros Fiscais & Repasses</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">REGRAS DE TRIBUTAÇÃO E HONORÁRIOS DA BANCA.</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-12 space-y-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                <div className="space-y-4">
-                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Alíquota ISS (%)</Label>
-                  <Input type="number" value={financialSettings.issRate} onChange={e => setFinancialSettings({...financialSettings, issRate: Number(e.target.value)})} className="bg-black/40 h-16 text-2xl font-black text-white text-center rounded-xl" />
-                </div>
-                <div className="space-y-4">
-                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Retenção IR (%)</Label>
-                  <Input type="number" value={financialSettings.irRate} onChange={e => setFinancialSettings({...financialSettings, irRate: Number(e.target.value)})} className="bg-black/40 h-16 text-2xl font-black text-white text-center rounded-xl" />
-                </div>
-                <div className="space-y-4">
-                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Honorário de Êxito Padrão (%)</Label>
-                  <Input type="number" value={financialSettings.successFeeDefault} onChange={e => setFinancialSettings({...financialSettings, successFeeDefault: Number(e.target.value)})} className="bg-black/40 h-16 text-2xl font-black text-white text-center rounded-xl" />
-                </div>
-              </div>
-
-              <div className="p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 space-y-8 shadow-inner">
-                <div className="flex items-center gap-4 pb-4 border-b border-white/5">
-                  <Landmark className="h-6 w-6 text-primary" />
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Domicílio Bancário Oficial</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Instituição / Banco</Label><Input value={financialSettings.masterBank} onChange={e => setFinancialSettings({...financialSettings, masterBank: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white font-bold" /></div>
-                  <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Chave PIX (Honorários)</Label><Input value={financialSettings.masterPix} onChange={e => setFinancialSettings({...financialSettings, masterPix: e.target.value})} className="bg-black/40 h-12 text-white font-bold" /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Agência</Label><Input value={financialSettings.masterAgency} onChange={e => setFinancialSettings({...financialSettings, masterAgency: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
-                    <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Conta</Label><Input value={financialSettings.masterAccount} onChange={e => setFinancialSettings({...financialSettings, masterAccount: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-8 rounded-2xl bg-primary/5 border border-primary/20 shadow-xl">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest">Faturamento Automático</h4>
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Gerar títulos de contas a receber automaticamente no fechamento de acordos.</p>
-                </div>
-                <Switch checked={financialSettings.autoGenerateInvoices} onCheckedChange={v => setFinancialSettings({...financialSettings, autoGenerateInvoices: v})} className="data-[state=checked]:bg-emerald-500 scale-125" />
-              </div>
-
-              <Button onClick={handleSaveFinancial} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-[0_20px_50px_rgba(245,208,48,0.2)] hover:scale-[1.02] transition-transform">
-                <Save className="h-5 w-5 mr-3" /> CONSOLIDAR PARÂMETROS FINANCEIROS
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="documentos" className="mt-0 space-y-8">
-          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
-            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><FileText className="h-7 w-7" /></div>
-                <div>
-                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Modelos de Recibos & Vouchers</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">CUSTOMIZAÇÃO DE ESCRITA E ASSINATURA DIGITAL.</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-12 space-y-12">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                    <ArrowUpRight className="h-5 w-5 text-emerald-500" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template de Recibo (Recebimento)</h4>
-                  </div>
-                  <Textarea 
-                    value={docSettings.receiptTemplate} 
-                    onChange={e => setDocSettings({...docSettings, receiptTemplate: e.target.value})} 
-                    className="bg-black/40 min-h-[150px] text-white text-xs font-bold leading-relaxed p-6 rounded-2xl"
-                  />
-                </div>
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                    <ArrowDownRight className="h-5 w-5 text-rose-500" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template de Comprovante (Pagamento)</h4>
-                  </div>
-                  <Textarea 
-                    value={docSettings.voucherTemplate} 
-                    onChange={e => setDocSettings({...docSettings, voucherTemplate: e.target.value})} 
-                    className="bg-black/40 min-h-[150px] text-white text-xs font-bold leading-relaxed p-6 rounded-2xl"
-                  />
-                </div>
-              </div>
-
-              <div className="p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 space-y-10 shadow-inner">
-                <div className="flex items-center gap-4 pb-4 border-b border-white/5">
-                  <Signature className="h-6 w-6 text-primary" />
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Chancela Digital da Banca</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-3">
-                    <Label className={labelMini}>Texto da Assinatura (Advogado)</Label>
-                    <Textarea value={docSettings.signatureText} onChange={e => setDocSettings({...docSettings, signatureText: e.target.value})} className="bg-black/40 h-32 text-white font-black" />
-                  </div>
-                  <div className="space-y-3">
-                    <Label className={labelMini}>Texto do Carimbo (Institucional)</Label>
-                    <Textarea value={docSettings.stampText} onChange={e => setDocSettings({...docSettings, stampText: e.target.value})} className="bg-black/40 h-32 text-white font-black" />
-                  </div>
-                  <div className="space-y-3 md:col-span-2">
-                    <Label className={labelMini}>URL da Logo Institucional (.png transparente)</Label>
-                    <Input value={docSettings.logoUrl} onChange={e => setDocSettings({...docSettings, logoUrl: e.target.value})} className="bg-black/40 h-12 text-white font-bold" placeholder="https://..." />
-                  </div>
-                </div>
-              </div>
-
-              <Button onClick={handleSaveDocSettings} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-2xl">
-                <Save className="h-5 w-5 mr-3" /> CONSOLIDAR MODELOS DE DOCUMENTO
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="usuarios" className="mt-0 space-y-8">
           <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
             <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
@@ -856,8 +734,12 @@ function SettingsContent() {
             <DialogHeader><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingUser ? "Retificar Acesso" : "Novo Acesso RGMJ"}</DialogTitle></DialogHeader>
           </div>
           <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-[9px] text-white/70 font-bold uppercase leading-relaxed">Este e-mail é a chave de acesso Google. Certifique-se da grafia correta para sucesso no login.</p>
+            </div>
             <div className="space-y-3"><Label className={labelMini}>Nome Completo *</Label><Input value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
-            <div className="space-y-3"><Label className={labelMini}>E-mail Google *</Label><Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="usuario@gmail.com" /></div>
+            <div className="space-y-3"><Label className={labelMini}>E-mail Google *</Label><Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase().trim()})} className="bg-black/40 h-14 text-white font-bold" placeholder="usuario@gmail.com" /></div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label className={labelMini}>Perfil de Comando</Label>

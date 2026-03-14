@@ -35,7 +35,9 @@ import {
   CreditCard,
   FileText,
   UserPlus,
-  ExternalLink
+  ExternalLink,
+  ShieldAlert,
+  Info
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,7 +46,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useFirestore, useCollection, useUser, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -130,7 +132,7 @@ export default function StaffPage() {
       return
     }
 
-    const emailId = formData.email.toLowerCase();
+    const emailId = formData.email.toLowerCase().trim();
     const payload = {
       ...formData,
       name: formData.name.toUpperCase(),
@@ -139,14 +141,14 @@ export default function StaffPage() {
       updatedAt: serverTimestamp()
     }
 
-    // 1. Salva na coleção de RH (Employees) - Identidade Única por E-mail
+    // 1. RH Central
     setDocumentNonBlocking(doc(db!, "employees", emailId), {
       ...payload,
       id: emailId,
       createdAt: editingStaff?.createdAt || serverTimestamp()
     }, { merge: true })
 
-    // 2. Se habilitado, salvar na Soberania Digital (Profiles) - Identidade Única por E-mail
+    // 2. Soberania Digital
     if (formData.createSystemAccess) {
       const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
       const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
@@ -161,7 +163,7 @@ export default function StaffPage() {
         updatedAt: serverTimestamp()
       }, { merge: true })
 
-      setInvitedMember({ name: payload.name, email: payload.email })
+      setInvitedMember({ name: payload.name, email: emailId })
       setIsInviteOpen(true)
     }
 
@@ -195,7 +197,7 @@ export default function StaffPage() {
   const inputClass = "bg-black/40 border-white/10 h-12 text-white font-bold uppercase focus:ring-1 focus:ring-primary/50 rounded-xl"
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
@@ -321,6 +323,17 @@ export default function StaffPage() {
           
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-10 pb-32 max-w-4xl mx-auto">
+              
+              <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-4 shadow-xl">
+                <ShieldAlert className="h-6 w-6 text-amber-500 shrink-0 mt-1" />
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black text-amber-500 uppercase tracking-widest">Aviso de Soberania Digital</h4>
+                  <p className="text-[10px] text-white/70 leading-relaxed font-bold uppercase">
+                    O e-mail indicado abaixo será o <span className="text-white">ID MESTRE</span> para todas as integrações Google (Agenda, Drive, Meet). Certifique-se de que é um e-mail @gmail.com ou Workspace ativo.
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Briefcase className="h-4 w-4 text-primary" />
@@ -395,13 +408,14 @@ export default function StaffPage() {
                 
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-3">
-                    <Label className={labelMini}>E-mail Google (Gmail/Workspace) *</Label>
-                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={cn(inputClass, "h-14")} placeholder="obrigatorio@gmail.com" />
+                    <Label className={labelMini}>E-mail Google (Identidade Oficial) *</Label>
+                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={cn(inputClass, "h-14")} placeholder="exemplo@gmail.com" />
+                    <div className="flex items-center gap-2 mt-2">
+                      <Info className="h-3 w-3 text-primary/40" />
+                      <span className="text-[8px] text-primary/60 font-black uppercase">Este e-mail será usado para todas as permissões automáticas Google.</span>
+                    </div>
                   </div>
                 </div>
-                <p className="text-[9px] text-[#F5D030] font-black uppercase tracking-[0.1em] opacity-80 mt-4">
-                  O acesso será vinculado a este e-mail automaticamente.
-                </p>
               </div>
 
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
@@ -452,7 +466,6 @@ export default function StaffPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE CONVITE & ACESSO */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[550px] p-0 overflow-hidden shadow-2xl rounded-[2.5rem] text-center">
           <div className="p-12 space-y-8">
@@ -460,7 +473,7 @@ export default function StaffPage() {
               <ShieldCheck className="h-12 w-12 animate-pulse" />
             </div>
             <div className="space-y-3">
-              <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-tight">Soberania Liberada</DialogTitle>
+              <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Soberania Liberada</DialogTitle>
               <DialogDescription className="text-muted-foreground text-xs font-bold uppercase tracking-widest leading-relaxed">
                 O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO ECOSSISTEMA RGMJ.
               </DialogDescription>
@@ -489,7 +502,6 @@ export default function StaffPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[850px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] font-sans rounded-3xl">
           <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 flex-none shadow-xl">
@@ -540,12 +552,6 @@ export default function StaffPage() {
                         <p className="text-sm font-mono font-bold text-white">{viewingStaff?.cpf || '---'}</p>
                       </div>
                     </div>
-                    {viewingStaff?.oabNumber && (
-                      <div className="space-y-2 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                        <Label className={labelMini}>Inscrição OAB</Label>
-                        <p className="text-lg font-black text-primary uppercase tracking-widest">{viewingStaff.oabNumber}</p>
-                      </div>
-                    )}
                   </Card>
                 </div>
 
@@ -570,18 +576,13 @@ export default function StaffPage() {
                         <p className="text-2xl font-black text-[#F5D030] tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
                       </div>
                     </div>
-                    <div className="pt-6 border-t border-white/10">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight italic">
-                        "O sistema projeta honorários automaticamente seguindo este DNA contratual."
-                      </p>
-                    </div>
                   </Card>
                 </div>
               </div>
             </div>
           </ScrollArea>
 
-          <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
+          <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-[2.5rem]">
             <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-4 opacity-50">
               <ShieldCheck className="h-5 w-5 text-emerald-500" /> SOBERANIA TÉCNICA AUDITADA
             </span>
