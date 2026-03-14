@@ -22,7 +22,9 @@ import {
   Handshake,
   TrendingUp,
   CalendarDays,
-  Target
+  Target,
+  History,
+  ArrowLeft
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,6 +39,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfWeek, endOfWeek, subDays, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 type CycleMode = "monthly" | "biweekly" | "weekly"
 
@@ -47,11 +50,16 @@ export default function BillingPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [cycleMode, setCycleMode] = useState<CycleMode>("monthly")
   
+  // Estado para Auditoria de Membro Específico
+  const [selectedStaffMember, setSelectedStaffMember] = useState<any>(null)
+  
   const db = useFirestore()
-  const { user, isUserLoading, profile } = useUser()
+  const { user, profile, role } = useUser()
   const { toast } = useToast()
 
-  // Engenharia de Ciclos de Data (Espelhado do Repasse para consistência)
+  const isAdmin = role === 'admin'
+
+  // Engenharia de Ciclos de Data
   const dateRange = useMemo(() => {
     const today = startOfDay(new Date())
     if (cycleMode === "weekly") {
@@ -72,17 +80,31 @@ export default function BillingPage() {
     }
   }, [currentMonth, cycleMode])
 
+  // Busca financeira global ou filtrada por membro da equipe
   const financialQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(
+    let q = query(
       collection(db!, "financial_titles"), 
       where("dueDate", ">=", dateRange.start),
       where("dueDate", "<=", dateRange.end),
       orderBy("dueDate", "desc")
     )
-  }, [db, user, dateRange])
+
+    if (selectedStaffMember) {
+      q = query(q, where("responsibleStaffId", "==", selectedStaffMember.id))
+    }
+
+    return q
+  }, [db, user, dateRange, selectedStaffMember])
 
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection(financialQuery)
+
+  // Busca equipe para o dashboard de repasses
+  const staffQuery = useMemoFirebase(() => {
+    if (!user || !db || !isAdmin) return null
+    return query(collection(db!, "staff_profiles"), orderBy("name", "asc"))
+  }, [db, user, isAdmin])
+  const { data: teamMembers } = useCollection(staffQuery)
 
   const stats = useMemo(() => {
     if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, pendente: 0 }
@@ -93,6 +115,17 @@ export default function BillingPage() {
 
     return { entradas, saídas, saldo: entradas - saídas, pendente }
   }, [transactions])
+
+  const teamBalanceList = useMemo(() => {
+    if (!teamMembers || !transactions || !isAdmin || selectedStaffMember) return []
+    // Para a lista de equipe, calculamos os saldos baseados nos lançamentos totais daquele membro
+    return teamMembers.map(member => {
+      const memberTrans = (transactions || []).filter(t => t.responsibleStaffId === member.id)
+      const pending = memberTrans.filter(t => t.status === 'Pendente' && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+      const liquidated = memberTrans.filter(t => (t.status === 'Liquidado' || t.status === 'Recebido') && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+      return { ...member, pending, liquidated }
+    })
+  }, [teamMembers, transactions, isAdmin, selectedStaffMember])
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return []
@@ -123,27 +156,29 @@ export default function BillingPage() {
             <span className="text-white uppercase tracking-tighter">Soberania Financeira</span>
           </div>
           <div className="flex items-center gap-4">
-            <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Caixa da Banca</h1>
-            {profile?.isOwner && <Badge className="bg-primary text-background font-black text-[10px] uppercase h-6 px-3">CONTA MESTRE</Badge>}
+            {selectedStaffMember && (
+              <Button variant="ghost" size="icon" onClick={() => setSelectedStaffMember(null)} className="h-10 w-10 text-primary hover:bg-primary/10 rounded-full">
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+            )}
+            <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">
+              {selectedStaffMember ? `Extrato: ${selectedStaffMember.name}` : "Caixa da Banca"}
+            </h1>
           </div>
         </div>
         
         <div className="flex flex-col md:flex-row items-center gap-4">
           <div className="bg-white/5 p-1 rounded-xl border border-white/5 flex gap-1">
-            {[
-              { id: 'weekly', label: 'SEMANAL' },
-              { id: 'biweekly', label: 'QUINZENAL' },
-              { id: 'monthly', label: 'MENSAL' },
-            ].map(c => (
+            {['weekly', 'biweekly', 'monthly'].map(c => (
               <button
-                key={c.id}
-                onClick={() => setCycleMode(c.id as CycleMode)}
+                key={c}
+                onClick={() => setCycleMode(c as CycleMode)}
                 className={cn(
                   "px-4 h-9 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                  cycleMode === c.id ? "bg-primary text-background shadow-lg" : "text-muted-foreground hover:text-white"
+                  cycleMode === c ? "bg-primary text-background shadow-lg" : "text-muted-foreground hover:text-white"
                 )}
               >
-                {c.label}
+                {c === 'weekly' ? 'SEMANAL' : c === 'biweekly' ? 'QUINZENAL' : 'MENSAL'}
               </button>
             ))}
           </div>
@@ -186,6 +221,58 @@ export default function BillingPage() {
         </Card>
       </div>
 
+      {/* SEÇÃO DE EQUIPE (EXCLUSIVA ADMIN NA BANCA) */}
+      {isAdmin && !selectedStaffMember && (
+        <Card className="glass border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl bg-black/20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="p-8 border-b border-white/5 bg-[#0a0f1e]/40 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <History className="h-6 w-6 text-primary" />
+              <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Equipe & Carteiras de Repasse</h3>
+            </div>
+            <Badge variant="outline" className="border-primary/30 text-primary font-black uppercase text-[9px] px-4 py-1.5 rounded-full tracking-widest">Auditoria em Lote</Badge>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 divide-x divide-y divide-white/5 border-t border-white/5">
+            {teamBalanceList.map(member => (
+              <div 
+                key={member.id} 
+                onClick={() => setSelectedStaffMember(member)}
+                className="p-10 hover:bg-white/[0.02] transition-all group cursor-pointer relative overflow-hidden"
+              >
+                <div className="flex items-center gap-6 mb-10">
+                  <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-2xl transition-transform group-hover:scale-110">
+                    <AvatarFallback className="bg-[#1a1f2e] text-primary text-xl font-black uppercase">{member.name.substring(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1">
+                    <h4 className="text-lg font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">{member.name}</h4>
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-40">{member.role} • {member.paymentType}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Pendente</p>
+                    <p className="text-2xl font-black text-rose-500 tabular-nums tracking-tighter">R$ {member.pending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Liquidado</p>
+                    <p className="text-2xl font-black text-emerald-500 tabular-nums tracking-tighter">R$ {member.liquidated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between text-primary/40 group-hover:text-primary transition-all">
+                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
+                    <History className="h-4 w-4" /> Ver Extrato Completo
+                  </div>
+                  <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* HISTÓRICO DE FLUXO DE CAIXA (GLOBAL OU DO MEMBRO SELECIONADO) */}
       <Card className="glass border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl bg-black/20">
         <div className="p-10 border-b border-white/5 bg-[#0a0f1e]/40 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
@@ -193,8 +280,10 @@ export default function BillingPage() {
               <Target className="h-7 w-7" />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Histórico de Fluxo de Caixa</h3>
-              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-2 opacity-40">Lançamentos oficiais do ecossistema RGMJ.</p>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">
+                {selectedStaffMember ? `Lançamentos: ${selectedStaffMember.name}` : "Histórico de Fluxo de Caixa"}
+              </h3>
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-2 opacity-40">LANÇAMENTOS OFICIAIS DO ECOSSISTEMA RGMJ.</p>
             </div>
           </div>
           <div className="relative">
@@ -252,7 +341,7 @@ export default function BillingPage() {
                         {t.status}
                       </Badge>
                     </div>
-                    {profile?.isOwner && t.status === 'Pendente' && (
+                    {isAdmin && t.status === 'Pendente' && (
                       <div className="flex gap-2">
                         <Button size="icon" variant="ghost" onClick={() => handleUpdateStatus(t.id, t.type.includes('Entrada') ? 'Recebido' : 'Pago')} className="h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 rounded-xl"><Plus className="h-5 w-5" /></Button>
                       </div>
