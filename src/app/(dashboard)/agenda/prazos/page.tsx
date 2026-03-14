@@ -11,19 +11,20 @@ import {
   CheckCircle2, 
   Loader2, 
   MoreVertical,
-  History,
   Scale,
   Plus,
   Edit3,
   Trash2,
   Save,
-  X,
   FileText,
-  Calendar
+  Calendar,
+  Eye,
+  ShieldAlert,
+  Zap
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
-import { format, parseISO, isBefore, startOfDay, isAfter, isSameDay } from "date-fns"
+import { format, parseISO, isBefore, startOfDay, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -45,7 +46,10 @@ export default function PrazosSubpage() {
   const { toast } = useToast()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isViewOpen, setIsViewOpen] = useState(false)
   const [editingDeadline, setEditingDeadline] = useState<any>(null)
+  const [viewingDeadline, setViewingDeadline] = useState<any>(null)
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -87,6 +91,11 @@ export default function PrazosSubpage() {
       status: deadline.status || "Aberto"
     })
     setIsDialogOpen(true)
+  }
+
+  const handleOpenView = (deadline: any) => {
+    setViewingDeadline(deadline)
+    setIsViewOpen(true)
   }
 
   const handleSave = async () => {
@@ -179,8 +188,8 @@ export default function PrazosSubpage() {
                     </span>
                   </div>
 
-                  {/* Conteúdo Central - Estética Imagem */}
-                  <div className="flex-1 p-10 space-y-5 flex flex-col justify-center min-w-0">
+                  {/* Conteúdo Central */}
+                  <div className="flex-1 p-10 space-y-5 flex flex-col justify-center min-w-0 cursor-pointer" onClick={() => handleOpenView(d)}>
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-4 h-6 bg-primary/5 tracking-[0.15em] rounded-full">
                         {d.title}
@@ -199,7 +208,7 @@ export default function PrazosSubpage() {
                     </div>
                   </div>
 
-                  {/* Ações Laterais - Estética Imagem */}
+                  {/* Ações Laterais - Estética Imagem Alinhada */}
                   <div className="p-10 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-4 flex-none bg-white/[0.01]">
                     <Button 
                       onClick={() => handleMarkAsDone(d.id)}
@@ -210,20 +219,25 @@ export default function PrazosSubpage() {
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button className="bg-primary hover:bg-primary/90 text-background h-14 w-14 rounded-xl shadow-xl transition-all hover:scale-105">
+                        <Button className="bg-[#f5d030] hover:bg-[#f5d030]/90 text-background h-14 w-14 rounded-xl shadow-xl transition-all hover:scale-105">
                           <MoreVertical className="h-6 w-6" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 bg-[#0d121f] border-white/10 text-white p-2 rounded-xl shadow-2xl">
-                        <DropdownMenuItem onClick={() => handleOpenEdit(d)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest h-11 rounded-lg cursor-pointer">
-                          <Edit3 className="h-4 w-4 text-primary" /> Editar Ato
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleMarkAsDone(d.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest h-11 rounded-lg cursor-pointer text-emerald-400">
-                          <CheckCircle2 className="h-4 w-4" /> Marcar Cumprido
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(d.id)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest h-11 rounded-lg cursor-pointer text-rose-500">
-                          <Trash2 className="h-4 w-4" /> Excluir Prazo
-                        </DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white p-2 rounded-2xl shadow-2xl font-sans">
+                        <div className="p-1">
+                          <Button 
+                            onClick={() => handleOpenEdit(d)}
+                            className="w-full gold-gradient text-background font-black uppercase text-[11px] tracking-widest h-12 rounded-xl mb-2 hover:scale-[1.02] transition-transform"
+                          >
+                            EDITAR ATO
+                          </Button>
+                          <DropdownMenuItem onClick={() => handleMarkAsDone(d.id)} className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest h-12 rounded-xl cursor-pointer text-emerald-400 hover:bg-emerald-500/10 focus:bg-emerald-500/10 transition-colors">
+                            <CheckCircle2 className="h-5 w-5" /> MARCAR CUMPRIDO
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(d.id)} className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest h-12 rounded-xl cursor-pointer text-rose-500 hover:bg-rose-500/10 focus:bg-rose-500/10 transition-colors">
+                            <Trash2 className="h-5 w-5" /> EXCLUIR PRAZO
+                          </DropdownMenuItem>
+                        </div>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -239,7 +253,78 @@ export default function PrazosSubpage() {
         </div>
       )}
 
-      {/* DIÁLOGO DE GESTÃO DE PRAZO */}
+      {/* DIÁLOGO DE VISUALIZAÇÃO DE DETALHES */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between flex-none shadow-xl">
+            <div className="flex items-center gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
+                <FileText className="h-7 w-7" />
+              </div>
+              <div className="text-left">
+                <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase bg-primary/5 px-3 h-6 mb-2">DOSSIÊ DO PRAZO</Badge>
+                <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter leading-none">
+                  {viewingDeadline?.title}
+                </DialogTitle>
+              </div>
+            </div>
+            <Button onClick={() => handleOpenEdit(viewingDeadline)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] h-11 px-6 rounded-xl hover:bg-primary hover:text-background transition-all">
+              <Edit3 className="h-4 w-4 mr-2" /> EDITAR
+            </Button>
+          </div>
+
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-10 space-y-10">
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Vencimento Fatal</Label>
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <span className={cn("text-base font-black uppercase", viewingDeadline?.dueDate && isBefore(parseISO(viewingDeadline.dueDate), startOfDay(new Date())) ? "text-rose-500" : "text-white")}>
+                      {viewingDeadline?.dueDate ? format(parseISO(viewingDeadline.dueDate), "dd/MM/yyyy", { locale: ptBR }) : '---'}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Protocolo CNJ</Label>
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
+                    <Scale className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-bold text-white font-mono">{viewingDeadline?.processId || 'NÃO VINCULADO'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Providência / Detalhamento</Label>
+                <div className="p-8 rounded-3xl bg-primary/5 border border-primary/20 shadow-inner">
+                  <p className="text-base text-white/90 leading-relaxed font-serif text-justify whitespace-pre-wrap uppercase font-bold italic">
+                    {viewingDeadline?.description || "SEM DETALHAMENTO TÉCNICO REGISTRADO."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-white/[0.01] border border-white/5 flex items-start gap-4">
+                <ShieldAlert className="h-5 w-5 text-primary/40 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
+                  Este prazo está sob auditoria constante. Certifique-se de registrar o cumprimento logo após a execução para manter o Radar de Riscos saneado.
+                </p>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex justify-between items-center flex-none rounded-b-3xl">
+            <div className="flex items-center gap-3">
+              <Zap className="h-4 w-4 text-emerald-500 animate-pulse" />
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Soberania Técnica RGMJ</span>
+            </div>
+            <Button variant="ghost" onClick={() => setIsViewOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-12 hover:text-white">
+              FECHAR DOSSIÊ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE GESTÃO DE PRAZO (CRIAÇÃO/EDIÇÃO) */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
