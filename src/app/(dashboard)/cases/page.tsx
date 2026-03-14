@@ -183,8 +183,8 @@ export default function CasesPage() {
 
   const handleOpenEdit = (proc: any) => {
     setEditingProcess(proc)
-    setIsSheetOpen(true)
     setIsViewOpen(false)
+    setIsSheetOpen(true)
   }
 
   const handleOpenView = (proc: any) => {
@@ -325,30 +325,30 @@ export default function CasesPage() {
   const ProcessActionsMenu = ({ proc }: { proc: any }) => (
     <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
       <DropdownMenuLabel className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
-      <DropdownMenuItem onClick={() => handleOpenView(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <History className="h-4 w-4 text-muted-foreground" /> Ver Processo Completo
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <Calendar className="h-4 w-4" /> Agendar Reunião/Atend.
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
         <ListTodo className="h-4 w-4" /> Agendar Diligência
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
         <AlarmClock className="h-4 w-4" /> Lançar Prazo Fatal
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsHearingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsHearingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
         <Gavel className="h-4 w-4" /> Agendar Audiência
       </DropdownMenuItem>
       <DropdownMenuSeparator className="bg-white/5 my-1" />
-      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsFinancialOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsFinancialOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
         <DollarSign className="h-4 w-4" /> Evento Financeiro
       </DropdownMenuItem>
       <DropdownMenuSeparator className="bg-white/5 my-1" />
-      <DropdownMenuItem onClick={() => handleOpenEdit(proc)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); handleOpenEdit(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <Edit3 className="h-4 w-4 text-muted-foreground" /> Editar Processo
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
+      <DropdownMenuItem onClick={() => { setIsViewOpen(false); handleArchiveProcess(proc.id); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
         <Archive className="h-4 w-4" /> Arquivar Processo
       </DropdownMenuItem>
     </DropdownMenuContent>
@@ -427,11 +427,18 @@ export default function CasesPage() {
                             
                             <div className="flex items-center gap-12 shrink-0 ml-8">
                               <div className="flex items-center gap-3">
-                                <button disabled={!hasPauta} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasPauta ? "border-amber-500/30 bg-amber-500/5 text-amber-500 shadow-[0_0_15px_rgba(245,208,48,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><Calendar className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PAUTA</span></button>
-                                <button disabled={!hasPrazos} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasPrazos ? "border-rose-500/30 bg-rose-500/5 text-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><Clock className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PRAZOS</span></button>
-                                <button disabled={!hasFinancial} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasFinancial ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><DollarSign className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">FINANC.</span></button>
+                                <button onClick={(e) => e.stopPropagation()} disabled={!hasPauta} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasPauta ? "border-amber-500/30 bg-amber-500/5 text-amber-500 shadow-[0_0_15px_rgba(245,208,48,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><Calendar className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PAUTA</span></button>
+                                <button onClick={(e) => e.stopPropagation()} disabled={!hasPrazos} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasPrazos ? "border-rose-500/30 bg-rose-500/5 text-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><Clock className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PRAZOS</span></button>
+                                <button onClick={(e) => e.stopPropagation()} disabled={!hasFinancial} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasFinancial ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><DollarSign className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">FINANC.</span></button>
                                 <div className="flex items-center gap-2 pl-4 border-l border-white/5">
-                                  <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="h-10 w-10 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5"><MoreVertical className="h-5 w-5" /></button></DropdownMenuTrigger><ProcessActionsMenu proc={proc} /></DropdownMenu>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                      <button className="h-10 w-10 rounded-xl flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 transition-all outline-none border border-white/5">
+                                        <MoreVertical className="h-5 w-5" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <ProcessActionsMenu proc={proc} />
+                                  </DropdownMenu>
                                 </div>
                               </div>
                             </div>
@@ -448,7 +455,7 @@ export default function CasesPage() {
                           <div className="flex items-center justify-between pt-2 border-t border-white/5">
                             <div className="flex items-center gap-3">
                               <Button variant="outline" size="sm" className={cn("h-10 text-[10px] font-black uppercase px-5 rounded-xl transition-all", proc.driveStatus === 'synced' ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/5" : "border-amber-500/30 text-amber-500 bg-amber-500/5")} onClick={(e) => { e.stopPropagation(); proc.driveStatus === 'synced' ? window.open(proc.driveUrl || "#", "_blank") : handleSyncDrive(proc); }} disabled={syncingDriveId === proc.id}>{syncingDriveId === proc.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FolderPlus className="h-4 w-4 mr-2" />}{proc.driveStatus === 'synced' ? "ACESSAR DRIVE" : "SINCRONIZAR DRIVE"}</Button>
-                              <Button variant="outline" size="sm" className="h-10 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[10px] font-black uppercase px-5 rounded-xl transition-all"><ExternalLink className="h-4 w-4 mr-2" /> PORTAL JUDICIÁRIO</Button>
+                              <Button onClick={(e) => e.stopPropagation()} variant="outline" size="sm" className="h-10 border-blue-500/30 text-blue-400 bg-blue-500/5 text-[10px] font-black uppercase px-5 rounded-xl transition-all"><ExternalLink className="h-4 w-4 mr-2" /> PORTAL JUDICIÁRIO</Button>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground/20"><FileText className="h-4 w-4" /><span className="text-[10px] font-black uppercase">PROTOCOLO: {proc.startDate || "---"}</span></div>
                           </div>
@@ -524,7 +531,7 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO LANÇAR PRAZO - RECALIBRADO CONFORME REFERÊNCIA */}
+      {/* DIÁLOGO LANÇAR PRAZO */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[550px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
