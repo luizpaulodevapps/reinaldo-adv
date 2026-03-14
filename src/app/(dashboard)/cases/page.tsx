@@ -73,6 +73,7 @@ import Link from "next/link"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -102,6 +103,9 @@ export default function CasesPage() {
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
 
+  // Estados para Lançamento de Prazo com IA
+  const [publicationText, setPublicationText] = useState("")
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
   const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "", priority: "normal", calculationType: "Dias Úteis (CPC)" })
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
@@ -244,7 +248,27 @@ export default function CasesPage() {
     }
     await addDocumentNonBlocking(collection(db, "deadlines"), payload)
     setIsDeadlineOpen(false)
+    setPublicationText("")
     toast({ title: "Prazo Lançado" })
+  }
+
+  const handleAiParsePublication = async () => {
+    if (!publicationText) return
+    setIsAnalyzing(true)
+    try {
+      const result = await aiParseDjePublication({ publicationText })
+      setDeadlineData({
+        ...deadlineData,
+        title: result.deadlineType || "PRAZO JUDICIAL",
+        date: result.dueDate || "",
+        description: result.summary || ""
+      })
+      toast({ title: "Inteligência RGMJ Concluída", description: "Dados extraídos do despacho." })
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro na Análise IA" })
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleScheduleHearing = async () => {
@@ -325,30 +349,30 @@ export default function CasesPage() {
   const ProcessActionsMenu = ({ proc }: { proc: any }) => (
     <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
       <DropdownMenuLabel className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); handleOpenView(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <History className="h-4 w-4 text-muted-foreground" /> Ver Processo Completo
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400">
         <Calendar className="h-4 w-4" /> Agendar Reunião/Atend.
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsDiligenceOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest h-11 rounded-lg hover:bg-white/5 text-blue-400 cursor-pointer">
         <ListTodo className="h-4 w-4" /> Agendar Diligência
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400">
         <AlarmClock className="h-4 w-4" /> Lançar Prazo Fatal
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsHearingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsHearingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-amber-400">
         <Gavel className="h-4 w-4" /> Agendar Audiência
       </DropdownMenuItem>
       <DropdownMenuSeparator className="bg-white/5 my-1" />
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); setActiveActionProcess(proc); setIsFinancialOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); setActiveActionProcess(proc); setIsFinancialOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-blue-400">
         <DollarSign className="h-4 w-4" /> Evento Financeiro
       </DropdownMenuItem>
       <DropdownMenuSeparator className="bg-white/5 my-1" />
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); handleOpenEdit(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); handleOpenEdit(proc); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5">
         <Edit3 className="h-4 w-4 text-muted-foreground" /> Editar Processo
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setIsViewOpen(false); handleArchiveProcess(proc.id); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
+      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsViewOpen(false); handleArchiveProcess(proc.id); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-500">
         <Archive className="h-4 w-4" /> Arquivar Processo
       </DropdownMenuItem>
     </DropdownMenuContent>
@@ -427,9 +451,9 @@ export default function CasesPage() {
                             
                             <div className="flex items-center gap-12 shrink-0 ml-8">
                               <div className="flex items-center gap-3">
-                                <button onClick={(e) => e.stopPropagation()} disabled={!hasPauta} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasPauta ? "border-amber-500/30 bg-amber-500/5 text-amber-500 shadow-[0_0_15px_rgba(245,208,48,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><Calendar className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PAUTA</span></button>
-                                <button onClick={(e) => e.stopPropagation()} disabled={!hasPrazos} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasPrazos ? "border-rose-500/30 bg-rose-500/5 text-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><Clock className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PRAZOS</span></button>
-                                <button onClick={(e) => e.stopPropagation()} disabled={!hasFinancial} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all", hasFinancial ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "border-white/5 bg-white/[0.02] opacity-10 pointer-events-none")}><DollarSign className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">FINANC.</span></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenView(proc); }} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all border-white/5 bg-white/[0.02] text-muted-foreground hover:text-primary hover:border-primary/30")}><Calendar className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PAUTA</span></button>
+                                <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all border-white/5 bg-white/[0.02] text-muted-foreground hover:text-rose-500 hover:border-rose-500/30")}><Clock className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">PRAZOS</span></button>
+                                <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setIsFinancialOpen(true); }} className={cn("flex flex-col items-center justify-center w-12 h-12 rounded-full border transition-all border-white/5 bg-white/[0.02] text-muted-foreground hover:text-emerald-500 hover:border-emerald-500/30")}><DollarSign className="h-4 w-4" /><span className="text-[7px] font-black mt-0.5">FINANC.</span></button>
                                 <div className="flex items-center gap-2 pl-4 border-l border-white/5">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -531,12 +555,12 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO LANÇAR PRAZO */}
+      {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[550px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
             <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
-              <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-xl">
                 <AlarmClock className="h-6 w-6" />
               </div>
               <div>
@@ -544,15 +568,39 @@ export default function CasesPage() {
                 <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">CONTROLE TÁTICO DE VENCIMENTOS RGMJ.</DialogDescription>
               </div>
             </DialogHeader>
+            <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
-          <ScrollArea className="max-h-[65vh]">
+          <ScrollArea className="max-h-[75vh]">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+              
+              {/* ÁREA DE IA */}
+              <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-4 shadow-inner">
+                <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <Brain className="h-4 w-4" /> Análise de Despacho (IA)
+                </Label>
+                <Textarea 
+                  placeholder="Cole aqui o texto da publicação ou despacho para extração automática..." 
+                  className="bg-black/40 border-white/10 min-h-[100px] text-white text-xs font-bold p-4 rounded-xl resize-none uppercase"
+                  value={publicationText}
+                  onChange={(e) => setPublicationText(e.target.value.toUpperCase())}
+                />
+                <Button 
+                  onClick={handleAiParsePublication} 
+                  disabled={isAnalyzing || !publicationText}
+                  variant="outline" 
+                  className="w-full h-12 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary hover:text-background transition-all"
+                >
+                  {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  ANALISAR COM IA RGMJ
+                </Button>
+              </div>
+
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Ato *</Label>
                 <Input 
-                  placeholder="EX: RÉPLICA" 
-                  className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase placeholder:opacity-20" 
+                  placeholder="EX: RÉPLICA À CONTESTAÇÃO" 
+                  className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase placeholder:opacity-20 rounded-xl" 
                   value={deadlineData.title} 
                   onChange={e => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} 
                 />
@@ -562,10 +610,10 @@ export default function CasesPage() {
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data Vencimento *</Label>
                   <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-500/40" />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
                     <Input 
                       type="date" 
-                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold" 
+                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold rounded-xl" 
                       value={deadlineData.date} 
                       onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} 
                     />
@@ -574,8 +622,11 @@ export default function CasesPage() {
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Regra de Contagem</Label>
                   <Select value={deadlineData.calculationType} onValueChange={(v) => setDeadlineData({...deadlineData, calculationType: v})}>
-                    <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase">
-                      <SelectValue />
+                    <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Library className="h-4 w-4 opacity-40" />
+                        <SelectValue />
+                      </div>
                     </SelectTrigger>
                     <SelectContent className="bg-[#0d121f] text-white">
                       <SelectItem value="Dias Úteis (CPC)" className="text-[10px] font-bold">🏛️ DIAS ÚTEIS (CPC)</SelectItem>
@@ -595,36 +646,38 @@ export default function CasesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                    <Zap className="h-3 w-3" /> Nível de Urgência
-                  </Label>
-                  <Select value={deadlineData.priority} onValueChange={(v) => setDeadlineData({...deadlineData, priority: v})}>
-                    <SelectTrigger className="bg-black/40 border-white/10 h-10 text-white font-black text-[10px] uppercase">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="normal" className="text-[10px] font-bold">NORMAL</SelectItem>
-                      <SelectItem value="urgente" className="text-[10px] font-bold text-rose-500">🔥 URGENTE / FATAL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-start gap-3 opacity-40">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500 mt-0.5" />
-                  <p className="text-[8px] font-black text-muted-foreground uppercase leading-relaxed tracking-wider">Auditado pelo Radar de Riscos RGMJ.</p>
+              <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-inner">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                  <div className="space-y-3 flex-1 w-full">
+                    <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-3">
+                      <Zap className="h-4 w-4" /> Nível de Urgência
+                    </Label>
+                    <Select value={deadlineData.priority} onValueChange={(v) => setDeadlineData({...deadlineData, priority: v})}>
+                      <SelectTrigger className="bg-black/40 border-white/10 h-12 text-white font-black text-[10px] uppercase rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] text-white">
+                        <SelectItem value="normal" className="text-[10px] font-bold">NORMAL</SelectItem>
+                        <SelectItem value="urgente" className="text-[10px] font-bold text-rose-500">🔥 URGENTE / FATAL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-start gap-4 opacity-40 w-full md:w-auto">
+                    <ShieldCheck className="h-5 w-5 text-emerald-500 mt-0.5" />
+                    <p className="text-[9px] font-black text-muted-foreground uppercase leading-relaxed tracking-wider max-w-[150px]">Auditado pelo Radar de Riscos RGMJ.</p>
+                  </div>
                 </div>
               </div>
             </div>
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Cancelar</Button>
+            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">CANCELAR</Button>
             <Button 
               onClick={handleLaunchDeadline} 
-              className="bg-[#e11d48] hover:bg-[#be123c] text-white font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-2xl shadow-[0_10px_30px_rgba(225,29,72,0.3)] transition-all hover:scale-[1.03] active:scale-95"
+              className="bg-[#e11d48] hover:bg-[#be123c] text-white font-black uppercase text-[13px] tracking-[0.2em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(225,29,72,0.3)] transition-all hover:scale-[1.03] active:scale-95"
             >
-              Registrar
+              REGISTRAR
             </Button>
           </DialogFooter>
         </DialogContent>
