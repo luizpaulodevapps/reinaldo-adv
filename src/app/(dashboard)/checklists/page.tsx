@@ -108,18 +108,6 @@ const FIELD_TYPES = [
   { id: "date", label: "Data/Calendário", icon: Calendar },
 ]
 
-const REUSE_TARGETS = [
-  { id: "caseDetails", label: "Detalhes do Caso" },
-  { id: "client", label: "Cadastro do Cliente" },
-  { id: "distribution", label: "Pauta / Distribuição" },
-]
-
-const REUSE_PRIORITIES = [
-  { id: "alta", label: "Alta" },
-  { id: "media", label: "Média" },
-  { id: "baixa", label: "Baixa" },
-]
-
 const PRESET_MATRICES = [
   {
     title: "TRIAGEM INICIAL TRABALHISTA",
@@ -138,31 +126,14 @@ const PRESET_MATRICES = [
     ]
   },
   {
-    title: "APOSENTADORIA POR IDADE / TEMPO",
-    category: "Entrevista de Triagem",
-    legalArea: "Previdenciário",
-    description: "Rito de triagem focado em tempo de contribuição e idade. Analisa períodos especiais e prova rural.",
-    items: [
-      { label: "CLIENTE: DATA DE NASCIMENTO", type: "date", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "birthDate", reusePriority: "alta", balizaObrigatoria: true },
-      { label: "CNIS: POSSUI EXTRATO CNIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "TEMPO: TRABALHOU EM AREA RURAL?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "TEMPO: TRABALHOU EM CONDICOES ESPECIAIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "MILITAR: SERVIU AS FORCAS ARMADAS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: false },
-      { label: "PUBLICO: POSSUI TEMPO NO SERVICO PUBLICO?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: false },
-    ]
-  },
-  {
-    title: "INVENTARIO E PARTILHA",
+    title: "DIVORCIO E ALIMENTOS",
     category: "Entrevista de Triagem",
     legalArea: "Família",
-    description: "Protocolo para abertura de Inventário. Mapeia falecido, herdeiros e relação preliminar de bens.",
+    description: "Roteiro tático para ações de Família. Mapeamento de regime de bens, guarda e binômio necessidade/possibilidade.",
     items: [
-      { label: "OBITO: NOME DO FALECIDO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "OBITO: DATA DO FALECIMENTO", type: "date", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "BENS: EXISTEM BENS IMOVEIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "BENS: EXISTEM VEICULOS OU VALORES?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "HERDEIROS: QUANTIDADE DE FILHOS/HERDEIROS", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "DIVIDAS: O FALECIDO DEIXOU DIVIDAS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "CASAMENTO: DATA DA UNIAO", type: "date", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "BENS: EXISTE PATRIMONIO COMUM?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "ALIMENTOS: QUANTIDADE DE FILHOS", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
     ]
   },
   {
@@ -177,6 +148,17 @@ const PRESET_MATRICES = [
     ]
   },
   {
+    title: "APOSENTADORIA POR IDADE / TEMPO",
+    category: "Entrevista de Triagem",
+    legalArea: "Previdenciário",
+    description: "Rito de triagem focado em tempo de contribuição e idade. Analisa períodos especiais e prova rural.",
+    items: [
+      { label: "CLIENTE: DATA DE NASCIMENTO", type: "date", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "birthDate", reusePriority: "alta", balizaObrigatoria: true },
+      { label: "CNIS: POSSUI EXTRATO CNIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "TEMPO: TRABALHOU EM AREA RURAL?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+    ]
+  },
+  {
     title: "DEFESA EXECUCAO FISCAL",
     category: "Entrevista de Triagem",
     legalArea: "Tributário",
@@ -185,7 +167,6 @@ const PRESET_MATRICES = [
       { label: "CDA: NUMERO DA CERTIDAO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
       { label: "ORIGEM: NATUREZA DO DEBITO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
       { label: "VALOR: VALOR TOTAL EXECUTADO", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "NOTIFICACAO: DATA DA CITACAO/AVISO", type: "date", required: true, reuseEnabled: false, balizaObrigatoria: true },
     ]
   }
 ]
@@ -284,18 +265,29 @@ export default function LaboratorioChecklistsPage() {
     setIsInjecting(true)
     try {
       const batch = writeBatch(db)
+      const existingTitles = new Set((checklists || []).map(c => c.title.toUpperCase()))
+      
+      let addedCount = 0
       PRESET_MATRICES.forEach(matrix => {
-        const newDocRef = doc(collection(db, "checklists"))
-        batch.set(newDocRef, {
-          ...matrix,
-          id: newDocRef.id,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          isPreset: true
-        })
+        if (!existingTitles.has(matrix.title.toUpperCase())) {
+          const newDocRef = doc(collection(db, "checklists"))
+          batch.set(newDocRef, {
+            ...matrix,
+            id: newDocRef.id,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            isPreset: true
+          })
+          addedCount++
+        }
       })
-      await batch.commit()
-      toast({ title: "Biblioteca Injetada", description: "As matrizes DNA padrão RGMJ foram restauradas." })
+
+      if (addedCount > 0) {
+        await batch.commit()
+        toast({ title: "Biblioteca Injetada", description: `${addedCount} matrizes inéditas foram instaladas.` })
+      } else {
+        toast({ title: "Biblioteca Integrada", description: "Todos os modelos oficiais já constam no acervo." })
+      }
     } catch (e) {
       toast({ variant: "destructive", title: "Erro na Injeção" })
     } finally {
@@ -410,7 +402,7 @@ export default function LaboratorioChecklistsPage() {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
+    <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-10 font-sans">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
@@ -444,229 +436,227 @@ export default function LaboratorioChecklistsPage() {
         </div>
       </div>
 
-      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-10">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="bg-white/5 border border-white/10 p-1.5 rounded-2xl w-fit shadow-2xl">
-            <TabsList className="bg-transparent h-12 p-0 gap-1">
-              <TabsTrigger value="matrizes" className={cn(
-                "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2",
-                activeMainTab === "matrizes" && "bg-primary text-background"
-              )}>
-                <Zap className="h-3.5 w-3.5" /> Matrizes de DNA (Triagem)
-              </TabsTrigger>
-              <TabsTrigger value="peticoes" className={cn(
-                "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2",
-                activeMainTab === "peticoes" && "bg-primary text-background"
-              )}>
-                <FileText className="h-3.5 w-3.5" /> Modelos de Petição
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5 shadow-xl">
-            <Button onClick={() => setViewMode("grid")} variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "grid" ? "bg-primary text-background" : "text-muted-foreground")}>
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "list" ? "bg-primary text-background" : "text-muted-foreground")}>
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="bg-white/5 border border-white/10 p-1.5 rounded-full w-fit shadow-2xl">
+          <TabsList className="bg-transparent h-12 p-0 gap-1">
+            <TabsTrigger value="matrizes" className={cn(
+              "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-full transition-all tracking-widest gap-2",
+              activeMainTab === "matrizes" && "bg-primary text-background shadow-[0_0_20px_rgba(245,208,48,0.3)]"
+            )}>
+              <Zap className="h-3.5 w-3.5" /> Matrizes de DNA (Triagem)
+            </TabsTrigger>
+            <TabsTrigger value="peticoes" className={cn(
+              "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-full transition-all tracking-widest gap-2",
+              activeMainTab === "peticoes" && "bg-primary text-background shadow-[0_0_20px_rgba(245,208,48,0.3)]"
+            )}>
+              <FileText className="h-3.5 w-3.5" /> Modelos de Petição
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        <TabsContent value="matrizes" className="m-0 outline-none animate-in fade-in duration-500">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {isLoadingChecklists ? (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca de matrizes...</span>
-                </div>
-              ) : filteredChecklists.length > 0 ? (
-                filteredChecklists.map((list) => (
-                  <Card key={list.id} className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col rounded-[2.5rem] shadow-2xl border min-h-[400px]">
-                    <div className="p-10 space-y-8 flex-1 relative">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">
-                          {list.category?.toUpperCase() || "ENTREVISTA DE TRIAGEM"}
-                        </Badge>
-                        <div className="flex gap-4">
-                          <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Eye className="h-5 w-5" /></button>
-                          <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all hover:scale-110"><Edit3 className="h-5 w-5" /></button>
-                          <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
-                        </div>
+        <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5 shadow-xl">
+          <Button onClick={() => setViewMode("grid")} variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "grid" ? "bg-primary text-background" : "text-muted-foreground")}>
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "list" ? "bg-primary text-background" : "text-muted-foreground")}>
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <TabsContent value="matrizes" className="m-0 outline-none animate-in fade-in duration-500">
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {isLoadingChecklists ? (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca de matrizes...</span>
+              </div>
+            ) : filteredChecklists.length > 0 ? (
+              filteredChecklists.map((list) => (
+                <Card key={list.id} className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col rounded-[2.5rem] shadow-2xl border min-h-[400px]">
+                  <div className="p-10 space-y-8 flex-1 relative">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">
+                        {list.category?.toUpperCase() || "ENTREVISTA DE TRIAGEM"}
+                      </Badge>
+                      <div className="flex gap-4">
+                        <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Eye className="h-5 w-5" /></button>
+                        <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all hover:scale-110"><Edit3 className="h-5 w-5" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
                       </div>
-                      
-                      <h3 className="text-2xl font-black text-[#F5D030] uppercase tracking-tighter leading-none group-hover:brightness-125 transition-all">
-                        {list.title}
-                      </h3>
-                      
-                      <div className="flex items-center gap-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
-                        <Scale className="h-4 w-4 opacity-50" /> {list.legalArea?.toUpperCase() || "TRABALHISTA"}
-                      </div>
-                      
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 italic uppercase font-medium tracking-wide">
-                        {list.description || "Padrão básico estruturado para triagem técnica. Você pode editar ou adicionar novos campos a qualquer momento."}
-                      </p>
                     </div>
                     
-                    <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
-                      <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
-                        <Layers className="h-5 w-5 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all group-hover:translate-x-2" />
+                    <h3 className="text-2xl font-black text-[#F5D030] uppercase tracking-tighter leading-none group-hover:brightness-125 transition-all">
+                      {list.title}
+                    </h3>
+                    
+                    <div className="flex items-center gap-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
+                      <Scale className="h-4 w-4 opacity-50" /> {list.legalArea?.toUpperCase() || "TRABALHISTA"}
                     </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20 text-center">
-                  <CloudLightning className="h-16 w-16 text-muted-foreground mb-4 mx-auto" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.4em]">Biblioteca de Matrizes Vazia</p>
-                  <Button onClick={handleInjectPresets} variant="outline" className="mt-6 border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest">Restaurar Modelos DNA RGMJ</Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-2xl">
-              <Table>
-                <TableHeader className="bg-white/[0.03]">
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 pl-8">DNA Triagem</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6">Categoria</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 text-center">Área</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 text-center">Campos</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 text-right pr-8">Comandos</TableHead>
+                    
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 italic uppercase font-medium tracking-wide">
+                      {list.description || "Padrão básico estruturado para triagem técnica. Você pode editar ou adicionar novos campos a qualquer momento."}
+                    </p>
+                  </div>
+                  
+                  <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                    <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
+                      <Layers className="h-5 w-5 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all group-hover:translate-x-2" />
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20 text-center">
+                <CloudLightning className="h-16 w-16 text-muted-foreground mb-4 mx-auto" />
+                <p className="text-[11px] font-black uppercase tracking-[0.4em]">Biblioteca de Matrizes Vazia</p>
+                <Button onClick={handleInjectPresets} variant="outline" className="mt-6 border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest">Restaurar Modelos DNA RGMJ</Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-[2rem] bg-black/40">
+            <Table>
+              <TableHeader className="bg-white/[0.03]">
+                <TableRow className="border-white/5 hover:bg-transparent">
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 pl-10">DNA TRIAGEM</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-center">CATEGORIA</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-center">ÁREA</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-center">CAMPOS</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-right pr-10">COMANDOS</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredChecklists.map((list) => (
+                  <TableRow key={list.id} className="border-white/5 hover:bg-white/[0.01] transition-colors group">
+                    <TableCell className="py-8 pl-10">
+                      <span className="text-sm font-black text-white uppercase group-hover:text-[#F5D030] transition-colors tracking-tight">{list.title}</span>
+                    </TableCell>
+                    <TableCell className="py-8 text-center">
+                      <Badge variant="outline" className="text-[8px] font-black border-white/10 text-muted-foreground uppercase px-3 py-1 rounded-full">{list.category?.toUpperCase()}</Badge>
+                    </TableCell>
+                    <TableCell className="py-8 text-center">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">{list.legalArea?.toUpperCase()}</span>
+                    </TableCell>
+                    <TableCell className="py-8 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <Layers className="h-4 w-4 text-primary/40" />
+                        <span className="text-xs font-black text-white">{list.items?.length || 0}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-8 text-right pr-10">
+                      <div className="flex items-center justify-end gap-6">
+                        <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all"><Eye className="h-5 w-5" /></button>
+                        <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all"><Edit3 className="h-5 w-5" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all"><Trash2 className="h-5 w-5" /></button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredChecklists.map((list) => (
-                    <TableRow key={list.id} className="border-white/5 hover:bg-white/[0.01] transition-colors group">
-                      <TableCell className="py-6 pl-8">
-                        <span className="text-sm font-black text-white uppercase group-hover:text-primary transition-colors">{list.title}</span>
-                      </TableCell>
-                      <TableCell className="py-6">
-                        <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase">{list.category}</Badge>
-                      </TableCell>
-                      <TableCell className="py-6 text-center">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase">{list.legalArea}</span>
-                      </TableCell>
-                      <TableCell className="py-6 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Layers className="h-3 w-3 text-primary/40" />
-                          <span className="text-xs font-bold text-white">{list.items?.length || 0}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-6 text-right pr-8">
-                        <div className="flex items-center justify-end gap-4">
-                          <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all"><Eye className="h-4 w-4" /></button>
-                          <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all"><Edit3 className="h-4 w-4" /></button>
-                          <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
-        </TabsContent>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+      </TabsContent>
 
-        <TabsContent value="peticoes" className="m-0 outline-none animate-in fade-in duration-500">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {isLoadingModels ? (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando acervo de petições...</span>
-                </div>
-              ) : filteredModels.length > 0 ? (
-                filteredModels.map((model) => (
-                  <Card key={model.id} className="bg-[#0d1117] border-white/10 hover:border-primary/40 transition-all group shadow-2xl rounded-[2.5rem] overflow-hidden flex flex-col border min-h-[350px]">
-                    <div className="p-10 space-y-8 flex-1">
-                      <div className="flex items-start justify-between">
-                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                          <FileText className="h-7 w-7" />
-                        </div>
-                        <div className="flex gap-3">
-                          <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white bg-white/5 p-2.5 rounded-xl transition-colors"><Settings2 className="h-5 w-5" /></button>
-                          <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 bg-white/5 p-2.5 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
-                        </div>
+      <TabsContent value="peticoes" className="m-0 outline-none animate-in fade-in duration-500">
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {isLoadingModels ? (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando acervo de petições...</span>
+              </div>
+            ) : filteredModels.length > 0 ? (
+              filteredModels.map((model) => (
+                <Card key={model.id} className="bg-[#0d1117] border-white/10 hover:border-primary/40 transition-all group shadow-2xl rounded-[2.5rem] overflow-hidden flex flex-col border min-h-[350px]">
+                  <div className="p-10 space-y-8 flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                        <FileText className="h-7 w-7" />
                       </div>
-                      <div className="space-y-4">
-                        <h3 className="text-xl font-black text-[#F5D030] uppercase tracking-tight group-hover:brightness-125 transition-all leading-tight">
-                          {model.title}
-                        </h3>
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">{model.area?.toUpperCase()}</Badge>
-                          {model.googleDocId && <Badge className="bg-blue-500/10 text-blue-400 border-0 text-[9px] font-black uppercase tracking-widest px-3 h-7 rounded-full">DOCS SYNC</Badge>}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2 pt-4">
-                        {model.tags?.slice(0, 3).map((tag: string) => (
-                          <span key={tag} className="text-[9px] font-mono font-bold text-muted-foreground/40 bg-white/5 px-2 py-1 rounded-md">
-                            {tag}
-                          </span>
-                        ))}
-                        {model.tags?.length > 3 && <span className="text-[9px] text-muted-foreground/20 font-black">+{model.tags.length - 3} TAGS</span>}
+                      <div className="flex gap-3">
+                        <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white bg-white/5 p-2.5 rounded-xl transition-colors"><Settings2 className="h-5 w-5" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 bg-white/5 p-2.5 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
                       </div>
                     </div>
-                    <div className="px-10 py-6 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
-                      <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {model.id.substring(0,8).toUpperCase()}</span>
-                      <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all" />
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-black text-[#F5D030] uppercase tracking-tight group-hover:brightness-125 transition-all leading-tight">
+                        {model.title}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">{model.area?.toUpperCase()}</Badge>
+                        {model.googleDocId && <Badge className="bg-blue-500/10 text-blue-400 border-0 text-[9px] font-black uppercase tracking-widest px-3 h-7 rounded-full">DOCS SYNC</Badge>}
+                      </div>
                     </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
-                  <BookOpen className="h-16 w-16 text-muted-foreground" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.4em]">Acervo de minutas vazio</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-2xl">
-              <Table>
-                <TableHeader className="bg-white/[0.03]">
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 pl-8">Minuta Estratégica</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6">Esfera Jurídica</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 text-center">Tags Mapeadas</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 text-center">Sincronismo</TableHead>
-                    <TableHead className="text-[10px] font-black text-primary uppercase py-6 text-right pr-8">Comandos</TableHead>
+                    <div className="flex flex-wrap gap-2 pt-4">
+                      {model.tags?.slice(0, 3).map((tag: string) => (
+                        <span key={tag} className="text-[9px] font-mono font-bold text-muted-foreground/40 bg-white/5 px-2 py-1 rounded-md">
+                          {tag}
+                        </span>
+                      ))}
+                      {model.tags?.length > 3 && <span className="text-[9px] text-muted-foreground/20 font-black">+{model.tags.length - 3} TAGS</span>}
+                    </div>
+                  </div>
+                  <div className="px-10 py-6 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                    <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {model.id.substring(0,8).toUpperCase()}</span>
+                    <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all" />
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
+                <BookOpen className="h-16 w-16 text-muted-foreground" />
+                <p className="text-[11px] font-black uppercase tracking-[0.4em]">Acervo de minutas vazio</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-[2rem] bg-black/40">
+            <Table>
+              <TableHeader className="bg-white/[0.03]">
+                <TableRow className="border-white/5 hover:bg-transparent">
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 pl-10">Minuta Estratégica</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-center">Esfera Jurídica</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-center">Tags Mapeadas</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-center">Sincronismo</TableHead>
+                  <TableHead className="text-[10px] font-black text-primary uppercase py-8 text-right pr-10">Comandos</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredModels.map((model) => (
+                  <TableRow key={model.id} className="border-white/5 hover:bg-white/[0.01] transition-colors group">
+                    <TableCell className="py-8 pl-10">
+                      <span className="text-sm font-black text-white uppercase group-hover:text-[#F5D030] transition-colors tracking-tight">{model.title}</span>
+                    </TableCell>
+                    <TableCell className="py-8 text-center">
+                      <Badge variant="outline" className="text-[8px] font-black border-white/10 text-muted-foreground uppercase px-3 py-1 rounded-full">{model.area?.toUpperCase()}</Badge>
+                    </TableCell>
+                    <TableCell className="py-8 text-center">
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground opacity-60">{model.tags?.length || 0} VARIÁVEIS</span>
+                    </TableCell>
+                    <TableCell className="py-8 text-center">
+                      {model.googleDocId ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black">GOOGLE DOCS OK</Badge>
+                      ) : (
+                        <Badge className="bg-amber-500/10 text-amber-500 border-0 text-[8px] font-black">LOCAL ONLY</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-8 text-right pr-10">
+                      <div className="flex items-center justify-end gap-6">
+                        <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white transition-all"><Settings2 className="h-5 w-5" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 transition-all"><Trash2 className="h-5 w-5" /></button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredModels.map((model) => (
-                    <TableRow key={model.id} className="border-white/5 hover:bg-white/[0.01] transition-colors group">
-                      <TableCell className="py-6 pl-8">
-                        <span className="text-sm font-black text-white uppercase group-hover:text-primary transition-colors">{model.title}</span>
-                      </TableCell>
-                      <TableCell className="py-6">
-                        <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase">{model.area}</Badge>
-                      </TableCell>
-                      <TableCell className="py-6 text-center">
-                        <span className="text-[10px] font-mono font-bold text-muted-foreground">{model.tags?.length || 0} VARIÁVEIS</span>
-                      </TableCell>
-                      <TableCell className="py-6 text-center">
-                        {model.googleDocId ? (
-                          <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black">GOOGLE DOCS OK</Badge>
-                        ) : (
-                          <Badge className="bg-amber-500/10 text-amber-500 border-0 text-[8px] font-black">LOCAL ONLY</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-6 text-right pr-8">
-                        <div className="flex items-center justify-end gap-4">
-                          <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white transition-all"><Settings2 className="h-4 w-4" /></button>
-                          <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 transition-all"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+      </TabsContent>
 
       {/* DIÁLOGO ENGENHARIA DE MATRIZ */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -811,7 +801,9 @@ export default function LaboratorioChecklistsPage() {
                                 <Select value={item.reuseTarget} onValueChange={(v) => handleUpdateField(idx, 'reuseTarget', v)}>
                                   <SelectTrigger className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase"><SelectValue /></SelectTrigger>
                                   <SelectContent className="bg-[#0d121f] text-white">
-                                    {REUSE_TARGETS.map(t => <SelectItem key={t.id} value={t.id}>{t.label.toUpperCase()}</SelectItem>)}
+                                    <SelectItem value="caseDetails">DETALHES DO CASO</SelectItem>
+                                    <SelectItem value="client">CADASTRO DO CLIENTE</SelectItem>
+                                    <SelectItem value="distribution">PAUTA / DISTRIBUIÇÃO</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -824,7 +816,9 @@ export default function LaboratorioChecklistsPage() {
                                 <Select value={item.reusePriority} onValueChange={(v) => handleUpdateField(idx, 'reusePriority', v)}>
                                   <SelectTrigger className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase"><SelectValue /></SelectTrigger>
                                   <SelectContent className="bg-[#0d121f] text-white">
-                                    {REUSE_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id}>{p.label.toUpperCase()}</SelectItem>)}
+                                    <SelectItem value="alta">ALTA</SelectItem>
+                                    <SelectItem value="media">MÉDIA</SelectItem>
+                                    <SelectItem value="baixa">BAIXA</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -874,8 +868,8 @@ export default function LaboratorioChecklistsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/60 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-12 hover:text-white">Descartar</Button>
+          <div className="p-8 bg-black/60 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-12 hover:text-white transition-colors">Descartar</Button>
             <div className="flex gap-4">
               {currentStepIndex > 0 && <Button variant="outline" onClick={() => setEditorStep(EDITOR_STEPS[currentStepIndex - 1].id)} className="h-12 border-white/10 text-white font-black uppercase text-[11px] px-8 rounded-xl"><ArrowLeft className="h-4 w-4 mr-2" /> ANTERIOR</Button>}
               <Button 
@@ -887,7 +881,7 @@ export default function LaboratorioChecklistsPage() {
                 {editorStep !== "revisao" ? <ChevronRight className="h-5 w-5" /> : null}
               </Button>
             </div>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -940,9 +934,9 @@ export default function LaboratorioChecklistsPage() {
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex-none">
+          <div className="p-8 bg-black/40 border-t border-white/5 flex-none">
             <Button onClick={() => setIsViewDialogOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">FECHAR DOSSIÊ</Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -989,6 +983,6 @@ export default function LaboratorioChecklistsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Tabs>
   )
 }
