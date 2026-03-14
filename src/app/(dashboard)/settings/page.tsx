@@ -97,26 +97,12 @@ const MESSAGE_PLACEHOLDERS = [
   { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
 ]
 
-const DEFAULT_TEMPLATES = {
-  "Audiência Física": {
-    profileName: "AUDIÊNCIA PRESENCIAL RGMJ",
-    calendarTemplate: "🏛️ AUDIÊNCIA FÍSICA: {{NOME_CLIENTE}}\nLOCAL: {{LOCAL_ATO}}\nFÓRUM: {{FORUM_VARA}}\nPROCESSO: {{NUMERO_PROCESSO}}",
-    clientTemplate: "Prezado(a) {{NOME_CLIENTE}}, confirmamos sua audiência presencial em {{DATA_ATO}} às {{HORA_ATO}} no endereço: {{LOCAL_ATO}}.",
-    reminderMinutes: 120,
-    calendarColorId: "11",
-    useMeetLink: false,
-    sendWhatsApp: true
-  },
-  "Audiência Virtual": {
-    profileName: "AUDIÊNCIA VIRTUAL",
-    calendarTemplate: "🖥️ AUDIÊNCIA VIRTUAL: {{NOME_CLIENTE}}\nLINK: {{LINK_ATO}}\nPROCESSO: {{NUMERO_PROCESSO}}",
-    clientTemplate: "Olá {{NOME_CLIENTE}}, sua audiência virtual está confirmada para {{DATA_ATO}} às {{HORA_ATO}}. Link: {{LINK_ATO}}",
-    reminderMinutes: 60,
-    calendarColorId: "9",
-    useMeetLink: true,
-    sendWhatsApp: true
-  }
-}
+const KIT_TEMPLATES = [
+  { id: "audiencia_fisica", title: "AUDIÊNCIA FÍSICA", icon: MapPin },
+  { id: "audiencia_virtual", title: "AUDIÊNCIA VIRTUAL", icon: Video },
+  { id: "atendimento", title: "ATENDIMENTO", icon: MapPin },
+  { id: "prazo", title: "PRAZO", icon: Clock },
+]
 
 function SettingsContent() {
   const { toast } = useToast()
@@ -173,20 +159,12 @@ function SettingsContent() {
     if (finData) setFinancialSettings(prev => ({ ...prev, ...finData }))
   }, [finData])
 
-  // Outros estados
-  const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
-  const [editingModel, setEditingModel] = useState<any>(null)
-  const [modelFormData, setModelFormData] = useState({
-    title: "",
-    area: "Trabalhista",
-    googleDocId: "",
-    tags: ""
-  })
-
+  // Estados Customização Kit Cliente
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<any>(null)
   const [messageFormData, setMessageFormData] = useState({
     profileName: "",
-    eventType: "Audiência Virtual",
+    eventType: "",
     calendarTemplate: "",
     clientTemplate: "",
     isActive: true,
@@ -195,6 +173,12 @@ function SettingsContent() {
     useMeetLink: true,
     sendWhatsApp: true
   })
+
+  const messagesQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "notification_templates"), orderBy("createdAt", "desc"))
+  }, [db, user])
+  const { data: messageTemplates } = useCollection(messagesQuery)
 
   const [firmFormData, setFirmFormData] = useState({
     name: "RGMJ ADVOGADOS",
@@ -235,18 +219,6 @@ function SettingsContent() {
     if (googleData) setGoogleConfig(prev => ({ ...prev, ...googleData }))
   }, [googleData])
 
-  const modelsQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "document_templates"), orderBy("createdAt", "desc"))
-  }, [db, user])
-  const { data: models } = useCollection(modelsQuery)
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "notification_templates"), orderBy("createdAt", "desc"))
-  }, [db, user])
-  const { data: messageTemplates } = useCollection(messagesQuery)
-
   const handleSaveFinancial = () => {
     if (!db) return
     setDocumentNonBlocking(doc(db, 'settings', 'financial'), {
@@ -268,6 +240,38 @@ function SettingsContent() {
     setDocumentNonBlocking(doc(db!, "staff_profiles", userId), { ...payload, id: userId }, { merge: true })
     setIsUserDialogOpen(false)
     toast({ title: "Acesso Atualizado" })
+  }
+
+  const handleSaveMessageTemplate = () => {
+    if (!db || !messageFormData.profileName) return
+    const payload = {
+      ...messageFormData,
+      updatedAt: serverTimestamp()
+    }
+    if (editingTemplate) {
+      updateDocumentNonBlocking(doc(db, "notification_templates", editingTemplate.id), payload)
+    } else {
+      addDocumentNonBlocking(collection(db, "notification_templates"), { ...payload, createdAt: serverTimestamp() })
+    }
+    setIsMessageDialogOpen(false)
+    toast({ title: "Configuração de Atendimento Salva" })
+  }
+
+  const handleOpenMessageTemplate = (typeId: string, title: string) => {
+    const existing = (messageTemplates || []).find(t => t.eventType === typeId)
+    setEditingTemplate(existing || null)
+    setMessageFormData({
+      profileName: title,
+      eventType: typeId,
+      calendarTemplate: existing?.calendarTemplate || `[${title}] {{NOME_CLIENTE}}`,
+      clientTemplate: existing?.clientTemplate || `Olá {{NOME_CLIENTE}}, confirmamos o compromisso de ${title} para {{DATA_ATO}} às {{HORA_ATO}}.`,
+      isActive: existing?.isActive ?? true,
+      reminderMinutes: existing?.reminderMinutes || 60,
+      calendarColorId: existing?.calendarColorId || "1",
+      useMeetLink: existing?.useMeetLink ?? (typeId === 'audiencia_virtual'),
+      sendWhatsApp: existing?.sendWhatsApp ?? true
+    })
+    setIsMessageDialogOpen(true)
   }
 
   const handleSaveGoogleConfig = () => {
@@ -294,8 +298,6 @@ function SettingsContent() {
             <TabsTrigger value="financeiro" className={tabTriggerClass}>Financeiro</TabsTrigger>
             <TabsTrigger value="tags" className={tabTriggerClass}>Dicionário de Tags</TabsTrigger>
             <TabsTrigger value="kit" className={tabTriggerClass}>Kit Cliente</TabsTrigger>
-            <TabsTrigger value="modelos" className={tabTriggerClass}>Modelos</TabsTrigger>
-            <TabsTrigger value="backup" className={tabTriggerClass}>Backup</TabsTrigger>
             <TabsTrigger value="licenca" className={tabTriggerClass}>Licença</TabsTrigger>
           </TabsList>
         </div>
@@ -421,6 +423,31 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="kit" className="mt-0 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {KIT_TEMPLATES.map((item) => (
+              <Card key={item.id} className="bg-[#0d1117]/80 border border-white/5 p-8 hover:border-primary/30 transition-all group shadow-2xl rounded-3xl relative overflow-hidden flex flex-col items-start gap-8">
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <item.icon className="h-7 w-7" />
+                  </div>
+                  <Badge variant="outline" className="border-white/10 text-muted-foreground font-black text-[8px] uppercase px-3 h-6">SISTEMA</Badge>
+                </div>
+                
+                <h3 className="text-white font-black uppercase tracking-tight text-sm leading-tight">{item.title}</h3>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleOpenMessageTemplate(item.id, item.title)}
+                  className="w-full h-12 border border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all"
+                >
+                  CUSTOMIZAR
+                </Button>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
         <TabsContent value="tags" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {MESSAGE_PLACEHOLDERS.map((p) => (
@@ -431,17 +458,6 @@ function SettingsContent() {
               </Card>
             ))}
           </div>
-        </TabsContent>
-
-        <TabsContent value="kit" className="mt-0 space-y-8">
-          <Card className="glass border-white/5 p-12 rounded-[3rem] text-center space-y-8 opacity-40 shadow-inner">
-            <Smartphone className="h-20 w-20 mx-auto text-primary" />
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Perfis de Notificação</h3>
-              <p className="text-sm font-bold uppercase tracking-widest max-w-md mx-auto">Configure os modelos de WhatsApp e Agenda para automação de lembretes aos clientes.</p>
-            </div>
-            <Button disabled className="h-14 px-10 rounded-xl font-black uppercase text-xs tracking-widest">EM BREVE (API V3)</Button>
-          </Card>
         </TabsContent>
 
         <TabsContent value="licenca" className="mt-0">
@@ -462,6 +478,69 @@ function SettingsContent() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* DIÁLOGO CUSTOMIZAR RITO / MENSAGEM */}
+      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[90vh]">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl flex-none">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Configuração de Rito: {messageFormData.profileName}</DialogTitle>
+              <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground mt-1">DEFINA OS TEMPLATES DE COMUNICAÇÃO E AGENDA.</DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
+            <div className="p-10 space-y-10">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template do Calendário Google</h4>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Título do Evento na Agenda</Label>
+                  <Input value={messageFormData.calendarTemplate} onChange={e => setMessageFormData({...messageFormData, calendarTemplate: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" />
+                  <p className="text-[8px] text-primary/60 font-bold uppercase">Use as tags do dicionário para injeção dinâmica.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Lembrete WhatsApp (Cliente)</h4>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Corpo da Mensagem</Label>
+                  <Textarea value={messageFormData.clientTemplate} onChange={e => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} className="bg-black/40 min-h-[150px] text-white text-xs font-bold leading-relaxed resize-none p-6 rounded-2xl" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-black text-white uppercase tracking-widest">Gerar Meet Link?</Label>
+                    <Switch checked={messageFormData.useMeetLink} onCheckedChange={v => setMessageFormData({...messageFormData, useMeetLink: v})} className="data-[state=checked]:bg-emerald-500" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-black text-white uppercase tracking-widest">Notificar WhatsApp?</Label>
+                    <Switch checked={messageFormData.sendWhatsApp} onCheckedChange={v => setMessageFormData({...messageFormData, sendWhatsApp: v})} className="data-[state=checked]:bg-emerald-500" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Antecedência Alerta (Minutos)</Label>
+                  <Input type="number" value={messageFormData.reminderMinutes} onChange={e => setMessageFormData({...messageFormData, reminderMinutes: Number(e.target.value)})} className="bg-black/40 h-14 text-white font-black text-center text-lg" />
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+            <Button variant="ghost" onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
+            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black h-14 px-12 rounded-xl shadow-2xl uppercase text-[11px] flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5" /> CONSOLIDAR RITO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* DIÁLOGO USUÁRIOS */}
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
