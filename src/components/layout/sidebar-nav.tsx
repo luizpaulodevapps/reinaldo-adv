@@ -167,7 +167,6 @@ export function SidebarNav() {
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        tooltip={item.name}
                         className={cn(
                           "relative flex items-center transition-all duration-200 h-10 rounded-xl",
                           isCollapsed ? "justify-center px-0 w-10 mx-auto" : "gap-4 px-4",

@@ -27,11 +27,12 @@ import { useUser } from "@/firebase"
 
 interface DynamicInterviewProps {
   template: any
+  leadId: string
   onSubmit: (payload: { responses: any; templateSnapshot: any[] }) => void
   onCancel: () => void
 }
 
-export function DynamicInterviewExecution({ template, onSubmit, onCancel }: DynamicInterviewProps) {
+export function DynamicInterviewExecution({ template, leadId, onSubmit, onCancel }: DynamicInterviewProps) {
   const { user } = useUser()
   const [responses, setResponses] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(false)
@@ -60,24 +61,27 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
   }, [groupKeys, activeGroup])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && template?.id) {
-      const cacheKey = `rgmj_interview_v3_${template.id}`
+    if (typeof window !== 'undefined' && template?.id && leadId) {
+      // Chave de cache isolada por template e por lead para evitar colisões
+      const cacheKey = `rgmj_interview_v3_${template.id}_${leadId}`
       const savedData = localStorage.getItem(cacheKey)
       if (savedData) {
         try { setResponses(JSON.parse(savedData)) } catch (e) { console.error(e) }
+      } else {
+        setResponses({})
       }
     }
-  }, [template?.id])
+  }, [template?.id, leadId])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && template?.id && Object.keys(responses).length > 0) {
-      const cacheKey = `rgmj_interview_v3_${template.id}`
+    if (typeof window !== 'undefined' && template?.id && leadId && Object.keys(responses).length > 0) {
+      const cacheKey = `rgmj_interview_v3_${template.id}_${leadId}`
       localStorage.setItem(cacheKey, JSON.stringify(responses))
       setIsSaved(true)
       const timer = setTimeout(() => setIsSaved(false), 2000)
       return () => clearTimeout(timer)
     }
-  }, [responses, template?.id])
+  }, [responses, template?.id, leadId])
 
   const handleInputChange = (label: string, value: any) => {
     setResponses(prev => ({ ...prev, [label]: value }))
@@ -138,7 +142,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
     try {
       const templateSnapshot = (template.items || []).map((item: any) => ({ ...item }))
       await onSubmit({ responses, templateSnapshot })
-      if (typeof window !== 'undefined') localStorage.removeItem(`rgmj_interview_v3_${template.id}`)
+      if (typeof window !== 'undefined') localStorage.removeItem(`rgmj_interview_v3_${template.id}_${leadId}`)
     } catch (error) {
       toast({ variant: "destructive", title: "Falha no Protocolo" })
     } finally {

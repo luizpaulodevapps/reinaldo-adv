@@ -184,10 +184,8 @@ export default function LeadsPage() {
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id || selectedLead?.id
     if (!user || !db || !leadId) return null
-    return query(
-      collection(db!, "interviews"), 
-      where("clientId", "==", leadId)
-    )
+    // Busca na subcoleção conforme blueprint
+    return collection(db!, "leads", leadId, "interviews")
   }, [db, user, activeLead?.id, selectedLead?.id])
   const { data: leadInterviewsRaw, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
   
@@ -275,8 +273,11 @@ export default function LeadsPage() {
 
   const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
     if (!db || !activeLead || !user) return
-    addDocumentNonBlocking(collection(db!, "interviews"), { 
-      clientId: activeLead.id, 
+    const leadId = activeLead.id
+    
+    // Salva na subcoleção para isolamento total dos dados do cliente
+    addDocumentNonBlocking(collection(db!, "leads", leadId, "interviews"), { 
+      clientId: leadId, 
       clientName: activeLead.name, 
       templateId: executingTemplate.id, 
       interviewType: executingTemplate.title, 
@@ -307,7 +308,7 @@ export default function LeadsPage() {
     try {
       const result = await aiAnalyzeFullInterview({ clientName: activeLead.name, interviewType: interview.interviewType, responses: interview.responses })
       setInterviewAnalysis(result)
-      if (db) updateDocumentNonBlocking(doc(db, "interviews", interview.id), { aiAnalysis: result, updatedAt: serverTimestamp() })
+      if (db) updateDocumentNonBlocking(doc(db, "leads", activeLead.id, "interviews", interview.id), { aiAnalysis: result, updatedAt: serverTimestamp() })
     } catch (e) { toast({ variant: "destructive", title: "Erro na análise" }) } finally { setIsAiAnalyzing(false) }
   }
 
@@ -650,7 +651,7 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 text-left"><DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Rito de captura de DNA jurídico RGMJ.</DialogDescription></DialogHeader>{executingTemplate && (<DynamicInterviewExecution template={executingTemplate} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />)}</DialogContent></Dialog>
+      <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 text-left"><DialogTitle className="text-white font-bold uppercase tracking-widest text-lg">Atendimento Técnico Estratégico</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Rito de captura de DNA jurídico RGMJ.</DialogDescription></DialogHeader>{executingTemplate && (<DynamicInterviewExecution template={executingTemplate} leadId={activeLead.id} onSubmit={handleFinishInterview} onCancel={() => setIsInterviewDialogOpen(false)} />)}</DialogContent></Dialog>
       <Dialog open={isConversionOpen} onOpenChange={setIsConversionOpen}><DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh]"><DialogHeader className="p-5 bg-[#0a0f1e] border-b border-white/5 flex-none text-left"><DialogTitle className="text-white text-lg font-bold uppercase tracking-widest">Migração para Acervo Ativo</DialogTitle><DialogDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50">Conversão estratégica de Lead em Processo Judicial.</DialogDescription></DialogHeader><div className="flex-1 min-h-0">{activeLead && (<ProcessForm initialData={{ clientName: activeLead.name, clientId: activeLead.id, defendantName: activeLead.defendantName, caseType: activeLead.type, court: activeLead.court, vara: activeLead.vara, processNumber: activeLead.processNumber || "", responsibleStaffId: user?.uid }} onSubmit={handleConvertProcess} onCancel={() => setIsConversionOpen(false)} />)}</div></DialogContent></Dialog>
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={handleCreateLead} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle></SheetHeader><div className="flex-1 min-h-0">{activeLead && (<LeadForm existingLeads={[]} initialData={activeLead} lockMode={true} onSubmit={async (data) => { await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() }); setIsEditModeOpen(false); toast({ title: "Qualificação Atualizada" }) }} onSelectExisting={() => {}} onCancel={() => setIsEditModeOpen(false)} />)}</div></SheetContent></Sheet>
