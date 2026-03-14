@@ -37,8 +37,7 @@ import {
   Users,
   UserPlus,
   Building2,
-  ShieldAlert,
-  CloudSync
+  ShieldAlert
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -397,7 +396,7 @@ export default function MasterAgendaPage() {
           </div>
 
           <Button onClick={() => setSyncing(true)} disabled={syncing} variant="outline" className="glass border-white/10 h-10 px-6 gap-3 text-[10px] font-black uppercase tracking-widest hidden md:flex">
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudSync className="h-4 w-4 text-primary" />} Sincronizar Google
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 text-primary" />} Sincronizar Google
           </Button>
         </div>
 
