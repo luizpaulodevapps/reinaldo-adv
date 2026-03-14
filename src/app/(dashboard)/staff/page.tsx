@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -33,7 +34,8 @@ import {
   Scale,
   CreditCard,
   FileText,
-  UserPlus
+  UserPlus,
+  ExternalLink
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -112,7 +114,7 @@ export default function StaffPage() {
     )
   }, [employees, searchTerm])
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!db || !formData.name || !formData.role || !formData.email) {
       toast({ variant: "destructive", title: "Dados Incompletos" })
       return
@@ -127,38 +129,34 @@ export default function StaffPage() {
       updatedAt: serverTimestamp()
     }
 
-    try {
-      // Salva na coleção de RH (Employees) - Usamos o email como ID para consistência
-      await setDocumentNonBlocking(doc(db!, "employees", emailId), {
-        ...payload,
+    // 1. Salva na coleção de RH (Employees) - Non-blocking
+    setDocumentNonBlocking(doc(db!, "employees", emailId), {
+      ...payload,
+      id: emailId,
+      createdAt: editingStaff?.createdAt || serverTimestamp()
+    }, { merge: true })
+
+    // 2. Se habilitado, salvar na Soberania Digital (Profiles)
+    if (formData.createSystemAccess) {
+      const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
+      const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
+      
+      setDocumentNonBlocking(doc(db!, "staff_profiles", emailId), {
         id: emailId,
-        createdAt: editingStaff?.createdAt || serverTimestamp()
+        name: payload.name,
+        email: emailId,
+        role: systemRole,
+        isOwner: payload.isOwner,
+        isActive: payload.status === 'Ativo',
+        updatedAt: serverTimestamp()
       }, { merge: true })
 
-      // Se habilitado, salva na coleção de Soberania Digital (Profiles)
-      if (formData.createSystemAccess) {
-        const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
-        const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
-        
-        await setDocumentNonBlocking(doc(db!, "staff_profiles", emailId), {
-          id: emailId,
-          name: payload.name,
-          email: emailId,
-          role: systemRole,
-          isOwner: payload.isOwner,
-          isActive: payload.status === 'Ativo',
-          updatedAt: serverTimestamp()
-        }, { merge: true })
-
-        setInvitedMember({ name: payload.name, email: payload.email })
-        setIsInviteOpen(true)
-      }
-
-      toast({ title: editingStaff ? "Registro Atualizado" : "Membro Admitido" })
-      setIsDialogOpen(false)
-    } catch (e) {
-      toast({ variant: "destructive", title: "Erro no processamento" })
+      setInvitedMember({ name: payload.name, email: payload.email })
+      setIsInviteOpen(true)
     }
+
+    toast({ title: editingStaff ? "Registro Atualizado" : "Membro Admitido" })
+    setIsDialogOpen(false)
   }
 
   const handleCopyInvite = () => {
@@ -369,34 +367,31 @@ export default function StaffPage() {
                 </div>
               </div>
 
-              <div className="p-8 rounded-2xl border border-primary/20 bg-primary/5 space-y-8 shadow-inner">
-                <div className="flex items-center justify-between border-primary/10 pb-4 border-b">
-                  <div className="flex items-center gap-3">
-                    <Lock className="h-5 w-5 text-primary" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania Workspace</h4>
+              <div className="p-8 rounded-2xl border border-white/5 bg-[#0d1422]/60 space-y-10 shadow-2xl relative">
+                <div className="flex flex-col md:flex-row md:items-center justify-between border-white/5 pb-6 border-b gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <h4 className="text-xs font-black text-white uppercase tracking-[0.2em]">Soberania Workspace</h4>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 bg-white/[0.02] px-4 py-2.5 rounded-full border border-white/5">
                     <Checkbox id="access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} />
-                    <Label htmlFor="access" className="text-[10px] font-black text-white uppercase cursor-pointer">Habilitar Acesso ao Sistema</Label>
+                    <Label htmlFor="access" className="text-[10px] font-black text-white uppercase cursor-pointer flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Habilitar Acesso ao Sistema
+                    </Label>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-3">
                     <Label className={labelMini}>E-mail Google (Gmail/Workspace) *</Label>
-                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} placeholder="obrigatorio@gmail.com" />
-                    <p className="text-[8px] text-amber-500 font-bold uppercase">O acesso será vinculado a este e-mail automaticamente.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Status Atual</Label>
-                    <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
-                      <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] text-white">
-                        <SelectItem value="Ativo" className="text-[10px] font-bold">✅ ATIVO</SelectItem>
-                        <SelectItem value="Inativo" className="text-[10px] font-bold">❌ BLOQUEADO</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={cn(inputClass, "h-14")} placeholder="obrigatorio@gmail.com" />
                   </div>
                 </div>
+                <p className="text-[9px] text-[#F5D030] font-black uppercase tracking-[0.1em] opacity-80 mt-4">
+                  O acesso será vinculado a este e-mail automaticamente.
+                </p>
               </div>
 
               <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-inner">
@@ -447,22 +442,36 @@ export default function StaffPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE CONVITE */}
+      {/* DIÁLOGO DE CONVITE & ACESSO */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-[2.5rem] text-center">
+        <DialogContent className="glass border-emerald-500/20 bg-[#0a0f1e] sm:max-w-[550px] p-0 overflow-hidden shadow-2xl rounded-[2.5rem] text-center">
           <div className="p-12 space-y-8">
             <div className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 mx-auto shadow-2xl">
-              <CheckCircle2 className="h-12 w-12 animate-bounce" />
+              <ShieldCheck className="h-12 w-12 animate-pulse" />
             </div>
             <div className="space-y-3">
-              <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter">Acesso Liberado!</DialogTitle>
+              <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-tight">Soberania Liberada</DialogTitle>
               <DialogDescription className="text-muted-foreground text-xs font-bold uppercase tracking-widest leading-relaxed">
                 O PERFIL DE <span className="text-primary">{invitedMember?.name}</span> JÁ ESTÁ ATIVO NO ECOSSISTEMA RGMJ.
               </DialogDescription>
             </div>
+
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4 shadow-inner">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Link Oficial de Acesso:</p>
+              <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
+                <code className="text-xs font-mono text-primary truncate mr-4">{window.location.origin}/login</code>
+                <button onClick={() => { 
+                  navigator.clipboard.writeText(`${window.location.origin}/login`); 
+                  toast({ title: "Link Copiado" });
+                }} className="text-white/40 hover:text-primary transition-colors">
+                  <Copy className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 pt-4">
               <Button onClick={handleCopyInvite} className="gold-gradient h-16 rounded-2xl font-black uppercase text-[11px] gap-4 shadow-xl hover:scale-105 transition-all text-background">
-                <Copy className="h-5 w-5" /> COPIAR CONVITE WHATSAPP
+                <Smartphone className="h-5 w-5" /> DISPARAR CONVITE WHATSAPP
               </Button>
               <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12 hover:text-white">CONCLUIR RITO</Button>
             </div>
@@ -566,9 +575,7 @@ export default function StaffPage() {
             <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-4 opacity-50">
               <ShieldCheck className="h-5 w-5 text-emerald-500" /> SOBERANIA TÉCNICA AUDITADA
             </span>
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-105 active:scale-95">
-              FECHAR DOSSIÊ
-            </Button>
+            <Button variant="ghost" onClick={() => setIsViewOpen(false)} className="text-white uppercase font-black text-[11px] px-10 h-12 hover:bg-white/5">FECHAR</Button>
           </div>
         </DialogContent>
       </Dialog>
