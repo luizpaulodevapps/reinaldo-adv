@@ -87,7 +87,7 @@ export default function StaffPage() {
     paymentType: "Mensalista",
     commissionPercentage: 0,
     baseSalary: 0,
-    createSystemAccess: false,
+    createSystemAccess: true,
     isOwner: false
   })
 
@@ -115,6 +115,15 @@ export default function StaffPage() {
   const handleSave = async () => {
     if (!db || !formData.name || !formData.role || !formData.email) {
       toast({ variant: "destructive", title: "Dados Incompletos" })
+      return
+    }
+
+    if (!formData.email.includes("@gmail.com") && !formData.email.includes("rgmj.adv.br")) {
+      toast({ 
+        variant: "destructive", 
+        title: "E-mail Inválido", 
+        description: "Utilize uma conta Google/Workspace para habilitar o sincronismo de agenda." 
+      })
       return
     }
 
@@ -311,7 +320,7 @@ export default function StaffPage() {
                 {editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}
               </DialogTitle>
               <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-60">
-                REGISTRO DE DADOS E NÍVEIS DE ACESSO.
+                REGISTRO DE DADOS E NÍVEIS DE ACESSO GOOGLE.
               </DialogDescription>
             </DialogHeader>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
@@ -353,7 +362,7 @@ export default function StaffPage() {
                 <div className="flex items-center justify-between border-primary/10 pb-4 border-b">
                   <div className="flex items-center gap-3">
                     <Lock className="h-5 w-5 text-primary" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania de Acesso</h4>
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Soberania Workspace</h4>
                   </div>
                   <div className="flex items-center gap-3">
                     <Checkbox id="access" checked={formData.createSystemAccess} onCheckedChange={(v) => setFormData({...formData, createSystemAccess: !!v})} />
@@ -362,8 +371,9 @@ export default function StaffPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label className={labelMini}>E-mail Google Corporativo *</Label>
-                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} />
+                    <Label className={labelMini}>E-mail Google (Gmail/Workspace) *</Label>
+                    <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} placeholder="obrigatorio@gmail.com" />
+                    <p className="text-[8px] text-amber-500 font-bold uppercase">Essencial para sincronismo de Agenda/Drive.</p>
                   </div>
                   <div className="space-y-2">
                     <Label className={labelMini}>Status Atual</Label>

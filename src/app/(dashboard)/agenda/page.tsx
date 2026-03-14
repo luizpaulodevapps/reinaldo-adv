@@ -37,9 +37,10 @@ import {
   Users,
   UserPlus,
   Building2,
-  ShieldAlert
+  ShieldAlert,
+  CloudSync
 } from "lucide-react"
-import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
 import { 
   format, 
@@ -72,6 +73,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { pushActToGoogleCalendar } from "@/services/google-calendar"
 
 type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendimento'
 
@@ -104,12 +106,10 @@ export default function MasterAgendaPage() {
     valueToPay: 0,
     valueToCharge: 0,
     extraExpenses: 0,
-    // Sub-detalhamento de despesas
     fuelExpense: 0,
     parkingExpense: 0,
     copyExpense: 0,
     miscExpense: 0,
-    // Campos de Cadastro Rápido Freelance
     plaintiffName: "",
     defendantName: "",
     representedSide: "Autor",
@@ -120,6 +120,9 @@ export default function MasterAgendaPage() {
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
+
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleConfig } = useDoc(googleSettingsRef)
 
   // Queries para a Pauta Consolidada
   const hearingsQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "hearings"), orderBy("startDateTime", "asc")) : null, [db, user])
@@ -255,6 +258,7 @@ export default function MasterAgendaPage() {
 
   const handleSaveEvent = async () => {
     if (!db || !newEventData.date) return
+    setSyncing(true)
     const dateTime = `${newEventData.date}T${newEventData.time || '09:00'}:00`
     
     let targetCollection = "appointments"
@@ -266,27 +270,32 @@ export default function MasterAgendaPage() {
       updatedAt: serverTimestamp()
     }
 
+    let typeForGoogle: any = 'atendimento'
+
     if (createMode === 'audiencia') {
       targetCollection = 'hearings'
       payload.startDateTime = dateTime
       payload.location = newEventData.location
       payload.status = "Agendado"
+      typeForGoogle = 'audiencia'
     } else if (createMode === 'atendimento') {
       targetCollection = 'appointments'
       payload.startDateTime = dateTime
       payload.location = newEventData.location
       payload.status = "Agendado"
+      typeForGoogle = 'atendimento'
     } else if (createMode === 'prazo') {
       targetCollection = 'deadlines'
       payload.dueDate = newEventData.date
       payload.status = "Aberto"
+      typeForGoogle = 'prazo'
     } else if (createMode === 'diligencia') {
       targetCollection = 'diligences'
       payload.dueDate = dateTime
       payload.location = newEventData.location
       payload.status = "Pendente"
+      typeForGoogle = 'diligencia'
     } else if (createMode === 'freelance') {
-      // Rito Especial Freelance
       const totalExtras = Number(newEventData.fuelExpense) + Number(newEventData.parkingExpense) + Number(newEventData.copyExpense) + Number(newEventData.miscExpense)
       
       const flDoc = await addDocumentNonBlocking(collection(db, "freelance_diligences"), {
@@ -321,6 +330,7 @@ export default function MasterAgendaPage() {
       payload.diligenceId = (flDoc as any).id
       payload.location = newEventData.courtName || newEventData.location
       payload.status = "Agendado"
+      typeForGoogle = 'freelance'
     }
 
     addDocumentNonBlocking(collection(db, targetCollection), {
@@ -328,7 +338,30 @@ export default function MasterAgendaPage() {
       createdAt: serverTimestamp()
     })
 
+    // Sincronismo com Google Calendar
+    try {
+      const token = localStorage.getItem('google_access_token') // Assume token centralizado
+      if (token) {
+        await pushActToGoogleCalendar({
+          accessToken: token,
+          act: {
+            title: payload.title,
+            description: payload.notes,
+            location: payload.location,
+            startDateTime: createMode === 'prazo' ? `${newEventData.date}T00:00:00` : dateTime,
+            type: typeForGoogle,
+            processNumber: payload.processNumber,
+            clientName: payload.clientName
+          }
+        })
+        toast({ title: "Ato Sincronizado com Workspace" })
+      }
+    } catch (e) {
+      console.warn("Sync Google failed, focusing on Firestore persistence.")
+    }
+
     toast({ title: "Ato Injetado na Pauta" })
+    setSyncing(false)
     setIsCreateOpen(false)
   }
 
@@ -364,7 +397,7 @@ export default function MasterAgendaPage() {
           </div>
 
           <Button onClick={() => setSyncing(true)} disabled={syncing} variant="outline" className="glass border-white/10 h-10 px-6 gap-3 text-[10px] font-black uppercase tracking-widest hidden md:flex">
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 text-primary" />} Sincronizar
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudSync className="h-4 w-4 text-primary" />} Sincronizar Google
           </Button>
         </div>
 
@@ -703,7 +736,8 @@ export default function MasterAgendaPage() {
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Abortar</Button>
-            <Button onClick={handleSaveEvent} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02]">
+            <Button onClick={handleSaveEvent} disabled={syncing} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02]">
+              {syncing ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : null}
               CONFIRMAR AGENDA
             </Button>
           </DialogFooter>
@@ -787,9 +821,9 @@ export default function MasterAgendaPage() {
                       <MapPin className="h-5 w-5 text-primary" />
                       <span className="text-sm font-bold text-white uppercase">{viewingEvent.location}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-primary" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}>
+                    <button className="text-white/20 hover:text-primary transition-colors" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}>
                       <Navigation className="h-4 w-4" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
