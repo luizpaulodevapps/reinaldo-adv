@@ -45,7 +45,10 @@ import {
   LayoutGrid,
   List,
   Briefcase,
-  Tag
+  Tag,
+  History,
+  ListChecks,
+  RotateCcw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -141,7 +144,6 @@ export default function CasesPage() {
   const { data: processesData, isLoading } = useCollection(processesQuery)
   const processes = processesData || []
 
-  // Busca configurações do Google para o RootFolderID
   const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
   const { data: googleConfig } = useDoc(googleSettingsRef)
 
@@ -354,8 +356,8 @@ export default function CasesPage() {
           <div className="text-4xl font-black text-white tracking-tighter tabular-nums">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
         </Card>
         <Card className="bg-[#141B2D] border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-12 w-12" /></div>
-          <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Briefcase className="h-3.5 w-3.5" /> TICKET MÉDIO</p>
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Briefcase className="h-12 w-12" /></div>
+          <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Target className="h-3.5 w-3.5" /> TICKET MÉDIO</p>
           <div className="text-4xl font-black text-white tracking-tighter tabular-nums">R$ {stats.ticket.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
         </Card>
       </div>
@@ -407,16 +409,50 @@ export default function CasesPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary"><CalendarDays className="h-5 w-5" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary"><Clock className="h-5 w-5" /></button>
-                  <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary"><DollarSign className="h-5 w-5" /></button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"><MoreVertical className="h-5 w-5" /></button>
+                      <button className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all group/menu shadow-2xl">
+                        <MoreVertical className="h-6 w-6 text-muted-foreground group-hover/menu:text-primary transition-colors" />
+                      </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
-                      <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="gap-2 text-[10px] font-black uppercase"><Edit3 className="h-3.5 w-3.5" /> Editar Dossiê</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db!, "processes", proc.id))} className="gap-2 text-[10px] font-black uppercase text-rose-500"><Trash2 className="h-3.5 w-3.5" /> Arquivar Feito</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-[320px] bg-[#0d121f] border-white/10 text-white p-2 rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] font-sans">
+                      <div className="px-4 py-3 border-b border-white/5 mb-2">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Gestão do Caso</p>
+                      </div>
+                      
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 cursor-pointer group">
+                        <History className="h-5 w-5 text-muted-foreground/40 group-hover:text-white" /> VER PROCESSO COMPLETO
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer group">
+                        <Calendar className="h-5 w-5" /> AGENDAR REUNIÃO/ATEND.
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer group">
+                        <ListChecks className="h-5 w-5" /> AGENDAR DILIGÊNCIA
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer group">
+                        <AlarmClock className="h-5 w-5" /> LANÇAR PRAZO FATAL
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#f5d030]/10 text-[#f5d030] cursor-pointer group">
+                        <Gavel className="h-5 w-5" /> AGENDAR AUDIÊNCIA
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-sky-500/10 text-sky-400 cursor-pointer group">
+                        <DollarSign className="h-5 w-5" /> EVENTO FINANCEIRO
+                      </DropdownMenuItem>
+                      
+                      <div className="h-px bg-white/5 my-2" />
+                      
+                      <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer group">
+                        <Edit3 className="h-5 w-5" /> EDITAR PROCESSO
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db!, "processes", proc.id))} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600/10 text-rose-600 cursor-pointer group">
+                        <Trash2 className="h-5 w-5" /> ARQUIVAR PROCESSO
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -560,11 +596,11 @@ export default function CasesPage() {
                         <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
                           <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Sede RGMJ</span>
                         </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'custom' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'custom'})}>
                           <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
                         </div>
                       </RadioGroup>
-                      {meetingData.locationType === 'externo' && (
+                      {meetingData.locationType === 'custom' && (
                         <div className="space-y-2 animate-in fade-in">
                           <Label className={labelMini}>Endereço do Atendimento</Label>
                           <Input value={meetingData.location} onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl" placeholder="DIGITE O LOCAL..." />
