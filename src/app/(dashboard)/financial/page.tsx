@@ -27,7 +27,8 @@ import {
   LayoutGrid,
   CalendarDays,
   Target,
-  User as UserIcon
+  User as UserIcon,
+  Handshake
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
