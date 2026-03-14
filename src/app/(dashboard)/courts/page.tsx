@@ -304,10 +304,10 @@ export default function CourtsPage() {
           filtered.map((court) => (
             <Card 
               key={court.id} 
-              className="bg-[#0d1117] border-white/5 hover:border-primary/20 transition-all group overflow-hidden flex flex-col shadow-2xl cursor-pointer rounded-[2rem]"
+              className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col shadow-2xl cursor-pointer rounded-[2.5rem] border min-h-[450px]"
               onClick={() => handleOpenView(court)}
             >
-              <CardContent className="p-10 space-y-8 relative">
+              <CardContent className="p-10 space-y-8 relative flex-1">
                 <div className="flex items-start justify-between">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
                     <Building2 className="h-8 w-8" />
@@ -315,30 +315,33 @@ export default function CourtsPage() {
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleOpenEdit(court); }} 
-                      className="text-white/20 hover:text-white transition-colors"
+                      className="text-white/20 hover:text-white transition-all hover:scale-110"
                     >
                       <Edit3 className="h-5 w-5" />
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleDelete(court.id); }} 
-                      className="w-10 h-10 rounded-full bg-[#f5d030] flex items-center justify-center text-[#0d1117] hover:scale-110 transition-all shadow-lg"
+                      className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-[#f5d030] uppercase tracking-tighter leading-tight">
+                <div className="space-y-3">
+                  <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">
+                    ÓRGÃO JUDICIÁRIO
+                  </Badge>
+                  <h3 className="text-2xl font-black text-[#F5D030] uppercase tracking-tighter leading-tight group-hover:brightness-125 transition-all">
                     {court.name}
                   </h3>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-black uppercase tracking-widest">
-                    <MapPin className="h-3.5 w-3.5 opacity-50 text-primary" /> {court.city} - {court.state}
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
+                    <MapPin className="h-4 w-4 opacity-50 text-primary" /> {court.city} - {court.state}
                   </div>
                 </div>
 
                 <div className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-4 shadow-inner">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Endereço de Citação</p>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-40">Endereço de Citação</p>
                   <div className="space-y-1">
                     <p className="text-sm font-bold text-white uppercase leading-relaxed tracking-tight">
                       {court.address}, {court.number} {court.complement && `• ${court.complement}`}
@@ -348,26 +351,22 @@ export default function CourtsPage() {
                     </p>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                  <Badge variant="outline" className="text-[9px] font-black uppercase border-[#f5d030]/20 text-[#f5d030] bg-[#f5d030]/5 px-4 h-7 rounded-full">
-                    LOGÍSTICA OK
-                  </Badge>
-                  {court.mapsLink ? (
-                    <a href={court.mapsLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-2.5 text-[11px] font-black text-[#f5d030] hover:text-white transition-colors uppercase tracking-[0.15em]">
-                      <Navigation className="h-4 w-4" /> VER NO MAPS
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-2.5 text-[11px] font-black text-muted-foreground/30 uppercase tracking-widest">
-                      <Navigation className="h-4 w-4" /> ROTA INDISP.
-                    </div>
-                  )}
-                </div>
               </CardContent>
+              
+              <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-widest">
+                  <Library className="h-5 w-5 opacity-50" /> {court.varas?.length || 0} VARAS MAPEADAS
+                </div>
+                {court.mapsLink && (
+                  <button onClick={(e) => { e.stopPropagation(); window.open(court.mapsLink, "_blank"); }} className="flex items-center gap-2.5 text-[11px] font-black text-primary hover:text-white transition-colors uppercase tracking-[0.15em]">
+                    <Navigation className="h-4 w-4" /> VER NO MAPS
+                  </button>
+                )}
+              </div>
             </Card>
           ))
         ) : (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-30">
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-20">
             <Building2 className="h-16 w-16 text-muted-foreground" />
             <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Nenhum fórum cadastrado</p>
             <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12 rounded-xl shadow-xl">
@@ -570,9 +569,7 @@ export default function CourtsPage() {
               </div>
             </div>
             <div className="flex gap-3 pr-8">
-              <Button onClick={() => handleOpenEdit(viewingCourt)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] uppercase h-11 px-6 rounded-xl hover:bg-white/5 transition-all">
-                <Edit3 className="h-4 w-4 mr-2" /> EDITAR
-              </Button>
+              <button onClick={() => handleOpenEdit(viewingCourt)} className="text-white/20 hover:text-white bg-white/5 p-2.5 rounded-xl transition-colors border border-white/10"><Edit3 className="h-5 w-5" /></button>
             </div>
           </div>
 

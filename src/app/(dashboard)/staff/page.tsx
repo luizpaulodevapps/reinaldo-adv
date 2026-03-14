@@ -118,15 +118,6 @@ export default function StaffPage() {
       return
     }
 
-    if (!formData.email.includes("@gmail.com") && !formData.email.includes("rgmj.adv.br")) {
-      toast({ 
-        variant: "destructive", 
-        title: "E-mail Inválido", 
-        description: "Utilize uma conta Google/Workspace para habilitar o sincronismo de agenda." 
-      })
-      return
-    }
-
     const payload = {
       ...formData,
       name: formData.name.toUpperCase(),
@@ -170,30 +161,21 @@ export default function StaffPage() {
   const handleCopyInvite = () => {
     if (!invitedMember) return
     const appUrl = window.location.origin
-    const message = `Olá ${invitedMember.name}! \n\nVocê foi convidado para o Ecossistema RGMJ.\n\nE-mail liberado: ${invitedMember.email}\n\nPara entrar, acesse:\n${appUrl}/login\n\nUtilize o botão "Entrar com Google".`
+    const message = `Olá ${invitedMember.name}! \n\nVocê foi convidado para o Ecossistema RGMJ.\n\nE-mail liberado: ${invitedMember.email}\n\nPara entrar, acesse:\n${appUrl}/login`
     navigator.clipboard.writeText(message)
     toast({ title: "Convite Copiado!" })
   }
 
   const handleDeleteStaff = (id: string) => {
     if (!db) return
-    
     if (!canManage) {
-      toast({ 
-        variant: "destructive", 
-        title: "Acesso Negado", 
-        description: "Somente o Sócio Fundador detém soberania para revogar acessos." 
-      })
+      toast({ variant: "destructive", title: "Acesso Negado" })
       return
     }
-
-    if (confirm("Revogar este acesso permanentemente? O usuário será bloqueado no sistema.")) {
+    if (confirm("Revogar este acesso permanentemente?")) {
       deleteDocumentNonBlocking(doc(db!, "employees", id))
       deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
-      toast({ 
-        title: "Acesso Revogado", 
-        description: "Membro removido. Para exclusão total do banco de identidades, utilize o Console RGMJ." 
-      })
+      toast({ title: "Acesso Revogado" })
       setIsViewOpen(false)
     }
   }
@@ -227,9 +209,9 @@ export default function StaffPage() {
           {canManage && (
             <Button 
               onClick={() => { setEditingStaff(null); setFormData({...formData, isOwner: false}); setIsDialogOpen(true); }} 
-              className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+              className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl hover:scale-105 transition-all"
             >
-              <UserPlus className="h-4.5 w-4.5" /> NOVO MEMBRO
+              <UserPlus className="h-4.5 w-4.5" /> ADMISSÃO
             </Button>
           )}
         </div>
@@ -243,8 +225,8 @@ export default function StaffPage() {
           </div>
         ) : filtered.length > 0 ? (
           filtered.map((staff) => (
-            <Card key={staff.id} className="glass border-white/5 hover:border-primary/30 transition-all group rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative">
-              <CardContent className="p-10 space-y-8 flex-1">
+            <Card key={staff.id} className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col shadow-2xl rounded-[2.5rem] border min-h-[400px]">
+              <CardContent className="p-10 space-y-8 relative flex-1">
                 <div className="flex items-start justify-between">
                   <div className="relative">
                     <Avatar className="h-20 w-20 border-4 border-white/5 shadow-2xl transition-transform group-hover:scale-105 duration-500">
@@ -258,17 +240,21 @@ export default function StaffPage() {
                       </div>
                     )}
                   </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => { setViewingStaff(staff); setIsViewOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Settings2 className="h-5 w-5" /></button>
+                    <button onClick={() => handleDeleteStaff(staff.id)} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
                   <Badge variant="outline" className={cn(
-                    "text-[10px] font-black uppercase border-primary/30 text-primary px-4 h-7 rounded-full tracking-widest",
+                    "text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest",
                     staff.isOwner && "bg-primary text-background border-0"
                   )}>
                     {staff.isOwner ? <Crown className="h-3 w-3 mr-2" /> : null}
-                    {staff.isOwner ? 'ADMIN' : (staff.role === 'Sócio' ? 'ADMIN' : 'LAWYER')}
+                    {staff.role?.toUpperCase() || 'ADVOGADO'}
                   </Badge>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-xl font-black text-white uppercase truncate tracking-tight group-hover:text-primary transition-colors leading-tight">
+                  <h3 className="text-2xl font-black text-[#F5D030] uppercase truncate tracking-tighter group-hover:brightness-125 transition-all leading-tight">
                     {staff.name}
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">
@@ -276,31 +262,26 @@ export default function StaffPage() {
                   </div>
                 </div>
 
-                <div className="pt-8 border-t border-white/5 flex justify-between items-center">
-                  <div className="flex gap-3">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-11 w-11 text-white/20 hover:text-white rounded-xl bg-white/5 border border-white/5 transition-all" 
-                      onClick={() => { setViewingStaff(staff); setIsViewOpen(true); }}
-                    >
-                      <Settings2 className="h-5 w-5" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-11 w-11 text-white/20 hover:text-rose-500 rounded-xl bg-white/5 border border-white/5 transition-all" 
-                      onClick={() => handleDeleteStaff(staff.id)}
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Ativo</span>
+                <div className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-4 shadow-inner">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase mb-1 opacity-40">Contrato</p>
+                      <p className="text-xs font-bold text-white uppercase">{staff.paymentType || 'MENSALISTA'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-muted-foreground uppercase mb-1 opacity-40">Admissão</p>
+                      <p className="text-xs font-mono font-bold text-white">{staff.hiringDate || '---'}</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
+              
+              <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-widest">
+                  <ShieldCheck className="h-5 w-5 opacity-50" /> ACESSO ATIVO
+                </div>
+                <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all group-hover:translate-x-2" />
+              </div>
             </Card>
           ))
         ) : (
@@ -313,8 +294,8 @@ export default function StaffPage() {
 
       {/* DIÁLOGO DE ADMISSÃO / EDIÇÃO */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl h-[90vh] flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
             <DialogHeader className="text-left space-y-1">
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
                 {editingStaff ? "Gestão de Colaborador" : "Admissão RGMJ"}
@@ -327,8 +308,9 @@ export default function StaffPage() {
               <UserCheck className="h-6 w-6" />
             </div>
           </div>
-          <ScrollArea className="max-h-[70vh]">
-            <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+          
+          <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
+            <div className="p-10 space-y-10 pb-32 max-w-4xl mx-auto">
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-white/5">
                   <Briefcase className="h-4 w-4 text-primary" />
@@ -418,9 +400,10 @@ export default function StaffPage() {
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">ABORTAR</Button>
-            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-105">
+          
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors">Abortar</Button>
+            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-105 active:scale-95">
               <Save className="h-5 w-5 mr-3" /> SALVAR REGISTRO
             </Button>
           </DialogFooter>
@@ -441,7 +424,7 @@ export default function StaffPage() {
               </DialogDescription>
             </div>
             <div className="grid grid-cols-1 gap-4 pt-4">
-              <Button onClick={handleCopyInvite} className="gold-gradient h-16 rounded-2xl font-black uppercase text-[11px] gap-4 shadow-xl hover:scale-105 transition-all">
+              <Button onClick={handleCopyInvite} className="gold-gradient h-16 rounded-2xl font-black uppercase text-[11px] gap-4 shadow-xl hover:scale-105 transition-all text-background">
                 <Copy className="h-5 w-5" /> COPIAR CONVITE WHATSAPP
               </Button>
               <Button variant="ghost" onClick={() => setIsInviteOpen(false)} className="text-muted-foreground font-black uppercase text-[10px] h-12 hover:text-white">CONCLUIR RITO</Button>
@@ -459,21 +442,17 @@ export default function StaffPage() {
                 <AvatarFallback className="bg-secondary text-3xl font-black text-primary uppercase">{viewingStaff?.name?.substring(0, 2)}</AvatarFallback>
               </Avatar>
               <div className="text-left space-y-2">
-                <DialogTitle className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
+                <DialogTitle className="text-4xl font-black text-[#F5D030] uppercase tracking-tighter leading-none">{viewingStaff?.name}</DialogTitle>
                 <div className="flex items-center gap-4 pt-2">
-                  <Badge className="bg-primary text-background font-black uppercase text-[10px] px-4 h-7 rounded-full shadow-lg">{viewingStaff?.role}</Badge>
+                  <Badge className="bg-primary text-background font-black uppercase text-[10px] px-4 h-7 rounded-full shadow-lg">{viewingStaff?.role?.toUpperCase()}</Badge>
                   {viewingStaff?.isOwner && <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px] px-4 h-7 rounded-full shadow-lg">SÓCIO FUNDADOR</Badge>}
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">• {viewingStaff?.status}</span>
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest opacity-40">• {viewingStaff?.status?.toUpperCase()}</span>
                 </div>
               </div>
             </div>
             <div className="flex gap-4 pr-8">
-              <Button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff, createSystemAccess: false}); setIsDialogOpen(true); setIsViewOpen(false); }} variant="outline" className="glass border-white/10 text-white font-black text-[11px] uppercase h-12 px-8 rounded-xl hover:bg-primary hover:text-background transition-all">
-                <Settings2 className="h-5 w-5 mr-3" /> AJUSTES
-              </Button>
-              <Button onClick={() => handleDeleteStaff(viewingStaff?.id)} variant="ghost" className="h-12 w-12 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl border border-white/5">
-                <Trash2 className="h-5 w-5" />
-              </Button>
+              <button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff, createSystemAccess: false}); setIsDialogOpen(true); setIsViewOpen(false); }} className="text-white/20 hover:text-white bg-white/5 p-3 rounded-xl transition-all border border-white/10"><Settings2 className="h-6 w-6" /></button>
+              <button onClick={() => handleDeleteStaff(viewingStaff?.id)} className="text-white/20 hover:text-rose-500 bg-white/5 p-3 rounded-xl transition-all border border-white/10"><Trash2 className="h-6 w-6" /></button>
             </div>
           </div>
 
@@ -518,7 +497,7 @@ export default function StaffPage() {
                     <div className="absolute top-0 right-0 p-8 opacity-5"><Landmark className="h-20 w-20" /></div>
                     <div className="space-y-2">
                       <Label className={labelMini}>Modelo de Contratação</Label>
-                      <Badge className="bg-primary text-background font-black uppercase text-[10px] h-8 px-5 rounded-full">{viewingStaff?.paymentType}</Badge>
+                      <Badge className="bg-primary text-background font-black uppercase text-[10px] h-8 px-5 rounded-full">{viewingStaff?.paymentType?.toUpperCase()}</Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-8">
                       <div className="space-y-2">
@@ -527,7 +506,7 @@ export default function StaffPage() {
                       </div>
                       <div className="space-y-2">
                         <Label className={labelMini}>Participação %</Label>
-                        <p className="text-2xl font-black text-primary tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
+                        <p className="text-2xl font-black text-[#F5D030] tabular-nums">{viewingStaff?.commissionPercentage || 0}%</p>
                       </div>
                     </div>
                     <div className="pt-6 border-t border-white/10">
@@ -538,31 +517,14 @@ export default function StaffPage() {
                   </Card>
                 </div>
               </div>
-
-              <div className="space-y-8">
-                <div className="flex items-center gap-4 pb-3 border-b border-white/5">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Telemetria RGMJ</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="glass border-white/5 p-6 rounded-2xl bg-white/[0.01] flex items-center gap-5 shadow-lg group hover:border-primary/20 transition-all">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-all"><Plus className="h-6 w-6" /></div>
-                    <div><Label className={labelMini}>Admissão</Label><p className="text-sm font-bold text-white uppercase">{viewingStaff?.hiringDate || '---'}</p></div>
-                  </Card>
-                  <Card className="glass border-white/5 p-6 rounded-2xl bg-white/[0.01] flex items-center gap-5 shadow-lg group hover:border-primary/20 transition-all">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-all"><Settings2 className="h-6 w-6" /></div>
-                    <div><Label className={labelMini}>Status Acesso</Label><p className="text-sm font-bold text-emerald-500 uppercase">ATIVO</p></div>
-                  </Card>
-                </div>
-              </div>
             </div>
           </ScrollArea>
 
-          <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-[2.5rem]">
+          <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
             <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-4 opacity-50">
               <ShieldCheck className="h-5 w-5 text-emerald-500" /> SOBERANIA TÉCNICA AUDITADA
             </span>
-            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-2xl shadow-2xl transition-all hover:scale-105 active:scale-95">
+            <Button onClick={() => setIsViewOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-105 active:scale-95">
               FECHAR DOSSIÊ
             </Button>
           </div>

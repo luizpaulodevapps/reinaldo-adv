@@ -47,7 +47,11 @@ import {
   ShieldQuestion,
   Bookmark,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  History,
+  Brain,
+  Calculator,
+  Save
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -355,29 +359,37 @@ export default function LaboratorioChecklistsPage() {
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca de matrizes...</span>
               </div>
             ) : filteredChecklists.map((list) => (
-              <Card key={list.id} className="glass border-primary/10 hover:border-primary/30 transition-all group overflow-hidden flex flex-col rounded-[2rem] shadow-2xl">
-                <div className="p-8 space-y-6 flex-1">
+              <Card key={list.id} className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col rounded-[2.5rem] shadow-2xl border min-h-[400px]">
+                <div className="p-10 space-y-8 flex-1 relative">
                   <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 h-6">
-                      {list.category}
+                    <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">
+                      {list.category?.toUpperCase() || "ENTREVISTA DE TRIAGEM"}
                     </Badge>
-                    <div className="flex gap-3">
-                      <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></button>
-                      <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-colors"><Edit3 className="h-4 w-4" /></button>
-                      <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                    <div className="flex gap-4">
+                      <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Eye className="h-5 w-5" /></button>
+                      <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all hover:scale-110"><Edit3 className="h-5 w-5" /></button>
+                      <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
                     </div>
                   </div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{list.title}</h3>
-                  <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">
-                    <Scale className="h-3.5 w-3.5" /> {list.legalArea || "GERAL"}
+                  
+                  <h3 className="text-2xl font-black text-[#F5D030] uppercase tracking-tighter leading-none group-hover:brightness-125 transition-all">
+                    {list.title}
+                  </h3>
+                  
+                  <div className="flex items-center gap-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
+                    <Scale className="h-4 w-4 opacity-50" /> {list.legalArea?.toUpperCase() || "TRABALHISTA"}
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 italic uppercase font-medium">{list.description || "Sem descrição técnica definida."}</p>
+                  
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 italic uppercase font-medium tracking-wide">
+                    {list.description || "Padrão básico estruturado para triagem técnica. Você pode editar ou adicionar novos campos a qualquer momento."}
+                  </p>
                 </div>
-                <div className="px-8 py-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
-                    <Layers className="h-4 w-4 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
+                
+                <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                  <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
+                    <Layers className="h-5 w-5 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
                   </div>
-                  <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-primary transition-all group-hover:translate-x-1" />
+                  <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all group-hover:translate-x-2" />
                 </div>
               </Card>
             ))}
@@ -393,41 +405,43 @@ export default function LaboratorioChecklistsPage() {
               </div>
             ) : filteredModels.length > 0 ? (
               filteredModels.map((model) => (
-                <Card key={model.id} className="glass border-white/5 hover:border-primary/40 transition-all group shadow-2xl rounded-[2rem] overflow-hidden flex flex-col">
-                  <div className="p-8 space-y-6 flex-1">
+                <Card key={model.id} className="bg-[#0d1117] border-white/10 hover:border-primary/40 transition-all group shadow-2xl rounded-[2.5rem] overflow-hidden flex flex-col border min-h-[350px]">
+                  <div className="p-10 space-y-8 flex-1">
                     <div className="flex items-start justify-between">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                        <FileText className="h-6 w-6" />
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                        <FileText className="h-7 w-7" />
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white bg-white/5 p-2 rounded-lg transition-colors"><Settings2 className="h-4 w-4" /></button>
-                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 bg-white/5 p-2 rounded-lg transition-colors"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">{model.title}</h3>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/20 text-primary bg-primary/5">{model.area}</Badge>
-                        {model.googleDocId && <Badge className="bg-blue-500/10 text-blue-400 border-0 text-[8px] font-black uppercase tracking-widest">GOOGLE DOCS OK</Badge>}
+                      <div className="flex gap-3">
+                        <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white bg-white/5 p-2.5 rounded-xl transition-colors"><Settings2 className="h-5 w-5" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 bg-white/5 p-2.5 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 pt-4">
-                      {model.tags?.slice(0, 4).map((tag: string) => (
-                        <span key={tag} className="text-[8px] font-mono font-bold text-muted-foreground/40 bg-white/5 px-1.5 py-0.5 rounded">
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-black text-[#F5D030] uppercase tracking-tight group-hover:brightness-125 transition-all leading-tight">
+                        {model.title}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">{model.area?.toUpperCase()}</Badge>
+                        {model.googleDocId && <Badge className="bg-blue-500/10 text-blue-400 border-0 text-[9px] font-black uppercase tracking-widest px-3 h-7 rounded-full">DOCS SYNC</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-4">
+                      {model.tags?.slice(0, 3).map((tag: string) => (
+                        <span key={tag} className="text-[9px] font-mono font-bold text-muted-foreground/40 bg-white/5 px-2 py-1 rounded-md">
                           {tag}
                         </span>
                       ))}
-                      {model.tags?.length > 4 && <span className="text-[8px] text-muted-foreground/20">+{model.tags.length - 4}</span>}
+                      {model.tags?.length > 3 && <span className="text-[9px] text-muted-foreground/20 font-black">+{model.tags.length - 3} TAGS</span>}
                     </div>
                   </div>
-                  <div className="px-8 py-5 bg-white/[0.02] border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Identificador: {model.id.substring(0,8)}</span>
-                    <ChevronRight className="h-4 w-4 text-white/5 group-hover:text-primary transition-all" />
+                  <div className="px-10 py-6 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                    <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">ID: {model.id.substring(0,8).toUpperCase()}</span>
+                    <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all" />
                   </div>
                 </Card>
               ))
             ) : (
-              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-20">
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20">
                 <BookOpen className="h-16 w-16 text-muted-foreground" />
                 <p className="text-[11px] font-black uppercase tracking-[0.4em]">Acervo de minutas vazio</p>
               </div>
