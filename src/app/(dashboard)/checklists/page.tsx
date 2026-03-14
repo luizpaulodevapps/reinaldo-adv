@@ -40,7 +40,11 @@ import {
   ArrowLeft,
   Settings2,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Zap,
+  Target,
+  ShieldQuestion,
+  Bookmark
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -57,7 +61,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -69,16 +73,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 const CATEGORIES = [
   { id: "Entrevista de Triagem", label: "Entrevista de Triagem", icon: MessageSquare },
@@ -100,85 +95,25 @@ const LEGAL_AREAS = [
 ]
 
 const FIELD_TYPES = [
-  { id: "boolean", label: "Sim / Não", icon: ToggleLeft },
-  { id: "boolean_partial", label: "Sim / Não / Parcial", icon: Circle },
-  { id: "text", label: "Resposta em Texto", icon: FileText },
-  { id: "number", label: "Valor Numérico", icon: Hash },
-  { id: "cep", label: "CEP / Endereço Automático", icon: MapPin },
-  { id: "cpf_cnpj", label: "CPF / CNPJ", icon: Fingerprint },
-  { id: "phone", label: "WhatsApp / Telefone", icon: Phone },
-  { id: "date", label: "Data", icon: Calendar },
+  { id: "text", label: "Texto Livre (IA)", icon: FileText },
+  { id: "boolean_partial", label: "Sim/Não/Parcial", icon: Circle },
+  { id: "number", label: "Moeda/Valor", icon: DollarSign },
+  { id: "cep", label: "CEP (Automação)", icon: MapPin },
+  { id: "cpf_cnpj", label: "Documentos", icon: Fingerprint },
+  { id: "phone", label: "WhatsApp", icon: Phone },
+  { id: "date", label: "Data/Calendário", icon: Calendar },
 ]
 
 const REUSE_TARGETS = [
   { id: "caseDetails", label: "Detalhes do Caso" },
-  { id: "distribution", label: "Distribuição" },
   { id: "client", label: "Cadastro do Cliente" },
-  { id: "claimant", label: "Cadastro do Reclamante" },
+  { id: "distribution", label: "Pauta / Distribuição" },
 ]
 
 const REUSE_PRIORITIES = [
   { id: "alta", label: "Alta" },
   { id: "media", label: "Média" },
   { id: "baixa", label: "Baixa" },
-]
-
-const TARGET_FIELDS_BY_REUSE_TARGET: Record<string, Array<{ id: string; label: string }>> = {
-  caseDetails: [{ id: "caseDetails", label: "Detalhes do Caso" }],
-  distribution: [
-    { id: "processTitle", label: "Título do Processo" },
-    { id: "processNumber", label: "Número CNJ" },
-    { id: "link", label: "Link CNJ" },
-    { id: "forum", label: "Tribunal/Fórum" },
-    { id: "vara", label: "Vara" },
-    { id: "hearingDate", label: "Data da Audiência" },
-  ],
-  client: [
-    { id: "fullName", label: "Nome Completo" },
-    { id: "cpf", label: "CPF" },
-    { id: "rg", label: "RG" },
-    { id: "rgIssueDate", label: "Data Expedição RG" },
-    { id: "motherName", label: "Nome da Mãe" },
-    { id: "ctps", label: "CTPS" },
-    { id: "zipCode", label: "CEP" },
-    { id: "address", label: "Endereço" },
-    { id: "neighborhood", label: "Bairro" },
-    { id: "city", label: "Cidade" },
-    { id: "state", label: "UF" },
-  ],
-  claimant: [
-    { id: "fullName", label: "Nome Completo" },
-    { id: "documentNumber", label: "CPF/CNPJ" },
-    { id: "documentType", label: "Tipo Documento" },
-    { id: "zipCode", label: "CEP" },
-    { id: "address", label: "Endereço" },
-    { id: "neighborhood", label: "Bairro" },
-    { id: "city", label: "Cidade" },
-    { id: "state", label: "UF" },
-  ],
-}
-
-type ReadyQuestionTemplate = {
-  id: string
-  label: string
-  type: string
-  required?: boolean
-  reuseEnabled?: boolean
-  reuseTarget?: string
-  targetField?: string
-  reusePriority?: string
-  balizaObrigatoria?: boolean
-}
-
-const ALL_READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
-  { id: "id-nome", label: "IDENTIFICACAO: NOME COMPLETO", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "id-cpf", label: "IDENTIFICACAO: CPF", type: "cpf_cnpj", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "cpf", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "id-rg", label: "IDENTIFICACAO: RG", type: "text", required: false, reuseEnabled: true, reuseTarget: "client", targetField: "rg", reusePriority: "media" },
-  { id: "id-contato", label: "IDENTIFICACAO: TELEFONE, WHATSAPP E EMAIL", type: "phone", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "civel-conflito", label: "CIVEL: QUAL E O CONFLITO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "criminal-acusacao", label: "CRIMINAL: QUAL A ACUSACAO E A DATA DO FATO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "contrato-admissao", label: "CONTRATO: DATA DE ADMISSAO", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "situacao-atual", label: "SITUACAO ATUAL: RESUMO DA DEMANDA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
 ]
 
 type EditorStep = "geral" | "perguntas" | "revisao"
@@ -220,8 +155,7 @@ export default function LaboratorioChecklistsPage() {
     if (!checklists) return []
     return checklists.filter(c => 
       c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.legalArea?.toLowerCase().includes(searchTerm.toLowerCase())
+      c.category?.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [checklists, searchTerm])
 
@@ -266,7 +200,6 @@ export default function LaboratorioChecklistsPage() {
         required: true,
         reuseEnabled: false,
         reuseTarget: "caseDetails",
-        targetField: "caseDetails",
         reusePriority: "media",
         balizaObrigatoria: false,
       },
@@ -427,7 +360,7 @@ export default function LaboratorioChecklistsPage() {
                       <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Categoria</Label>
                       <Select value={category} onValueChange={setCategory}>
                         <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold rounded-xl"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-[#0d121f] text-white">
+                        <SelectContent className="bg-[#0d121f] border-white/10 text-white">
                           {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id} className="uppercase text-[10px] font-black">{c.label.toUpperCase()}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -527,14 +460,7 @@ export default function LaboratorioChecklistsPage() {
                               </div>
                               <div className="md:col-span-4 space-y-3">
                                 <Label className="text-[9px] font-black text-muted-foreground uppercase">Campo Mapeado</Label>
-                                <Select value={item.targetField} onValueChange={(v) => handleUpdateField(idx, 'targetField', v)}>
-                                  <SelectTrigger className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase"><SelectValue /></SelectTrigger>
-                                  <SelectContent className="bg-[#0d121f] text-white">
-                                    {TARGET_FIELDS_BY_REUSE_TARGET[item.reuseTarget || "caseDetails"]?.map(f => (
-                                      <SelectItem key={f.id} value={f.id}>{f.label.toUpperCase()}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <Input value={item.targetField} onChange={(e) => handleUpdateField(idx, 'targetField', e.target.value)} className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase" placeholder="EX: fullName, cpf, address..." />
                               </div>
                               <div className="md:col-span-2 space-y-3">
                                 <Label className="text-[9px] font-black text-muted-foreground uppercase">Prioridade</Label>
