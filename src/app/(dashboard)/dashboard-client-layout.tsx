@@ -1,11 +1,12 @@
+
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
-import { doc, serverTimestamp } from 'firebase/firestore';
-import { Scale, ShieldCheck, ShieldAlert } from "lucide-react";
+import { doc, serverTimestamp, query, collection, where } from 'firebase/firestore';
+import { Scale, ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { signOut } from "firebase/auth";
@@ -32,12 +33,14 @@ export function DashboardClientLayout({
     }
   }, [user, isUserLoading, router]);
 
-  const profileRef = useMemoFirebase(() => {
+  // Rito de busca de perfil por e-mail (Soberania de Acesso Automático)
+  const profileQuery = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return doc(db, 'staff_profiles', user.uid);
+    return query(collection(db, 'staff_profiles'), where('email', '==', user.email?.toLowerCase()));
   }, [user, db]);
 
-  const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
+  const { data: profileSearch, isLoading: isProfileLoading } = useCollection(profileQuery);
+  const profileData = profileSearch && profileSearch.length > 0 ? profileSearch[0] : null;
 
   useEffect(() => {
     if (profileData && !profile) {
@@ -45,12 +48,14 @@ export function DashboardClientLayout({
     }
   }, [profileData, profile, setProfile]);
 
+  // Bloqueio imediato se o status não for Ativo
   useEffect(() => {
     if (user && profileData && profileData.isActive === false && auth) {
       signOut(auth).then(() => router.push('/login'));
     }
   }, [user, profileData, auth, router]);
 
+  // Auto-criação de perfil para Sócios Fundadores (Whitelisted)
   useEffect(() => {
     if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email || '')) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
@@ -60,7 +65,7 @@ export function DashboardClientLayout({
         id: user.uid,
         googleId: user.uid,
         name: user.displayName || 'Sócio Fundador',
-        email: user.email || '',
+        email: user.email?.toLowerCase() || '',
         role: 'admin',
         isOwner: isOwner,
         isActive: true,

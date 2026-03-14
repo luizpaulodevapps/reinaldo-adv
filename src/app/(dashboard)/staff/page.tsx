@@ -137,10 +137,14 @@ export default function StaffPage() {
         const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
         const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
         
-        await setDocumentNonBlocking(doc(db!, "staff_profiles", memberId), {
-          id: memberId,
+        // No rito de admissão, o perfil do sistema é ativado via e-mail.
+        // O DashboardClientLayout fará o cruzamento automático.
+        const profileId = editingStaff?.id || payload.email.toLowerCase()
+
+        await setDocumentNonBlocking(doc(db!, "staff_profiles", profileId), {
+          id: profileId,
           name: payload.name,
-          email: payload.email,
+          email: payload.email.toLowerCase(),
           role: systemRole,
           isOwner: payload.isOwner,
           isActive: payload.status === 'Ativo',
@@ -181,7 +185,7 @@ export default function StaffPage() {
   }
 
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 block"
-  const inputClass = "bg-black/40 border-white/10 h-12 text-white font-bold uppercase focus:ring-primary/50 rounded-xl"
+  const inputClass = "bg-black/40 border-white/10 h-12 text-white font-bold uppercase focus:ring-1 focus:ring-primary/50 rounded-xl"
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans max-w-[1600px] mx-auto">
@@ -451,8 +455,8 @@ export default function StaffPage() {
               </div>
             </div>
             <div className="flex gap-4 pr-8">
-              <button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff, createSystemAccess: false}); setIsDialogOpen(true); setIsViewOpen(false); }} className="text-white/20 hover:text-white bg-white/5 p-3 rounded-xl transition-all border border-white/10"><Settings2 className="h-6 w-6" /></button>
-              <button onClick={() => handleDeleteStaff(viewingStaff?.id)} className="text-white/20 hover:text-rose-500 bg-white/5 p-3 rounded-xl transition-all border border-white/10"><Trash2 className="h-6 w-6" /></button>
+              <button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff, createSystemAccess: false}); setIsDialogOpen(true); setIsViewOpen(false); }} className="text-white/20 hover:text-primary transition-all border border-white/10 p-3 rounded-xl"><Settings2 className="h-6 w-6" /></button>
+              <button onClick={() => handleDeleteStaff(viewingStaff?.id)} className="text-white/20 hover:text-rose-500 transition-all border border-white/10 p-3 rounded-xl"><Trash2 className="h-6 w-6" /></button>
             </div>
           </div>
 
