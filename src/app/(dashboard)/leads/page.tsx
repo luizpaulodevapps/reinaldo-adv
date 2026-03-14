@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -111,6 +112,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ActivityManager } from "@/components/leads/activity-manager"
+import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
+import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -163,6 +166,19 @@ export default function LeadsPage() {
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "" })
 
+  const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
+  const [deadlineData, setDeadlineData] = useState({ 
+    title: "", 
+    pubDate: format(new Date(), 'yyyy-MM-dd'),
+    fatalDate: "", 
+    description: "", 
+    priority: "normal", 
+    calculationType: "Dias Úteis (CPC/CLT)" 
+  })
+  const [publicationText, setPublicationText] = useState("")
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [deadlineDuration, setDeadlineDuration] = useState("")
+
   const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
   const canGoBack = currentTabIndex > 0
   const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
@@ -183,7 +199,6 @@ export default function LeadsPage() {
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id || selectedLead?.id
     if (!user || !db || !leadId) return null
-    // Busca na subcoleção conforme blueprint
     return collection(db!, "leads", leadId, "interviews")
   }, [db, user, activeLead?.id, selectedLead?.id])
   const { data: leadInterviewsRaw, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
@@ -274,7 +289,6 @@ export default function LeadsPage() {
     if (!db || !activeLead || !user) return
     const leadId = activeLead.id
     
-    // Salva na subcoleção para isolamento total dos dados do cliente
     addDocumentNonBlocking(collection(db!, "leads", leadId, "interviews"), { 
       clientId: leadId, 
       clientName: activeLead.name, 
@@ -352,6 +366,51 @@ export default function LeadsPage() {
     });
 
     setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
+  }
+
+  const handleAiParsePublication = async () => {
+    if (!publicationText) return
+    setIsAnalyzing(true)
+    try {
+      const result = await aiParseDjePublication({ publicationText })
+      setDeadlineData({
+        ...deadlineData,
+        title: result.deadlineType || "PRAZO JUDICIAL",
+        fatalDate: result.dueDate || "",
+        description: result.summary || ""
+      })
+      toast({ title: "Análise Concluída" })
+    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }) } finally { setIsAnalyzing(false) }
+  }
+
+  const handleApplyDeadlineCalculation = () => {
+    const days = parseInt(deadlineDuration)
+    if (isNaN(days)) return
+    const baseDate = parseISO(deadlineData.pubDate)
+    let calculatedDate: Date
+    if (deadlineData.calculationType.includes("Úteis")) {
+      calculatedDate = addBusinessDays(baseDate, days)
+    } else {
+      calculatedDate = addDays(baseDate, days)
+    }
+    setDeadlineData({ ...deadlineData, fatalDate: format(calculatedDate, 'yyyy-MM-dd') })
+  }
+
+  const handleLaunchDeadline = async () => {
+    if (!db || !activeLead) return
+    await addDocumentNonBlocking(collection(db!, "deadlines"), {
+      title: deadlineData.title.toUpperCase(),
+      dueDate: deadlineData.fatalDate,
+      pubDate: deadlineData.pubDate,
+      description: deadlineData.description.toUpperCase(),
+      priority: deadlineData.priority,
+      calculationType: deadlineData.calculationType,
+      leadId: activeLead.id,
+      status: "Aberto",
+      createdAt: serverTimestamp()
+    })
+    setIsDeadlineOpen(false)
+    toast({ title: "Prazo Lançado" })
   }
 
   const handleExportToGoogleDocs = () => {
@@ -642,7 +701,7 @@ export default function LeadsPage() {
               <div className="px-6 bg-black/20 border-b border-white/5 flex-none"><TabsList className="bg-transparent h-12 gap-8 p-0"><TabsTrigger value="transcricao" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full tracking-widest">Transcrição Técnica</TabsTrigger><TabsTrigger value="analise" className="data-[state=active]:text-primary text-muted-foreground font-black text-[11px] uppercase h-full tracking-widest">Diagnóstico IA</TabsTrigger></TabsList></div>
               <div className="flex-1 overflow-hidden">
                 <TabsContent value="transcricao" className="h-full mt-0"><ScrollArea className="h-full"><div className="p-10 space-y-8 max-w-4xl mx-auto pb-20">{(viewingInterview?.templateSnapshot || Object.keys(viewingInterview?.responses || {})).map((item: any, i: number) => { const label = typeof item === 'string' ? item : item.label; const answer = viewingInterview?.responses?.[label]; if (!answer) return null; return (<div key={i} className="space-y-2 group"><h5 className="text-[9px] font-black text-primary uppercase tracking-[0.2em] group-hover:text-white transition-colors">{label}</h5><p className="text-base text-white/90 font-serif leading-relaxed text-justify border-l-2 border-white/5 pl-6 py-1">{String(answer)}</p></div>) })}</div></ScrollArea></TabsContent>
-                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-6"><div className="relative"><Brain className="h-16 w-16 text-primary animate-pulse" /><div className="absolute -top-2 -right-2"><Sparkles className="h-6 w-6 text-primary animate-bounce" /></div></div><p className="text-[11px] font-black text-white uppercase tracking-[0.4em] animate-pulse">Processando Inteligência RGMJ...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full"><div className="p-10 space-y-10 max-w-5xl mx-auto pb-20"><Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden"><div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-20 w-20" /></div><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-primary rounded-full" /><h5 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Resumo Executivo dos Fatos</h5></div><p className="text-lg text-white font-serif leading-loose text-justify italic whitespace-pre-wrap">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-xl"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-rose-500 rounded-full" /><h5 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em]">Teses & Riscos Processuais</h5></div><p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl shadow-xl"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-emerald-500 rounded-full" /><h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em]">Recomendações & Provas</h5></div><p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4"><Sparkles className="h-16 w-16" /><p className="text-[11px] font-black uppercase tracking-[0.5em]">Aguardando Comando de Inteligência</p></div>)}</TabsContent>
+                <TabsContent value="analise" className="h-full mt-0">{isAiAnalyzing ? (<div className="h-full flex flex-col items-center justify-center space-y-6"><div className="relative"><Brain className="h-16 w-16 text-primary animate-pulse" /><div className="absolute -top-2 -right-2"><Sparkles className="h-6 w-6 text-primary animate-bounce" /></div></div><p className="text-[11px] font-black text-white uppercase tracking-[0.4em] animate-pulse">Processando Inteligência RGMJ...</p></div>) : interviewAnalysis ? (<ScrollArea className="h-full"><div className="p-10 space-y-10 max-w-5xl mx-auto pb-20"><Card className="glass border-primary/20 bg-primary/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden"><div className="absolute top-0 right-0 p-6 opacity-5"><Brain className="h-20 w-20" /></div><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-primary rounded-full" /><h5 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Resumo Executivo dos Fatos</h5></div><p className="text-lg text-white font-serif leading-loose text-justify italic whitespace-pre-wrap">{interviewAnalysis.summary}</p></Card><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-xl"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-rose-500 rounded-full" /><h5 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em]">Teses & Riscos Processuais</h5></div><p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">{interviewAnalysis.legalAnalysis}</p></Card><Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-2xl shadow-xl"><div className="flex items-center gap-3 mb-6"><div className="w-1.5 h-6 bg-emerald-500 rounded-full" /><h5 className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.4em]">Recomendações & Provas</h5></div><p className="text-sm text-white/90 font-serif leading-relaxed text-justify whitespace-pre-wrap">{interviewAnalysis.recommendations}</p></Card></div></div></ScrollArea>) : (<div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4"><Sparkles className="h-16 w-16" /><p className="text-[11px] font-black uppercase tracking-[0.5em]">Aguardando Comando de Inteligência</p></div>)}</TabsContent>
               </div>
             </Tabs>
           </div>
@@ -655,6 +714,207 @@ export default function LeadsPage() {
       <Sheet open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Novo Atendimento</SheetTitle></SheetHeader><div className="flex-1 min-h-0"><LeadForm existingLeads={leads} onSubmit={handleCreateLead} onSelectExisting={(l) => { handleOpenLead(l); setIsNewEntryOpen(false); }} onCancel={() => setIsNewEntryOpen(false)} defaultResponsibleLawyer={user?.displayName || ""} /></div></SheetContent></Sheet>
       <Sheet open={isEditModeOpen} onOpenChange={setIsEditModeOpen}><SheetContent className="w-full lg:w-[calc(100vw-16rem)] lg:max-w-none overflow-hidden glass border-l border-white/10 p-0 flex flex-col bg-[#05070a] shadow-2xl h-full"><SheetHeader className="p-5 border-b border-white/5 bg-[#0a0f1e] shadow-xl flex-none"><SheetTitle className="text-lg font-bold text-white uppercase tracking-widest">Qualificação Estratégica</SheetTitle></SheetHeader><div className="flex-1 min-h-0">{activeLead && (<LeadForm existingLeads={[]} initialData={activeLead} lockMode={true} onSubmit={async (data) => { await updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { ...data, updatedAt: serverTimestamp() }); setIsEditModeOpen(false); toast({ title: "Qualificação Atualizada" }) }} onSelectExisting={() => {}} onCancel={() => setIsEditModeOpen(false)} />)}</div></SheetContent></Sheet>
       
+      {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
+      <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] max-h-[95vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
+            <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                <Clock className="h-6 w-6" />
+              </div>
+              <div>
+                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl flex items-center gap-3">
+                  Lançar Prazo Judicial
+                </DialogTitle>
+                <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">
+                  Configure o compromisso fatal para: <span className="text-white">{activeLead?.name}</span>
+                </DialogDescription>
+              </div>
+            </DialogHeader>
+            <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+              
+              {/* SEÇÃO DESPACHO IA */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                    <FileText className="h-4 w-4" /> Texto da Publicação / Despacho
+                  </Label>
+                  <Button 
+                    onClick={handleAiParsePublication} 
+                    disabled={isAnalyzing || !publicationText}
+                    variant="outline" 
+                    className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] tracking-widest hover:bg-primary/10 transition-all gap-2"
+                  >
+                    {isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                    ANALISAR COM IA
+                  </Button>
+                </div>
+                <Textarea 
+                  placeholder="Cole aqui o texto oficial do Diário da Justiça para que a IA ajude no preenchimento..." 
+                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase"
+                  value={publicationText}
+                  onChange={(e) => setPublicationText(e.target.value.toUpperCase())}
+                />
+              </div>
+
+              {/* TIPO E CONTADORES */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                <div className="md:col-span-7 space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Tipo de Prazo *</Label>
+                  <Select value={deadlineData.title} onValueChange={v => setDeadlineData({...deadlineData, title: v})}>
+                    <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold text-sm">
+                      <SelectValue placeholder="Selecione o tipo..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      {["Manifestação", "Petição Inicial", "Réplica", "Recurso Ordinário", "Contestação", "Cumprimento de Sentença"].map(t => (
+                        <SelectItem key={t} value={t.toUpperCase()}>{t.toUpperCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-5 flex gap-2">
+                  <div className="flex-1 bg-primary/5 border border-primary/20 rounded-xl p-3 text-center">
+                    <p className="text-[8px] font-black text-primary uppercase mb-1">Dias Úteis</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Star className="h-3 w-3 text-primary fill-primary" />
+                      <span className="text-xl font-black text-white">0</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center">
+                    <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Corridos</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <CalendarDays className="h-3 w-3 text-muted-foreground opacity-40" />
+                      <span className="text-xl font-black text-white">0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* METODOLOGIA */}
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Metodologia de Contagem</Label>
+                <RadioGroup 
+                  value={deadlineData.calculationType} 
+                  onValueChange={(v) => setDeadlineData({...deadlineData, calculationType: v})}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                >
+                  <div className={cn(
+                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
+                    deadlineData.calculationType === "Dias Úteis (CPC/CLT)" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
+                  )} onClick={() => setDeadlineData({...deadlineData, calculationType: "Dias Úteis (CPC/CLT)"})}>
+                    <RadioGroupItem value="Dias Úteis (CPC/CLT)" className="border-primary text-primary" />
+                    <div>
+                      <p className="text-[11px] font-black text-white uppercase">Dias Úteis (CPC/CLT)</p>
+                      <p className="text-[9px] text-muted-foreground uppercase mt-0.5">Exclui sábados e domingos</p>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
+                    deadlineData.calculationType === "Dias Corridos (Material)" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
+                  )} onClick={() => setDeadlineData({...deadlineData, calculationType: "Dias Corridos (Material)"})}>
+                    <RadioGroupItem value="Dias Corridos (Material)" className="border-primary text-primary" />
+                    <div>
+                      <p className="text-[11px] font-black text-white uppercase">Dias Corridos (Material)</p>
+                      <p className="text-[9px] text-muted-foreground uppercase mt-0.5">Conta todos os dias</p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* CALCULADORA */}
+              <div className="p-8 rounded-3xl border-2 border-primary/20 bg-primary/5 space-y-6 shadow-2xl relative overflow-hidden group">
+                <div className="flex items-center gap-3">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Calculadora de Vencimento</h4>
+                </div>
+                <div className="flex flex-col md:flex-row items-end gap-6">
+                  <div className="flex-1 space-y-2 w-full">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Duração do Prazo (Dias)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Ex: 5, 15, 30..." 
+                      className="bg-black/60 border-white/10 h-16 text-white font-black text-2xl text-center rounded-2xl focus:border-primary/50"
+                      value={deadlineDuration}
+                      onChange={(e) => setDeadlineDuration(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleApplyDeadlineCalculation}
+                    variant="outline" 
+                    className="h-16 px-10 border-primary text-primary font-black uppercase text-xs tracking-widest gap-3 hover:bg-primary hover:text-background transition-all rounded-2xl"
+                  >
+                    <Zap className="h-5 w-5" /> APLICAR PRAZO
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic font-medium uppercase tracking-tight opacity-50">
+                  O cálculo excluirá o dia da publicação e seguirá a metodologia acima.
+                </p>
+              </div>
+
+              {/* DATAS */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data da Publicação *</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                    <Input 
+                      type="date" 
+                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold rounded-xl" 
+                      value={deadlineData.pubDate} 
+                      onChange={e => setDeadlineData({...deadlineData, pubDate: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <TriangleAlert className="h-3.5 w-3.5" /> Data Fatal (Vencimento) *
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-500/40" />
+                    <Input 
+                      type="date" 
+                      className="bg-black/40 border-rose-500/30 h-14 pl-12 text-rose-400 font-black rounded-xl focus:border-rose-500" 
+                      value={deadlineData.fatalDate} 
+                      onChange={e => setDeadlineData({...deadlineData, fatalDate: e.target.value})} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* OBSERVAÇÕES */}
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Observações Estratégicas</Label>
+                <Textarea 
+                  placeholder="Observações internas sobre o cumprimento deste prazo..." 
+                  className="bg-black/40 border-white/10 min-h-[140px] text-white text-xs font-bold p-6 rounded-2xl resize-none uppercase"
+                  value={deadlineData.description}
+                  onChange={e => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})}
+                />
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
+            <button 
+              onClick={() => setIsDeadlineOpen(false)} 
+              className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"
+            >
+              CANCELAR
+            </button>
+            <Button 
+              onClick={handleLaunchDeadline} 
+              className="bg-[#f5d030] hover:bg-[#ffcc00] text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
+            >
+              <Calendar className="h-5 w-5" /> CONFIRMAR LANÇAMENTO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}><DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl"><div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Clock className="h-6 w-6 text-amber-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle><DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure a data e hora do rito de triagem.</DialogDescription></div></DialogHeader></div><ScrollArea className="max-h-[60vh]"><div className="p-8 space-y-6"><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} /></div></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label><Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}><SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem><SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem></SelectContent></Select></div></div></ScrollArea><DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button></DialogFooter></DialogContent></Dialog>
     </div>
   )

@@ -592,8 +592,8 @@ export default function CasesPage() {
 
       {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] max-h-[95vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
             <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
                 <Clock className="h-6 w-6" />
@@ -610,7 +610,7 @@ export default function CasesPage() {
             <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
-          <ScrollArea className="max-h-[80vh]">
+          <ScrollArea className="flex-1">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
               
               {/* SEÇÃO DESPACHO IA */}
@@ -774,7 +774,7 @@ export default function CasesPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
             <button 
               onClick={() => setIsDeadlineOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"
