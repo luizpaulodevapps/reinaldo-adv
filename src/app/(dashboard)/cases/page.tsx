@@ -48,7 +48,8 @@ import {
   CalendarDays,
   Video,
   MapPin,
-  Globe
+  Globe,
+  Save
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -243,7 +244,6 @@ export default function CasesPage() {
     toast({ title: "Atendimento Protocolado" })
   }
 
-  // Restante das funções omitidas por brevidade, mantendo compatibilidade total...
   const handleLaunchDeadline = async () => { if (!db || !activeActionProcess) return; setIsSyncingAct(true); await addDocumentNonBlocking(collection(db, "deadlines"), { title: deadlineData.title.toUpperCase(), dueDate: deadlineData.fatalDate, pubDate: deadlineData.pubDate, description: deadlineData.description.toUpperCase(), priority: deadlineData.priority, calculationType: deadlineData.calculationType, processId: activeActionProcess.processNumber || activeActionProcess.id, status: "Aberto", createdAt: serverTimestamp() }); setIsSyncingAct(false); setIsDeadlineOpen(false); toast({ title: "Prazo Injetado" }); }
   const handleAiParsePublication = async () => { if (!publicationText) return; setIsAnalyzing(true); try { const result = await aiParseDjePublication({ publicationText }); setDeadlineData({ ...deadlineData, title: result.deadlineType || "PRAZO JUDICIAL", fatalDate: result.dueDate || "", description: result.summary || "" }); toast({ title: "Inteligência Concluída" }); } catch (e) { toast({ variant: "destructive", title: "Erro IA" }); } finally { setIsAnalyzing(false); } }
   const handleApplyDeadlineCalculation = () => { const days = parseInt(deadlineDuration); if (isNaN(days)) return; const baseDate = parseISO(deadlineData.pubDate); let calculatedDate: Date; if (deadlineData.calculationType.includes("Úteis")) calculatedDate = addBusinessDays(baseDate, days); else calculatedDate = addDays(baseDate, days); setDeadlineData({ ...deadlineData, fatalDate: format(calculatedDate, 'yyyy-MM-dd') }); }
