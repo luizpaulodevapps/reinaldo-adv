@@ -28,7 +28,8 @@ import {
   TriangleAlert,
   CalendarDays,
   Target,
-  ChevronDown
+  ChevronDown,
+  Library
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
@@ -349,8 +350,8 @@ export default function PrazosSubpage() {
             </Button>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="p-12 space-y-12 bg-[#0a0f1e]/50">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-12 space-y-12 bg-[#0a0f1e]/50 pb-20">
               {/* Grid de Dados Expandido */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-3">
@@ -467,7 +468,7 @@ export default function PrazosSubpage() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
               
               {/* SEÇÃO DESPACHO IA */}
@@ -631,8 +632,8 @@ export default function PrazosSubpage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Abortar</Button>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors">Abortar</Button>
             <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl hover:scale-105 transition-all">
               <Save className="h-5 w-5 mr-3" /> {editingDeadline ? "ATUALIZAR REGISTRO" : "LANÇAR NO RADAR"}
             </Button>

@@ -66,7 +66,8 @@ import {
   Star,
   TriangleAlert,
   CalendarDays,
-  ChevronDown
+  ChevronDown,
+  Library
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -738,7 +739,7 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
               
               {/* SEÇÃO DESPACHO IA */}
@@ -902,7 +903,7 @@ export default function LeadsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
             <button 
               onClick={() => setIsDeadlineOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"

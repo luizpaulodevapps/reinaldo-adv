@@ -436,7 +436,7 @@ export default function CasesPage() {
           <CardContent className="p-5"><p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 flex items-center gap-3"><Zap className="h-3.5 w-3.5" /> PROCESSOS ATIVOS</p><div className="text-xl font-black text-white tracking-tighter">{isLoading ? "..." : metrics.total}</div></CardContent>
         </Card>
         <Card className="glass border-white/5 h-24 flex flex-col justify-center rounded-xl"><CardContent className="p-5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5 flex items-center gap-3"><Scale className="h-3.5 w-3.5" /> VALOR SOB GESTÃO</p><div className="text-xl font-black text-white tracking-tighter tabular-nums">R$ {metrics.valorEmRisco.toLocaleString('pt-BR')}</div></CardContent></Card>
-        <Card className="glass border-white/5 h-24 flex flex-col justify-center rounded-xl"><CardContent className="p-5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5">TICKET MÉDIO</p><div className="text-xl font-black text-white tracking-tighter tabular-nums">R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</div></CardContent></Card>
+        <Card className="glass border-white/5 h-24 flex flex-col justify-center rounded-xl"><CardContent className="p-5"><p className="text-[9px) font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5">TICKET MÉDIO</p><div className="text-xl font-black text-white tracking-tighter tabular-nums">R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</div></CardContent></Card>
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-2">
@@ -596,7 +596,7 @@ export default function CasesPage() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
               
               {/* SEÇÃO DESPACHO IA */}
@@ -760,7 +760,7 @@ export default function CasesPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
             <button 
               onClick={() => setIsDeadlineOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"
