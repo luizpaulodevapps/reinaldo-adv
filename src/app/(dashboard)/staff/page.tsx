@@ -96,10 +96,10 @@ export default function StaffPage() {
   })
 
   const db = useFirestore()
-  const { user, role: userRole } = useUser()
+  const { user, profile, role: userRole } = useUser()
   const { toast } = useToast()
 
-  const canManage = userRole === 'admin'
+  const canManage = userRole === 'admin' || profile?.isOwner === true
 
   const staffQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -119,7 +119,7 @@ export default function StaffPage() {
     // Saneamento de Duplicidade: Garante unicidade por E-mail no RH
     const seenEmails = new Set();
     return searchResult.filter(e => {
-      const email = e.email?.toLowerCase();
+      const email = e.email?.toLowerCase().trim();
       if (!email || seenEmails.has(email)) return false;
       seenEmails.add(email);
       return true;
@@ -141,7 +141,7 @@ export default function StaffPage() {
       updatedAt: serverTimestamp()
     }
 
-    // 1. RH Central
+    // 1. RH Central - Usar E-mail como ID para evitar duplicatas
     setDocumentNonBlocking(doc(db!, "employees", emailId), {
       ...payload,
       id: emailId,
@@ -179,16 +179,27 @@ export default function StaffPage() {
     toast({ title: "Convite Copiado!" })
   }
 
-  const handleDeleteStaff = (id: string) => {
-    if (!db) return
+  const handleDeleteStaff = (staff: any) => {
+    if (!db || !staff) return
+    
     if (!canManage) {
-      toast({ variant: "destructive", title: "Acesso Negado" })
+      toast({ variant: "destructive", title: "Acesso Negado", description: "Somente sócios e admins podem gerir a equipe." })
       return
     }
-    if (confirm("Revogar este acesso permanentemente?")) {
-      deleteDocumentNonBlocking(doc(db!, "employees", id))
-      deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
-      toast({ title: "Acesso Revogado" })
+
+    if (staff.email?.toLowerCase() === user?.email?.toLowerCase()) {
+      toast({ variant: "destructive", title: "Operação Bloqueada", description: "Você não pode revogar seu próprio acesso." })
+      return
+    }
+
+    if (confirm(`Revogar permanentemente o acesso de ${staff.name}? Esta ação é irreversível e removerá o colaborador do RH e do Workspace.`)) {
+      // Deleta das duas coleções baseado no e-mail (ID mestre)
+      const emailId = staff.email?.toLowerCase().trim() || staff.id;
+      
+      deleteDocumentNonBlocking(doc(db!, "employees", emailId))
+      deleteDocumentNonBlocking(doc(db!, "staff_profiles", emailId))
+      
+      toast({ title: "Acesso Revogado", description: "O colaborador foi removido do ecossistema RGMJ." })
       setIsViewOpen(false)
     }
   }
@@ -255,7 +266,7 @@ export default function StaffPage() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => { setViewingStaff(staff); setIsViewOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Settings2 className="h-5 w-5" /></button>
-                    <button onClick={() => handleDeleteStaff(staff.id)} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
+                    <button onClick={() => handleDeleteStaff(staff)} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
                   </div>
                 </div>
 
@@ -525,7 +536,7 @@ export default function StaffPage() {
                 setIsDialogOpen(true); 
                 setIsViewOpen(false); 
               }} className="text-white/20 hover:text-primary transition-all border border-white/10 p-3 rounded-xl"><Settings2 className="h-6 w-6" /></button>
-              <button onClick={() => handleDeleteStaff(viewingStaff?.id)} className="text-white/20 hover:text-rose-500 transition-all border border-white/10 p-3 rounded-xl"><Trash2 className="h-6 w-6" /></button>
+              <button onClick={() => handleDeleteStaff(viewingStaff)} className="text-white/20 hover:text-rose-500 transition-all border border-white/10 p-3 rounded-xl"><Trash2 className="h-6 w-6" /></button>
             </div>
           </div>
 
