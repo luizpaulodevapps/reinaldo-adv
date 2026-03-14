@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
-import { cn } from "@/lib/utils"
+import { cn, maskCurrency, parseCurrencyToNumber } from "@/lib/utils"
 
 interface FinancialTitleFormProps {
   initialData?: any
@@ -69,24 +69,16 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
       setFormData({
         ...formData,
         ...initialData,
-        value: typeof initialData.value === 'number' 
-          ? initialData.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-          : initialData.value || "0,00"
+        value: maskCurrency(initialData.value || 0)
       })
     }
   }, [initialData])
-
-  const handleValueChange = (val: string) => {
-    let clean = val.replace(/\D/g, "")
-    let formatted = (Number(clean) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-    setFormData({ ...formData, value: formatted })
-  }
 
   const handleConfirm = () => {
     setLoading(true)
     onSubmit({
       ...formData,
-      numericValue: parseFloat(formData.value.replace(/\./g, '').replace(',', '.')),
+      numericValue: parseCurrencyToNumber(formData.value),
       status: formData.status || "Pendente"
     })
   }
@@ -220,7 +212,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
             <Input 
               className="bg-black/60 border-primary/30 h-20 pl-16 text-3xl font-black text-white focus:ring-primary/50 shadow-inner"
               value={formData.value}
-              onChange={(e) => handleValueChange(e.target.value)}
+              onChange={(e) => setFormData({...formData, value: maskCurrency(e.target.value)})}
             />
           </div>
         </div>

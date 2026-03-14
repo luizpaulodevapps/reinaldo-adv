@@ -61,6 +61,34 @@ export function maskCPFOrCNPJ(value: string) {
 }
 
 /**
+ * Máscara para Moeda (Real BRL)
+ * Transforma 123456 em 1.234,56
+ */
+export function maskCurrency(value: string | number) {
+  if (value === undefined || value === null) return "0,00";
+  const stringValue = typeof value === 'number' 
+    ? (value * 100).toFixed(0).toString() 
+    : value.replace(/\D/g, "");
+  
+  if (!stringValue) return "0,00";
+  
+  return (Number(stringValue) / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/**
+ * Converte valor formatado (1.234,56) para Number (1234.56)
+ */
+export function parseCurrencyToNumber(value: string): number {
+  if (!value) return 0;
+  const cleanValue = value.replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(cleanValue);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
  * Valida matematicamente um CPF (Dígitos Verificadores)
  */
 export function validateCPF(cpf: string): boolean {

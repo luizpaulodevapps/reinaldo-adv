@@ -47,7 +47,7 @@ import { useFirestore, useCollection, useUser, useMemoFirebase, deleteDocumentNo
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn, maskPhone, maskCPF } from "@/lib/utils"
+import { cn, maskPhone, maskCPF, maskCurrency, parseCurrencyToNumber } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
 
@@ -87,6 +87,7 @@ export default function StaffPage() {
     paymentType: "Mensalista",
     commissionPercentage: 0,
     baseSalary: 0,
+    salaryFormatted: "0,00",
     createSystemAccess: true,
     isOwner: false
   })
@@ -122,6 +123,7 @@ export default function StaffPage() {
       ...formData,
       name: formData.name.toUpperCase(),
       email: formData.email.toLowerCase(),
+      baseSalary: parseCurrencyToNumber(formData.salaryFormatted),
       updatedAt: serverTimestamp()
     }
 
@@ -137,8 +139,6 @@ export default function StaffPage() {
         const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
         const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
         
-        // No rito de admissão, o perfil do sistema é ativado via e-mail.
-        // O DashboardClientLayout fará o cruzamento automático.
         const profileId = editingStaff?.id || payload.email.toLowerCase()
 
         await setDocumentNonBlocking(doc(db!, "staff_profiles", profileId), {
@@ -212,7 +212,7 @@ export default function StaffPage() {
           </div>
           {canManage && (
             <Button 
-              onClick={() => { setEditingStaff(null); setFormData({...formData, isOwner: false}); setIsDialogOpen(true); }} 
+              onClick={() => { setEditingStaff(null); setFormData({...formData, isOwner: false, salaryFormatted: "0,00"}); setIsDialogOpen(true); }} 
               className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl hover:scale-105 transition-all"
             >
               <UserPlus className="h-4.5 w-4.5" /> ADMISSÃO
@@ -296,7 +296,6 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* DIÁLOGO DE ADMISSÃO / EDIÇÃO */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl h-[90vh] flex flex-col">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -340,6 +339,33 @@ export default function StaffPage() {
                   <div className="space-y-0.5">
                     <Label htmlFor="isOwner" className="text-[10px] font-black text-white uppercase cursor-pointer">Sócio Fundador / Dono da Banca</Label>
                     <p className="text-[8px] text-primary/60 font-bold uppercase">Habilita soberania financeira total e selo de distinção.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                  <Fingerprint className="h-4 w-4 text-primary" />
+                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Dados Pessoais</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className={labelMini}>CPF *</Label>
+                    <Input 
+                      value={formData.cpf} 
+                      onChange={(e) => setFormData({...formData, cpf: maskCPF(e.target.value)})} 
+                      className={inputClass} 
+                      placeholder="000.000.000-00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={labelMini}>WhatsApp / Celular *</Label>
+                    <Input 
+                      value={formData.phone} 
+                      onChange={(e) => setFormData({...formData, phone: maskPhone(e.target.value)})} 
+                      className={inputClass} 
+                      placeholder="(00) 00000-0000"
+                    />
                   </div>
                 </div>
               </div>
@@ -392,12 +418,20 @@ export default function StaffPage() {
                   {formData.paymentType === "Parceria (Porcentagem)" ? (
                     <div className="space-y-2">
                       <Label className={labelMini}>Comissão (%)</Label>
-                      <Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 h-12 text-white text-center font-black text-lg" />
+                      <Input type="number" value={formData.commissionPercentage} onChange={(e) => setFormData({...formData, commissionPercentage: Number(e.target.value)})} className="bg-black/60 h-12 text-white text-center font-black text-lg rounded-xl" />
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <Label className={labelMini}>Valor Fixo / Salário</Label>
-                      <Input type="number" value={formData.baseSalary} onChange={(e) => setFormData({...formData, baseSalary: Number(e.target.value)})} className="bg-black/60 h-12 text-white font-black text-lg" />
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 font-black text-sm">R$</span>
+                        <Input 
+                          type="text" 
+                          value={formData.salaryFormatted} 
+                          onChange={(e) => setFormData({...formData, salaryFormatted: maskCurrency(e.target.value)})} 
+                          className={cn(inputClass, "pl-12 bg-black/60 h-12 text-white font-black text-lg")}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -455,7 +489,12 @@ export default function StaffPage() {
               </div>
             </div>
             <div className="flex gap-4 pr-8">
-              <button onClick={() => { setEditingStaff(viewingStaff); setFormData({...formData, ...viewingStaff, createSystemAccess: false}); setIsDialogOpen(true); setIsViewOpen(false); }} className="text-white/20 hover:text-primary transition-all border border-white/10 p-3 rounded-xl"><Settings2 className="h-6 w-6" /></button>
+              <button onClick={() => { 
+                setEditingStaff(viewingStaff); 
+                setFormData({...formData, ...viewingStaff, salaryFormatted: maskCurrency(viewingStaff.baseSalary || 0), createSystemAccess: false}); 
+                setIsDialogOpen(true); 
+                setIsViewOpen(false); 
+              }} className="text-white/20 hover:text-primary transition-all border border-white/10 p-3 rounded-xl"><Settings2 className="h-6 w-6" /></button>
               <button onClick={() => handleDeleteStaff(viewingStaff?.id)} className="text-white/20 hover:text-rose-500 transition-all border border-white/10 p-3 rounded-xl"><Trash2 className="h-6 w-6" /></button>
             </div>
           </div>
