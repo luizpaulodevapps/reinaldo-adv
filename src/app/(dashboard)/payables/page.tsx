@@ -20,7 +20,8 @@ import {
   Wallet,
   Calculator,
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +30,7 @@ import { collection, query, orderBy, serverTimestamp, doc, where } from "firebas
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
+import { ReceiptVoucherModal } from "@/components/financial/receipt-voucher-modal"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -37,6 +39,7 @@ export default function PayablesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState<any>(null)
+  const [issuingDoc, setIssuingDoc] = useState<any>(null)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -163,7 +166,12 @@ export default function PayablesPage() {
                       <div className="text-xl font-black text-rose-400 tabular-nums tracking-tighter">R$ {Number(p.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                       <Badge className={cn("text-[8px] font-black uppercase mt-1", p.status === 'Pago' ? "bg-rose-500 text-white" : "bg-amber-500/10 text-amber-500")}>{p.status}</Badge>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingTitle(p); setIsDialogOpen(true); }} className="h-10 w-10 rounded-lg text-white/20 hover:text-white"><Edit3 className="h-4 w-4" /></Button>
+                    <div className="flex gap-2">
+                      {p.status === 'Pago' && (
+                        <Button variant="ghost" size="icon" onClick={() => setIssuingDoc(p)} className="h-10 w-10 rounded-lg text-rose-400 hover:bg-rose-500/10"><FileText className="h-4 w-4" /></Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingTitle(p); setIsDialogOpen(true); }} className="h-10 w-10 rounded-lg text-white/20 hover:text-white"><Edit3 className="h-4 w-4" /></Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -188,6 +196,12 @@ export default function PayablesPage() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <ReceiptVoucherModal 
+        open={!!issuingDoc} 
+        onOpenChange={(open) => !open && setIssuingDoc(null)} 
+        transaction={issuingDoc} 
+      />
     </div>
   )
 }

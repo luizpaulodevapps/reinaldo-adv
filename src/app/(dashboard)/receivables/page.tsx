@@ -20,7 +20,8 @@ import {
   Wallet,
   Calculator,
   ChevronRight,
-  DollarSign
+  DollarSign,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +30,7 @@ import { collection, query, orderBy, serverTimestamp, doc, where } from "firebas
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
+import { ReceiptVoucherModal } from "@/components/financial/receipt-voucher-modal"
 import { useToast } from "@/hooks/use-toast"
 import { addMonths, format, parseISO } from "date-fns"
 import Link from "next/link"
@@ -38,6 +40,7 @@ export default function ReceivablesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState<any>(null)
+  const [issuingDoc, setIssuingDoc] = useState<any>(null)
   
   const db = useFirestore()
   const { user } = useUser()
@@ -164,7 +167,12 @@ export default function ReceivablesPage() {
                       <div className="text-xl font-black text-emerald-400 tabular-nums tracking-tighter">R$ {Number(r.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                       <Badge className={cn("text-[8px] font-black uppercase h-5 mt-1", r.status === 'Recebido' ? "bg-emerald-500 text-white" : "bg-amber-500/10 text-amber-500")}>{r.status}</Badge>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingTitle(r); setIsDialogOpen(true); }} className="h-10 w-10 rounded-lg text-white/20 hover:text-white"><Edit3 className="h-4 w-4" /></Button>
+                    <div className="flex gap-2">
+                      {r.status === 'Recebido' && (
+                        <Button variant="ghost" size="icon" onClick={() => setIssuingDoc(r)} className="h-10 w-10 rounded-lg text-emerald-500 hover:bg-emerald-500/10"><FileText className="h-4 w-4" /></Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingTitle(r); setIsDialogOpen(true); }} className="h-10 w-10 rounded-lg text-white/20 hover:text-white"><Edit3 className="h-4 w-4" /></Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -189,6 +197,12 @@ export default function ReceivablesPage() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <ReceiptVoucherModal 
+        open={!!issuingDoc} 
+        onOpenChange={(open) => !open && setIssuingDoc(null)} 
+        transaction={issuingDoc} 
+      />
     </div>
   )
 }

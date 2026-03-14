@@ -60,7 +60,9 @@ import {
   TrendingUp,
   Landmark,
   Scale,
-  DollarSign
+  DollarSign,
+  Stamp,
+  Signature
 } from "lucide-react"
 import { 
   Select, 
@@ -92,9 +94,9 @@ const MESSAGE_PLACEHOLDERS = [
   { tag: "{{HORA_ATO}}", desc: "Horário do compromisso" },
   { tag: "{{LOCAL_ATO}}", desc: "Endereço físico (Somente Audiência Física)" },
   { tag: "{{LINK_ATO}}", desc: "Link eletrônico (Tribunal/Virtual)" },
-  { tag: "{{SENHA_ATO}}", desc: "Senha/Código de acesso (Virtual)" },
-  { tag: "{{NOME_ADVOGADO}}", desc: "Nome do advogado responsável" },
-  { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
+  { tag: "{{VALOR}}", desc: "Valor numérico do lançamento" },
+  { tag: "{{VALOR_EXTENSO}}", desc: "Valor por extenso do lançamento" },
+  { tag: "{{DESCRICAO}}", desc: "Objeto do pagamento ou recebimento" },
 ]
 
 const KIT_TEMPLATES = [
@@ -158,6 +160,30 @@ function SettingsContent() {
   useEffect(() => {
     if (finData) setFinancialSettings(prev => ({ ...prev, ...finData }))
   }, [finData])
+
+  // Estados Recibos & Comprovantes
+  const [docSettings, setDocSettings] = useState({
+    receiptTemplate: "Recebemos de {{NOME_CLIENTE}}, CPF/CNPJ {{CLIENTE_CPF}}, a importância de {{VALOR}} ({{VALOR_EXTENSO}}), referente a {{DESCRICAO}}.",
+    voucherTemplate: "Efetuamos o pagamento a {{NOME_CLIENTE}}, referente a {{DESCRICAO}}, no valor de {{VALOR}}.",
+    signatureText: "Dr. Reinaldo Gonçalves Miguel de Jesus\nOAB/SP 000.000",
+    stampText: "RGMJ ADVOGADOS\nCNPJ 00.000.000/0001-00",
+    logoUrl: "",
+    useDigitalStamp: true,
+    useDigitalSignature: true
+  })
+
+  const docRef = useMemoFirebase(() => db ? doc(db, 'settings', 'documents') : null, [db])
+  const { data: storedDocData } = useDoc(docRef)
+
+  useEffect(() => {
+    if (storedDocData) setDocSettings(prev => ({ ...prev, ...storedDocData }))
+  }, [storedDocData])
+
+  const handleSaveDocSettings = () => {
+    if (!db) return
+    setDocumentNonBlocking(doc(db, 'settings', 'documents'), { ...docSettings, updatedAt: serverTimestamp() }, { merge: true })
+    toast({ title: "Modelos de Documentos Atualizados" })
+  }
 
   // Estados Customização Kit Cliente
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
@@ -319,7 +345,8 @@ function SettingsContent() {
             <TabsTrigger value="seo" className={tabTriggerClass}>Google Hub</TabsTrigger>
             <TabsTrigger value="usuarios" className={tabTriggerClass}>Usuários</TabsTrigger>
             <TabsTrigger value="financeiro" className={tabTriggerClass}>Financeiro</TabsTrigger>
-            <TabsTrigger value="tags" className={tabTriggerClass}>Dicionário de Tags</TabsTrigger>
+            <TabsTrigger value="documentos" className={tabTriggerClass}>Recibos</TabsTrigger>
+            <TabsTrigger value="tags" className={tabTriggerClass}>Tags</TabsTrigger>
             <TabsTrigger value="kit" className={tabTriggerClass}>Kit Cliente</TabsTrigger>
             <TabsTrigger value="licenca" className={tabTriggerClass}>Licença</TabsTrigger>
           </TabsList>
@@ -398,6 +425,71 @@ function SettingsContent() {
 
               <Button onClick={handleSaveFinancial} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-[0_20px_50px_rgba(245,208,48,0.2)] hover:scale-[1.02] transition-transform">
                 <Save className="h-5 w-5 mr-3" /> CONSOLIDAR PARÂMETROS FINANCEIROS
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documentos" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><FileText className="h-7 w-7" /></div>
+                <div>
+                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Modelos de Recibos & Vouchers</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">CUSTOMIZAÇÃO DE ESCRITA E ASSINATURA DIGITAL.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-12 space-y-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <DollarSign className="h-5 w-5 text-emerald-500" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template de Recibo (Recebimento)</h4>
+                  </div>
+                  <Textarea 
+                    value={docSettings.receiptTemplate} 
+                    onChange={e => setDocSettings({...docSettings, receiptTemplate: e.target.value})} 
+                    className="bg-black/40 min-h-[150px] text-white text-xs font-bold leading-relaxed p-6 rounded-2xl"
+                  />
+                </div>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <ArrowDownRight className="h-5 w-5 text-rose-500" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template de Comprovante (Pagamento)</h4>
+                  </div>
+                  <Textarea 
+                    value={docSettings.voucherTemplate} 
+                    onChange={e => setDocSettings({...docSettings, voucherTemplate: e.target.value})} 
+                    className="bg-black/40 min-h-[150px] text-white text-xs font-bold leading-relaxed p-6 rounded-2xl"
+                  />
+                </div>
+              </div>
+
+              <div className="p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 space-y-10 shadow-inner">
+                <div className="flex items-center gap-4 pb-4 border-b border-white/5">
+                  <Signature className="h-6 w-6 text-primary" />
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Chancela Digital da Banca</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-3">
+                    <Label className={labelMini}>Texto da Assinatura (Advogado)</Label>
+                    <Textarea value={docSettings.signatureText} onChange={e => setDocSettings({...docSettings, signatureText: e.target.value})} className="bg-black/40 h-32 text-white font-black" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className={labelMini}>Texto do Carimbo (Institucional)</Label>
+                    <Textarea value={docSettings.stampText} onChange={e => setDocSettings({...docSettings, stampText: e.target.value})} className="bg-black/40 h-32 text-white font-black" />
+                  </div>
+                  <div className="space-y-3 md:col-span-2">
+                    <Label className={labelMini}>URL da Logo Institucional (.png transparente)</Label>
+                    <Input value={docSettings.logoUrl} onChange={e => setDocSettings({...docSettings, logoUrl: e.target.value})} className="bg-black/40 h-12 text-white font-bold" placeholder="https://..." />
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveDocSettings} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-2xl">
+                <Save className="h-5 w-5 mr-3" /> CONSOLIDAR MODELOS DE DOCUMENTO
               </Button>
             </CardContent>
           </Card>
