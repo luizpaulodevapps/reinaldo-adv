@@ -45,7 +45,9 @@ import {
   Zap,
   Target,
   ShieldQuestion,
-  Bookmark
+  Bookmark,
+  ExternalLink,
+  BookOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -66,14 +68,7 @@ import { collection, query, orderBy, serverTimestamp, doc } from "firebase/fires
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 const CATEGORIES = [
@@ -126,18 +121,31 @@ const EDITOR_STEPS: Array<{ id: EditorStep; label: string; icon: any }> = [
 ]
 
 export default function LaboratorioChecklistsPage() {
+  const [activeMainTab, setActiveMainTab] = useState("matrizes")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
+  
   const [viewingList, setViewingList] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
+  const [editingModel, setEditingModel] = useState<any>(null)
   const [editorStep, setEditorStep] = useState<EditorStep>("geral")
   
+  // Estados Matriz
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Entrevista de Triagem")
   const [legalArea, setLegalArea] = useState("Trabalhista")
   const [description, setDescription] = useState("")
   const [items, setItems] = useState<any[]>([])
+
+  // Estados Modelo Petição
+  const [modelFormData, setModelFormData] = useState({
+    title: "",
+    area: "Trabalhista",
+    googleDocId: "",
+    tags: ""
+  })
 
   const db = useFirestore()
   const { user, role } = useUser()
@@ -145,12 +153,18 @@ export default function LaboratorioChecklistsPage() {
 
   const canManage = role === 'admin'
 
+  // Queries
   const checklistsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db, "checklists"), orderBy("createdAt", "desc"))
   }, [db, user])
+  const { data: checklists, isLoading: isLoadingChecklists } = useCollection(checklistsQuery)
 
-  const { data: checklists, isLoading } = useCollection(checklistsQuery)
+  const modelsQuery = useMemoFirebase(() => {
+    if (!user || !db) return null
+    return query(collection(db!, "document_templates"), orderBy("createdAt", "desc"))
+  }, [db, user])
+  const { data: models, isLoading: isLoadingModels } = useCollection(modelsQuery)
 
   const filteredChecklists = useMemo(() => {
     if (!checklists) return []
@@ -160,15 +174,29 @@ export default function LaboratorioChecklistsPage() {
     )
   }, [checklists, searchTerm])
 
+  const filteredModels = useMemo(() => {
+    if (!models) return []
+    return models.filter(m => 
+      m.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.area?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [models, searchTerm])
+
   const handleOpenCreate = () => {
-    setEditingList(null)
-    setTitle("")
-    setCategory("Entrevista de Triagem")
-    setLegalArea("Trabalhista")
-    setDescription("")
-    setItems([])
-    setEditorStep("geral")
-    setIsDialogOpen(true)
+    if (activeMainTab === "matrizes") {
+      setEditingList(null)
+      setTitle("")
+      setCategory("Entrevista de Triagem")
+      setLegalArea("Trabalhista")
+      setDescription("")
+      setItems([])
+      setEditorStep("geral")
+      setIsDialogOpen(true)
+    } else {
+      setEditingModel(null)
+      setModelFormData({ title: "", area: "Trabalhista", googleDocId: "", tags: "" })
+      setIsModelDialogOpen(true)
+    }
   }
 
   const handleOpenEdit = (list: any) => {
@@ -180,6 +208,17 @@ export default function LaboratorioChecklistsPage() {
     setItems(list.items || [])
     setEditorStep("geral")
     setIsDialogOpen(true)
+  }
+
+  const handleOpenEditModel = (model: any) => {
+    setEditingModel(model)
+    setModelFormData({
+      title: model.title,
+      area: model.area,
+      googleDocId: model.googleDocId || "",
+      tags: (model.tags || []).join(", ")
+    })
+    setIsModelDialogOpen(true)
   }
 
   const handleUpdateField = (index: number, field: string, value: any) => {
@@ -235,9 +274,28 @@ export default function LaboratorioChecklistsPage() {
     setIsDialogOpen(false)
   }
 
+  const handleSaveModel = () => {
+    if (!db || !modelFormData.title) return
+    const tagsArray = modelFormData.tags.split(",").map(t => t.trim().toUpperCase()).filter(t => t !== "")
+    const payload = {
+      title: modelFormData.title.toUpperCase(),
+      area: modelFormData.area,
+      googleDocId: modelFormData.googleDocId,
+      tags: tagsArray,
+      updatedAt: serverTimestamp()
+    }
+    if (editingModel) {
+      updateDocumentNonBlocking(doc(db!, "document_templates", editingModel.id), payload)
+    } else {
+      addDocumentNonBlocking(collection(db!, "document_templates"), { ...payload, createdAt: serverTimestamp() })
+    }
+    setIsModelDialogOpen(false)
+    toast({ title: "Acervo Atualizado" })
+  }
+
   const currentStepIndex = EDITOR_STEPS.findIndex(s => s.id === editorStep)
 
-  if (!canManage && !isLoading) {
+  if (!canManage && !isLoadingChecklists) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
         <Shield className="h-16 w-16 text-rose-500 animate-pulse" />
@@ -277,41 +335,108 @@ export default function LaboratorioChecklistsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {isLoading ? (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca...</span>
-          </div>
-        ) : filteredChecklists.map((list) => (
-          <Card key={list.id} className="glass border-primary/10 hover:border-primary/30 transition-all group overflow-hidden flex flex-col rounded-[2rem] shadow-2xl">
-            <div className="p-8 space-y-6 flex-1">
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 h-6">
-                  {list.category}
-                </Badge>
-                <div className="flex gap-3">
-                  <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></button>
-                  <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-colors"><Edit3 className="h-4 w-4" /></button>
-                  <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
-                </div>
-              </div>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{list.title}</h3>
-              <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">
-                <Scale className="h-3.5 w-3.5" /> {list.legalArea || "GERAL"}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 italic uppercase font-medium">{list.description || "Sem descrição técnica definida."}</p>
-            </div>
-            <div className="px-8 py-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
-                <Layers className="h-4 w-4 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
-              </div>
-              <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-primary transition-all group-hover:translate-x-1" />
-            </div>
-          </Card>
-        ))}
-      </div>
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-10">
+        <div className="bg-white/5 border border-white/10 p-1.5 rounded-2xl w-fit shadow-2xl">
+          <TabsList className="bg-transparent h-12 p-0 gap-1">
+            <TabsTrigger value="matrizes" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2">
+              <Zap className="h-3.5 w-3.5" /> Matrizes de DNA (Triagem)
+            </TabsTrigger>
+            <TabsTrigger value="peticoes" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2">
+              <FileText className="h-3.5 w-3.5" /> Modelos de Petição
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
+        <TabsContent value="matrizes" className="m-0 outline-none animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {isLoadingChecklists ? (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca de matrizes...</span>
+              </div>
+            ) : filteredChecklists.map((list) => (
+              <Card key={list.id} className="glass border-primary/10 hover:border-primary/30 transition-all group overflow-hidden flex flex-col rounded-[2rem] shadow-2xl">
+                <div className="p-8 space-y-6 flex-1">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 h-6">
+                      {list.category}
+                    </Badge>
+                    <div className="flex gap-3">
+                      <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></button>
+                      <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-colors"><Edit3 className="h-4 w-4" /></button>
+                      <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{list.title}</h3>
+                  <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">
+                    <Scale className="h-3.5 w-3.5" /> {list.legalArea || "GERAL"}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 italic uppercase font-medium">{list.description || "Sem descrição técnica definida."}</p>
+                </div>
+                <div className="px-8 py-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
+                    <Layers className="h-4 w-4 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-primary transition-all group-hover:translate-x-1" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="peticoes" className="m-0 outline-none animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {isLoadingModels ? (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando acervo de petições...</span>
+              </div>
+            ) : filteredModels.length > 0 ? (
+              filteredModels.map((model) => (
+                <Card key={model.id} className="glass border-white/5 hover:border-primary/40 transition-all group shadow-2xl rounded-[2rem] overflow-hidden flex flex-col">
+                  <div className="p-8 space-y-6 flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                        <FileText className="h-6 w-6" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white bg-white/5 p-2 rounded-lg transition-colors"><Settings2 className="h-4 w-4" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "document_templates", model.id))} className="text-white/20 hover:text-rose-500 bg-white/5 p-2 rounded-lg transition-colors"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">{model.title}</h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/20 text-primary bg-primary/5">{model.area}</Badge>
+                        {model.googleDocId && <Badge className="bg-blue-500/10 text-blue-400 border-0 text-[8px] font-black uppercase tracking-widest">GOOGLE DOCS OK</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-4">
+                      {model.tags?.slice(0, 4).map((tag: string) => (
+                        <span key={tag} className="text-[8px] font-mono font-bold text-muted-foreground/40 bg-white/5 px-1.5 py-0.5 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                      {model.tags?.length > 4 && <span className="text-[8px] text-muted-foreground/20">+{model.tags.length - 4}</span>}
+                    </div>
+                  </div>
+                  <div className="px-8 py-5 bg-white/[0.02] border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Identificador: {model.id.substring(0,8)}</span>
+                    <ChevronRight className="h-4 w-4 text-white/5 group-hover:text-primary transition-all" />
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-3xl border-dashed border-2 border-white/5 opacity-20">
+                <BookOpen className="h-16 w-16 text-muted-foreground" />
+                <p className="text-[11px] font-black uppercase tracking-[0.4em]">Acervo de minutas vazio</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* DIÁLOGO ENGENHARIA DE MATRIZ */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
@@ -534,6 +659,7 @@ export default function LaboratorioChecklistsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* DIÁLOGO VISUALIZAÇÃO MATRIZ */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh] font-sans">
           <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
@@ -584,6 +710,50 @@ export default function LaboratorioChecklistsPage() {
           </ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex-none">
             <Button onClick={() => setIsViewDialogOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">FECHAR DOSSIÊ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO MODELO PETIÇÃO */}
+      <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
+                {editingModel ? "Retificar Modelo" : "Novo Modelo Estratégico"}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO DA MINUTA *</Label>
+                  <Input value={modelFormData.title} onChange={(e) => setModelFormData({...modelFormData, title: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black text-sm" />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ÁREA DE ATUAÇÃO</Label>
+                  <Select value={modelFormData.area} onValueChange={(v) => setModelFormData({...modelFormData, area: v})}>
+                    <SelectTrigger className="glass border-white/10 h-14 text-white uppercase text-[11px] font-black tracking-widest"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      {LEGAL_AREAS.map(area => <SelectItem key={area} value={area}>{area.toUpperCase()}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ID GOOGLE DOC (MODELO BASE)</Label>
+                <Input value={modelFormData.googleDocId} onChange={(e) => setModelFormData({...modelFormData, googleDocId: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-xs" />
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black text-primary uppercase tracking-widest">TAGS DINÂMICAS (SEPARAR POR VÍRGULA)</Label>
+                <Input value={modelFormData.tags} onChange={(e) => setModelFormData({...modelFormData, tags: e.target.value})} className="glass border-primary/20 h-14 text-white font-bold text-xs" placeholder="{{NOME}}, {{CPF}}, {{DATA}}..." />
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsModelDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
+            <Button onClick={handleSaveModel} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-14 rounded-xl shadow-2xl">SALVAR ACERVO</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
