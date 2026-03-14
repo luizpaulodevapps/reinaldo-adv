@@ -415,35 +415,35 @@ export default function LaboratorioChecklistsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="bg-white/5 border border-white/10 p-1.5 rounded-2xl w-fit shadow-2xl">
-          <TabsList className="bg-transparent h-12 p-0 gap-1">
-            <TabsTrigger value="matrizes" onClick={() => setActiveMainTab("matrizes")} className={cn(
-              "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2",
-              activeMainTab === "matrizes" && "bg-primary text-background"
-            )}>
-              <Zap className="h-3.5 w-3.5" /> Matrizes de DNA (Triagem)
-            </TabsTrigger>
-            <TabsTrigger value="peticoes" onClick={() => setActiveMainTab("peticoes")} className={cn(
-              "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2",
-              activeMainTab === "peticoes" && "bg-primary text-background"
-            )}>
-              <FileText className="h-3.5 w-3.5" /> Modelos de Petição
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-10">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="bg-white/5 border border-white/10 p-1.5 rounded-2xl w-fit shadow-2xl">
+            <TabsList className="bg-transparent h-12 p-0 gap-1">
+              <TabsTrigger value="matrizes" className={cn(
+                "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2",
+                activeMainTab === "matrizes" && "bg-primary text-background"
+              )}>
+                <Zap className="h-3.5 w-3.5" /> Matrizes de DNA (Triagem)
+              </TabsTrigger>
+              <TabsTrigger value="peticoes" className={cn(
+                "text-muted-foreground font-black text-[10px] uppercase h-full px-8 rounded-xl transition-all tracking-widest gap-2",
+                activeMainTab === "peticoes" && "bg-primary text-background"
+              )}>
+                <FileText className="h-3.5 w-3.5" /> Modelos de Petição
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5 shadow-xl">
+            <Button onClick={() => setViewMode("grid")} variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "grid" ? "bg-primary text-background" : "text-muted-foreground")}>
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "list" ? "bg-primary text-background" : "text-muted-foreground")}>
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5 shadow-xl">
-          <Button onClick={() => setViewMode("grid")} variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "grid" ? "bg-primary text-background" : "text-muted-foreground")}>
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10 rounded-lg transition-all", viewMode === "list" ? "bg-primary text-background" : "text-muted-foreground")}>
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeMainTab} className="space-y-10">
         <TabsContent value="matrizes" className="m-0 outline-none animate-in fade-in duration-500">
           {viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
