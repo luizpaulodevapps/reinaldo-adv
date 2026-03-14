@@ -118,7 +118,7 @@ export default function CourtsPage() {
     try {
       const result = await aiSearchCourtAddress({ courtName: formData.name })
       if (result.found && result.zipCode) {
-        setFormData(prev => ({ ...prev, zipCode: result.zipCode, number: result.number || prev.number }))
+        setFormData((prev: any) => ({ ...prev, zipCode: result.zipCode, number: result.number || prev.number }))
         toast({ title: "Localização Encontrada", description: "Dados sincronizados via Inteligência RGMJ." })
         setTimeout(() => handleCepBlur(), 100)
       } else {

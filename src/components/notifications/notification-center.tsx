@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Bell, Zap, Clock, DollarSign, Gavel, AlertCircle, CheckCircle2, History, X, Info } from "lucide-react"
+import { Bell, Zap, Clock, DollarSign, Gavel, AlertCircle, CheckCircle2, History, X, Info, ChevronRight } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, where, orderBy, limit, doc, serverTimestamp, writeBatch } from "firebase/firestore"
 import {

@@ -25,7 +25,9 @@ import {
   Clock,
   Briefcase,
   Gavel,
-  Zap
+  Zap,
+  Mail,
+  Phone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +49,7 @@ import { FreelancerForm } from "@/components/correspondents/freelancer-form"
 import { CounterpartyForm } from "@/components/correspondents/counterparty-form"
 import { FreelanceDiligenceForm } from "@/components/correspondents/freelance-diligence-form"
 import { format } from "date-fns"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 export default function CorrespondentsModule() {
   const [activeTab, setActiveTab] = useState("diligencias")
@@ -360,7 +363,7 @@ export default function CorrespondentsModule() {
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Ordem de Serviço Freelance</DialogTitle>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Ordem de Serviço Freelance</DialogTitle>
               <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground mt-1">Requisição tática de ato de correspondência.</DialogDescription>
             </DialogHeader>
           </div>

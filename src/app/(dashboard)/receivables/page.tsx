@@ -19,7 +19,8 @@ import {
   Clock, 
   Wallet,
   Calculator,
-  ChevronRight
+  ChevronRight,
+  DollarSign
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -161,7 +162,7 @@ export default function ReceivablesPage() {
                   <div className="flex items-center gap-8">
                     <div className="text-right">
                       <div className="text-xl font-black text-emerald-400 tabular-nums tracking-tighter">R$ {Number(r.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                      <Badge className={cn("text-[8px] font-black uppercase mt-1", r.status === 'Recebido' ? "bg-emerald-500 text-white" : "bg-amber-500/10 text-amber-500")}>{r.status}</Badge>
+                      <Badge className={cn("text-[8px] font-black uppercase h-5 mt-1", r.status === 'Recebido' ? "bg-emerald-500 text-white" : "bg-amber-500/10 text-amber-500")}>{r.status}</Badge>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => { setEditingTitle(r); setIsDialogOpen(true); }} className="h-10 w-10 rounded-lg text-white/20 hover:text-white"><Edit3 className="h-4 w-4" /></Button>
                   </div>

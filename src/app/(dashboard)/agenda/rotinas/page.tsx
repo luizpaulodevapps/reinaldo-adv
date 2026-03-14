@@ -4,7 +4,6 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/progress"
 import { Progress } from "@/components/ui/progress"
 import { 
   ClipboardList, 
@@ -12,9 +11,9 @@ import {
   Loader2, 
   Clock, 
   CheckCircle2, 
-  ArrowRight,
-  User,
-  ShieldCheck
+  ArrowRight, 
+  User, 
+  ShieldCheck 
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"

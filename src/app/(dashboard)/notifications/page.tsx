@@ -18,7 +18,8 @@ import {
   Search,
   ChevronRight,
   History,
-  LayoutGrid
+  LayoutGrid,
+  ExternalLink
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, where, orderBy, doc, serverTimestamp } from "firebase/firestore"
