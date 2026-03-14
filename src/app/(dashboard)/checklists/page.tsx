@@ -35,7 +35,12 @@ import {
   MapPin,
   Fingerprint,
   Phone,
-  Calendar
+  Calendar,
+  Sparkles,
+  ArrowLeft,
+  Settings2,
+  Layers,
+  ChevronDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -119,9 +124,7 @@ const REUSE_PRIORITIES = [
 ]
 
 const TARGET_FIELDS_BY_REUSE_TARGET: Record<string, Array<{ id: string; label: string }>> = {
-  caseDetails: [
-    { id: "caseDetails", label: "Detalhes do Caso" },
-  ],
+  caseDetails: [{ id: "caseDetails", label: "Detalhes do Caso" }],
   distribution: [
     { id: "processTitle", label: "Título do Processo" },
     { id: "processNumber", label: "Número CNJ" },
@@ -155,8 +158,6 @@ const TARGET_FIELDS_BY_REUSE_TARGET: Record<string, Array<{ id: string; label: s
   ],
 }
 
-const MIN_QUESTIONS_REQUIRED = 1
-
 type ReadyQuestionTemplate = {
   id: string
   label: string
@@ -169,200 +170,23 @@ type ReadyQuestionTemplate = {
   balizaObrigatoria?: boolean
 }
 
-const READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
+const ALL_READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
   { id: "id-nome", label: "IDENTIFICACAO: NOME COMPLETO", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
   { id: "id-cpf", label: "IDENTIFICACAO: CPF", type: "cpf_cnpj", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "cpf", reusePriority: "alta", balizaObrigatoria: true },
   { id: "id-rg", label: "IDENTIFICACAO: RG", type: "text", required: false, reuseEnabled: true, reuseTarget: "client", targetField: "rg", reusePriority: "media" },
-  { id: "id-estado-profissao", label: "IDENTIFICACAO: ESTADO CIVIL E PROFISSAO ATUAL", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "baixa" },
-  { id: "id-endereco", label: "IDENTIFICACAO: ENDERECO COMPLETO", type: "cep", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "address", reusePriority: "media" },
   { id: "id-contato", label: "IDENTIFICACAO: TELEFONE, WHATSAPP E EMAIL", type: "phone", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "empresa-nome", label: "EMPRESA: NOME DA EMPRESA", type: "text", required: true, reuseEnabled: true, reuseTarget: "claimant", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "empresa-cnpj", label: "EMPRESA: CNPJ (SE SOUBER)", type: "cpf_cnpj", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "documentNumber", reusePriority: "media" },
-  { id: "empresa-endereco", label: "EMPRESA: ENDERECO DA EMPRESA", type: "cep", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "address", reusePriority: "media" },
-  { id: "empresa-responsavel", label: "EMPRESA: RESPONSAVEL DIRETO (GERENTE/SUPERVISOR)", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "empresa-ativa", label: "EMPRESA: AINDA ESTA ATIVA?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "baixa" },
-
-  { id: "contrato-admissao", label: "CONTRATO: DATA DE ADMISSAO", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "contrato-demissao", label: "CONTRATO: DATA DE DEMISSAO OU SE AINDA TRABALHA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "contrato-tipo-demissao", label: "CONTRATO: TIPO DE DEMISSAO (SEM JUSTA CAUSA/JUSTA CAUSA/PEDIDO/INDIRETA)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "contrato-cargo", label: "CONTRATO: CARGO REGISTRADO X CARGO REAL", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "contrato-salario", label: "CONTRATO: SALARIO REGISTRADO", type: "number", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "contrato-por-fora", label: "CONTRATO: RECEBIA POR FORA OU HOUVE AUMENTO NAO REGISTRADO?", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-
-  { id: "jornada-horario", label: "JORNADA: HORARIO DE ENTRADA, SAIDA E INTERVALO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "jornada-fim-semana", label: "JORNADA: TRABALHAVA AOS SABADOS/DOMINGOS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "jornada-horas-extras", label: "JORNADA: HORAS EXTRAS (QUANTIDADE E PAGAMENTO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "jornada-banco-ponto", label: "JORNADA: BANCO DE HORAS E CONTROLE DE PONTO", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-
-  { id: "verbas-ferias", label: "VERBAS: RECEBEU FERIAS + 1/3?", type: "boolean", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "verbas-decimo", label: "VERBAS: RECEBEU 13 SALARIO?", type: "boolean", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "verbas-fgts", label: "VERBAS: RECEBEU FGTS E MULTA DE 40%?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "verbas-aviso-seguro", label: "VERBAS: RECEBEU AVISO PREVIO E SEGURO-DESEMPREGO?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "docs-trct", label: "DOCUMENTOS: POSSUI TRCT?", type: "boolean", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "docs-fgts", label: "DOCUMENTOS: POSSUI CHAVE E EXTRATO DO FGTS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "docs-comprovantes", label: "DOCUMENTOS: POSSUI COMPROVANTES DE PAGAMENTO?", type: "boolean", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-
-  { id: "especifico-desvio", label: "SITUACOES ESPECIFICAS: HOUVE DESVIO OU ACUMULO DE FUNCAO?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "especifico-insalubridade", label: "SITUACOES ESPECIFICAS: INSALUBRIDADE/PERICULOSIDADE E ADICIONAL", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "especifico-assedio", label: "SITUACOES ESPECIFICAS: ASSEDIO MORAL, TESTEMUNHAS E PROVAS", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "especifico-acidente", label: "SITUACOES ESPECIFICAS: ACIDENTE, CAT E AUXILIO-DOENCA", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "especifico-estabilidade", label: "SITUACOES ESPECIFICAS: ESTABILIDADE (GESTANTE/CIPA/DOENCA/SINDICAL)", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-
-  { id: "provas-gerais", label: "PROVAS: CTPS, HOLERITES, EXTRATO FGTS, WHATSAPP, FOTOS, CONTRATO, ADVERTENCIAS", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "testemunhas", label: "TESTEMUNHAS: NOME, TELEFONE, SE AINDA TRABALHAM E O QUE SABEM", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "situacao-atual", label: "SITUACAO ATUAL: DESEMPREGADO, RESCISAO, INFORMALIDADE E URGENCIA FINANCEIRA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "expectativa-cliente", label: "EXPECTATIVA DO CLIENTE: OBJETIVO, PRAZO E ACEITE DE ACORDO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "avaliacao-interna", label: "AVALIACAO JURIDICA INTERNA: VIAVEL/RISCO/PROVAS/ACORDO/VALOR", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "formalizacao", label: "FORMALIZACAO DO LEAD: HONORARIOS, CUSTAS, PERICIA E ASSINATURAS", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "pergunta-final", label: "PERGUNTA FINAL: EXISTE ALGO A MAIS QUE TE INCOMODAVA E AINDA NAO COMENTOU?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-]
-
-const READY_TEMPLATE_STARTER_PACK = [
-  "id-nome",
-  "id-cpf",
-  "contrato-tipo-demissao",
-  "jornada-horas-extras",
-  "provas-gerais",
-  "pergunta-final",
-]
-
-const READY_TEMPLATE_BASE_PACK = READY_QUESTION_TEMPLATES.map((template) => template.id)
-
-const DEFAULT_CHECKLIST_TITLE = "CHECKLIST - ENTREVISTA PARA PROCESSO TRABALHISTA"
-const DEFAULT_CHECKLIST_DESCRIPTION = "Padrao basico trabalhista para triagem. Voce pode editar, remover e adicionar perguntas a qualquer momento."
-
-const READY_QUESTION_TEMPLATES_EXTRA: ReadyQuestionTemplate[] = [
   { id: "civel-conflito", label: "CIVEL: QUAL E O CONFLITO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "civel-inicio", label: "CIVEL: QUANDO O CONFLITO COMECOU?", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "civel-amigavel", label: "CIVEL: JA TENTOU RESOLVER AMIGAVELMENTE?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "civel-contrato", label: "CIVEL: EXISTE CONTRATO?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "civel-documentos", label: "CIVEL: POSSUI CONTRATO, PAGAMENTOS, MENSAGENS, NOTIFICACOES OU BOLETIM?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "civel-pontos", label: "CIVEL: EXISTE DANO MORAL, PROVA DOCUMENTAL OU TESTEMUNHAS?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "criminal-preso", label: "CRIMINAL: FOI PRESO?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "criminal-flagrante", label: "CRIMINAL: FOI EM FLAGRANTE?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "criminal-custodia", label: "CRIMINAL: JA HOUVE AUDIENCIA DE CUSTODIA?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "criminal-liberdade", label: "CRIMINAL: RESPONDE EM LIBERDADE?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
   { id: "criminal-acusacao", label: "CRIMINAL: QUAL A ACUSACAO E A DATA DO FATO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "criminal-provas", label: "CRIMINAL: TESTEMUNHAS E PROVAS CONTRA ELE", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "criminal-documentos", label: "CRIMINAL: POSSUI INQUERITO, BO, PROCESSO OU MANDADO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "prev-beneficio", label: "PREVIDENCIARIO: TIPO DE BENEFICIO (APOSENTADORIA/AUXILIO/BPC/PENSAO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "prev-historico", label: "PREVIDENCIARIO: TRABALHOU REGISTRADO OU CONTRIBUIU COMO AUTONOMO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "prev-cnis", label: "PREVIDENCIARIO: TEM CNIS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "prev-documentos", label: "PREVIDENCIARIO: POSSUI RG/CPF, CTPS, CNIS E LAUDOS MEDICOS?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "trib-problema", label: "TRIBUTARIO: PROBLEMA (DIVIDA ATIVA/EXECUCAO/MULTA/PLANEJAMENTO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "trib-dados", label: "TRIBUTARIO: CNPJ/CPF, TIPO DE EMPRESA, REGIME E PARCELAMENTO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "trib-documentos", label: "TRIBUTARIO: POSSUI CDA, AUTOS DE INFRACAO E NOTIFICACOES?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "familia-acao", label: "FAMILIA: TIPO DE ACAO (DIVORCIO/GUARDA/PENSAO/VISITAS)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "familia-filhos", label: "FAMILIA: FILHOS, IDADES E ACORDO PREVIO", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
-  { id: "familia-violencia", label: "FAMILIA: EXISTE VIOLENCIA ENVOLVIDA?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "familia-documentos", label: "FAMILIA: POSSUI CERTIDOES E COMPROVANTES DE RENDA?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "empresarial-problema", label: "EMPRESARIAL: NATUREZA DO PROBLEMA (SOCIETARIO/CONTRATO/COBRANCA/RECUPERACAO)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "empresarial-dados", label: "EMPRESARIAL: CONTRATO SOCIAL, ALTERACOES, FATURAMENTO E DIVIDAS", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-
-  { id: "geral-area", label: "TRIAGEM GERAL: QUAL AREA DO DIREITO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "geral-descricao", label: "TRIAGEM GERAL: BREVE DESCRICAO DO PROBLEMA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "geral-urgencia", label: "TRIAGEM GERAL: EXISTE URGENCIA?", type: "boolean_partial", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
-  { id: "geral-processo", label: "TRIAGEM GERAL: JA EXISTE PROCESSO?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "distribution", targetField: "processNumber", reusePriority: "media" },
-  { id: "geral-documentos", label: "TRIAGEM GERAL: PODE ENVIAR DOCUMENTOS?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
+  { id: "contrato-admissao", label: "CONTRATO: DATA DE ADMISSAO", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "situacao-atual", label: "SITUACAO ATUAL: RESUMO DA DEMANDA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
 ]
-
-const READY_TEMPLATE_CIVEL_PACK = ["civel-conflito", "civel-inicio", "civel-amigavel", "civel-contrato", "civel-documentos", "civel-pontos"]
-const READY_TEMPLATE_CRIMINAL_PACK = ["criminal-preso", "criminal-flagrante", "criminal-custodia", "criminal-liberdade", "criminal-acusacao", "criminal-provas", "criminal-documentos"]
-const READY_TEMPLATE_PREVIDENCIARIO_PACK = ["prev-beneficio", "prev-historico", "prev-cnis", "prev-documentos"]
-const READY_TEMPLATE_TRIBUTARIO_PACK = ["trib-problema", "trib-dados", "trib-documentos"]
-const READY_TEMPLATE_FAMILIA_PACK = ["familia-acao", "familia-filhos", "familia-violencia", "familia-documentos"]
-const READY_TEMPLATE_EMPRESARIAL_PACK = ["empresarial-problema", "empresarial-dados"]
-const READY_TEMPLATE_GERAL_PACK = ["geral-area", "geral-descricao", "geral-urgencia", "geral-processo", "geral-documentos"]
-
-const ALL_READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
-  ...READY_QUESTION_TEMPLATES,
-  ...READY_QUESTION_TEMPLATES_EXTRA,
-]
-
-const CHECKLIST_PRESETS_BY_LEGAL_AREA: Record<string, { title: string; description: string; templateIds: string[] }> = {
-  "Trabalhista": {
-    title: DEFAULT_CHECKLIST_TITLE,
-    description: DEFAULT_CHECKLIST_DESCRIPTION,
-    templateIds: READY_TEMPLATE_BASE_PACK,
-  },
-  "Cível": {
-    title: "CHECKLIST - ENTREVISTA CIVEL",
-    description: "Padrao civil para conflitos contratuais e obrigacionais.",
-    templateIds: READY_TEMPLATE_CIVEL_PACK,
-  },
-  "Criminal": {
-    title: "CHECKLIST - ENTREVISTA CRIMINAL",
-    description: "Padrao criminal para coleta tecnica inicial do caso.",
-    templateIds: READY_TEMPLATE_CRIMINAL_PACK,
-  },
-  "Previdenciário": {
-    title: "CHECKLIST - ENTREVISTA PREVIDENCIARIA",
-    description: "Padrao previdenciario para beneficios e historico contributivo.",
-    templateIds: READY_TEMPLATE_PREVIDENCIARIO_PACK,
-  },
-  "Tributário": {
-    title: "CHECKLIST - ENTREVISTA TRIBUTARIA",
-    description: "Padrao tributario para passivo fiscal e planejamento.",
-    templateIds: READY_TEMPLATE_TRIBUTARIO_PACK,
-  },
-  "Família": {
-    title: "CHECKLIST - ENTREVISTA FAMILIA",
-    description: "Padrao familia para divorcio, guarda, pensao e visitas.",
-    templateIds: READY_TEMPLATE_FAMILIA_PACK,
-  },
-  "Empresarial": {
-    title: "CHECKLIST - ENTREVISTA EMPRESARIAL",
-    description: "Padrao empresarial para demandas societarias e contratuais.",
-    templateIds: READY_TEMPLATE_EMPRESARIAL_PACK,
-  },
-  "Geral": {
-    title: "CHECKLIST - TRIAGEM GERAL",
-    description: "Triagem inicial rapida para direcionar o lead para a area correta.",
-    templateIds: READY_TEMPLATE_GERAL_PACK,
-  },
-}
-
-const normalizeTemplateLabel = (value: string) => value.trim().toUpperCase()
-
-const buildChecklistItemFromTemplate = (template: ReadyQuestionTemplate) => {
-  const reuseTarget = template.reuseTarget || "caseDetails"
-  const availableFields = TARGET_FIELDS_BY_REUSE_TARGET[reuseTarget] || []
-  const fallbackField = availableFields[0]?.id || "caseDetails"
-  const targetField = availableFields.some((field) => field.id === template.targetField)
-    ? template.targetField
-    : fallbackField
-
-  return {
-    label: normalizeTemplateLabel(template.label),
-    type: template.type || "text",
-    required: template.required ?? true,
-    reuseEnabled: template.reuseEnabled ?? false,
-    reuseTarget,
-    targetField,
-    reusePriority: template.reusePriority || "media",
-    balizaObrigatoria: template.balizaObrigatoria ?? false,
-  }
-}
-
-const buildChecklistItemsFromTemplateIds = (templateIds: string[]) => {
-  const templateIdSet = new Set(templateIds)
-  return ALL_READY_QUESTION_TEMPLATES
-    .filter((template) => templateIdSet.has(template.id))
-    .map(buildChecklistItemFromTemplate)
-}
 
 type EditorStep = "geral" | "perguntas" | "revisao"
 
-const EDITOR_STEPS: Array<{ id: EditorStep; label: string }> = [
-  { id: "geral", label: "GERAL" },
-  { id: "perguntas", label: "PERGUNTAS" },
-  { id: "revisao", label: "REVISÃO" },
+const EDITOR_STEPS: Array<{ id: EditorStep; label: string; icon: any }> = [
+  { id: "geral", label: "CONTEXTO", icon: Settings2 },
+  { id: "perguntas", label: "DNA CAPTURA", icon: Zap },
+  { id: "revisao", label: "SANEAMENTO", icon: ShieldCheck },
 ]
 
 export default function LaboratorioChecklistsPage() {
@@ -372,9 +196,7 @@ export default function LaboratorioChecklistsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [editingList, setEditingList] = useState<any>(null)
   const [editorStep, setEditorStep] = useState<EditorStep>("geral")
-  const [isAreaChangeDialogOpen, setIsAreaChangeDialogOpen] = useState(false)
-  const [pendingAreaChange, setPendingAreaChange] = useState<string | null>(null)
-
+  
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Entrevista de Triagem")
   const [legalArea, setLegalArea] = useState("Trabalhista")
@@ -403,80 +225,13 @@ export default function LaboratorioChecklistsPage() {
     )
   }, [checklists, searchTerm])
 
-  const currentStepIndex = EDITOR_STEPS.findIndex(step => step.id === editorStep)
-  const canGoBack = currentStepIndex > 0
-  const isLastStep = currentStepIndex === EDITOR_STEPS.length - 1
-  const selectedAreaPreset = CHECKLIST_PRESETS_BY_LEGAL_AREA[legalArea] || CHECKLIST_PRESETS_BY_LEGAL_AREA["Trabalhista"]
-  const pendingAreaPreset = pendingAreaChange
-    ? (CHECKLIST_PRESETS_BY_LEGAL_AREA[pendingAreaChange] || CHECKLIST_PRESETS_BY_LEGAL_AREA["Trabalhista"])
-    : null
-  const currentQuestionsCount = items.length
-  const pendingAreaQuestionsCount = pendingAreaPreset?.templateIds.length || 0
-  const templateById = useMemo(() => {
-    const templates = new Map<string, ReadyQuestionTemplate>()
-    for (const template of ALL_READY_QUESTION_TEMPLATES) {
-      templates.set(template.id, template)
-    }
-    return templates
-  }, [])
-  const pendingAreaPreviewQuestions = useMemo(() => {
-    if (!pendingAreaPreset) return []
-    return pendingAreaPreset.templateIds
-      .slice(0, 3)
-      .map((templateId) => templateById.get(templateId))
-      .filter((template): template is ReadyQuestionTemplate => Boolean(template))
-  }, [pendingAreaPreset, templateById])
-  const pendingAreaPreviewBalizasCount = pendingAreaPreviewQuestions.filter((question) => Boolean(question.balizaObrigatoria)).length
-  const selectedAreaTemplates = useMemo(() => {
-    const templateIdSet = new Set(selectedAreaPreset?.templateIds || READY_TEMPLATE_BASE_PACK)
-    return ALL_READY_QUESTION_TEMPLATES.filter((template) => templateIdSet.has(template.id))
-  }, [selectedAreaPreset])
-
-  const applyChecklistPreset = (area: string, mode: "replace" | "append" = "replace") => {
-    const preset = CHECKLIST_PRESETS_BY_LEGAL_AREA[area]
-    if (!preset) return
-
-    const presetItems = buildChecklistItemsFromTemplateIds(preset.templateIds)
-
-    if (mode === "replace") {
-      setTitle(preset.title)
-      setCategory("Entrevista de Triagem")
-      setLegalArea(area)
-      setDescription(preset.description)
-      setItems(presetItems)
-      toast({
-        title: `Padrao ${area.toUpperCase()} aplicado`,
-        description: `${preset.templateIds.length} perguntas carregadas como base.`,
-      })
-      return
-    }
-
-    const existingLabels = new Set(items.map((item) => normalizeTemplateLabel(item.label || "")))
-    const entriesToAdd = presetItems.filter((entry) => !existingLabels.has(entry.label))
-
-    if (entriesToAdd.length === 0) {
-      toast({
-        title: "Pacote ja aplicado",
-        description: `O pacote ${area.toUpperCase()} ja esta refletido no checklist atual.`,
-      })
-      return
-    }
-
-    setItems((prev) => [...prev, ...entriesToAdd])
-    toast({
-      title: `Pacote ${area.toUpperCase()} adicionado`,
-      description: `${entriesToAdd.length} pergunta(s) incorporada(s).`,
-    })
-  }
-
   const handleOpenCreate = () => {
-    const preset = CHECKLIST_PRESETS_BY_LEGAL_AREA["Trabalhista"]
     setEditingList(null)
-    setTitle(preset.title)
+    setTitle("")
     setCategory("Entrevista de Triagem")
     setLegalArea("Trabalhista")
-    setDescription(preset.description)
-    setItems(buildChecklistItemsFromTemplateIds(preset.templateIds))
+    setDescription("")
+    setItems([])
     setEditorStep("geral")
     setIsDialogOpen(true)
   }
@@ -492,100 +247,6 @@ export default function LaboratorioChecklistsPage() {
     setIsDialogOpen(true)
   }
 
-  const handleOpenView = (list: any) => {
-    setViewingList(list)
-    setIsViewDialogOpen(true)
-  }
-
-  const handleAddField = () => {
-    setItems([
-      ...items,
-      {
-        label: "",
-        type: "boolean",
-        required: true,
-        reuseEnabled: false,
-        reuseTarget: "caseDetails",
-        targetField: "caseDetails",
-        reusePriority: "media",
-        balizaObrigatoria: false,
-      },
-    ])
-  }
-
-  const handleAddReadyQuestions = (templates: ReadyQuestionTemplate[]) => {
-    if (templates.length === 0) return
-
-    const existingLabels = new Set(items.map((item) => normalizeTemplateLabel(item.label || "")))
-    const entriesToAdd = templates
-      .map(buildChecklistItemFromTemplate)
-      .filter((entry) => !existingLabels.has(entry.label))
-
-    if (entriesToAdd.length === 0) {
-      toast({
-        title: "Perguntas ja adicionadas",
-        description: "As perguntas selecionadas ja estao no checklist.",
-      })
-      return
-    }
-
-    setItems((prev) => [...prev, ...entriesToAdd])
-    toast({
-      title: "Perguntas adicionadas",
-      description: `${entriesToAdd.length} item(ns) incluido(s).`,
-    })
-  }
-
-  const handleAddReadyQuestionById = (templateId: string) => {
-    const template = ALL_READY_QUESTION_TEMPLATES.find((entry) => entry.id === templateId)
-    if (!template) return
-    handleAddReadyQuestions([template])
-  }
-
-  const handleAddStarterPack = () => {
-    const starterTemplates = ALL_READY_QUESTION_TEMPLATES.filter((template) =>
-      READY_TEMPLATE_STARTER_PACK.includes(template.id)
-    )
-    handleAddReadyQuestions(starterTemplates)
-  }
-
-  const handleApplyDefaultChecklist = (area?: string) => {
-    applyChecklistPreset(area || legalArea || "Trabalhista", "replace")
-  }
-
-  const handleAddAreaPack = (area?: string) => {
-    applyChecklistPreset(area || legalArea || "Trabalhista", "append")
-  }
-
-  const handleLegalAreaChange = (nextArea: string) => {
-    if (nextArea === legalArea) return
-
-    const hasExistingDraft = items.length > 0 || Boolean(title.trim()) || Boolean(description.trim())
-    if (!hasExistingDraft) {
-      handleApplyDefaultChecklist(nextArea)
-      return
-    }
-
-    setPendingAreaChange(nextArea)
-    setIsAreaChangeDialogOpen(true)
-  }
-
-  const handleConfirmAreaChange = () => {
-    if (!pendingAreaChange) {
-      setIsAreaChangeDialogOpen(false)
-      return
-    }
-
-    handleApplyDefaultChecklist(pendingAreaChange)
-    setPendingAreaChange(null)
-    setIsAreaChangeDialogOpen(false)
-  }
-
-  const handleCancelAreaChange = () => {
-    setPendingAreaChange(null)
-    setIsAreaChangeDialogOpen(false)
-  }
-
   const handleUpdateField = (index: number, field: string, value: any) => {
     const newItems = [...items]
     newItems[index] = { ...newItems[index], [field]: value }
@@ -594,6 +255,22 @@ export default function LaboratorioChecklistsPage() {
 
   const handleRemoveField = (index: number) => {
     setItems(items.filter((_, i) => i !== index))
+  }
+
+  const handleAddField = () => {
+    setItems([
+      ...items,
+      {
+        label: "",
+        type: "text",
+        required: true,
+        reuseEnabled: false,
+        reuseTarget: "caseDetails",
+        targetField: "caseDetails",
+        reusePriority: "media",
+        balizaObrigatoria: false,
+      },
+    ])
   }
 
   const handleSave = () => {
@@ -624,751 +301,367 @@ export default function LaboratorioChecklistsPage() {
     setIsDialogOpen(false)
   }
 
-  const handleNextStep = () => {
-    if (editorStep === "geral" && !title.trim()) {
-      toast({ variant: "destructive", title: "Título Necessário" })
-      return
-    }
-
-    if (editorStep === "perguntas" && items.length < MIN_QUESTIONS_REQUIRED) {
-      toast({ variant: "destructive", title: "Adicione ao menos uma pergunta" })
-      return
-    }
-
-    const nextStep = EDITOR_STEPS[currentStepIndex + 1]
-    if (nextStep) {
-      setEditorStep(nextStep.id)
-    }
-  }
-
-  const handlePreviousStep = () => {
-    const previousStep = EDITOR_STEPS[currentStepIndex - 1]
-    if (previousStep) {
-      setEditorStep(previousStep.id)
-    }
-  }
+  const currentStepIndex = EDITOR_STEPS.findIndex(s => s.id === editorStep)
 
   if (!canManage && !isLoading) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center text-center space-y-6 font-sans">
-        <Shield className="h-16 w-16 text-destructive animate-pulse" />
-        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Negado</h2>
-        <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">O Laboratório é restrito à alta cúpula RGMJ.</p>
+      <div className="h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
+        <Shield className="h-16 w-16 text-rose-500 animate-pulse" />
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Restrito</h2>
+        <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">O Laboratório exige permissões de Administrador RGMJ.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-5xl font-black text-white tracking-tighter uppercase">Laboratório de Matrizes</h1>
-          <p className="text-muted-foreground uppercase tracking-[0.3em] text-[10px] font-black opacity-60">
-            Arquitetura Jurídica: Configure roteiros de triagem e entrevistas.
-          </p>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
+            <LayoutGrid className="h-3 w-3" />
+            <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
+            <ChevronRight className="h-2 w-2" />
+            <span className="text-white uppercase tracking-tighter">ARQUITETURA JURÍDICA</span>
+          </div>
+          <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Laboratório de Matrizes</h1>
+          <p className="text-muted-foreground text-xs font-black uppercase tracking-[0.2em] opacity-60">Configuração de roteiros de triagem e inteligência de dados.</p>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="relative w-64 md:w-80">
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Filtrar matrizes..." 
-              className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
+              placeholder="Filtrar modelos..." 
+              className="pl-12 glass border-white/5 h-14 text-sm text-white focus:ring-primary/50 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button 
-            onClick={handleOpenCreate}
-            className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
-          >
-            <Plus className="h-6 w-6 text-[#0a0f1e]" />
-          </button>
+          <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black h-14 w-14 rounded-xl shadow-2xl hover:scale-105 transition-all">
+            <Plus className="h-6 w-6" />
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {isLoading ? (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando Laboratório...</span>
+          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca...</span>
           </div>
-        ) : filteredChecklists.map((list) => {
-          const CatIcon = CATEGORIES.find(c => c.id === list.category)?.icon || Star
-          return (
-            <Card key={list.id} className="glass border-primary/10 hover-gold transition-all group overflow-hidden flex flex-col">
-              <CardHeader className="p-8 pb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 py-1">
-                    <CatIcon className="h-3 w-3 mr-2" /> {list.category}
-                  </Badge>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleOpenView(list)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Visualizar">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleOpenEdit(list)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Editar">
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                    {db && (
-                      <button onClick={() => deleteDocumentNonBlocking(doc(db, "checklists", list.id))} className="text-muted-foreground hover:text-destructive transition-colors p-1" title="Excluir">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+        ) : filteredChecklists.map((list) => (
+          <Card key={list.id} className="glass border-primary/10 hover:border-primary/30 transition-all group overflow-hidden flex flex-col rounded-[2rem] shadow-2xl">
+            <div className="p-8 space-y-6 flex-1">
+              <div className="flex items-center justify-between">
+                <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-3 h-6">
+                  {list.category}
+                </Badge>
+                <div className="flex gap-3">
+                  <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></button>
+                  <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-colors"><Edit3 className="h-4 w-4" /></button>
+                  <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
                 </div>
-                <CardTitle className="text-xl font-black text-white uppercase tracking-tight leading-tight">
-                  {list.title}
-                </CardTitle>
-                <div className="flex items-center gap-2 mt-2">
-                  <Scale className="h-3 w-3 text-primary/50" />
-                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{list.legalArea || "GERAL"}</span>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 pt-0 flex-1">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-6 line-clamp-2">
-                  {list.description || "Roteiro tático sem descrição técnica."}
-                </p>
-                <div className="flex items-center justify-between mt-auto">
-                  <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-[0.2em]">
-                    <ListPlus className="h-3.5 w-3.5" /> {list.items?.length || 0} Campos Definidos
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-all group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+              </div>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight group-hover:text-primary transition-colors">{list.title}</h3>
+              <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">
+                <Scale className="h-3.5 w-3.5" /> {list.legalArea || "GERAL"}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 italic uppercase font-medium">{list.description || "Sem descrição técnica definida."}</p>
+            </div>
+            <div className="px-8 py-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
+                <Layers className="h-4 w-4 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
+              </div>
+              <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-primary transition-all group-hover:translate-x-1" />
+            </div>
+          </Card>
+        ))}
       </div>
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[90vh] font-sans rounded-3xl gap-0">
-          <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
-            <div className="flex items-center gap-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                <Eye className="h-7 w-7" />
-              </div>
-              <div className="space-y-1">
-                <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                  {viewingList?.title}
-                </DialogTitle>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">{viewingList?.category}</Badge>
-                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">• {viewingList?.legalArea}</span>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
+          {/* Header Editor */}
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-6">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                  <FileEdit className="h-6 w-6" />
+                </div>
+                <div>
+                  <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter">Engenharia de Matriz</DialogTitle>
+                  <DialogDescription className="text-[10px] uppercase font-black text-muted-foreground opacity-50 tracking-widest">Protocolo de estruturação tática RGMJ.</DialogDescription>
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                {EDITOR_STEPS.map((s, idx) => (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setEditorStep(s.id)}
+                      className={cn(
+                        "px-5 h-9 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        editorStep === s.id ? "bg-primary text-background shadow-lg" : "bg-white/5 text-muted-foreground hover:text-white"
+                      )}
+                    >
+                      {s.label}
+                    </button>
+                    {idx < EDITOR_STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-white/5" />}
+                  </div>
+                ))}
+              </div>
             </div>
-            <Button onClick={() => { setIsViewDialogOpen(false); handleOpenEdit(viewingList); }} className="gold-gradient text-background font-black uppercase text-[11px] px-8 h-12 rounded-xl shadow-xl">
-              ABRIR EDITOR
-            </Button>
+            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-700 shadow-[0_0_15px_rgba(245,208,48,0.5)]" style={{ width: `${((currentStepIndex + 1) / EDITOR_STEPS.length) * 100}%` }} />
+            </div>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="p-10 space-y-10">
-              {viewingList?.description && (
-                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2 shadow-inner">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-50">Finalidade Estratégica</Label>
-                  <p className="text-sm text-white/80 leading-relaxed font-medium">{viewingList.description}</p>
+          <ScrollArea className="flex-1 min-h-0 bg-[#0a0f1e]/50">
+            <div className="p-10 max-w-5xl mx-auto pb-32">
+              {editorStep === "geral" && (
+                <div className="space-y-10 animate-in fade-in duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                    <div className="md:col-span-8 space-y-3">
+                      <Label className="text-[11px] font-black text-primary uppercase tracking-widest">Título da Matriz *</Label>
+                      <Input value={title} onChange={(e) => setTitle(e.target.value.toUpperCase())} className="bg-black/40 border-white/10 h-14 text-white font-black text-lg focus:ring-1 focus:ring-primary/50 rounded-xl" placeholder="EX: TRIAGEM INICIAL TRABALHISTA" />
+                    </div>
+                    <div className="md:col-span-4 space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Categoria</Label>
+                      <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold rounded-xl"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-[#0d121f] text-white">
+                          {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id} className="uppercase text-[10px] font-black">{c.label.toUpperCase()}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-12 space-y-3">
+                      <Label className="text-[11px] font-black text-primary uppercase tracking-widest">Área Jurídica de Atuação</Label>
+                      <div className="flex flex-wrap gap-3">
+                        {LEGAL_AREAS.map(area => (
+                          <button 
+                            key={area}
+                            onClick={() => setLegalArea(area)}
+                            className={cn(
+                              "px-6 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                              legalArea === area ? "bg-primary/10 border-primary text-primary shadow-xl" : "bg-black/20 border-white/5 text-muted-foreground hover:text-white"
+                            )}
+                          >
+                            {area}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="md:col-span-12 space-y-3">
+                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Finalidade Estratégica</Label>
+                      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="bg-black/40 border-white/10 min-h-[120px] text-white text-sm resize-none p-6 rounded-2xl" placeholder="Descreva os objetivos desta captura de dados..." />
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b border-white/5">
-                  <LayoutGrid className="h-5 w-5 text-primary" />
-                  <h4 className="text-xs font-black text-white uppercase tracking-widest">Inventário de Campos ({viewingList?.items?.length || 0})</h4>
-                </div>
+              {editorStep === "perguntas" && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-white uppercase tracking-[0.3em]">DNA de Captura</h4>
+                      <p className="text-[10px] text-muted-foreground uppercase font-black opacity-40">Defina os campos e a inteligência de resposta.</p>
+                    </div>
+                    <Button onClick={handleAddField} className="gold-gradient text-background font-black h-12 px-8 rounded-xl shadow-xl uppercase text-[10px] tracking-widest gap-3">
+                      <Plus className="h-4 w-4" /> ADICIONAR ELEMENTO
+                    </Button>
+                  </div>
 
-                <div className="grid grid-cols-1 gap-3">
-                  {viewingList?.items?.map((item: any, idx: number) => (
-                    <div key={idx} className="p-5 rounded-xl bg-white/[0.01] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-lg">
-                      <div className="flex items-center gap-5">
-                        <span className="text-[10px] font-mono font-black text-muted-foreground/30">#{idx + 1}</span>
+                  <div className="grid grid-cols-1 gap-6">
+                    {items.map((item, idx) => (
+                      <Card key={idx} className="bg-white/[0.02] border-white/5 p-8 rounded-3xl relative group hover:border-primary/20 transition-all shadow-2xl">
+                        <div className="absolute -left-3 top-8 w-1 h-12 bg-primary rounded-full shadow-[0_0_15px_rgba(245,208,48,0.5)]" />
+                        <div className="flex justify-between items-start mb-8">
+                          <Badge className="bg-[#1a1f2e] border-white/10 text-primary font-black uppercase text-[9px] px-4 h-7 rounded-full">ITEM #{idx + 1}</Badge>
+                          <button onClick={() => handleRemoveField(idx)} className="h-10 w-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"><X className="h-5 w-5" /></button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
+                          <div className="md:col-span-7 space-y-3">
+                            <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Rótulo / Pergunta da Entrevista *</Label>
+                            <Input value={item.label} onChange={(e) => handleUpdateField(idx, 'label', e.target.value.toUpperCase())} className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase" />
+                          </div>
+                          <div className="md:col-span-3 space-y-3">
+                            <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Tipo de Campo</Label>
+                            <Select value={item.type} onValueChange={(v) => handleUpdateField(idx, 'type', v)}>
+                              <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                                {FIELD_TYPES.map(t => (
+                                  <SelectItem key={t.id} value={t.id} className="uppercase text-[10px] font-black">
+                                    <div className="flex items-center gap-3"><t.icon className="h-3.5 w-3.5 opacity-50" /> {t.label}</div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="md:col-span-2 flex items-center gap-3 pb-3">
+                            <Switch checked={item.required} onCheckedChange={(v) => handleUpdateField(idx, 'required', v)} className="data-[state=checked]:bg-emerald-500" />
+                            <Label className="text-[9px] font-black text-white uppercase tracking-widest">Obrigatório</Label>
+                          </div>
+                        </div>
+
+                        <div className="mt-10 pt-8 border-t border-white/5 grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-black/20 p-6 rounded-2xl">
+                          <div className="md:col-span-3 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Switch checked={item.reuseEnabled} onCheckedChange={(v) => handleUpdateField(idx, 'reuseEnabled', v)} className="data-[state=checked]:bg-primary" />
+                              <Label className="text-[10px] font-black text-primary uppercase tracking-widest">REUSO DE DADOS</Label>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Switch checked={item.balizaObrigatoria} onCheckedChange={(v) => handleUpdateField(idx, 'balizaObrigatoria', v)} className="data-[state=checked]:bg-amber-500" />
+                              <Label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">BALIZA IA</Label>
+                            </div>
+                          </div>
+
+                          {item.reuseEnabled && (
+                            <>
+                              <div className="md:col-span-3 space-y-3">
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase">Destino</Label>
+                                <Select value={item.reuseTarget} onValueChange={(v) => handleUpdateField(idx, 'reuseTarget', v)}>
+                                  <SelectTrigger className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="bg-[#0d121f] text-white">
+                                    {REUSE_TARGETS.map(t => <SelectItem key={t.id} value={t.id}>{t.label.toUpperCase()}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="md:col-span-4 space-y-3">
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase">Campo Mapeado</Label>
+                                <Select value={item.targetField} onValueChange={(v) => handleUpdateField(idx, 'targetField', v)}>
+                                  <SelectTrigger className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="bg-[#0d121f] text-white">
+                                    {TARGET_FIELDS_BY_REUSE_TARGET[item.reuseTarget || "caseDetails"]?.map(f => (
+                                      <SelectItem key={f.id} value={f.id}>{f.label.toUpperCase()}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="md:col-span-2 space-y-3">
+                                <Label className="text-[9px] font-black text-muted-foreground uppercase">Prioridade</Label>
+                                <Select value={item.reusePriority} onValueChange={(v) => handleUpdateField(idx, 'reusePriority', v)}>
+                                  <SelectTrigger className="bg-black/40 border-white/5 h-11 text-white font-bold text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="bg-[#0d121f] text-white">
+                                    {REUSE_PRIORITIES.map(p => <SelectItem key={p.id} value={p.id}>{p.label.toUpperCase()}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {editorStep === "revisao" && (
+                <div className="space-y-10 animate-in zoom-in-95 duration-500">
+                  <div className="p-10 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/20 text-center space-y-6 shadow-2xl">
+                    <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto animate-bounce" />
+                    <div className="space-y-2">
+                      <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Matriz Saneada</h3>
+                      <p className="text-muted-foreground text-[11px] font-black uppercase tracking-[0.3em]">REVISÃO FINAL DE ARQUITETURA CONCLUÍDA.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Card className="glass border-white/5 p-8 rounded-3xl space-y-6 shadow-xl">
+                      <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <h4 className="text-xs font-black text-white uppercase tracking-widest">Consolidado Geral</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <div><p className="text-[9px] font-black text-muted-foreground uppercase mb-1">Título Oficial</p><p className="text-sm font-bold text-white uppercase">{title}</p></div>
+                        <div><Badge variant="outline" className="border-primary/30 text-primary font-black uppercase text-[10px] px-4">{category}</Badge></div>
+                      </div>
+                    </Card>
+                    <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-3xl space-y-6 shadow-xl">
+                      <div className="flex items-center gap-3 border-b border-primary/10 pb-4">
+                        <Layers className="h-5 w-5 text-primary" />
+                        <h4 className="text-xs font-black text-white uppercase tracking-widest">Resumo Técnico</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6 text-center">
+                        <div className="p-4 bg-black/40 rounded-2xl"><p className="text-2xl font-black text-white">{items.length}</p><p className="text-[8px] font-black text-muted-foreground uppercase">PERGUNTAS</p></div>
+                        <div className="p-4 bg-black/40 rounded-2xl"><p className="text-2xl font-black text-primary">{items.filter(i => i.reuseEnabled).length}</p><p className="text-[8px] font-black text-muted-foreground uppercase">REUSO DADOS</p></div>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/60 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-12 hover:text-white">Descartar</Button>
+            <div className="flex gap-4">
+              {currentStepIndex > 0 && <Button variant="outline" onClick={() => setEditorStep(EDITOR_STEPS[currentStepIndex - 1].id)} className="h-12 border-white/10 text-white font-black uppercase text-[11px] px-8 rounded-xl"><ArrowLeft className="h-4 w-4 mr-2" /> ANTERIOR</Button>}
+              <Button 
+                onClick={editorStep === "revisao" ? handleSave : () => setEditorStep(EDITOR_STEPS[currentStepIndex + 1].id)} 
+                className="gold-gradient text-background font-black h-14 px-12 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest gap-3"
+              >
+                {editorStep === "revisao" ? <ShieldCheck className="h-5 w-5" /> : null}
+                {editorStep === "revisao" ? "SALVAR E PUBLICAR NA BANCA" : "PRÓXIMO RITO"}
+                {editorStep !== "revisao" ? <ChevronRight className="h-5 w-5" /> : null}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh] font-sans">
+          <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
+            <div className="flex items-center gap-8">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
+                <Eye className="h-8 w-8" />
+              </div>
+              <div className="text-left space-y-2">
+                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{viewingList?.title}</DialogTitle>
+                <div className="flex items-center gap-4">
+                  <Badge className="bg-primary text-background font-black uppercase text-[10px] px-4 h-7 rounded-full">{viewingList?.category}</Badge>
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">• {viewingList?.legalArea}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-12 space-y-10">
+              <div className="p-8 rounded-3xl bg-white/[0.01] border border-white/5 space-y-4 shadow-inner">
+                <Label className="text-[10px] font-black text-primary uppercase tracking-widest opacity-50">Contexto da Matriz</Label>
+                <p className="text-base text-white/80 leading-relaxed font-medium uppercase">{viewingList?.description || "Sem descrição técnica."}</p>
+              </div>
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                  <Layers className="h-5 w-5 text-primary" />
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest">DNA de Captura ({viewingList?.items?.length || 0})</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  {viewingList?.items?.map((item: any, i: number) => (
+                    <div key={i} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-lg">
+                      <div className="flex items-center gap-6">
+                        <span className="text-xs font-mono font-bold text-muted-foreground/30">#{i + 1}</span>
                         <div>
                           <p className="text-sm font-bold text-white uppercase tracking-tight">{item.label}</p>
-                          <div className="flex items-center gap-3 mt-1.5">
+                          <div className="flex items-center gap-3 mt-2">
                             <Badge variant="secondary" className="bg-white/5 text-[8px] font-black uppercase text-muted-foreground">{item.type}</Badge>
-                            {item.required && <Badge variant="outline" className="border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase">Obrigatório</Badge>}
-                            {item.balizaObrigatoria && <Badge variant="outline" className="border-amber-500/20 text-amber-500 text-[8px] font-black uppercase">Baliza IA</Badge>}
+                            {item.required && <Badge className="bg-rose-500/10 text-rose-500 border-0 text-[8px] font-black uppercase">Obrigatório</Badge>}
+                            {item.balizaObrigatoria && <Badge className="bg-amber-500/10 text-amber-500 border-0 text-[8px] font-black uppercase">Baliza IA</Badge>}
                           </div>
                         </div>
                       </div>
-                      {item.reuseEnabled && (
-                        <div className="flex items-center gap-2 text-primary/40 group-hover:text-primary transition-colors">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="text-[8px] font-black uppercase tracking-widest">Reaproveitável</span>
-                        </div>
-                      )}
+                      {item.reuseEnabled && <CheckCircle2 className="h-5 w-5 text-primary opacity-20 group-hover:opacity-100 transition-all" />}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           </ScrollArea>
-
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex-none">
-            <Button variant="ghost" onClick={() => setIsViewDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-14 hover:text-white transition-colors">
-              FECHAR DOSSIÊ
-            </Button>
+            <Button onClick={() => setIsViewDialogOpen(false)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl">FECHAR DOSSIÊ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col h-[95vh] font-sans gap-0">
-          {/* Header Editor de Modelo */}
-          <div className="p-8 md:p-10 bg-[#0a0f1e] border-b border-white/5 space-y-6 flex-none">
-            <DialogHeader>
-              <div className="flex items-center gap-4 mb-2">
-                <FileEdit className="h-8 w-8 text-primary" />
-                <DialogTitle className="text-white font-headline text-4xl uppercase tracking-tighter">
-                  Editor de Modelo
-                </DialogTitle>
-              </div>
-              <DialogDescription className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                Desenvolva o passo a passo padrão para as rotinas do escritório.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">
-                  ETAPA {currentStepIndex + 1}/{EDITOR_STEPS.length}
-                </p>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  {EDITOR_STEPS[currentStepIndex]?.label}
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {EDITOR_STEPS.map((step, index) => (
-                  <button
-                    key={step.id}
-                    type="button"
-                    onClick={() => setEditorStep(step.id)}
-                    className={cn(
-                      "h-11 rounded-xl border text-[10px] font-black uppercase tracking-[0.2em] transition-all",
-                      editorStep === step.id
-                        ? "border-primary bg-primary text-[#0a0f1e]"
-                        : "border-white/10 bg-black/30 text-muted-foreground hover:text-white hover:border-primary/40",
-                      index <= currentStepIndex && editorStep !== step.id && "text-white/80"
-                    )}
-                  >
-                    {step.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="p-8 md:p-10 space-y-12">
-              {editorStep === "geral" && (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                  <div className="md:col-span-8 space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO DO CHECKLIST *</Label>
-                    <Input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value.toUpperCase())}
-                      placeholder="Ex: PROTOCOLO DE INICIAL TRABALHISTA"
-                      className="bg-black/40 border-white/10 h-14 text-white font-bold focus:ring-1 focus:ring-primary/50"
-                    />
-                  </div>
-                  <div className="md:col-span-4 space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">CATEGORIA</Label>
-                    <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="bg-black/40 border-primary h-14 text-white ring-1 ring-primary/20">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                        {CATEGORIES.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <cat.icon className="h-3.5 w-3.5 opacity-50" />
-                              {cat.label.toUpperCase()}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="md:col-span-12 space-y-2">
-                    <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                      <Scale className="h-3.5 w-3.5" /> ÁREA JURÍDICA VINCULADA
-                    </Label>
-                    <Select value={legalArea} onValueChange={handleLegalAreaChange}>
-                      <SelectTrigger className="bg-black/40 border-primary h-14 text-white ring-1 ring-primary/20">
-                        <SelectValue placeholder="Selecione a área para vincular esta entrevista..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                        {LEGAL_AREAS.map(area => (
-                          <SelectItem key={area} value={area}>{area.toUpperCase()}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[9px] text-muted-foreground italic font-medium uppercase tracking-tight">
-                      * AO TROCAR A AREA, O PADRAO DA AREA E APLICADO MEDIANTE CONFIRMACAO.
-                    </p>
-                  </div>
-
-                  <div className="md:col-span-12 space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DESCRIÇÃO / FINALIDADE</Label>
-                    <Textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Descreva quando e por quem este checklist deve ser executado..."
-                      className="bg-black/40 border-white/10 min-h-[120px] text-white text-sm focus:ring-1 focus:ring-primary/50 resize-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {editorStep === "perguntas" && (
-                <div className="space-y-8">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3">
-                        <LayoutGrid className="h-5 w-5" /> ELEMENTOS DA ENTREVISTA
-                      </h4>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Defina as perguntas e campos de captura de dados.</p>
-                      <p className="text-[9px] font-bold text-primary/80 uppercase tracking-wider">
-                        Voce pode aplicar o padrao da area selecionada e editar tudo em seguida.
-                      </p>
-                      <div className="flex items-center gap-2 pt-1">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[9px] font-black uppercase tracking-widest",
-                            items.length >= MIN_QUESTIONS_REQUIRED
-                              ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/5"
-                              : "border-amber-500/40 text-amber-300 bg-amber-500/5"
-                          )}
-                        >
-                          {items.length} PERGUNTA{items.length === 1 ? "" : "S"} CRIADA{items.length === 1 ? "" : "S"}
-                        </Badge>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                          mínimo: {MIN_QUESTIONS_REQUIRED}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full sm:w-auto border-primary/35 bg-primary/5 text-primary hover:bg-primary hover:text-[#0a0f1e] font-black uppercase text-[10px] tracking-widest gap-2 h-12 px-6"
-                          >
-                            <ListPlus className="h-4 w-4" /> PERGUNTAS PRONTAS
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-80 max-h-[65vh] overflow-y-auto bg-[#0d121f] border-white/10 text-white"
-                        >
-                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                            Biblioteca tatica
-                          </DropdownMenuLabel>
-                          <DropdownMenuSeparator className="bg-white/10" />
-                          <DropdownMenuItem
-                            onClick={() => handleApplyDefaultChecklist(legalArea)}
-                            className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
-                          >
-                            <ShieldCheck className="h-4 w-4 text-primary" /> APLICAR PADRAO {legalArea.toUpperCase()} ({selectedAreaPreset.templateIds.length})
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/10" />
-                          <DropdownMenuItem
-                            onClick={handleAddStarterPack}
-                            className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
-                          >
-                            <PlusCircle className="h-4 w-4 text-primary" /> INSERIR PACOTE RAPIDO ({READY_TEMPLATE_STARTER_PACK.length})
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleAddAreaPack(legalArea)}
-                            className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
-                          >
-                            <Plus className="h-4 w-4 text-primary" /> SOMAR PACOTE {legalArea.toUpperCase()} ({selectedAreaPreset.templateIds.length})
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/10" />
-                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
-                            Aplicar por area
-                          </DropdownMenuLabel>
-                          {LEGAL_AREAS.map((area) => (
-                            <DropdownMenuItem
-                              key={`preset-${area}`}
-                              onClick={() => handleApplyDefaultChecklist(area)}
-                              className="text-[10px] font-black uppercase tracking-widest focus:bg-primary/20"
-                            >
-                              APLICAR {area.toUpperCase()}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuSeparator className="bg-white/10" />
-                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
-                            Perguntas individuais ({legalArea.toUpperCase()})
-                          </DropdownMenuLabel>
-                          {selectedAreaTemplates.map((template) => (
-                            <DropdownMenuItem
-                              key={template.id}
-                              onClick={() => handleAddReadyQuestionById(template.id)}
-                              className="text-[10px] font-bold uppercase tracking-wide focus:bg-primary/20"
-                            >
-                              {template.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      <Button
-                        onClick={handleAddField}
-                        className="w-full sm:w-auto gold-gradient text-background font-black uppercase text-[11px] tracking-widest gap-2 h-12 px-8 rounded-xl shadow-xl shadow-primary/10"
-                      >
-                        <Plus className="h-4 w-4" /> ADICIONAR PERGUNTA
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {items.length === 0 ? (
-                      <div className="p-20 border-2 border-dashed border-white/5 rounded-[2rem] text-center space-y-6 opacity-20">
-                        <div className="w-20 h-20 rounded-full border border-white/10 mx-auto flex items-center justify-center">
-                          <ListPlus className="h-10 w-10 text-primary" />
-                        </div>
-                        <p className="text-xs font-black uppercase tracking-[0.5em]">Nenhum elemento tático definido.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {items.map((item, idx) => (
-                          <div key={idx} className="p-5 rounded-[1.25rem] bg-white/[0.02] border border-white/5 space-y-4 relative group hover:border-primary/20 transition-all">
-                            <div className="flex justify-between items-center">
-                              <Badge variant="outline" className="text-[10px] font-black text-primary border-primary/20 bg-primary/5 px-4">ITEM #{idx + 1}</Badge>
-                              <button
-                                onClick={() => handleRemoveField(idx)}
-                                className="text-rose-500 hover:text-white hover:bg-rose-500/20 p-2.5 rounded-xl transition-all"
-                              >
-                                <X className="h-5 w-5" />
-                              </button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                              <div className="md:col-span-7 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">PERGUNTA / RÓTULO DE CAMPO</Label>
-                                <Input
-                                  value={item.label}
-                                  onChange={(e) => handleUpdateField(idx, 'label', e.target.value.toUpperCase())}
-                                  className="bg-black/20 border-white/10 h-12 text-sm text-white font-bold focus:ring-1 focus:ring-primary/50"
-                                  placeholder="EX: QUAL O ÚLTIMO SALÁRIO NOMINAL?"
-                                />
-                              </div>
-                              <div className="md:col-span-3 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">INTELIGÊNCIA DE RESPOSTA</Label>
-                                <Select value={item.type} onValueChange={(v) => handleUpdateField(idx, 'type', v)}>
-                                  <SelectTrigger className="bg-black/20 border-primary h-12 text-[10px] text-white uppercase font-black ring-1 ring-primary/20">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                                    {FIELD_TYPES.map(type => (
-                                      <SelectItem key={type.id} value={type.id}>
-                                        <div className="flex items-center gap-3">
-                                          <type.icon className="h-4 w-4 opacity-50" />
-                                          {type.label.toUpperCase()}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="md:col-span-2 flex items-center gap-3 pb-2">
-                                <Switch
-                                  id={`req-${idx}`}
-                                  checked={item.required}
-                                  onCheckedChange={(v) => handleUpdateField(idx, 'required', v)}
-                                  className="data-[state=checked]:bg-emerald-500"
-                                />
-                                <Label htmlFor={`req-${idx}`} className="text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer">
-                                  <ShieldCheck className="h-4 w-4 text-emerald-500" /> OBRIGATÓRIO
-                                </Label>
-                              </div>
-                            </div>
-
-                            {/* SISTEMA DE REUSO DE DADOS */}
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                              <div className="md:col-span-3 flex items-center gap-3 pb-2">
-                                <Switch
-                                  id={`reuse-${idx}`}
-                                  checked={Boolean(item.reuseEnabled)}
-                                  onCheckedChange={(v) => handleUpdateField(idx, 'reuseEnabled', v)}
-                                  className="data-[state=checked]:bg-primary"
-                                />
-                                <Label htmlFor={`reuse-${idx}`} className="text-[9px] font-black text-white uppercase tracking-widest cursor-pointer">
-                                  REAPROVEITAR DADOS
-                                </Label>
-                              </div>
-
-                              <div className="md:col-span-3 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">DESTINO DO DADO</Label>
-                                <Select
-                                  value={item.reuseTarget || "caseDetails"}
-                                  onValueChange={(v) => {
-                                    const fallbackField = TARGET_FIELDS_BY_REUSE_TARGET[v]?.[0]?.id || ""
-                                    setItems((prev) => {
-                                      const next = [...prev]
-                                      next[idx] = {
-                                        ...next[idx],
-                                        reuseTarget: v,
-                                        targetField: fallbackField,
-                                      }
-                                      return next
-                                    })
-                                  }}
-                                  disabled={!item.reuseEnabled}
-                                >
-                                  <SelectTrigger className="bg-black/20 border-primary h-11 text-[10px] text-white uppercase font-black ring-1 ring-primary/20 disabled:opacity-50">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                                    {REUSE_TARGETS.map(target => (
-                                      <SelectItem key={target.id} value={target.id}>{target.label.toUpperCase()}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="md:col-span-4 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">CAMPO MAPEADO</Label>
-                                <Select
-                                  value={item.targetField || TARGET_FIELDS_BY_REUSE_TARGET[item.reuseTarget || "caseDetails"]?.[0]?.id || ""}
-                                  onValueChange={(v) => handleUpdateField(idx, 'targetField', v)}
-                                  disabled={!item.reuseEnabled}
-                                >
-                                  <SelectTrigger className="bg-black/20 border-primary h-11 text-[10px] text-white uppercase font-black ring-1 ring-primary/20 disabled:opacity-50">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                                    {(TARGET_FIELDS_BY_REUSE_TARGET[item.reuseTarget || "caseDetails"] || []).map((field) => (
-                                      <SelectItem key={field.id} value={field.id}>{field.label.toUpperCase()}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="md:col-span-2 space-y-2">
-                                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">PRIORIDADE</Label>
-                                <Select
-                                  value={item.reusePriority || "media"}
-                                  onValueChange={(v) => handleUpdateField(idx, 'reusePriority', v)}
-                                  disabled={!item.reuseEnabled}
-                                >
-                                  <SelectTrigger className="bg-black/20 border-primary h-11 text-[10px] text-white uppercase font-black ring-1 ring-primary/20 disabled:opacity-50">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                                    {REUSE_PRIORITIES.map(priority => (
-                                      <SelectItem key={priority.id} value={priority.id}>{priority.label.toUpperCase()}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="md:col-span-3 flex items-center gap-3 pb-2">
-                                <Switch
-                                  id={`baliza-${idx}`}
-                                  checked={Boolean(item.balizaObrigatoria)}
-                                  onCheckedChange={(v) => handleUpdateField(idx, 'balizaObrigatoria', v)}
-                                  className="data-[state=checked]:bg-amber-500"
-                                />
-                                <Label htmlFor={`baliza-${idx}`} className="text-[9px] font-black text-white uppercase tracking-widest cursor-pointer">
-                                  BALIZA OBRIGATÓRIA (IA)
-                                </Label>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {editorStep === "revisao" && (
-                <div className="space-y-6">
-                  <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 flex items-start gap-4 shadow-xl">
-                    {title.trim() && items.length > 0 ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
-                    )}
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Validação do Modelo</p>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {title.trim() && items.length > 0
-                          ? "Modelo pronto para disponibilizar na banca."
-                          : "Complete os dados obrigatórios para finalizar a publicação."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-white/[0.02] border-white/10 shadow-lg">
-                      <CardContent className="p-6 space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Dados Gerais</p>
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Título</p>
-                          <p className="text-sm font-black text-white">{title || "NÃO INFORMADO"}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Categoria</p>
-                          <p className="text-sm font-black text-white">{category.toUpperCase()}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Área Jurídica</p>
-                          <p className="text-sm font-black text-white">{legalArea.toUpperCase()}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-white/[0.02] border-white/10 shadow-lg">
-                      <CardContent className="p-6 space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">DNA de Captura</p>
-                        <p className="text-3xl font-black text-white">{items.length}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">perguntas configuradas</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/30 text-primary bg-primary/5">
-                            {items.filter((item) => item.reuseEnabled).length} REAPROVEITÁVEIS
-                          </Badge>
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-amber-500/30 text-amber-300 bg-amber-500/5">
-                            {items.filter((item) => item.balizaObrigatoria).length} BALIZAS (IA)
-                          </Badge>
-                        </div>
-                        <Button
-                          onClick={() => setEditorStep("perguntas")}
-                          variant="outline"
-                          className="mt-2 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                        >
-                          <PlusCircle className="h-4 w-4 mr-2" /> Ajustar Inteligência
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card className="bg-white/[0.02] border-white/10 shadow-lg">
-                    <CardContent className="p-6 space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Descrição / Finalidade</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {description || "Sem descrição informada."}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          {/* Footer Editor de Modelo */}
-          <div className="p-8 md:p-10 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 flex-none">
-            <button 
-              onClick={() => setIsDialogOpen(false)} 
-              className="text-muted-foreground uppercase font-black text-[11px] tracking-[0.2em] hover:text-white transition-colors"
-            >
-              DESCARTAR ALTERAÇÕES
-            </button>
-
-            <div className="w-full md:w-auto flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePreviousStep}
-                disabled={!canGoBack}
-                className="h-12 border-white/15 bg-transparent text-white hover:bg-white/5 disabled:opacity-40"
-              >
-                VOLTAR
-              </Button>
-
-              {isLastStep ? (
-                <Button
-                  onClick={handleSave}
-                  className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-10 h-12 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
-                >
-                  <ShieldCheck className="h-5 w-5" /> SALVAR E DISPONIBILIZAR NA BANCA
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="w-full md:w-auto gold-gradient text-background font-black uppercase text-[12px] tracking-widest px-10 h-12 rounded-xl shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
-                >
-                  PRÓXIMO <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
-        open={isAreaChangeDialogOpen}
-        onOpenChange={(open) => {
-          setIsAreaChangeDialogOpen(open)
-          if (!open) {
-            setPendingAreaChange(null)
-          }
-        }}
-      >
-        <AlertDialogContent className="glass border-white/10 bg-[#0d121f] text-white font-sans shadow-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white text-xl font-black uppercase tracking-tight">
-              Aplicar padrao da area
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              A troca para {pendingAreaChange?.toUpperCase() || "NOVA AREA"} vai sobrescrever titulo, descricao e perguntas atuais.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1 shadow-inner">
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Impacto da troca</p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/90">
-              {currentQuestionsCount} pergunta(s) atual(is) -&gt; {pendingAreaQuestionsCount} pergunta(s) do novo padrao
-            </p>
-          </div>
-          {pendingAreaPreviewQuestions.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-2 shadow-inner">
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary/90">Preview das 3 primeiras</p>
-              <ul className="space-y-1">
-                {pendingAreaPreviewQuestions.map((question, index) => (
-                  <li key={`${question.id}-${index}`} className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider text-white/85">
-                    <span>{index + 1}. {question.label}</span>
-                    {question.balizaObrigatoria && (
-                      <span className="px-2 py-0.5 rounded-full border border-amber-400/30 bg-amber-500/10 text-[8px] font-black uppercase tracking-widest text-amber-300">
-                        Baliza
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {pendingAreaPreviewBalizasCount > 0 && (
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                  {pendingAreaPreviewBalizasCount} baliza(s) obrigatoria(s) neste preview
-                </p>
-              )}
-              {pendingAreaQuestionsCount > pendingAreaPreviewQuestions.length && (
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  ... e mais {pendingAreaQuestionsCount - pendingAreaPreviewQuestions.length} pergunta(s)
-                </p>
-              )}
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={handleCancelAreaChange}
-              className="border-white/15 bg-transparent text-white hover:bg-white/5 rounded-lg"
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmAreaChange}
-              className="gold-gradient text-background font-black uppercase tracking-widest rounded-lg shadow-lg"
-            >
-              Aplicar e sobrescrever
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
