@@ -37,7 +37,9 @@ import {
   Users,
   UserPlus,
   Building2,
-  ShieldAlert
+  ShieldAlert,
+  ExternalLink,
+  Globe
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -760,18 +762,19 @@ export default function MasterAgendaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA */}
+      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA - ENRIQUECIDO */}
       <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between shadow-xl flex-none">
+        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans h-[85vh]">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
             <div className="flex items-center gap-6">
               <div className={cn(
                 "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-2xl",
                 viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : 
                 viewingEvent?.eventType === 'freelance' ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" :
-                "bg-primary/10 border-primary/20 text-primary"
+                viewingEvent?.eventType === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
+                "bg-amber-500/10 border-amber-500/20 text-amber-500"
               )}>
-                <Gavel className="h-7 w-7" />
+                {viewingEvent?.eventType === 'audiencia' ? <Gavel className="h-7 w-7" /> : viewingEvent?.eventType === 'prazo' ? <Clock className="h-7 w-7" /> : <Target className="h-7 w-7" />}
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-3">
@@ -779,31 +782,59 @@ export default function MasterAgendaPage() {
                     "text-[9px] font-black uppercase tracking-widest px-2 h-5 border-0",
                     viewingEvent?.eventType === 'audiencia' ? 'bg-rose-500 text-white' : 
                     viewingEvent?.eventType === 'freelance' ? 'bg-cyan-500 text-black' :
-                    'bg-primary text-background'
+                    viewingEvent?.eventType === 'prazo' ? 'bg-primary text-background' :
+                    viewingEvent?.eventType === 'diligencia' ? 'bg-blue-500 text-white' :
+                    'bg-amber-500 text-background'
                   )}>
                     {viewingEvent?.eventType?.toUpperCase()}
                   </Badge>
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DETALHES DO ATO</span>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DETALHES DO ATO ESTRATÉGICO</span>
                 </div>
-                <DialogTitle className="text-xl font-black text-white uppercase tracking-tighter mt-1 leading-none">
+                <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter mt-1 leading-none">
                   {viewingEvent?.title}
                 </DialogTitle>
               </div>
             </div>
+            {viewingEvent?.status && (
+              <Badge variant="outline" className="border-primary/20 text-primary uppercase font-black text-[9px] px-4 h-8 bg-primary/5 rounded-full tracking-widest">
+                {viewingEvent.status}
+              </Badge>
+            )}
           </div>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="p-10 space-y-10 bg-[#05070a]">
+
+          <ScrollArea className="flex-1">
+            <div className="p-10 space-y-10 bg-[#05070a] pb-32">
+              
+              {/* Vínculo Estratégico (Novo) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <Label className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Cliente / Lead</Label>
+                  <div className="flex items-center gap-3">
+                    <UserIcon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-bold text-white uppercase">{viewingEvent?.clientName || 'NÃO VINCULADO'}</span>
+                  </div>
+                </div>
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <Label className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Protocolo CNJ</Label>
+                  <div className="flex items-center gap-3">
+                    <Scale className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-mono font-bold text-white uppercase">{viewingEvent?.processNumber || 'PENDENTE'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data e Hora */}
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data do Evento</Label>
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
+                  <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-4 shadow-inner">
                     <CalendarIcon className="h-5 w-5 text-primary" />
                     <span className="text-sm font-bold text-white uppercase">{viewingEvent?.date ? format(viewingEvent.date, "dd 'de' MMMM", { locale: ptBR }) : '---'}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Horário</Label>
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
+                  <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-4 shadow-inner">
                     <Clock className="h-5 w-5 text-primary" />
                     <span className="text-sm font-bold text-white font-mono">{viewingEvent?.date ? format(viewingEvent.date, "HH:mm") : '--:--'}</span>
                   </div>
@@ -811,58 +842,92 @@ export default function MasterAgendaPage() {
               </div>
               
               {viewingEvent?.isFreelance && (
-                <Card className="glass border-cyan-500/20 bg-cyan-500/5 p-6 rounded-2xl space-y-4">
-                  <div className="flex items-center gap-3">
+                <Card className="glass border-cyan-500/20 bg-cyan-500/5 p-8 rounded-3xl space-y-6 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-6 opacity-5"><Handshake className="h-20 w-20" /></div>
+                  <div className="flex items-center gap-3 border-b border-cyan-500/10 pb-3">
                     <Handshake className="h-5 w-5 text-cyan-400" />
-                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Dossiê Logístico Freelance</h4>
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Dossiê Logístico Freelance</h4>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-[8px] font-black text-muted-foreground uppercase">Repasse Honorário</p>
-                      <p className="text-sm font-black text-white">R$ {Number(viewingEvent.valueToPay || 0).toLocaleString('pt-BR')}</p>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Correspondente</p>
+                      <p className="text-sm font-black text-white uppercase">{viewingEvent.freelancerName}</p>
                     </div>
-                    <div className="space-y-1 text-right">
-                      <p className="text-[8px] font-black text-muted-foreground uppercase">Reembolsos Extras</p>
-                      <p className="text-sm font-black text-amber-400">R$ {Number(viewingEvent.extraExpenses || 0).toLocaleString('pt-BR')}</p>
+                    <div className="space-y-1.5 text-right">
+                      <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Honorário Repasse</p>
+                      <p className="text-xl font-black text-emerald-400">R$ {Number(viewingEvent.valueToPay || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                   </div>
                 </Card>
               )}
 
-              {viewingEvent?.location && (
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Localização / Juízo</Label>
-                  <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-inner">
+              {/* Localização / Juízo / Meet */}
+              <div className="space-y-4">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Localização / Ambiente Virtual</Label>
+                
+                {(viewingEvent?.meetingUrl || viewingEvent?.meetingLink) && (
+                  <Button 
+                    className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[11px] tracking-widest gap-4 rounded-2xl shadow-[0_15px_40px_rgba(16,185,129,0.25)] group"
+                    onClick={() => window.open(viewingEvent.meetingUrl || viewingEvent.meetingLink, "_blank")}
+                  >
+                    <Video className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                    ACESSAR SALA VIRTUAL (GOOGLE MEET)
+                  </Button>
+                )}
+
+                {viewingEvent?.location && (
+                  <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-inner">
                     <div className="flex items-center gap-4">
                       { (viewingEvent.meetingUrl || viewingEvent.meetingLink) ? <Video className="h-5 w-5 text-emerald-500" /> : <MapPin className="h-5 w-5 text-primary" /> }
-                      <span className="text-sm font-bold text-white uppercase truncate max-w-[300px]">{viewingEvent.location}</span>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-black text-muted-foreground uppercase opacity-40 block mb-0.5">Endereço Registrado</span>
+                        <span className="text-sm font-bold text-white uppercase truncate max-w-[400px]">{viewingEvent.location}</span>
+                      </div>
                     </div>
                     <div className="flex gap-2">
-                      {(viewingEvent.meetingUrl || viewingEvent.meetingLink) && (
-                        <button className="text-emerald-500 hover:text-emerald-400 transition-colors p-2 bg-emerald-500/10 rounded-lg" onClick={() => window.open(viewingEvent.meetingUrl || viewingEvent.meetingLink, "_blank")}>
-                          <Video className="h-4 w-4" />
-                        </button>
-                      )}
-                      <button className="text-white/20 hover:text-primary transition-colors p-2 hover:bg-white/5 rounded-lg" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}>
-                        <Navigation className="h-4 w-4" />
+                      <button 
+                        className="text-white/20 hover:text-primary transition-all p-3 hover:bg-white/5 rounded-xl border border-white/5" 
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}
+                      >
+                        <Navigation className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Notas Estratégicas */}
+              <div className="space-y-4">
+                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-3">
+                  <Target className="h-4 w-4 text-primary" /> Inteligência Tática & Pauta
+                </Label>
+                <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 shadow-inner min-h-[150px]">
+                  {viewingEvent?.notes ? (
+                    <p className="text-sm text-white/80 leading-relaxed italic whitespace-pre-wrap font-medium uppercase tracking-tight">
+                      {viewingEvent.notes}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground/30 font-black uppercase tracking-[0.4em] text-center mt-10">
+                      NENHUMA NOTA REGISTRADA
+                    </p>
+                  )}
                 </div>
-              )}
-              {viewingEvent?.notes && (
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Inteligência Tática</Label>
-                  <div className="p-6 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                    <p className="text-sm text-white/80 leading-relaxed italic whitespace-pre-wrap">{viewingEvent.notes}</p>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex justify-end flex-none">
-            <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">FECHAR</Button>
-          </DialogFooter>
+
+          <div className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between flex-none rounded-b-3xl gap-6">
+            <div className="flex items-center gap-4">
+              <ShieldAlert className="h-5 w-5 text-primary animate-pulse" />
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-50">Soberania Técnica Auditada • RGMJ</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">VOLTAR</Button>
+              <Button variant="outline" className="border-primary/30 text-primary font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl hover:bg-primary/10">
+                <Edit3 className="h-4 w-4 mr-3" /> RETIFICAR ATO
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -892,9 +957,9 @@ export default function MasterAgendaPage() {
             <DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Injetar Solicitante</DialogTitle>
           </div>
           <div className="p-8 space-y-6">
-            <div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Razão Social / Nome</Label><Input className="glass h-12 text-white font-bold" value={quickSolicitorData.name} onChange={e => setQuickSolicitorData({...quickSolicitorData, name: e.target.value.toUpperCase()})} /></div>
+            <div className="space-y-2"><Label className={labelMini}>Razão Social / Nome</Label><Input className="glass h-12 text-white font-bold" value={quickSolicitorData.name} onChange={e => setQuickSolicitorData({...quickSolicitorData, name: e.target.value.toUpperCase()})} /></div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label>
+              <Label className={labelMini}>Tipo</Label>
               <Select value={quickSolicitorData.type} onValueChange={v => setQuickSolicitorData({...quickSolicitorData, type: v})}>
                 <SelectTrigger className="glass h-12 text-white"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-[#0d121f] text-white">
@@ -914,3 +979,5 @@ export default function MasterAgendaPage() {
     </div>
   )
 }
+
+const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
