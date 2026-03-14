@@ -115,6 +115,12 @@ function SettingsContent() {
 
   const isAdmin = role === 'admin'
 
+  // Redirect URIs para o Hub
+  const REDIRECT_URIS = [
+    "http://localhost:9002/api/auth/callback/google",
+    "https://reinaldo-adv.vercel.app/api/auth/callback/google"
+  ]
+
   // Estados CRUD Usuários
   const [userSearchTerm, setUserSearchTerm] = useState("")
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
@@ -140,7 +146,7 @@ function SettingsContent() {
     )
   }, [team, userSearchTerm])
 
-  // Estados Financeiros (Parâmetros Fiscais)
+  // Estados Financeiros
   const [financialSettings, setFinancialSettings] = useState({
     issRate: 2.0,
     irRate: 1.5,
@@ -315,9 +321,8 @@ function SettingsContent() {
       "{{HORA_ATO}}": "14:30",
       "{{LOCAL_ATO}}": "RUA DO FÓRUM, Nº 123 - CENTRO",
       "{{LINK_ATO}}": "meet.google.com/rgmj-atend",
-      "{{SENHA_ATO}}": "RGMJ2024",
-      "{{NOME_ADVOGADO}}": "DR. REINALDO GONÇALVES",
-      "{{DESC_CURTA}}": "REUNIÃO TÁTICA DE ALINHAMENTO"
+      "{{VALOR}}": "R$ 1.500,00",
+      "{{DESCRICAO}}": "REUNIÃO TÁTICA DE ALINHAMENTO"
     }
     
     let rendered = template;
@@ -369,6 +374,77 @@ function SettingsContent() {
                 <div className="space-y-3"><Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CNPJ</Label><Input value={firmFormData.cnpj} onChange={(e) => setFirmFormData({...firmFormData, cnpj: maskCNPJ(e.target.value)})} className="bg-black/40 h-14 text-white font-mono" placeholder="00.000.000/0000-00" /></div>
               </div>
               <Button onClick={() => { setDocumentNonBlocking(doc(db!, 'settings', 'firm'), {...firmFormData, updatedAt: serverTimestamp()}, {merge: true}); toast({title: "Dados Salvos"}); }} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] px-10 shadow-2xl">SALVAR IDENTIDADE</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="seo" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
+            <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400 shadow-xl"><CloudLightning className="h-6 w-6" /></div>
+                <div>
+                  <CardTitle className="text-xl font-black text-white uppercase tracking-tighter">Google Workspace Hub</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">SINCRONISMO E SOBERANIA DIGITAL RGMJ.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className={labelMini}>E-mail Mestre (Admin Workspace)</Label>
+                  <Input value={googleConfig.masterEmail} onChange={e => setGoogleConfig({...googleConfig, masterEmail: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="rgmj.adv@gmail.com" />
+                </div>
+                <div className="space-y-3">
+                  <Label className={labelMini}>ID da Pasta Raiz (Google Drive)</Label>
+                  <Input value={googleConfig.rootFolderId} onChange={e => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})} className="bg-black/40 h-14 text-white font-mono text-xs" />
+                  <p className="text-[8px] text-primary/60 font-bold uppercase">Esta pasta conterá todos os dossiês de clientes e processos.</p>
+                </div>
+              </div>
+
+              <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-6">
+                <div className="flex items-center gap-3">
+                  <Lock className="h-4 w-4 text-primary" />
+                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Configuração OAuth 2.0</h4>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className={labelMini}>Client ID do Google Cloud</Label>
+                    <Input value={googleConfig.clientId} onChange={e => setGoogleConfig({...googleConfig, clientId: e.target.value})} className="bg-black/40 h-12 text-white font-mono text-xs" placeholder="000000000000-xxxxxxxxxxxx.apps.googleusercontent.com" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className={labelMini}>URIs de Redirecionamento Autorizados</Label>
+                    <div className="space-y-2">
+                      {REDIRECT_URIS.map(uri => (
+                        <div key={uri} className="flex items-center justify-between p-3 bg-black/60 rounded-lg border border-white/5">
+                          <code className="text-[10px] text-primary/80 font-mono">{uri}</code>
+                          <button onClick={() => { navigator.clipboard.writeText(uri); toast({title: "URI Copiada"}); }} className="text-white/20 hover:text-primary"><Copy className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { id: 'isDriveActive', label: 'Google Drive', icon: Database },
+                  { id: 'isCalendarActive', label: 'Google Calendar', icon: Calendar },
+                  { id: 'isMeetActive', label: 'Google Meet', icon: Video },
+                ].map(service => (
+                  <div key={service.id} className="p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <service.icon className="h-5 w-5 text-primary/40" />
+                      <span className="text-[10px] font-black text-white uppercase">{service.label}</span>
+                    </div>
+                    <Switch checked={(googleConfig as any)[service.id]} onCheckedChange={v => setGoogleConfig({...googleConfig, [service.id]: v})} className="data-[state=checked]:bg-emerald-500" />
+                  </div>
+                ))}
+              </div>
+
+              <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] px-10 shadow-2xl">
+                <Save className="h-5 w-5 mr-3" /> ATUALIZAR HUB DIGITAL
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -538,6 +614,18 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="tags" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {MESSAGE_PLACEHOLDERS.map((p) => (
+              <Card key={p.tag} className="glass border-white/5 p-8 hover:border-primary/30 transition-all group shadow-xl rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5"><Tag className="h-10 w-10" /></div>
+                <code className="text-primary font-black text-sm uppercase tracking-tight block mb-4">{p.tag}</code>
+                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-relaxed">{p.desc}</p>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
         <TabsContent value="kit" className="mt-0 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {KIT_TEMPLATES.map((item) => (
@@ -558,18 +646,6 @@ function SettingsContent() {
                 >
                   CUSTOMIZAR
                 </Button>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="tags" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {MESSAGE_PLACEHOLDERS.map((p) => (
-              <Card key={p.tag} className="glass border-white/5 p-8 hover:border-primary/30 transition-all group shadow-xl rounded-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5"><Tag className="h-10 w-10" /></div>
-                <code className="text-primary font-black text-sm uppercase tracking-tight block mb-4">{p.tag}</code>
-                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-relaxed">{p.desc}</p>
               </Card>
             ))}
           </div>
@@ -611,8 +687,6 @@ function SettingsContent() {
           
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
-              
-              {/* Lado Esquerdo: Editor */}
               <div className="lg:col-span-7 space-y-10">
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 border-b border-white/5 pb-3">
@@ -620,7 +694,7 @@ function SettingsContent() {
                     <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template do Calendário Google</h4>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Título do Evento na Agenda</Label>
+                    <Label className={labelMini}>Título do Evento na Agenda</Label>
                     <Input value={messageFormData.calendarTemplate} onChange={e => setMessageFormData({...messageFormData, calendarTemplate: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" />
                     <p className="text-[8px] text-primary/60 font-bold uppercase">Use as tags do dicionário para injeção dinâmica.</p>
                   </div>
@@ -632,7 +706,7 @@ function SettingsContent() {
                     <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template WhatsApp (Cliente)</h4>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Corpo da Mensagem de Confirmação</Label>
+                    <Label className={labelMini}>Corpo da Mensagem de Confirmação</Label>
                     <Textarea 
                       value={messageFormData.clientTemplate} 
                       onChange={e => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} 
@@ -644,22 +718,21 @@ function SettingsContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-6">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-black text-white uppercase tracking-widest">Gerar Meet Link?</Label>
+                      <Label className={labelMini}>Gerar Meet Link?</Label>
                       <Switch checked={messageFormData.useMeetLink} onCheckedChange={v => setMessageFormData({...messageFormData, useMeetLink: v})} className="data-[state=checked]:bg-emerald-500" />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-black text-white uppercase tracking-widest">Notificar WhatsApp?</Label>
+                      <Label className={labelMini}>Notificar WhatsApp?</Label>
                       <Switch checked={messageFormData.sendWhatsApp} onCheckedChange={v => setMessageFormData({...messageFormData, sendWhatsApp: v})} className="data-[state=checked]:bg-emerald-500" />
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Antecedência Alerta (Minutos)</Label>
+                    <Label className={labelMini}>Antecedência Alerta (Minutos)</Label>
                     <Input type="number" value={messageFormData.reminderMinutes} onChange={e => setMessageFormData({...messageFormData, reminderMinutes: Number(e.target.value)})} className="bg-black/40 h-14 text-white font-black text-center text-lg" />
                   </div>
                 </div>
               </div>
 
-              {/* Lado Direito: Simulador de Preview */}
               <div className="lg:col-span-5 space-y-8">
                 <div className="sticky top-0 space-y-6">
                   <div className="flex items-center gap-3 border-b border-white/5 pb-3">
@@ -669,50 +742,24 @@ function SettingsContent() {
 
                   <div className="bg-[#0b141a] rounded-[2rem] p-8 border border-white/5 shadow-2xl relative overflow-hidden min-h-[400px] flex flex-col">
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }} />
-                    
                     <div className="flex items-center gap-4 mb-8 relative z-10 border-b border-white/5 pb-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/20">
-                        <Scale className="h-5 w-5" />
-                      </div>
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/20"><Scale className="h-5 w-5" /></div>
                       <div>
                         <p className="text-xs font-black text-white uppercase tracking-wider">RGMJ ADVOGADOS</p>
                         <p className="text-[8px] text-emerald-500 font-bold uppercase">Online agora</p>
                       </div>
                     </div>
-
                     <div className="flex-1 flex flex-col justify-end relative z-10">
                       <div className="bg-[#1f2c33] p-6 rounded-tr-3xl rounded-bl-3xl rounded-br-3xl shadow-xl max-w-[90%] animate-in fade-in slide-in-from-left-4 duration-500">
                         <div className="absolute -left-3 top-0 w-0 h-0 border-t-[15px] border-t-[#1f2c33] border-l-[15px] border-l-transparent" />
-                        
-                        <p className="text-white text-[13px] leading-relaxed whitespace-pre-wrap font-normal italic">
-                          {renderMessagePreview(messageFormData.clientTemplate)}
-                        </p>
-                        
+                        <p className="text-white text-[13px] leading-relaxed whitespace-pre-wrap font-normal italic">{renderMessagePreview(messageFormData.clientTemplate)}</p>
                         <div className="flex items-center justify-end gap-1.5 mt-3">
                           <span className="text-[9px] text-white/40 font-medium">{new Date().getHours()}:{new Date().getMinutes().toString().padStart(2, '0')}</span>
-                          <div className="flex">
-                            <CheckCircle2 className="w-3 h-3 text-sky-400 -mr-1.5" />
-                            <CheckCircle2 className="w-3 h-3 text-sky-400" />
-                          </div>
+                          <div className="flex"><CheckCircle2 className="w-3 h-3 text-sky-400 -mr-1.5" /><CheckCircle2 className="w-3 h-3 text-sky-400" /></div>
                         </div>
                       </div>
                     </div>
-
-                    <div className="mt-8 pt-4 border-t border-white/5 text-center relative z-10">
-                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-30 flex items-center justify-center gap-2">
-                        <ShieldCheck className="h-3 w-3" /> SOBERANIA TÉCNICA RGMJ
-                      </p>
-                    </div>
                   </div>
-
-                  <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl shadow-xl">
-                    <div className="flex items-start gap-4">
-                      <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-white/70 font-bold uppercase leading-relaxed tracking-wider">
-                        Os dados acima são fictícios para fins de teste. No envio real, o sistema cruzará os dados do <span className="text-primary">LEAD/PROCESSO</span> com o template configurado.
-                      </p>
-                    </div>
-                  </Card>
                 </div>
               </div>
             </div>
@@ -720,9 +767,7 @@ function SettingsContent() {
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
             <Button variant="ghost" onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
-            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black h-14 px-12 rounded-xl shadow-2xl uppercase text-[11px] flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5" /> CONSOLIDAR RITO
-            </Button>
+            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black h-14 px-12 rounded-xl shadow-2xl uppercase text-[11px] flex items-center gap-3"><ShieldCheck className="h-5 w-5" /> CONSOLIDAR RITO</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -731,45 +776,28 @@ function SettingsContent() {
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingUser ? "Retificar Acesso" : "Novo Acesso RGMJ"}</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingUser ? "Retificar Acesso" : "Novo Acesso RGMJ"}</DialogTitle></DialogHeader>
           </div>
           <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
-            <div className="space-y-3">
-              <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nome Completo *</Label>
-              <Input value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" />
-            </div>
-            <div className="space-y-3">
-              <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">E-mail Google *</Label>
-              <Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="usuario@gmail.com" />
-            </div>
+            <div className="space-y-3"><Label className={labelMini}>Nome Completo *</Label><Input value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+            <div className="space-y-3"><Label className={labelMini}>E-mail Google *</Label><Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="usuario@gmail.com" /></div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Perfil de Comando</Label>
+                <Label className={labelMini}>Perfil de Comando</Label>
                 <Select value={userFormData.role} onValueChange={(v) => setUserFormData({...userFormData, role: v})}>
                   <SelectTrigger className="bg-black/40 h-14 text-white font-black text-[10px] uppercase"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[#0d121f] text-white">
-                    <SelectItem value="admin">ADMINISTRADOR</SelectItem>
-                    <SelectItem value="lawyer">ADVOGADO</SelectItem>
-                    <SelectItem value="assistant">ASSISTENTE</SelectItem>
-                  </SelectContent>
+                  <SelectContent className="bg-[#0d121f] text-white"><SelectItem value="admin">ADMINISTRADOR</SelectItem><SelectItem value="lawyer">ADVOGADO</SelectItem><SelectItem value="assistant">ASSISTENTE</SelectItem></SelectContent>
                 </Select>
               </div>
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</Label>
-                <div className="h-14 flex items-center justify-between px-4 bg-black/40 rounded-xl">
-                  <span className="text-[10px] font-black text-white">{userFormData.isActive ? "ATIVO" : "BLOQUEADO"}</span>
-                  <Switch checked={userFormData.isActive} onCheckedChange={(v) => setUserFormData({...userFormData, isActive: v})} className="data-[state=checked]:bg-emerald-500" />
-                </div>
+                <Label className={labelMini}>Status</Label>
+                <div className="h-14 flex items-center justify-between px-4 bg-black/40 rounded-xl"><span className="text-[10px] font-black text-white">{userFormData.isActive ? "ATIVO" : "BLOQUEADO"}</span><Switch checked={userFormData.isActive} onCheckedChange={(v) => setUserFormData({...userFormData, isActive: v})} className="data-[state=checked]:bg-emerald-500" /></div>
               </div>
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
             <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
-            <Button onClick={handleSaveUser} className="gold-gradient text-background font-black h-14 px-10 rounded-xl shadow-2xl uppercase text-[11px] flex items-center gap-3">
-              <UserCheck className="h-5 w-5" /> CONFIRMAR ACESSO
-            </Button>
+            <Button onClick={handleSaveUser} className="gold-gradient text-background font-black h-14 px-10 rounded-xl shadow-2xl uppercase text-[11px] flex items-center gap-3"><UserCheck className="h-5 w-5" /> CONFIRMAR ACESSO</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
