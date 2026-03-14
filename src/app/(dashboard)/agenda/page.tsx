@@ -332,17 +332,18 @@ export default function MasterAgendaPage() {
       typeForGoogle = 'freelance'
     }
 
-    addDocumentNonBlocking(collection(db, targetCollection), {
+    const docRefRes = await addDocumentNonBlocking(collection(db, targetCollection), {
       ...payload,
       createdAt: serverTimestamp()
     })
+    const docRefId = (docRefRes as any).id;
 
-    // Sincronismo com Google Calendar
+    // Sincronismo com Google Calendar + Meet + Mensagem
     try {
-      const token = localStorage.getItem('google_access_token') // Assume token centralizado
-      if (token) {
-        await pushActToGoogleCalendar({
-          accessToken: token,
+      const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+      if (accessToken) {
+        const calRes = await pushActToGoogleCalendar({
+          accessToken,
           act: {
             title: payload.title,
             description: payload.notes,
@@ -350,13 +351,29 @@ export default function MasterAgendaPage() {
             startDateTime: createMode === 'prazo' ? `${newEventData.date}T00:00:00` : dateTime,
             type: typeForGoogle,
             processNumber: payload.processNumber,
-            clientName: payload.clientName
+            clientName: payload.clientName,
+            useMeet: true // Tenta gerar Meet link por padrão na agenda
           }
         })
+        
+        if (calRes && calRes.hangoutLink) {
+          updateDocumentNonBlocking(doc(db, targetCollection, docRefId), {
+            meetingUrl: calRes.hangoutLink,
+            calendarEventId: calRes.id,
+            updatedAt: serverTimestamp()
+          })
+        }
         toast({ title: "Ato Sincronizado com Workspace" })
       }
     } catch (e) {
-      console.warn("Sync Google failed, focusing on Firestore persistence.")
+      console.warn("Sync Google failed, focusing on Firestore persistence.", e)
+    }
+
+    // Disparo WhatsApp rápido
+    if (newEventData.partyContact) {
+      const cleanPhone = newEventData.partyContact.replace(/\D/g, "");
+      const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}. Dr. Reinaldo - RGMJ.`
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
     }
 
     toast({ title: "Ato Injetado na Pauta" })
@@ -374,9 +391,9 @@ export default function MasterAgendaPage() {
               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
             </h2>
             <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-primary/10 hover:text-primary" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-6 w-6" /></Button>
+              <button className="h-10 w-10 text-white hover:bg-primary/10 hover:text-primary flex items-center justify-center rounded-xl" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-6 w-6" /></button>
               <Button variant="secondary" className="h-10 px-6 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/10 rounded-xl" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-primary/10 hover:text-primary" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-6 w-6" /></Button>
+              <button className="h-10 w-10 text-white hover:bg-primary/10 hover:text-primary flex items-center justify-center rounded-xl" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-6 w-6" /></button>
             </div>
           </div>
 
@@ -728,7 +745,7 @@ export default function MasterAgendaPage() {
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Notas Estratégicas</Label>
-                <Textarea value={newEventData.notes} onChange={(e) => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/20 border-white/10 min-h-[100px] text-white text-xs resize-none p-4 rounded-xl" />
+                <Textarea value={newEventData.notes} onChange={(e) => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 border-white/10 min-h-[100px] text-white text-xs resize-none p-4 rounded-xl" />
               </div>
             </div>
           </ScrollArea>
@@ -817,12 +834,19 @@ export default function MasterAgendaPage() {
                   <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Localização / Juízo</Label>
                   <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-inner">
                     <div className="flex items-center gap-4">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-bold text-white uppercase">{viewingEvent.location}</span>
+                      { (viewingEvent.meetingUrl || viewingEvent.meetingLink) ? <Video className="h-5 w-5 text-emerald-500" /> : <MapPin className="h-5 w-5 text-primary" /> }
+                      <span className="text-sm font-bold text-white uppercase truncate max-w-[300px]">{viewingEvent.location}</span>
                     </div>
-                    <button className="text-white/20 hover:text-primary transition-colors" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}>
-                      <Navigation className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      {(viewingEvent.meetingUrl || viewingEvent.meetingLink) && (
+                        <button className="text-emerald-500 hover:text-emerald-400 transition-colors p-2 bg-emerald-500/10 rounded-lg" onClick={() => window.open(viewingEvent.meetingUrl || viewingEvent.meetingLink, "_blank")}>
+                          <Video className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button className="text-white/20 hover:text-primary transition-colors p-2 hover:bg-white/5 rounded-lg" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")}>
+                        <Navigation className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

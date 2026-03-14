@@ -67,7 +67,8 @@ import {
   TriangleAlert,
   CalendarDays,
   ChevronDown,
-  Library
+  Library,
+  Globe
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -120,6 +121,8 @@ import { ActivityManager } from "@/components/leads/activity-manager"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Switch } from "@/components/ui/switch"
+import { pushActToGoogleCalendar } from "@/services/google-calendar"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -170,7 +173,7 @@ export default function LeadsPage() {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
-  const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "" })
+  const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "", autoMeet: true })
 
   const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
   const [deadlineData, setDeadlineData] = useState({ 
@@ -227,7 +230,8 @@ export default function LeadsPage() {
         type: activeLead.meetingType || "online", 
         locationType: activeLead.locationType || "sede", 
         customAddress: activeLead.customAddress || "", 
-        observations: activeLead.intakeObservations || "" 
+        observations: activeLead.intakeObservations || "",
+        autoMeet: true
       })
     }
   }, [activeLead?.id])
@@ -266,7 +270,9 @@ export default function LeadsPage() {
 
   const handleScheduleIntake = async () => {
     if (!db || !activeLead || !intakeData.date || !intakeData.time) return
-    const finalLocation = intakeData.type === 'online' ? 'Virtual RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
+    const finalLocation = intakeData.type === 'online' ? 'GOOGLE MEET RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
+    
+    // 1. Salva no Firestore
     const payload = { 
       scheduledDate: intakeData.date, 
       scheduledTime: intakeData.time, 
@@ -275,8 +281,9 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp() 
     }
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
-    addDocumentNonBlocking(collection(db, "appointments"), { 
-      title: `Atendimento: ${activeLead.name}`, 
+    
+    const appointmentRes = await addDocumentNonBlocking(collection(db, "appointments"), { 
+      title: `TRIAGEM: ${activeLead.name}`, 
       type: "Atendimento", 
       startDateTime: `${intakeData.date}T${intakeData.time}:00`, 
       clientId: activeLead.id, 
@@ -285,8 +292,46 @@ export default function LeadsPage() {
       status: "Agendado", 
       createdAt: serverTimestamp() 
     })
+    const appointmentId = (appointmentRes as any).id;
+
+    // 2. Sincroniza com Google Calendar + Meet
+    try {
+      const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+      if (accessToken) {
+        const calRes = await pushActToGoogleCalendar({
+          accessToken,
+          act: {
+            title: `[TRIAGEM] ${activeLead.name}`,
+            description: `Atendimento inicial do lead RGMJ.`,
+            location: finalLocation,
+            startDateTime: `${intakeData.date}T${intakeData.time}:00`,
+            type: 'atendimento',
+            clientName: activeLead.name,
+            useMeet: intakeData.type === 'online' && intakeData.autoMeet
+          }
+        })
+
+        if (calRes && calRes.hangoutLink) {
+          updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
+            meetingUrl: calRes.hangoutLink,
+            updatedAt: serverTimestamp()
+          })
+          toast({ title: "Workspace Sincronizado", description: "Google Meet criado com sucesso." })
+        }
+      }
+    } catch (e) {
+      console.warn("Calendar sync failed", e)
+    }
+
+    // 3. Disparo WhatsApp
+    if (activeLead.phone) {
+      const cleanPhone = activeLead.phone.replace(/\D/g, "");
+      const msg = `Olá ${activeLead.name}! Seu atendimento de TRIAGEM foi agendado para o dia ${new Date(intakeData.date).toLocaleDateString('pt-BR')} às ${intakeData.time}. Modalidade: ${intakeData.type === 'online' ? 'VIRTUAL (Meet)' : 'PRESENCIAL'}. Dr. Reinaldo - RGMJ.`
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
+    }
+
     setIsSchedulingIntake(false)
-    toast({ title: "Atendimento Agendado" })
+    toast({ title: "Rito de Agendamento Concluído" })
   }
 
   const handleStartInterview = (t: any) => { setExecutingTemplate(t); setIsInterviewDialogOpen(true); }
@@ -920,7 +965,17 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}><DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl"><div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Clock className="h-6 w-6 text-amber-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle><DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure a data e hora do rito de triagem.</DialogDescription></div></DialogHeader></div><ScrollArea className="max-h-[60vh]"><div className="p-8 space-y-6"><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} /></div></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label><Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}><SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem><SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem></SelectContent></Select></div></div></ScrollArea><DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}><DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl"><div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Clock className="h-6 w-6 text-amber-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest">Agendar Atendimento</DialogTitle><DialogDescription className="text-[9px] uppercase font-black text-muted-foreground">Configure a data e hora do rito de triagem.</DialogDescription></div></DialogHeader></div><ScrollArea className="max-h-[60vh]"><div className="p-8 space-y-6"><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={intakeData.date} onChange={e => setIntakeData({...intakeData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={intakeData.time} onChange={e => setIntakeData({...intakeData, time: e.target.value})} /></div></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Modalidade</Label><Select value={intakeData.type} onValueChange={v => setIntakeData({...intakeData, type: v})}><SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="online">🖥️ ONLINE / VIRTUAL</SelectItem><SelectItem value="presencial">🏢 PRESENCIAL (SEDE)</SelectItem></SelectContent></Select></div>
+      {intakeData.type === 'online' && (
+        <div className="flex items-center justify-between p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-4">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-4 w-4 text-emerald-500" />
+            <span className="text-[10px] font-black text-white uppercase tracking-widest">Gerar Meet Link?</span>
+          </div>
+          <Switch checked={intakeData.autoMeet} onCheckedChange={v => setIntakeData({...intakeData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
+        </div>
+      )}
+      </div></ScrollArea><DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button></DialogFooter></DialogContent></Dialog>
     </div>
   )
 }

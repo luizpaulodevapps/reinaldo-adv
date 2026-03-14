@@ -51,7 +51,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, limit, doc } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { 
@@ -85,6 +85,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
+import { pushActToGoogleCalendar } from "@/services/google-calendar"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -231,8 +232,9 @@ export default function CasesPage() {
 
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
-    const finalLocation = meetingData.type === 'online' ? (meetingData.location || 'MEETING VIRTUAL RGMJ') : (meetingData.location || 'SEDE RGMJ')
+    const finalLocation = meetingData.type === 'online' ? (meetingData.location || 'GOOGLE MEET RGMJ') : (meetingData.location || 'SEDE RGMJ')
     
+    // 1. Injeção no Firestore
     const payload = {
       title: meetingData.title.toUpperCase() || `REUNIÃO: ${activeActionProcess.clientName}`,
       type: "Atendimento",
@@ -246,9 +248,50 @@ export default function CasesPage() {
       status: "Agendado",
       createdAt: serverTimestamp()
     }
-    await addDocumentNonBlocking(collection(db, "appointments"), payload)
+    const docRefRes = await addDocumentNonBlocking(collection(db, "appointments"), payload)
+    const docRefId = (docRefRes as any).id;
+
+    // 2. Sincronismo Workspace (Agenda + Meet)
+    try {
+      const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+      if (accessToken) {
+        const calRes = await pushActToGoogleCalendar({
+          accessToken,
+          act: {
+            title: payload.title,
+            description: payload.notes,
+            location: payload.location,
+            startDateTime: payload.startDateTime,
+            type: 'atendimento',
+            processNumber: activeActionProcess.processNumber,
+            clientName: payload.clientName,
+            useMeet: meetingData.type === 'online' && meetingData.autoMeet
+          }
+        })
+
+        if (calRes && calRes.hangoutLink) {
+          updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
+            meetingUrl: calRes.hangoutLink,
+            calendarEventId: calRes.id,
+            updatedAt: serverTimestamp()
+          })
+          toast({ title: "Google Meet Gerado", description: "Link da sala injetado no dossiê." })
+        }
+      }
+    } catch (e) {
+      console.warn("Calendar integration failed", e)
+    }
+
+    // 3. Disparo WhatsApp (Mensagem de Confirmação)
+    if (activeActionProcess.phone || activeActionProcess.registrationData?.phone) {
+      const phone = activeActionProcess.phone || activeActionProcess.registrationData?.phone;
+      const cleanPhone = phone.replace(/\D/g, "");
+      const msg = `Olá ${activeActionProcess.clientName}! Confirmamos sua REUNIÃO ${meetingData.type === 'online' ? 'VIRTUAL' : 'PRESENCIAL'} para o dia ${new Date(meetingData.date).toLocaleDateString('pt-BR')} às ${meetingData.time}. Link/Local: ${finalLocation}. Dr. Reinaldo - RGMJ.`
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
+    }
+
     setIsMeetingOpen(false)
-    toast({ title: "Reunião Agendada", description: "O compromisso foi injetado na pauta." })
+    toast({ title: "Rito de Agendamento Concluído", description: "Agenda sincronizada e cliente notificado." })
   }
 
   const handleLaunchDeadline = async () => {
@@ -449,7 +492,7 @@ export default function CasesPage() {
           <CardContent className="p-5"><p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 flex items-center gap-3"><Zap className="h-3.5 w-3.5" /> PROCESSOS ATIVOS</p><div className="text-xl font-black text-white tracking-tighter">{isLoading ? "..." : metrics.total}</div></CardContent>
         </Card>
         <Card className="glass border-white/5 h-24 flex flex-col justify-center rounded-xl"><CardContent className="p-5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5 flex items-center gap-3"><Scale className="h-3.5 w-3.5" /> VALOR SOB GESTÃO</p><div className="text-xl font-black text-white tracking-tighter tabular-nums">R$ {metrics.valorEmRisco.toLocaleString('pt-BR')}</div></CardContent></Card>
-        <Card className="glass border-white/5 h-24 flex flex-col justify-center rounded-xl"><CardContent className="p-5"><p className="text-[9px) font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5">TICKET MÉDIO</p><div className="text-xl font-black text-white tracking-tighter tabular-nums">R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</div></CardContent></Card>
+        <Card className="glass border-white/5 h-24 flex flex-col justify-center rounded-xl"><CardContent className="p-5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1.5">TICKET MÉDIO</p><div className="text-xl font-black text-white tracking-tighter tabular-nums">R$ {metrics.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</div></CardContent></Card>
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-2">
@@ -579,7 +622,7 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}><SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-4xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl"><SheetHeader><div className="flex items-center gap-5 mb-4"><div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><FileText className="h-6 w-6" /></div><div><SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}</SheetTitle><SheetDescription asChild className="text-muted-foreground text-[10px] font-black uppercase mt-1.5 opacity-60"><div>{editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}</div></SheetDescription></div></div></SheetHeader></div><ProcessForm initialData={editingProcess} onSubmit={handleSaveProcess} onCancel={() => setIsSheetOpen(false)} /></SheetContent></Sheet>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}><SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-4xl"><div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl"><SheetHeader><div className="flex items-center gap-5 mb-4"><div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><FileText className="h-6" /></div><div><SheetTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingProcess ? "GESTÃO ESTRATÉGICA" : "Novo Processo"}</SheetTitle><SheetDescription asChild className="text-muted-foreground text-[10px] font-black uppercase mt-1.5 opacity-60"><div>{editingProcess ? "Retificação de dados técnicos RGMJ." : "Protocolo estruturado no ecossistema."}</div></SheetDescription></div></div></SheetHeader></div><ProcessForm initialData={editingProcess} onSubmit={handleSaveProcess} onCancel={() => setIsSheetOpen(false)} /></SheetContent></Sheet>
 
       {/* MODAL AGENDAR REUNIÃO - SOBERANIA LOGÍSTICA */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
@@ -590,7 +633,7 @@ export default function CasesPage() {
                 <Calendar className="h-6 w-6" />
               </div>
               <div className="text-left">
-                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Reunião</DialogTitle>
+                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Atendimento</DialogTitle>
                 <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase opacity-50 tracking-widest">
                   CLIENTE: <span className="text-primary">{activeActionProcess?.clientName}</span>
                 </DialogDescription>
@@ -668,7 +711,7 @@ export default function CasesPage() {
                       value={meetingData.location} 
                       onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})} 
                       className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold" 
-                      placeholder={meetingData.type === 'online' ? "MEET.GOOGLE.COM/..." : "SEDE RGMJ, CAFÉ X, ETC..."}
+                      placeholder={meetingData.type === 'online' ? "GERADO AUTOMATICAMENTE" : "SEDE RGMJ, CAFÉ X, ETC..."}
                     />
                   </div>
                 </div>
@@ -699,7 +742,7 @@ export default function CasesPage() {
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
             <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">Cancelar</Button>
             <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95">
-              Confirmar Agendamento
+              CONFIRMAR AGENDAMENTO
             </Button>
           </DialogFooter>
         </DialogContent>
