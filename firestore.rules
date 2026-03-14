@@ -19,12 +19,18 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isSignedIn() && 
+        (get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data.role == 'admin' || 
+         get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data.isOwner == true);
+    }
+
     // --- Collection Rules ---
 
-    // Perfis de Equipe: Leitura para todos, escrita apenas pelo próprio usuário
+    // Perfis de Equipe: Leitura para todos, escrita apenas pelo próprio usuário ou administradores
     match /staff_profiles/{userId} {
       allow read: if isSignedIn();
-      allow write: if isUser(userId);
+      allow write: if isUser(userId) || isAdmin();
     }
 
     // Leads e Entrevistas: Soberania total para o rito de triagem
