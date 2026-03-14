@@ -44,6 +44,7 @@ export interface FirebaseServicesAndUser {
   userError: Error | null;
   profile: any | null;
   setProfile: (profile: any) => void;
+  role: string | null;
 }
 
 // Return type for useUser() - specific to user auth state
@@ -52,6 +53,7 @@ export interface UserHookResult {
   isUserLoading: boolean;
   userError: Error | null;
   profile: any | null;
+  role: string | null;
 }
 
 // React Context
@@ -147,6 +149,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     userError: context.userError,
     profile: context.profile,
     setProfile: context.setProfile,
+    role: context.profile?.role || null,
   };
 };
 
@@ -185,6 +188,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
 export const useUser = (): UserHookResult => { 
-  const { user, isUserLoading, userError, profile } = useFirebase(); 
-  return { user, isUserLoading, userError, profile };
+  const { user, isUserLoading, userError, profile, role } = useFirebase(); 
+  return { user, isUserLoading, userError, profile, role };
 };
