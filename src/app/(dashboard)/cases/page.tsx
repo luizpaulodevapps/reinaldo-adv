@@ -38,7 +38,9 @@ import {
   ExternalLink,
   ChevronDown,
   AlertCircle,
-  ZapOff
+  ZapOff,
+  X,
+  Calculator
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,6 +76,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
+import { format, addDays, addBusinessDays } from "date-fns"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -103,9 +106,10 @@ export default function CasesPage() {
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
 
-  // Estados para Lançamento de Prazo com IA
+  // Estados para Lançamento de Prazo com IA e Calculadora
   const [publicationText, setPublicationText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [deadlineDuration, setDeadlineDuration] = useState("")
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
   const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "", priority: "normal", calculationType: "Dias Úteis (CPC)" })
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
@@ -249,6 +253,7 @@ export default function CasesPage() {
     await addDocumentNonBlocking(collection(db, "deadlines"), payload)
     setIsDeadlineOpen(false)
     setPublicationText("")
+    setDeadlineDuration("")
     toast({ title: "Prazo Lançado" })
   }
 
@@ -269,6 +274,26 @@ export default function CasesPage() {
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  const handleApplyDeadlineCalculation = () => {
+    const days = parseInt(deadlineDuration)
+    if (isNaN(days)) {
+      toast({ variant: "destructive", title: "Duração Inválida" })
+      return
+    }
+    
+    const today = new Date()
+    let calculatedDate: Date
+    
+    if (deadlineData.calculationType === "Dias Úteis (CPC)") {
+      calculatedDate = addBusinessDays(today, days)
+    } else {
+      calculatedDate = addDays(today, days)
+    }
+    
+    setDeadlineData({ ...deadlineData, date: format(calculatedDate, 'yyyy-MM-dd') })
+    toast({ title: "Vencimento Projetado", description: `Data fatal ajustada para ${format(calculatedDate, 'dd/MM/yyyy')}.` })
   }
 
   const handleScheduleHearing = async () => {
@@ -594,6 +619,36 @@ export default function CasesPage() {
                   {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
                   ANALISAR COM IA RGMJ
                 </Button>
+              </div>
+
+              {/* CALCULADORA DE VENCIMENTO */}
+              <div className="p-8 rounded-[2rem] border-2 border-primary/20 bg-primary/5 space-y-6 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center gap-3">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Calculadora de Vencimento</h4>
+                </div>
+                <div className="flex flex-col md:flex-row items-end gap-6">
+                  <div className="flex-1 space-y-2 w-full">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Duração do Prazo (Dias)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Ex: 5, 15, 30..." 
+                      className="bg-black/40 border-white/10 h-14 text-white font-black text-lg text-center"
+                      value={deadlineDuration}
+                      onChange={(e) => setDeadlineDuration(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleApplyDeadlineCalculation}
+                    variant="outline" 
+                    className="h-14 px-10 border-primary text-primary font-black uppercase text-[11px] tracking-widest gap-3 hover:bg-primary hover:text-background transition-all shadow-lg"
+                  >
+                    <Zap className="h-4 w-4" /> Aplicar Prazo
+                  </Button>
+                </div>
+                <p className="text-[9px] text-muted-foreground italic font-medium uppercase tracking-tight opacity-50">
+                  O cálculo excluirá o dia da publicação e seguirá a metodologia acima.
+                </p>
               </div>
 
               <div className="space-y-3">
