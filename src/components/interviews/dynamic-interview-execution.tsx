@@ -21,7 +21,7 @@ import {
   Bookmark,
   MapPin
 } from "lucide-react"
-import { cn, maskCEP } from "@/lib/utils"
+import { cn, maskCEP, maskCPFOrCNPJ, maskPhone } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/firebase"
 
@@ -285,6 +285,30 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
                           />
                         </div>
                       </div>
+                    )}
+                    {field.type === 'cpf_cnpj' && (
+                      <Input 
+                        className={cn("bg-black/40 border-white/10 h-14 text-white font-mono text-lg focus:ring-primary/50 shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5", !!responses[field.label] && "border-emerald-500/20")}
+                        value={responses[field.label] || ""}
+                        onChange={(e) => handleInputChange(field.label, maskCPFOrCNPJ(e.target.value))}
+                        placeholder="000.000.000-00"
+                      />
+                    )}
+                    {field.type === 'phone' && (
+                      <Input 
+                        className={cn("bg-black/40 border-white/10 h-14 text-white font-mono text-lg focus:ring-primary/50 shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5", !!responses[field.label] && "border-emerald-500/20")}
+                        value={responses[field.label] || ""}
+                        onChange={(e) => handleInputChange(field.label, maskPhone(e.target.value))}
+                        placeholder="(00) 00000-0000"
+                      />
+                    )}
+                    {field.type === 'date' && (
+                      <Input 
+                        type="date"
+                        className={cn("bg-black/40 border-white/10 h-14 text-white font-mono text-lg focus:ring-primary/50 shadow-inner w-fit px-8", errors[field.label] && "border-rose-500/30 bg-rose-500/5", !!responses[field.label] && "border-emerald-500/20")}
+                        value={responses[field.label] || ""}
+                        onChange={(e) => handleInputChange(field.label, e.target.value)}
+                      />
                     )}
                     {field.type === 'text' && <Textarea className={cn("bg-black/40 border-white/10 min-h-[140px] text-white focus:ring-1 focus:ring-primary/50 text-sm leading-relaxed resize-none p-6 rounded-2xl shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5", !!responses[field.label] && "border-emerald-500/20")} value={responses[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)} />}
                     {field.type === 'number' && <div className="relative max-w-sm"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-sm">R$</span><Input type="number" className={cn("bg-black/40 border-white/10 h-16 pl-14 text-white text-xl font-black rounded-2xl shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5")} value={responses[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)} /></div>}

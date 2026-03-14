@@ -32,7 +32,10 @@ import {
   Gavel,
   CheckCircle2,
   PlusCircle,
-  MapPin
+  MapPin,
+  Fingerprint,
+  Phone,
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -97,6 +100,9 @@ const FIELD_TYPES = [
   { id: "text", label: "Resposta em Texto", icon: FileText },
   { id: "number", label: "Valor Numérico", icon: Hash },
   { id: "cep", label: "CEP / Endereço Automático", icon: MapPin },
+  { id: "cpf_cnpj", label: "CPF / CNPJ", icon: Fingerprint },
+  { id: "phone", label: "WhatsApp / Telefone", icon: Phone },
+  { id: "date", label: "Data", icon: Calendar },
 ]
 
 const REUSE_TARGETS = [
@@ -165,19 +171,19 @@ type ReadyQuestionTemplate = {
 
 const READY_QUESTION_TEMPLATES: ReadyQuestionTemplate[] = [
   { id: "id-nome", label: "IDENTIFICACAO: NOME COMPLETO", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "id-cpf", label: "IDENTIFICACAO: CPF", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "cpf", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "id-cpf", label: "IDENTIFICACAO: CPF", type: "cpf_cnpj", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "cpf", reusePriority: "alta", balizaObrigatoria: true },
   { id: "id-rg", label: "IDENTIFICACAO: RG", type: "text", required: false, reuseEnabled: true, reuseTarget: "client", targetField: "rg", reusePriority: "media" },
   { id: "id-estado-profissao", label: "IDENTIFICACAO: ESTADO CIVIL E PROFISSAO ATUAL", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "baixa" },
   { id: "id-endereco", label: "IDENTIFICACAO: ENDERECO COMPLETO", type: "cep", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "address", reusePriority: "media" },
-  { id: "id-contato", label: "IDENTIFICACAO: TELEFONE, WHATSAPP E EMAIL", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "id-contato", label: "IDENTIFICACAO: TELEFONE, WHATSAPP E EMAIL", type: "phone", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
 
   { id: "empresa-nome", label: "EMPRESA: NOME DA EMPRESA", type: "text", required: true, reuseEnabled: true, reuseTarget: "claimant", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "empresa-cnpj", label: "EMPRESA: CNPJ (SE SOUBER)", type: "text", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "documentNumber", reusePriority: "media" },
+  { id: "empresa-cnpj", label: "EMPRESA: CNPJ (SE SOUBER)", type: "cpf_cnpj", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "documentNumber", reusePriority: "media" },
   { id: "empresa-endereco", label: "EMPRESA: ENDERECO DA EMPRESA", type: "cep", required: false, reuseEnabled: true, reuseTarget: "claimant", targetField: "address", reusePriority: "media" },
   { id: "empresa-responsavel", label: "EMPRESA: RESPONSAVEL DIRETO (GERENTE/SUPERVISOR)", type: "text", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
   { id: "empresa-ativa", label: "EMPRESA: AINDA ESTA ATIVA?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "baixa" },
 
-  { id: "contrato-admissao", label: "CONTRATO: DATA DE ADMISSAO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
+  { id: "contrato-admissao", label: "CONTRATO: DATA DE ADMISSAO", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
   { id: "contrato-demissao", label: "CONTRATO: DATA DE DEMISSAO OU SE AINDA TRABALHA", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
   { id: "contrato-tipo-demissao", label: "CONTRATO: TIPO DE DEMISSAO (SEM JUSTA CAUSA/JUSTA CAUSA/PEDIDO/INDIRETA)", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
   { id: "contrato-cargo", label: "CONTRATO: CARGO REGISTRADO X CARGO REAL", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
@@ -228,7 +234,7 @@ const DEFAULT_CHECKLIST_DESCRIPTION = "Padrao basico trabalhista para triagem. V
 
 const READY_QUESTION_TEMPLATES_EXTRA: ReadyQuestionTemplate[] = [
   { id: "civel-conflito", label: "CIVEL: QUAL E O CONFLITO?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta", balizaObrigatoria: true },
-  { id: "civel-inicio", label: "CIVEL: QUANDO O CONFLITO COMECOU?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
+  { id: "civel-inicio", label: "CIVEL: QUANDO O CONFLITO COMECOU?", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
   { id: "civel-amigavel", label: "CIVEL: JA TENTOU RESOLVER AMIGAVELMENTE?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
   { id: "civel-contrato", label: "CIVEL: EXISTE CONTRATO?", type: "boolean_partial", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "media" },
   { id: "civel-documentos", label: "CIVEL: POSSUI CONTRATO, PAGAMENTOS, MENSAGENS, NOTIFICACOES OU BOLETIM?", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "caseDetails", reusePriority: "alta" },
