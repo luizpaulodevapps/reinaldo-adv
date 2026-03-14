@@ -138,6 +138,34 @@ const PRESET_MATRICES = [
     ]
   },
   {
+    title: "APOSENTADORIA POR IDADE / TEMPO",
+    category: "Entrevista de Triagem",
+    legalArea: "Previdenciário",
+    description: "Rito de triagem focado em tempo de contribuição e idade. Analisa períodos especiais e prova rural.",
+    items: [
+      { label: "CLIENTE: DATA DE NASCIMENTO", type: "date", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "birthDate", reusePriority: "alta", balizaObrigatoria: true },
+      { label: "CNIS: POSSUI EXTRATO CNIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "TEMPO: TRABALHOU EM AREA RURAL?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "TEMPO: TRABALHOU EM CONDICOES ESPECIAIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "MILITAR: SERVIU AS FORCAS ARMADAS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: false },
+      { label: "PUBLICO: POSSUI TEMPO NO SERVICO PUBLICO?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: false },
+    ]
+  },
+  {
+    title: "INVENTARIO E PARTILHA",
+    category: "Entrevista de Triagem",
+    legalArea: "Família",
+    description: "Protocolo para abertura de Inventário. Mapeia falecido, herdeiros e relação preliminar de bens.",
+    items: [
+      { label: "OBITO: NOME DO FALECIDO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "OBITO: DATA DO FALECIMENTO", type: "date", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "BENS: EXISTEM BENS IMOVEIS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "BENS: EXISTEM VEICULOS OU VALORES?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "HERDEIROS: QUANTIDADE DE FILHOS/HERDEIROS", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "DIVIDAS: O FALECIDO DEIXOU DIVIDAS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+    ]
+  },
+  {
     title: "ACAO INDENIZATORIA CIVEL",
     category: "Entrevista de Triagem",
     legalArea: "Cível",
@@ -149,14 +177,15 @@ const PRESET_MATRICES = [
     ]
   },
   {
-    title: "DIVORCIO E ALIMENTOS",
+    title: "DEFESA EXECUCAO FISCAL",
     category: "Entrevista de Triagem",
-    legalArea: "Família",
-    description: "Matriz para ritos de Família. Coleta dados sobre bens, filhos e binômio necessidade/possibilidade.",
+    legalArea: "Tributário",
+    description: "Análise de CDA e prescrição para defesas em execuções de débitos tributários.",
     items: [
-      { label: "FAMILIA: POSSUI FILHOS MENORES?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "BENS: RELACAO DE PATRIMONIO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
-      { label: "ALIMENTOS: RENDA MENSAL ESTIMADA", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "CDA: NUMERO DA CERTIDAO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "ORIGEM: NATUREZA DO DEBITO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "VALOR: VALOR TOTAL EXECUTADO", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "NOTIFICACAO: DATA DA CITACAO/AVISO", type: "date", required: true, reuseEnabled: false, balizaObrigatoria: true },
     ]
   }
 ]
