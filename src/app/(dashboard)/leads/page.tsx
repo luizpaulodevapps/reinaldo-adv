@@ -39,7 +39,7 @@ import {
   Plus,
   AlertTriangle,
   GripVertical,
-  Calendar as CalendarIcon,
+  Calendar,
   FileSearch,
   Sparkles,
   FileText,
@@ -722,23 +722,23 @@ export default function LeadsPage() {
       {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
-            <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
+            <div className="flex flex-row items-center gap-5">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
                 <Clock className="h-6 w-6" />
               </div>
-              <div>
-                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl flex items-center gap-3">
+              <div className="text-left">
+                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">
                   Lançar Prazo Judicial
                 </DialogTitle>
                 <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">
                   Configure o compromisso fatal para: <span className="text-white">{activeLead?.name}</span>
                 </DialogDescription>
               </div>
-            </DialogHeader>
+            </div>
           </div>
 
-          <ScrollArea className="flex-1 w-full h-full">
+          <ScrollArea className="flex-1">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
               
               {/* SEÇÃO DESPACHO IA */}
@@ -902,7 +902,7 @@ export default function LeadsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
             <button 
               onClick={() => setIsDeadlineOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"

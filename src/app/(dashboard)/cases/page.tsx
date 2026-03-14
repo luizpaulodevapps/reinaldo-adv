@@ -540,7 +540,7 @@ export default function CasesPage() {
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh] font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex flex-row items-center justify-between">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none flex flex-row items-center justify-between shadow-xl">
             <div className="flex items-center gap-6"><div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl"><Scale className="h-7 w-7" /></div><DialogHeader className="space-y-0 text-left"><DialogTitle className="text-xl font-black text-white uppercase tracking-tighter leading-none">{viewingProcess?.description}</DialogTitle><DialogDescription asChild className="text-[10px] text-muted-foreground uppercase font-black mt-2"><div><Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary uppercase">{viewingProcess?.caseType}</Badge><span className="text-[11px] font-mono font-bold text-muted-foreground ml-3">{viewingProcess?.processNumber}</span></div></DialogDescription></DialogHeader></div>
             <div className="flex gap-3 pr-8"><Button onClick={() => handleOpenEdit(viewingProcess)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] h-11 px-6 rounded-xl hover:bg-primary hover:text-background transition-all"><Edit3 className="h-4 w-4 mr-2" /> EDITAR</Button></div>
           </div>
@@ -562,7 +562,7 @@ export default function CasesPage() {
               </div>
             </Tabs>
           </div>
-          <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end flex-none rounded-b-3xl"><Button variant="ghost" onClick={() => setIsViewOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12">FECHAR</Button></div>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end flex-none rounded-b-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.3)]"><Button variant="ghost" onClick={() => setIsViewOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12">FECHAR</Button></div>
         </DialogContent>
       </Dialog>
 
@@ -580,23 +580,23 @@ export default function CasesPage() {
       {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
-            <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
+            <div className="flex flex-row items-center gap-5">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
                 <Clock className="h-6 w-6" />
               </div>
-              <div>
-                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl flex items-center gap-3">
+              <div className="text-left">
+                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">
                   Lançar Prazo Judicial
                 </DialogTitle>
                 <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">
                   Configure o compromisso fatal para: <span className="text-white">{activeActionProcess?.clientName}</span>
                 </DialogDescription>
               </div>
-            </DialogHeader>
+            </div>
           </div>
 
-          <ScrollArea className="flex-1 w-full h-full">
+          <ScrollArea className="flex-1">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
               
               {/* SEÇÃO DESPACHO IA */}
@@ -760,7 +760,7 @@ export default function CasesPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
             <button 
               onClick={() => setIsDeadlineOpen(false)} 
               className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"
