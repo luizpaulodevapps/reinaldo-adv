@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -40,7 +39,8 @@ import {
   AlertCircle,
   ZapOff,
   X,
-  Calculator
+  Calculator,
+  Library
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
