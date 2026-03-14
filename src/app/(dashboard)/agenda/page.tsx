@@ -46,7 +46,9 @@ import {
   Calculator,
   Star,
   TriangleAlert,
-  CalendarDays
+  CalendarDays,
+  ShieldCheck,
+  FileText
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -93,13 +95,13 @@ type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendime
 export default function MasterAgendaPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [syncing, setSyncing] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>('atendimento')
   const [viewingEvent, setViewingEvent] = useState<any>(null)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   
-  // Estados para Operação IA e Cálculos
+  // Estados para Wizard de Atendimento
+  const [currentStep, setCurrentStep] = useState(1)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deadlineDuration, setDeadlineDuration] = useState("")
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false)
@@ -107,32 +109,18 @@ export default function MasterAgendaPage() {
   const [newEventData, setNewEventData] = useState<any>({
     title: "",
     date: "",
-    time: "",
+    time: "09:00",
     location: "Sede RGMJ",
+    locationType: "sede",
     notes: "",
     clientName: "",
     processNumber: "",
-    freelancerId: "",
-    freelancerName: "",
-    solicitorId: "",
-    solicitorName: "",
     meetingType: "online",
     autoMeet: true,
     calculationType: "Dias Úteis (CPC/CLT)",
-    priority: "normal",
     pubDate: format(new Date(), 'yyyy-MM-dd'),
     publicationText: "",
-    valueToPay: 0,
-    valueToCharge: 0,
-    fuelExpense: 0,
-    parkingExpense: 0,
-    copyExpense: 0,
-    miscExpense: 0,
-    plaintiffName: "",
-    defendantName: "",
-    representedSide: "Autor",
     partyContact: "",
-    courtName: "",
     assigneeId: ""
   })
 
@@ -140,20 +128,10 @@ export default function MasterAgendaPage() {
   const { user, profile } = useUser()
   const { toast } = useToast()
 
-  // Queries para suporte
+  // Queries da Pauta
   const staffQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "staff_profiles"), orderBy("name", "asc")) : null, [db, user])
   const { data: staffMembers } = useCollection(staffQuery)
 
-  const courtsQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "courts"), orderBy("name", "asc")) : null, [db, user])
-  const { data: courts } = useCollection(courtsQuery)
-
-  const freelancersQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "freelancers"), orderBy("name", "asc")) : null, [db, user])
-  const { data: freelancers } = useCollection(freelancersQuery)
-
-  const counterpartiesQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "counterparties"), orderBy("name", "asc")) : null, [db, user])
-  const { data: counterparties } = useCollection(counterpartiesQuery)
-
-  // Queries da Pauta
   const hearingsQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "hearings"), orderBy("startDateTime", "asc")) : null, [db, user])
   const { data: hearings } = useCollection(hearingsQuery)
 
@@ -209,6 +187,7 @@ export default function MasterAgendaPage() {
   const handleOpenSchedule = (date: Date, mode: CreateMode, existingEvent?: any) => {
     setSelectedDate(date)
     setCreateMode(mode)
+    setCurrentStep(1)
     if (existingEvent) {
       setEditingEventId(existingEvent.id)
       const d = existingEvent.date || parseDate(existingEvent.startDateTime || existingEvent.dueDate)
@@ -217,6 +196,7 @@ export default function MasterAgendaPage() {
         date: d ? format(d, 'yyyy-MM-dd') : format(date, 'yyyy-MM-dd'),
         time: d ? format(d, 'HH:mm') : "09:00",
         meetingType: existingEvent.meetingType || "online",
+        locationType: existingEvent.locationType || "sede",
         autoMeet: existingEvent.autoMeet ?? true,
         calculationType: existingEvent.calculationType || "Dias Úteis (CPC/CLT)"
       })
@@ -227,6 +207,7 @@ export default function MasterAgendaPage() {
         date: format(date, 'yyyy-MM-dd'),
         time: "09:00",
         location: mode === 'atendimento' ? "Sede RGMJ" : "",
+        locationType: "sede",
         notes: "",
         clientName: "",
         processNumber: "",
@@ -236,53 +217,11 @@ export default function MasterAgendaPage() {
         priority: "normal",
         pubDate: format(date, 'yyyy-MM-dd'),
         publicationText: "",
-        valueToPay: 0,
-        valueToCharge: 0,
-        fuelExpense: 0,
-        parkingExpense: 0,
-        copyExpense: 0,
-        miscExpense: 0,
-        plaintiffName: "",
-        defendantName: "",
-        representedSide: "Autor",
         partyContact: "",
-        courtName: "",
         assigneeId: user?.uid || ""
       })
     }
     setIsCreateOpen(true)
-  }
-
-  const handleAiParsePublication = async () => {
-    if (!newEventData.publicationText) return
-    setIsAnalyzing(true)
-    try {
-      const result = await aiParseDjePublication({ publicationText: newEventData.publicationText })
-      setNewEventData((prev: any) => ({
-        ...prev,
-        title: result.deadlineType?.toUpperCase() || prev.title,
-        date: result.dueDate || prev.date,
-        notes: result.summary?.toUpperCase() || prev.notes
-      }))
-      toast({ title: "Análise IA Concluída" })
-    } catch (e) {
-      toast({ variant: "destructive", title: "Erro na Análise" })
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  const handleApplyDeadlineCalculation = () => {
-    const days = parseInt(deadlineDuration)
-    if (isNaN(days)) return
-    const baseDate = parseISO(newEventData.pubDate)
-    let calculatedDate: Date
-    if (newEventData.calculationType.includes("Úteis")) {
-      calculatedDate = addBusinessDays(baseDate, days)
-    } else {
-      calculatedDate = addDays(baseDate, days)
-    }
-    setNewEventData((prev: any) => ({ ...prev, date: format(calculatedDate, 'yyyy-MM-dd') }))
   }
 
   const handleSaveEvent = async () => {
@@ -311,7 +250,8 @@ export default function MasterAgendaPage() {
       targetCollection = 'appointments'
       payload.startDateTime = dateTime
       payload.meetingType = newEventData.meetingType
-      payload.location = newEventData.meetingType === 'online' ? (newEventData.location || 'Google Meet') : (newEventData.location || 'Sede RGMJ')
+      payload.locationType = newEventData.locationType
+      payload.location = newEventData.meetingType === 'online' ? (newEventData.location || 'Google Meet') : (newEventData.locationType === 'sede' ? 'Sede RGMJ' : newEventData.location)
       payload.status = "Agendado"
       typeForGoogle = 'atendimento'
     } else if (createMode === 'prazo') {
@@ -329,7 +269,6 @@ export default function MasterAgendaPage() {
       payload.status = "Pendente"
       typeForGoogle = 'diligencia'
     } else if (createMode === 'freelance') {
-      // Lógica Freelance complexa...
       targetCollection = 'hearings'
       payload.isFreelance = true
       payload.startDateTime = dateTime
@@ -368,7 +307,7 @@ export default function MasterAgendaPage() {
           }
         })
         
-        if (calRes && calRes.id) {
+        if (calRes && (calRes.id || calRes.hangoutLink)) {
           generatedMeetLink = calRes.hangoutLink || "";
           updateDocumentNonBlocking(doc(db, targetCollection, finalDocId), {
             meetingUrl: generatedMeetLink,
@@ -385,7 +324,8 @@ export default function MasterAgendaPage() {
       if (contact) {
         const cleanPhone = contact.replace(/\D/g, "");
         const meetPart = generatedMeetLink ? ` Link da reunião: ${generatedMeetLink}` : "";
-        const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}.${meetPart} Dr. Reinaldo - RGMJ.`
+        const locPart = createMode === 'atendimento' && newEventData.meetingType === 'presencial' ? ` Local: ${payload.location}` : "";
+        const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}.${locPart}${meetPart} Dr. Reinaldo - RGMJ.`
         window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
       }
     }
@@ -552,11 +492,11 @@ export default function MasterAgendaPage() {
         </ScrollArea>
 
         <Button onClick={() => handleOpenSchedule(selectedDate, 'atendimento')} className="w-full gold-gradient text-background font-black gap-3 py-8 rounded-2xl shadow-2xl uppercase text-[11px] tracking-[0.2em] hover:scale-[1.02] transition-all">
-          <Plus className="h-5 w-5" /> Agendar Novo Ato
+          <Plus className="h-5 w-5" /> Agendar Atendimento
         </Button>
       </div>
 
-      {/* DIÁLOGO DE CRIAÇÃO MULTIMODAL - RECONSTRUÍDO PARA SOBERANIA LOGÍSTICA */}
+      {/* DIÁLOGO DE CRIAÇÃO MULTIMODAL - WIZARD RECONSTRUÍDO */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[90vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -566,7 +506,6 @@ export default function MasterAgendaPage() {
                 isSyncingWorkspace && "animate-pulse bg-emerald-500/20 border-emerald-500",
                 !isSyncingWorkspace && (
                   createMode === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
-                  createMode === 'freelance' ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" :
                   createMode === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
                   "bg-amber-500/10 border-amber-500/20 text-amber-500"
                 )
@@ -575,11 +514,12 @@ export default function MasterAgendaPage() {
               </div>
               <div className="text-left">
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                  {editingEventId ? "Retificar Registro" : createMode === 'audiencia' ? "Injetar Audiência" : createMode === 'freelance' ? "Ordem Freelance" : createMode === 'prazo' ? "Lançar Prazo" : "Agendar Atendimento"}
+                  {editingEventId ? "Retificar Registro" : createMode === 'audiencia' ? "Injetar Audiência" : createMode === 'prazo' ? "Lançar Prazo" : "Rito de Atendimento"}
                 </DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">
-                  RITO DE SINCRONISMO WORKSPACE RGMJ.
-                </DialogDescription>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Sincronismo Digital</Badge>
+                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">Step {currentStep} de {createMode === 'atendimento' ? '5' : '3'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -587,126 +527,167 @@ export default function MasterAgendaPage() {
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-10">
               
-              {/* FORMULÁRIO ATENDIMENTO (FIEL À IMAGEM) */}
+              {/* WIZARD ATENDIMENTO */}
               {createMode === 'atendimento' && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Identificação da Pauta *</Label>
-                    <Input 
-                      value={newEventData.title} 
-                      onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})}
-                      placeholder="REUNIÃO: CLIENTE X"
-                      className="bg-black/40 border-white/10 h-16 text-white font-black text-sm uppercase px-6 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data do Compromisso</Label>
-                      <div className="relative">
-                        <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                        <Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold" />
-                      </div>
+                  
+                  {currentStep === 1 && (
+                    <div className="space-y-8 animate-in zoom-in-95 duration-300">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 1: Modalidade do Atendimento</Label>
+                      <RadioGroup 
+                        value={newEventData.meetingType} 
+                        onValueChange={(v: any) => setNewEventData({...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                      >
+                        <div className={cn(
+                          "p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 text-center group",
+                          newEventData.meetingType === "online" ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20"
+                        )} onClick={() => setNewEventData({...newEventData, meetingType: "online", location: "Google Meet"})}>
+                          <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-2", newEventData.meetingType === "online" ? "bg-emerald-500 text-background" : "bg-white/5 text-muted-foreground")}>
+                            <Video className="h-8 w-8" />
+                          </div>
+                          <RadioGroupItem value="online" className="sr-only" />
+                          <span className="text-sm font-black text-white uppercase tracking-widest">Atendimento Virtual</span>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Sincronismo com Google Meet</p>
+                        </div>
+                        <div className={cn(
+                          "p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 text-center group",
+                          newEventData.meetingType === "presencial" ? "bg-primary/10 border-primary shadow-[0_0_30px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20"
+                        )} onClick={() => setNewEventData({...newEventData, meetingType: "presencial", location: "Sede RGMJ"})}>
+                          <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-2", newEventData.meetingType === "presencial" ? "bg-primary text-background" : "bg-white/5 text-muted-foreground")}>
+                            <MapPin className="h-8 w-8" />
+                          </div>
+                          <RadioGroupItem value="presencial" className="sr-only" />
+                          <span className="text-sm font-black text-white uppercase tracking-widest">Atendimento Presencial</span>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Sede da Banca ou Local Externo</p>
+                        </div>
+                      </RadioGroup>
                     </div>
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Horário</Label>
-                      <div className="relative">
-                        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                        <Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold" />
-                      </div>
-                    </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-6">
-                    <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Modalidade do Atendimento</Label>
-                    <RadioGroup 
-                      value={newEventData.meetingType} 
-                      onValueChange={(v: any) => setNewEventData({...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})}
-                      className="grid grid-cols-2 gap-6"
-                    >
-                      <div className={cn(
-                        "p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
-                        newEventData.meetingType === "online" ? "bg-emerald-500/5 border-emerald-500 shadow-lg shadow-emerald-500/10" : "bg-black/20 border-white/5"
-                      )} onClick={() => setNewEventData({...newEventData, meetingType: "online"})}>
-                        <RadioGroupItem value="online" className="border-emerald-500 text-emerald-500" />
-                        <div className="flex items-center gap-3">
-                          <Video className="h-5 w-5 text-emerald-500" />
-                          <span className="text-[11px] font-black text-white uppercase tracking-widest">Virtual</span>
+                  {currentStep === 2 && (
+                    <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 2: Cronograma Tático</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] shadow-2xl">
+                        <div className="space-y-3">
+                          <Label className={labelMini}>Data do Compromisso</Label>
+                          <div className="relative">
+                            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
+                            <Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 border-white/10 h-16 pl-14 text-white font-black text-lg rounded-2xl" />
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <Label className={labelMini}>Horário Inicial</Label>
+                          <div className="relative">
+                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
+                            <Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 border-white/10 h-16 pl-14 text-white font-black text-lg rounded-2xl" />
+                          </div>
                         </div>
                       </div>
-                      <div className={cn(
-                        "p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
-                        newEventData.meetingType === "presencial" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
-                      )} onClick={() => setNewEventData({...newEventData, meetingType: "presencial"})}>
-                        <RadioGroupItem value="presencial" className="border-primary text-primary" />
-                        <div className="flex items-center gap-3">
-                          <MapPin className="h-5 w-5 text-primary" />
-                          <span className="text-[11px] font-black text-white uppercase tracking-widest">Presencial</span>
+                    </div>
+                  )}
+
+                  {currentStep === 3 && (
+                    <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 3: Identificação & Pauta</Label>
+                      <div className="space-y-8">
+                        <div className="space-y-3">
+                          <Label className={labelMini}>Título da Pauta *</Label>
+                          <Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO TÁTICA: CLIENTE X" className="bg-black/40 border-white/10 h-16 text-white font-black text-lg px-8 rounded-2xl" />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className={labelMini}>Nome do Cliente / Lead</Label>
+                          <Input value={newEventData.clientName} onChange={e => setNewEventData({...newEventData, clientName: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-bold px-8 rounded-xl" />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className={labelMini}>Notas Estratégicas / Objetivos</Label>
+                          <Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 border-white/10 min-h-[150px] text-white p-6 rounded-2xl text-sm" placeholder="Descreva os pontos a serem abordados..." />
                         </div>
                       </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Localização da Reunião</Label>
-                    <div className="relative">
-                      <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                      <Input 
-                        value={newEventData.location} 
-                        onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})}
-                        className="bg-black/20 border-primary h-16 pl-12 text-white font-black text-sm rounded-xl focus:ring-4 focus:ring-primary/20"
-                      />
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Pauta / Notas Estratégicas</Label>
-                    <Textarea 
-                      value={newEventData.notes} 
-                      onChange={e => setNewEventData({...newEventData, notes: e.target.value})}
-                      placeholder="DESCREVA OS ASSUNTOS A SEREM TRATADOS NO ATENDIMENTO..."
-                      className="bg-black/40 border-white/10 min-h-[150px] text-white text-xs p-6 rounded-2xl resize-none uppercase"
-                    />
-                  </div>
+                  {currentStep === 4 && (
+                    <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 4: Logística {newEventData.meetingType === 'online' ? 'Digital' : 'Física'}</Label>
+                      
+                      {newEventData.meetingType === 'online' ? (
+                        <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
+                          <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20">
+                            <Video className="h-10 w-10 text-emerald-500" />
+                          </div>
+                          <div className="space-y-2">
+                            <h4 className="text-xl font-black text-white uppercase tracking-widest leading-none">Google Meet RGMJ</h4>
+                            <p className="text-[10px] text-emerald-500/60 font-black uppercase tracking-[0.2em]">O Link será gerado automaticamente no próximo passo.</p>
+                          </div>
+                          <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                            <Switch checked={newEventData.autoMeet} onCheckedChange={v => setNewEventData({...newEventData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
+                            <Label className="text-[10px] font-black text-white uppercase">Habilitar Conference Data?</Label>
+                          </div>
+                        </Card>
+                      ) : (
+                        <div className="space-y-8">
+                          <RadioGroup value={newEventData.locationType} onValueChange={v => setNewEventData({...newEventData, locationType: v, location: v === 'sede' ? 'Sede RGMJ' : ''})} className="grid grid-cols-2 gap-6">
+                            <div className={cn("p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                              <Building2 className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Sede RGMJ</span>
+                            </div>
+                            <div className={cn("p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
+                              <MapPin className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Endereço Custom</span>
+                            </div>
+                          </RadioGroup>
+                          <div className="space-y-3">
+                            <Label className={labelMini}>Localização do Atendimento</Label>
+                            <Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-16 text-white font-black text-lg px-8 rounded-2xl" placeholder="DIGITE O ENDEREÇO OU NOME DO LOCAL..." />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {currentStep === 5 && (
+                    <div className="space-y-8 animate-in zoom-in-95 duration-300">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo Final: Resumo da Pauta</Label>
+                      <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-10 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-10 opacity-5"><ShieldCheck className="h-32 w-32" /></div>
+                        <div className="grid grid-cols-2 gap-10">
+                          <div className="space-y-1">
+                            <p className="text-[9px] font-black text-primary uppercase">Modalidade</p>
+                            <p className="text-lg font-black text-white uppercase">{newEventData.meetingType}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[9px] font-black text-primary uppercase">Cronograma</p>
+                            <p className="text-lg font-black text-white uppercase">{new Date(newEventData.date).toLocaleDateString()} — {newEventData.time}</p>
+                          </div>
+                          <div className="space-y-1 col-span-2">
+                            <p className="text-[9px] font-black text-primary uppercase">Identificação</p>
+                            <p className="text-2xl font-black text-white uppercase tracking-tighter">{newEventData.title}</p>
+                          </div>
+                          <div className="space-y-1 col-span-2">
+                            <p className="text-[9px] font-black text-primary uppercase">Logística</p>
+                            <p className="text-base font-bold text-white uppercase flex items-center gap-3">
+                              <MapPin className="h-4 w-4 text-primary" /> {newEventData.location}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-4">
+                          <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                          <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest leading-relaxed">
+                            O rito de sincronismo disparará o convite para o Google Calendar do responsável e preparará a mensagem oficial de WhatsApp para o cliente.
+                          </p>
+                        </div>
+                      </Card>
+                    </div>
+                  )}
+
                 </div>
               )}
 
-              {/* FORMULÁRIO PRAZO (IA + CALCULADORA) */}
-              {createMode === 'prazo' && (
-                <div className="space-y-10 animate-in fade-in duration-500">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="h-4 w-4" /> Despacho / Publicação</Label>
-                      <Button onClick={handleAiParsePublication} disabled={isAnalyzing || !newEventData.publicationText} variant="outline" className="h-9 border-primary/30 text-primary font-black uppercase text-[9px] gap-2"><Brain className="h-3.5 w-3.5" /> ANALISAR IA</Button>
-                    </div>
-                    <Textarea value={newEventData.publicationText} onChange={e => setNewEventData({...newEventData, publicationText: e.target.value})} className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase" placeholder="COLE O TEXTO OFICIAL AQUI..." />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
-                    <div className="space-y-3"><Label className={labelMini}>Protocolo CNJ</Label><Input value={newEventData.processNumber} onChange={e => setNewEventData({...newEventData, processNumber: e.target.value})} className="bg-black/40 border-white/10 h-14 text-white font-mono" /></div>
-                  </div>
-
-                  <div className="p-8 rounded-3xl border-2 border-primary/20 bg-primary/5 space-y-6 shadow-2xl">
-                    <div className="flex items-center gap-3"><Calculator className="h-5 w-5 text-primary" /><h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Calculadora de Vencimento</h4></div>
-                    <div className="flex flex-col md:flex-row items-end gap-6">
-                      <div className="flex-1 space-y-2 w-full"><Label className={labelMini}>Duração (Dias)</Label><Input type="number" className="bg-black/60 border-white/10 h-16 text-white font-black text-2xl text-center rounded-2xl" value={deadlineDuration} onChange={e => setDeadlineDuration(e.target.value)} /></div>
-                      <Button onClick={handleApplyDeadlineCalculation} variant="outline" className="h-16 px-10 border-primary text-primary font-black uppercase text-xs tracking-widest gap-3 hover:bg-primary hover:text-background transition-all rounded-2xl"><Zap className="h-5 w-5" /> APLICAR PRAZO</Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Data Publicação</Label><Input type="date" value={newEventData.pubDate} onChange={e => setNewEventData({...newEventData, pubDate: e.target.value})} className="bg-black/40 h-14 text-white" /></div>
-                    <div className="space-y-3"><Label className="text-[10px] font-black text-rose-500 uppercase">Data Fatal (Vencimento) *</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 border-rose-500/30 h-14 text-rose-400 font-black" /></div>
-                  </div>
-                </div>
-              )}
-
-              {/* OUTROS FORMULÁRIOS (AUDIÊNCIA / DILIGÊNCIA)... */}
-              {(createMode === 'audiencia' || createMode === 'diligencia') && (
+              {/* OUTROS FORMULÁRIOS (PRAZO / AUDIÊNCIA / DILIGÊNCIA) - MANTER SIMPLICIDADE OU ADAPTAR SE NECESSÁRIO */}
+              {createMode !== 'atendimento' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
-                  <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
-                  <div className="grid grid-cols-2 gap-8">
+                   {/* ... Lógica anterior simplificada para os demais ... */}
+                   <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
+                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12" /></div>
                     <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-12" /></div>
                   </div>
@@ -722,20 +703,43 @@ export default function MasterAgendaPage() {
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-            <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">CANCELAR</Button>
-            <Button 
-              onClick={handleSaveEvent} 
-              disabled={isSyncingWorkspace || !newEventData.title || !newEventData.date}
-              className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
-            >
-              {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-              {editingEventId ? "ATUALIZAR REGISTRO" : "CONFIRMAR E SINCRONIZAR"}
+            <Button variant="ghost" onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">
+              {currentStep > 1 ? "ANTERIOR" : "CANCELAR"}
             </Button>
+            
+            {createMode === 'atendimento' ? (
+              currentStep < 5 ? (
+                <Button 
+                  onClick={() => setCurrentStep(currentStep + 1)} 
+                  className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.2em] px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.03] active:scale-95 gap-3"
+                >
+                  PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleSaveEvent} 
+                  disabled={isSyncingWorkspace || !newEventData.title || !newEventData.date}
+                  className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
+                >
+                  {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                  {editingEventId ? "ATUALIZAR REGISTRO" : "CONFIRMAR E SINCRONIZAR"}
+                </Button>
+              )
+            ) : (
+              <Button 
+                onClick={handleSaveEvent} 
+                disabled={isSyncingWorkspace || !newEventData.title || !newEventData.date}
+                className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
+              >
+                {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                {editingEventId ? "ATUALIZAR REGISTRO" : "CONFIRMAR E SINCRONIZAR"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO VISUALIZAÇÃO DETALHADA */}
+      {/* DIÁLOGO VISUALIZAÇÃO DETALHADA - SEM ALTERAÇÕES CRÍTICAS AQUI */}
       <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -743,7 +747,6 @@ export default function MasterAgendaPage() {
               <div className={cn(
                 "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-2xl",
                 viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : 
-                viewingEvent?.eventType === 'freelance' ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" :
                 viewingEvent?.eventType === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
                 "bg-amber-500/10 border-amber-500/20 text-amber-500"
               )}>
