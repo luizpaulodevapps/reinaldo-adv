@@ -39,7 +39,8 @@ import {
   Building2,
   ShieldAlert,
   ExternalLink,
-  Globe
+  Globe,
+  XCircle
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -85,6 +86,7 @@ export default function MasterAgendaPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>('atendimento')
   const [viewingEvent, setViewingEvent] = useState<any>(null)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
   
   // Estados para Cadastro Rápido
   const [isQuickFreelancerOpen, setIsQuickFreelancerOpen] = useState(false)
@@ -190,34 +192,65 @@ export default function MasterAgendaPage() {
     }
   }
 
-  const handleOpenSchedule = (date: Date, mode: CreateMode) => {
+  const handleOpenSchedule = (date: Date, mode: CreateMode, existingEvent?: any) => {
     setSelectedDate(date)
     setCreateMode(mode)
-    setNewEventData({
-      title: "",
-      date: format(date, 'yyyy-MM-dd'),
-      time: "09:00",
-      location: "",
-      notes: "",
-      clientName: "",
-      processNumber: "",
-      freelancerId: "",
-      freelancerName: "",
-      solicitorId: "",
-      solicitorName: "",
-      valueToPay: 0,
-      valueToCharge: 0,
-      extraExpenses: 0,
-      fuelExpense: 0,
-      parkingExpense: 0,
-      copyExpense: 0,
-      miscExpense: 0,
-      plaintiffName: "",
-      defendantName: "",
-      representedSide: "Autor",
-      partyContact: "",
-      courtName: ""
-    })
+    if (existingEvent) {
+      setEditingEventId(existingEvent.id)
+      const d = existingEvent.date || parseDate(existingEvent.startDateTime || existingEvent.dueDate)
+      setNewEventData({
+        title: existingEvent.title || "",
+        date: d ? format(d, 'yyyy-MM-dd') : format(date, 'yyyy-MM-dd'),
+        time: d ? format(d, 'HH:mm') : "09:00",
+        location: existingEvent.location || "",
+        notes: existingEvent.notes || "",
+        clientName: existingEvent.clientName || "",
+        processNumber: existingEvent.processNumber || "",
+        freelancerId: existingEvent.freelancerId || "",
+        freelancerName: existingEvent.freelancerName || "",
+        solicitorId: existingEvent.solicitorId || "",
+        solicitorName: existingEvent.solicitorName || "",
+        valueToPay: existingEvent.valueToPay || 0,
+        valueToCharge: existingEvent.valueToCharge || 0,
+        extraExpenses: existingEvent.extraExpenses || 0,
+        fuelExpense: existingEvent.fuelExpense || 0,
+        parkingExpense: existingEvent.parkingExpense || 0,
+        copyExpense: existingEvent.copyExpense || 0,
+        miscExpense: existingEvent.miscExpense || 0,
+        plaintiffName: existingEvent.plaintiffName || "",
+        defendantName: existingEvent.defendantName || "",
+        representedSide: existingEvent.representedSide || "Autor",
+        partyContact: existingEvent.partyContact || "",
+        courtName: existingEvent.courtName || existingEvent.court || ""
+      })
+    } else {
+      setEditingEventId(null)
+      setNewEventData({
+        title: "",
+        date: format(date, 'yyyy-MM-dd'),
+        time: "09:00",
+        location: "",
+        notes: "",
+        clientName: "",
+        processNumber: "",
+        freelancerId: "",
+        freelancerName: "",
+        solicitorId: "",
+        solicitorName: "",
+        valueToPay: 0,
+        valueToCharge: 0,
+        extraExpenses: 0,
+        fuelExpense: 0,
+        parkingExpense: 0,
+        copyExpense: 0,
+        miscExpense: 0,
+        plaintiffName: "",
+        defendantName: "",
+        representedSide: "Autor",
+        partyContact: "",
+        courtName: ""
+      })
+    }
     setIsCreateOpen(true)
   }
 
@@ -299,7 +332,7 @@ export default function MasterAgendaPage() {
     } else if (createMode === 'freelance') {
       const totalExtras = Number(newEventData.fuelExpense) + Number(newEventData.parkingExpense) + Number(newEventData.copyExpense) + Number(newEventData.miscExpense)
       
-      const flDoc = await addDocumentNonBlocking(collection(db, "freelance_diligences"), {
+      const flPayload = {
         type: "Audiência Freelance",
         freelancerId: newEventData.freelancerId,
         freelancerName: newEventData.freelancerName,
@@ -321,24 +354,39 @@ export default function MasterAgendaPage() {
         partyContact: newEventData.partyContact,
         court: newEventData.courtName.toUpperCase(),
         status: "Criada",
-        createdAt: serverTimestamp()
-      })
+        updatedAt: serverTimestamp()
+      }
+
+      let flDocId = "";
+      if (editingEventId && viewingEvent?.diligenceId) {
+        updateDocumentNonBlocking(doc(db, "freelance_diligences", viewingEvent.diligenceId), flPayload)
+        flDocId = viewingEvent.diligenceId;
+      } else {
+        const flDoc = await addDocumentNonBlocking(collection(db, "freelance_diligences"), { ...flPayload, createdAt: serverTimestamp() })
+        flDocId = (flDoc as any).id
+      }
 
       targetCollection = 'hearings'
       payload.isFreelance = true
       payload.title = `[FREELANCE] ${newEventData.plaintiffName || 'ATO'} vs ${newEventData.defendantName || 'PARTE'}`
       payload.startDateTime = dateTime
-      payload.diligenceId = (flDoc as any).id
+      payload.diligenceId = flDocId
       payload.location = newEventData.courtName || newEventData.location
       payload.status = "Agendado"
       typeForGoogle = 'freelance'
     }
 
-    const docRefRes = await addDocumentNonBlocking(collection(db, targetCollection), {
-      ...payload,
-      createdAt: serverTimestamp()
-    })
-    const docRefId = (docRefRes as any).id;
+    let finalDocId = "";
+    if (editingEventId) {
+      updateDocumentNonBlocking(doc(db, targetCollection, editingEventId), payload)
+      finalDocId = editingEventId;
+    } else {
+      const docRefRes = await addDocumentNonBlocking(collection(db, targetCollection), {
+        ...payload,
+        createdAt: serverTimestamp()
+      })
+      finalDocId = (docRefRes as any).id;
+    }
 
     // Sincronismo com Google Calendar + Meet + Mensagem
     try {
@@ -354,33 +402,63 @@ export default function MasterAgendaPage() {
             type: typeForGoogle,
             processNumber: payload.processNumber,
             clientName: payload.clientName,
-            useMeet: true // Tenta gerar Meet link por padrão na agenda
+            useMeet: true 
           }
         })
         
         if (calRes && calRes.hangoutLink) {
-          updateDocumentNonBlocking(doc(db, targetCollection, docRefId), {
+          updateDocumentNonBlocking(doc(db, targetCollection, finalDocId), {
             meetingUrl: calRes.hangoutLink,
             calendarEventId: calRes.id,
             updatedAt: serverTimestamp()
           })
         }
-        toast({ title: "Ato Sincronizado com Workspace" })
+        toast({ title: "Workspace Sincronizado" })
       }
     } catch (e) {
-      console.warn("Sync Google failed, focusing on Firestore persistence.", e)
+      console.warn("Sync Google failed", e)
     }
 
-    // Disparo WhatsApp rápido
-    if (newEventData.partyContact) {
+    // WhatsApp
+    if (newEventData.partyContact && !editingEventId) {
       const cleanPhone = newEventData.partyContact.replace(/\D/g, "");
       const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}. Dr. Reinaldo - RGMJ.`
       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
     }
 
-    toast({ title: "Ato Injetado na Pauta" })
+    toast({ title: editingEventId ? "Ato Retificado" : "Ato Injetado na Pauta" })
     setSyncing(false)
     setIsCreateOpen(false)
+    setViewingEvent(null)
+    setEditingEventId(null)
+  }
+
+  const handleCancelEvent = (event: any) => {
+    if (!db || !event) return
+    if (!confirm("Confirmar cancelamento deste ato? O histórico será preservado com status 'Cancelado'.")) return
+    
+    updateDocumentNonBlocking(doc(db, event.collection, event.id), {
+      status: "Cancelado",
+      updatedAt: serverTimestamp()
+    })
+    
+    toast({ title: "Ato Cancelado" })
+    setViewingEvent(null)
+  }
+
+  const handleDeleteEvent = (event: any) => {
+    if (!db || !event) return
+    if (!confirm("EXCLUIR PERMANENTEMENTE? Esta ação removerá o ato de todos os registros da banca.")) return
+    
+    deleteDocumentNonBlocking(doc(db, event.collection, event.id))
+    
+    // Se for freelance, deleta a ordem também
+    if (event.isFreelance && event.diligenceId) {
+      deleteDocumentNonBlocking(doc(db, "freelance_diligences", event.diligenceId))
+    }
+
+    toast({ variant: "destructive", title: "Ato Removido da Pauta" })
+    setViewingEvent(null)
   }
 
   return (
@@ -561,7 +639,7 @@ export default function MasterAgendaPage() {
               </div>
               <DialogHeader className="text-left">
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                  {createMode === 'audiencia' ? "Injetar Audiência" : createMode === 'freelance' ? "Ordem Freelance" : createMode === 'prazo' ? "Lançar Prazo" : "Agendar Atendimento"}
+                  {editingEventId ? "Retificar Registro" : createMode === 'audiencia' ? "Injetar Audiência" : createMode === 'freelance' ? "Ordem Freelance" : createMode === 'prazo' ? "Lançar Prazo" : "Agendar Atendimento"}
                 </DialogTitle>
                 <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">
                   RITO DE AGENDAMENTO ESTRATÉGICO RGMJ.
@@ -756,7 +834,7 @@ export default function MasterAgendaPage() {
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Abortar</Button>
             <Button onClick={handleSaveEvent} disabled={syncing} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02]">
               {syncing ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : null}
-              CONFIRMAR AGENDA
+              {editingEventId ? "SALVAR ALTERAÇÕES" : "CONFIRMAR AGENDA"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -796,7 +874,10 @@ export default function MasterAgendaPage() {
               </div>
             </div>
             {viewingEvent?.status && (
-              <Badge variant="outline" className="border-primary/20 text-primary uppercase font-black text-[9px] px-4 h-8 bg-primary/5 rounded-full tracking-widest">
+              <Badge variant="outline" className={cn(
+                "border-primary/20 uppercase font-black text-[9px] px-4 h-8 bg-primary/5 rounded-full tracking-widest",
+                viewingEvent.status === 'Cancelado' ? "border-rose-500/30 text-rose-500 bg-rose-500/5" : "text-primary"
+              )}>
                 {viewingEvent.status}
               </Badge>
             )}
@@ -805,7 +886,6 @@ export default function MasterAgendaPage() {
           <ScrollArea className="flex-1">
             <div className="p-10 space-y-10 bg-[#05070a] pb-32">
               
-              {/* Vínculo Estratégico (Novo) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
                   <Label className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Cliente / Lead</Label>
@@ -918,12 +998,28 @@ export default function MasterAgendaPage() {
 
           <div className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between flex-none rounded-b-3xl gap-6">
             <div className="flex items-center gap-4">
-              <ShieldAlert className="h-5 w-5 text-primary animate-pulse" />
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-50">Soberania Técnica Auditada • RGMJ</span>
+              <Button 
+                variant="ghost" 
+                className="text-rose-500 hover:bg-rose-500/10 font-black uppercase text-[10px] tracking-widest gap-2"
+                onClick={() => handleDeleteEvent(viewingEvent)}
+              >
+                <Trash2 className="h-4 w-4" /> EXCLUIR ATO
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-amber-500 hover:bg-amber-500/10 font-black uppercase text-[10px] tracking-widest gap-2"
+                onClick={() => handleCancelEvent(viewingEvent)}
+              >
+                <XCircle className="h-4 w-4" /> CANCELAR ATO
+              </Button>
             </div>
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">VOLTAR</Button>
-              <Button variant="outline" className="border-primary/30 text-primary font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl hover:bg-primary/10">
+              <Button 
+                variant="outline" 
+                className="border-primary/30 text-primary font-black uppercase text-[11px] tracking-widest px-10 h-12 rounded-xl hover:bg-primary hover:text-background transition-all"
+                onClick={() => handleOpenSchedule(viewingEvent.date || new Date(), viewingEvent.eventType, viewingEvent)}
+              >
                 <Edit3 className="h-4 w-4 mr-3" /> RETIFICAR ATO
               </Button>
             </div>
