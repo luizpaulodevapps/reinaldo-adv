@@ -62,14 +62,13 @@ import {
   Scale,
   DollarSign,
   Stamp,
-  Signature
+  Signature,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react"
 import { 
   Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
@@ -330,6 +329,7 @@ function SettingsContent() {
   }
 
   const tabTriggerClass = "data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-[0_0_20px_rgba(245,208,48,0.3)] text-muted-foreground font-black text-[10px] uppercase h-full px-10 rounded-full transition-all tracking-[0.1em] border border-transparent data-[state=active]:border-black/10"
+  const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 block"
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
@@ -445,7 +445,7 @@ function SettingsContent() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                    <DollarSign className="h-5 w-5 text-emerald-500" />
+                    <ArrowUpRight className="h-5 w-5 text-emerald-500" />
                     <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template de Recibo (Recebimento)</h4>
                   </div>
                   <Textarea 
