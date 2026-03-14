@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -108,7 +107,6 @@ export default function CasesPage() {
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
   const [loadingMeetingCep, setLoadingMeetingCep] = useState(false)
 
-  // Estados para Atendimento Wizard (Rito de 5 Passos)
   const [meetingData, setMeetingData] = useState({ 
     title: "", 
     date: format(new Date(), 'yyyy-MM-dd'), 
@@ -126,7 +124,6 @@ export default function CasesPage() {
     state: ""
   })
 
-  // Estados para Prazo
   const [deadlineData, setDeadlineData] = useState({ 
     title: "", 
     pubDate: format(new Date(), 'yyyy-MM-dd'), 
@@ -201,7 +198,7 @@ export default function CasesPage() {
       toast({ 
         variant: "destructive", 
         title: "Configuração Pendente", 
-        description: "O Root Folder ID do Google Drive não foi configurado nas definições." 
+        description: "O Root Folder ID do Google Drive não foi configurado." 
       })
       return
     }
@@ -211,7 +208,7 @@ export default function CasesPage() {
       toast({ 
         variant: "destructive", 
         title: "Google Workspace Desconectado", 
-        description: "Por favor, realize o login com Google novamente." 
+        description: "Login com Google necessário." 
       })
       return
     }
@@ -227,17 +224,9 @@ export default function CasesPage() {
           description: proc.description || "DEMANDA"
         }
       });
-
-      toast({ 
-        title: "Dossiê Sincronizado", 
-        description: "Estrutura de pastas RGMJ criada no Google Drive com sucesso." 
-      })
+      toast({ title: "Dossiê Sincronizado", description: "Pastas criadas no Drive." })
     } catch (error) {
-      toast({ 
-        variant: "destructive", 
-        title: "Erro no Sincronismo", 
-        description: "Falha ao criar infraestrutura no Drive. Verifique permissões." 
-      })
+      toast({ variant: "destructive", title: "Erro no Sincronismo" })
     } finally {
       setSyncingDriveId(null)
     }
@@ -309,7 +298,7 @@ export default function CasesPage() {
           })
         }
       }
-    } catch (e) { console.warn("Calendar error", e) }
+    } catch (e) { console.warn("Calendar sync failed", e) }
 
     if (activeActionProcess.phone || activeActionProcess.clientPhone) {
       const contact = activeActionProcess.phone || activeActionProcess.clientPhone || "";
@@ -322,7 +311,7 @@ export default function CasesPage() {
 
     setIsSyncingAct(false)
     setIsMeetingOpen(false)
-    toast({ title: "Atendimento Protocolado e Sincronizado" })
+    toast({ title: "Atendimento Protocolado" })
   }
 
   const handleLaunchDeadline = async () => { 
@@ -369,7 +358,6 @@ export default function CasesPage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
-      {/* Breadcrumbs & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
@@ -383,13 +371,12 @@ export default function CasesPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar..." className="pl-12 glass border-white/5 h-12 text-xs text-white rounded-xl focus:ring-primary/50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <Button onClick={() => { setEditingProcess(null); setIsSheetOpen(true); }} className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-[0_15px_40px_rgba(245,208,48,0.2)] hover:scale-105 transition-all">
+          <Button onClick={() => { setEditingProcess(null); setIsSheetOpen(true); }} className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-[0_15px_40px_rgba(245,208,48,0.2)]">
             <Plus className="h-4 w-4" /> NOVO PROCESSO
           </Button>
         </div>
       </div>
 
-      {/* Stats BI Topo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-[#141B2D] border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Scale className="h-12 w-12" /></div>
@@ -408,7 +395,6 @@ export default function CasesPage() {
         </Card>
       </div>
 
-      {/* Filtros e Tabs */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-6">
         <div className="flex flex-wrap gap-8 items-center">
           {AREAS.map(area => (
@@ -430,14 +416,12 @@ export default function CasesPage() {
         </div>
       </div>
 
-      {/* Lista de Processos */}
       <div className="space-y-6">
         {isLoading ? (
           <div className="py-32 flex flex-col items-center justify-center space-y-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Auditando Acervo...</span></div>
         ) : filteredProcesses.map((proc) => (
           <Card key={proc.id} className="bg-[#0d1117] border-white/5 hover:border-primary/30 transition-all group overflow-hidden rounded-2xl shadow-2xl relative">
             <CardContent className="p-10 space-y-10">
-              {/* Header Card: Título e Ações Rápidas */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -465,37 +449,28 @@ export default function CasesPage() {
                       <div className="px-4 py-3 border-b border-white/5 mb-2">
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Gestão do Caso</p>
                       </div>
-                      
                       <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 cursor-pointer group">
                         <History className="h-5 w-5 text-muted-foreground/40 group-hover:text-white" /> VER PROCESSO COMPLETO
                       </DropdownMenuItem>
-                      
                       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer group">
                         <Calendar className="h-5 w-5" /> AGENDAR REUNIÃO/ATEND.
                       </DropdownMenuItem>
-                      
                       <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer group">
                         <ListChecks className="h-5 w-5" /> AGENDAR DILIGÊNCIA
                       </DropdownMenuItem>
-                      
                       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer group">
                         <AlarmClock className="h-5 w-5" /> LANÇAR PRAZO FATAL
                       </DropdownMenuItem>
-                      
                       <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#f5d030]/10 text-[#f5d030] cursor-pointer group">
                         <Gavel className="h-5 w-5" /> AGENDAR AUDIÊNCIA
                       </DropdownMenuItem>
-                      
                       <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-sky-500/10 text-sky-400 cursor-pointer group">
                         <DollarSign className="h-5 w-5" /> EVENTO FINANCEIRO
                       </DropdownMenuItem>
-                      
                       <div className="h-px bg-white/5 my-2" />
-                      
                       <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer group">
                         <Edit3 className="h-5 w-5" /> EDITAR PROCESSO
                       </DropdownMenuItem>
-                      
                       <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db!, "processes", proc.id))} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600/10 text-rose-600 cursor-pointer group">
                         <Trash2 className="h-5 w-5" /> ARQUIVAR PROCESSO
                       </DropdownMenuItem>
@@ -504,7 +479,6 @@ export default function CasesPage() {
                 </div>
               </div>
 
-              {/* Grid de Metadados Internos */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
                 <div className="space-y-2">
                   <Label className={labelMini}>PROTOCOLO CNJ</Label>
@@ -542,7 +516,6 @@ export default function CasesPage() {
                 </div>
               </div>
 
-              {/* Footer Card: Ações Secundárias */}
               <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
                 <div className="flex gap-4">
                   <Button 
@@ -568,7 +541,6 @@ export default function CasesPage() {
         ))}
       </div>
 
-      {/* DIÁLOGO ATENDIMENTO (Wizard 5 Steps) */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[80vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -631,7 +603,7 @@ export default function CasesPage() {
                     <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                       <Video className="h-12 w-12 text-emerald-500 mx-auto" />
                       <h4 className="text-xl font-black text-white uppercase">Google Meet Hub</h4>
-                      <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                      <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
                         <Switch checked={meetingData.autoMeet} onCheckedChange={v => setMeetingData({...meetingData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
                         <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
                       </div>
@@ -733,7 +705,6 @@ export default function CasesPage() {
             </DialogContent>
           </Dialog>
 
-          {/* DIÁLOGO PRAZO JUDICIAL */}
           <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
             <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
               <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-5 flex-none shadow-xl">

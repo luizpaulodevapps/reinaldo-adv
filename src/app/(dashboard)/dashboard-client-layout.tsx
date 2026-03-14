@@ -32,7 +32,6 @@ export function DashboardClientLayout({
     }
   }, [user, isUserLoading, router]);
 
-  // Rito de busca direta pelo e-mail (Identidade Única RGMJ)
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'staff_profiles', user.email?.toLowerCase().trim() || 'unauthorized');
@@ -46,14 +45,12 @@ export function DashboardClientLayout({
     }
   }, [profileData, profile, setProfile]);
 
-  // Bloqueio imediato se o status não for Ativo
   useEffect(() => {
     if (user && profileData && profileData.isActive === false && auth) {
       signOut(auth).then(() => router.push('/login'));
     }
   }, [user, profileData, auth, router]);
 
-  // Auto-criação de perfil para Sócios Fundadores (Whitelisted)
   useEffect(() => {
     if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email?.toLowerCase() || '')) {
       const emailId = user.email?.toLowerCase().trim() || '';
@@ -89,7 +86,6 @@ export function DashboardClientLayout({
     );
   }
 
-  // Bloqueio de Acesso Não Autorizado
   if (!isProfileLoading && profileData === null && !OWNERS.includes(user?.email?.toLowerCase() || '')) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0D1422] flex-col gap-8 font-sans p-10 text-center">
@@ -100,7 +96,6 @@ export function DashboardClientLayout({
           <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Não Autorizado</h2>
           <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest max-w-md mx-auto leading-relaxed">
             Seu e-mail Google (<span className="text-white">{user?.email}</span>) não possui autorização neste ecossistema. 
-            Certifique-se de que este é o e-mail cadastrado na pauta de soberania pelo Sócio Fundador.
           </p>
         </div>
         <Button onClick={() => auth && signOut(auth).then(() => router.push('/'))} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[10px]">
@@ -142,7 +137,6 @@ export function DashboardClientLayout({
           </header>
 
           <main className="flex-1 overflow-x-hidden">
-            {/* VISÃO ULTRA-WIDE: Largura expandida para 1800px / 95% do viewport para evitar truncamentos */}
             <div className="py-8 px-6 lg:py-10 lg:px-12 max-w-[1800px] w-[95%] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
               {children}
             </div>
