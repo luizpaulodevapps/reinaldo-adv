@@ -1,109 +1,109 @@
-
 {
   "entities": {
-    "Client": {
+    "ClientInterview": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Client",
+      "title": "ClientInterview",
       "type": "object",
-      "description": "Represents a client (either individual or corporate) of the legal firm, storing their complete registration information.",
+      "description": "Represents a scheduled or completed meeting/interview with a prospective client (lead) or an existing client to gather information, conduct triaging, or discuss case details. This entity tracks individual interview instances, allowing for a historical record of interactions and preventing conflicts when creating new interviews.",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "documentNumber": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "phone": { "type": "string" },
-        "address": { "type": "string" },
-        "city": { "type": "string" },
-        "state": { "type": "string" },
-        "zipCode": { "type": "string" },
-        "type": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ClientInterview entity."
+        },
+        "leadId": {
+          "type": "string",
+          "description": "Reference to the Lead entity this interview is associated with. (Relationship: Lead 1:N ClientInterview)"
+        },
+        "interviewerStaffId": {
+          "type": "string",
+          "description": "Reference to the Staff entity (e.g., lawyer, assistant) who conducted or is scheduled to conduct this interview. (Relationship: Staff 1:N ClientInterview)"
+        },
+        "scheduledDateTime": {
+          "type": "string",
+          "description": "The date and time when the interview is scheduled to occur or occurred.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the interview (e.g., 'Scheduled', 'Completed', 'Cancelled', 'Rescheduled', 'No Show')."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type or purpose of the interview (e.g., 'Initial Screening', 'Follow-up', 'Contract Discussion', 'Fact-finding'). This may relate to dynamic questionnaires mentioned in the CRM module."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Detailed notes or a summary recorded during or after the interview. This can include key discussion points and questionnaire results."
+        },
+        "googleCalendarEventId": {
+          "type": "string",
+          "description": "The unique identifier for the corresponding event in Google Calendar, if synced. Used for bidirectional synchronization."
+        },
+        "virtualMeetingLink": {
+          "type": "string",
+          "description": "The URL for a virtual meeting platform (e.g., Google Meet link) if the interview is conducted remotely.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this interview record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this interview record was last updated.",
+          "format": "date-time"
+        }
       },
-      "required": ["id", "name", "documentNumber", "type", "createdAt"]
-    },
-    "Notification": {
-      "title": "Notification",
-      "type": "object",
-      "description": "System-wide notification for users.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "message": { "type": "string" },
-        "type": { "type": "string", "enum": ["deadline", "hearing", "lead", "financial", "system", "reimbursement"] },
-        "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
-        "read": { "type": "boolean" },
-        "link": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "AuditLog": {
-      "title": "AuditLog",
-      "type": "object",
-      "description": "Security log for traceability of all critical actions.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "action": { "type": "string", "enum": ["create", "update", "delete", "login", "export", "approve", "refuse"] },
-        "collection": { "type": "string" },
-        "docId": { "type": "string" },
-        "ip": { "type": "string" },
-        "metadata": { "type": "object" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "Reimbursement": {
-      "title": "Reimbursement",
-      "type": "object",
-      "description": "A request for expense reimbursement by a staff member.",
-      "properties": {
-        "id": { "type": "string" },
-        "requesterId": { "type": "string" },
-        "requesterName": { "type": "string" },
-        "amount": { "type": "number" },
-        "description": { "type": "string" },
-        "category": { "type": "string", "enum": ["Viagem", "Refeição", "Cópias", "Custas Judiciais", "Outros"] },
-        "status": { "type": "string", "enum": ["Pendente", "Aprovado", "Recusado", "Pago"] },
-        "date": { "type": "string", "format": "date" },
-        "destinationAccount": { "type": "string" },
-        "originAccount": { "type": "string" },
-        "refusalReason": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "FinancialTitle": {
-      "title": "FinancialTitle",
-      "type": "object",
-      "description": "Financial entry for the legal firm (income or expense).",
-      "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["Entrada (Receita)", "Saída (Despesa)"] },
-        "category": { "type": "string" },
-        "description": { "type": "string" },
-        "value": { "type": "number" },
-        "dueDate": { "type": "string", "format": "date" },
-        "status": { "type": "string", "enum": ["Pendente", "Pago", "Recebido", "Liquidado", "Cancelado"] },
-        "originBank": { "type": "string" },
-        "destinationBank": { "type": "string" },
-        "responsibleStaffId": { "type": "string" },
-        "clientName": { "type": "string" },
-        "processNumber": { "type": "string" }
-      }
+      "required": [
+        "id",
+        "leadId",
+        "interviewerStaffId",
+        "scheduledDateTime",
+        "status",
+        "type"
+      ]
     }
   },
   "auth": {
-    "providers": ["google"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/notifications/{notificationId}": { "schema": { "$ref": "#/backend/entities/Notification" }, "description": "User notifications." },
-    "/audit_logs/{logId}": { "schema": { "$ref": "#/backend/entities/AuditLog" }, "description": "Security audit logs." },
-    "/staff_profiles/{staffId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Staff access and roles." },
-    "/employees/{employeeId}": { "schema": { "$ref": "#/backend/entities/StaffProfile" }, "description": "Detailed DP records." },
-    "/clients/{clientId}": { "schema": { "$ref": "#/backend/entities/Client" }, "description": "Client registration data." },
-    "/processes/{processId}": { "schema": { "$ref": "#/backend/entities/Process" }, "description": "Legal process details." },
-    "/reimbursements/{reimbursementId}": { "schema": { "$ref": "#/backend/entities/Reimbursement" }, "description": "Staff reimbursement requests." },
-    "/financial_titles/{titleId}": { "schema": { "$ref": "#/backend/entities/FinancialTitle" }, "description": "Financial entries." }
+    "structure": [
+      {
+        "path": "/leads/{leadId}",
+        "definition": {
+          "entityName": "Lead",
+          "schema": {
+            "$ref": "#/backend/entities/Lead"
+          },
+          "description": "Top-level collection for managing client leads within the CRM funnel. Each Lead document is expected to contain an `ownerStaffId` field, representing the staff member responsible for the lead. This structure supports efficient queries for leads owned by a specific staff member and acts as the parent for related entities like ClientInterviews."
+        }
+      },
+      {
+        "path": "/leads/{leadId}/clientInterviews/{clientInterviewId}",
+        "definition": {
+          "entityName": "ClientInterview",
+          "schema": {
+            "$ref": "#/backend/entities/ClientInterview"
+          },
+          "description": "Subcollection under a specific Lead, storing individual interview instances with prospective or existing clients. This collection includes denormalized `leadOwnerStaffId` from its parent Lead for authorization independence, allowing direct access checks without requiring `get()` operations on the parent Lead document. It also contains the `interviewerStaffId` for direct access control by the conducting staff member. Each document represents a unique interview event.",
+          "params": [
+            {
+              "name": "leadId",
+              "description": "The unique identifier of the parent Lead entity."
+            },
+            {
+              "name": "clientInterviewId",
+              "description": "The unique identifier for a specific ClientInterview instance."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to be highly secure, scalable, and debuggable, primarily by prioritizing Authorization Independence and ensuring QAPs (Queryable Access Patterns).\n\n**Authorization Independence:** The core principle applied here is denormalization. Each `ClientInterview` document, located at `/leads/{leadId}/clientInterviews/{clientInterviewId}`, will include a `leadOwnerStaffId` field. This field will store the ID of the staff member (lawyer or assistant) who owns the parent `Lead` document. This denormalization is crucial because it allows Firestore security rules to determine if a user has access to a specific interview without performing a `get()` operation on the parent `Lead` document. For example, a rule can simply check if `request.auth.uid == resource.data.interviewerStaffId` or `request.auth.uid == resource.data.leadOwnerStaffId` to grant access. This eliminates hierarchical authorization dependencies, making rules simpler, faster, and more atomic for operations like creating a new interview.\n\n**QAPs (Rules are not Filters):**\n1.  **Listing interviews for a specific Lead:** The hierarchical path `/leads/{leadId}/clientInterviews` inherently supports listing all interviews for a given lead. Security rules, using the denormalized `leadOwnerStaffId` on each `ClientInterview` document, can efficiently verify if the requesting user has access to the lead's interviews, ensuring that `list` operations are secure and not reliant on filtering after an insecure read.\n2.  **Listing all interviews for a specific Interviewer:** A collection group query on `clientInterviews` can be used with a `where('interviewerStaffId', '==', request.auth.uid)`. This allows a lawyer to securely retrieve all interviews they are scheduled to conduct, adhering to the principle that rules validate the query rather than filtering the results.\n\n**Addressing \"ao tentar cria uma nova entrevista o sistema tenta trocar a atual\" (When trying to create a new interview, the system tries to replace the current one):** This issue is directly addressed by the proposed structure. By placing `ClientInterview` documents in a subcollection (`/leads/{leadId}/clientInterviews/{clientInterviewId}`), and specifically by allowing Firestore to auto-generate the `{clientInterviewId}` (e.g., using `addDoc()` in client SDKs), each new interview will automatically receive a globally unique ID within that subcollection. This ensures that new interviews are always created as distinct documents and never overwrite an existing interview, resolving the reported problem."
   }
 }

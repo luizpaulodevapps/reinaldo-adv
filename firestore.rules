@@ -1,14 +1,110 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     /**
-     * LexFlow ERP - Soberania de Acesso RGMJ
-     * Conforme diretriz: Qualquer usuário autenticado via Google tem permissão total (CRUD) em todas as coleções.
-     * Segurança baseada na identidade institucional única.
+     * Core Philosophy: This ruleset enforces a strict staff-ownership and collaborator model.
+     * Access is restricted to authenticated staff members who are either the assigned owners 
+     * of a Lead or the designated Interviewer for a specific session.
+     * 
+     * Data Structure: Data is organized hierarchically. Interviews are nested under Leads
+     * (/leads/{leadId}/clientInterviews/{id}) to maintain logical grouping and prevent overwriting.
+     * 
+     * Key Security Decisions: 
+     * 1. Denormalization for Authorization: The `leadOwnerStaffId` is denormalized onto 
+     *    ClientInterview documents. This allows the rules to verify access for both the 
+     *    interviewer and the lead owner without performing expensive cross-document lookups.
+     * 2. Prevention of Overwrites: By utilizing a subcollection structure and requiring 
+     *    unique document IDs for interviews, the system prevents new interviews from 
+     *    accidentally replacing existing ones.
+     * 3. Immutability: Critical relational fields like ownership IDs and parent IDs 
+     *    are made immutable after creation to maintain data integrity.
      */
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // --- Global Helper Functions ---
+
+    /**
+     * @description Checks if the request is made by an authenticated user.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user's UID matches the provided ID.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if a document exists and the user is the owner.
+     * Used for update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /**
+     * @description Checks if the user is either the assigned lead owner or the interviewer.
+     * Used for the ClientInterview entity.
+     */
+    function isInterviewCollaborator(data) {
+      return isOwner(data.leadOwnerStaffId) || isOwner(data.interviewerStaffId);
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the Lead collection. Access is restricted to the staff member owning the lead.
+     * @path /leads/{leadId}
+     * @allow (get) If signed in user is the ownerStaffId of the lead.
+     * @deny (create) If the user attempts to create a lead with someone else's ownerStaffId.
+     * @principle Ownership-based access control and relational integrity validation.
+     */
+    match /leads/{leadId} {
+      allow get, list: if isSignedIn() && isOwner(resource.data.ownerStaffId);
+      
+      allow create: if isSignedIn() && isOwner(request.resource.data.ownerStaffId);
+      
+      allow update: if isSignedIn() && isExistingOwner(resource.data.ownerStaffId) 
+                    && request.resource.data.ownerStaffId == resource.data.ownerStaffId;
+      
+      allow delete: if isSignedIn() && isExistingOwner(resource.data.ownerStaffId);
+
+      /**
+       * @description Rules for ClientInterviews. Access is granted to both the lead owner and the interviewer.
+       * @path /leads/{leadId}/clientInterviews/{clientInterviewId}
+       * @allow (create) If the creator is either the lead owner or the interviewer specified in the data.
+       * @deny (update) If a user who is neither the owner nor the interviewer tries to modify the record.
+       * @principle Shared access model using denormalized fields to avoid get() calls.
+       */
+      match /clientInterviews/{clientInterviewId} {
+        allow get, list: if isSignedIn() && isInterviewCollaborator(resource.data);
+
+        allow create: if isSignedIn() 
+                      && isInterviewCollaborator(request.resource.data)
+                      && request.resource.data.leadId == leadId;
+
+        allow update: if isSignedIn() 
+                      && resource != null 
+                      && isInterviewCollaborator(resource.data)
+                      && request.resource.data.leadId == resource.data.leadId
+                      && request.resource.data.leadOwnerStaffId == resource.data.leadOwnerStaffId;
+
+        allow delete: if isSignedIn() 
+                      && resource != null 
+                      && isInterviewCollaborator(resource.data);
+      }
+    }
+
+    // --- Collection Group Rules (for global queries) ---
+
+    /**
+     * @description Allows staff to query all interviews across different leads where they are the interviewer.
+     */
+    match /{path=**}/clientInterviews/{interview} {
+      allow list: if isSignedIn() && (isOwner(resource.data.interviewerStaffId) || isOwner(resource.data.leadOwnerStaffId));
     }
   }
 }
