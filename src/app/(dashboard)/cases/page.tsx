@@ -114,6 +114,7 @@ export default function CasesPage() {
   const [isFinancialOpen, setIsFinancialOpen] = useState(false)
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
+  const [isSyncingAct, setIsSyncingAct] = useState(false)
 
   // Estados para Lançamento de Prazo com IA e Calculadora (Fidelidade Modelo)
   const [publicationText, setPublicationText] = useState("")
@@ -232,6 +233,7 @@ export default function CasesPage() {
 
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
+    setIsSyncingAct(true)
     const finalLocation = meetingData.type === 'online' ? (meetingData.location || 'GOOGLE MEET RGMJ') : (meetingData.location || 'SEDE RGMJ')
     
     // 1. Injeção no Firestore
@@ -252,6 +254,7 @@ export default function CasesPage() {
     const docRefId = (docRefRes as any).id;
 
     // 2. Sincronismo Workspace (Agenda + Meet)
+    let meetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
       if (accessToken) {
@@ -270,6 +273,7 @@ export default function CasesPage() {
         })
 
         if (calRes && calRes.hangoutLink) {
+          meetLink = calRes.hangoutLink;
           updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
             meetingUrl: calRes.hangoutLink,
             calendarEventId: calRes.id,
@@ -286,16 +290,19 @@ export default function CasesPage() {
     if (activeActionProcess.phone || activeActionProcess.registrationData?.phone) {
       const phone = activeActionProcess.phone || activeActionProcess.registrationData?.phone;
       const cleanPhone = phone.replace(/\D/g, "");
-      const msg = `Olá ${activeActionProcess.clientName}! Confirmamos sua REUNIÃO ${meetingData.type === 'online' ? 'VIRTUAL' : 'PRESENCIAL'} para o dia ${new Date(meetingData.date).toLocaleDateString('pt-BR')} às ${meetingData.time}. Link/Local: ${finalLocation}. Dr. Reinaldo - RGMJ.`
+      const meetPart = meetLink ? ` Link da reunião: ${meetLink}` : "";
+      const msg = `Olá ${activeActionProcess.clientName}! Confirmamos sua REUNIÃO ${meetingData.type === 'online' ? 'VIRTUAL' : 'PRESENCIAL'} para o dia ${new Date(meetingData.date).toLocaleDateString('pt-BR')} às ${meetingData.time}.${meetPart} Dr. Reinaldo - RGMJ.`
       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
     }
 
+    setIsSyncingAct(false)
     setIsMeetingOpen(false)
     toast({ title: "Rito de Agendamento Concluído", description: "Agenda sincronizada e cliente notificado." })
   }
 
   const handleLaunchDeadline = async () => {
     if (!db || !activeActionProcess) return
+    setIsSyncingAct(true)
     const payload = {
       title: deadlineData.title.toUpperCase(),
       dueDate: deadlineData.fatalDate,
@@ -308,6 +315,7 @@ export default function CasesPage() {
       createdAt: serverTimestamp()
     }
     await addDocumentNonBlocking(collection(db, "deadlines"), payload)
+    setIsSyncingAct(false)
     setIsDeadlineOpen(false)
     setPublicationText("")
     setDeadlineDuration("")
@@ -355,6 +363,7 @@ export default function CasesPage() {
 
   const handleScheduleHearing = async () => {
     if (!db || !activeActionProcess) return
+    setIsSyncingAct(true)
     const payload = {
       title: `AUDIÊNCIA ${hearingData.type}: ${activeActionProcess.clientName}`,
       type: hearingData.type,
@@ -367,12 +376,14 @@ export default function CasesPage() {
       createdAt: serverTimestamp()
     }
     await addDocumentNonBlocking(collection(db, "hearings"), payload)
+    setIsSyncingAct(false)
     setIsHearingOpen(false)
     toast({ title: "Audiência Injetada" })
   }
 
   const handleScheduleDiligence = async () => {
     if (!db || !activeActionProcess) return
+    setIsSyncingAct(true)
     const selectedStaff = staffMembers?.find(s => s.id === diligenceData.assigneeId)
     const payload = {
       title: diligenceData.title.toUpperCase(),
@@ -390,6 +401,7 @@ export default function CasesPage() {
       createdAt: serverTimestamp()
     }
     await addDocumentNonBlocking(collection(db, "diligences"), payload)
+    setIsSyncingAct(false)
     setIsDiligenceOpen(false)
     toast({ title: "Diligência Agendada" })
   }
@@ -638,8 +650,11 @@ export default function CasesPage() {
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
             <div className="flex items-center gap-6">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 shadow-xl">
-                <Calendar className="h-6 w-6" />
+              <div className={cn(
+                "w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 shadow-xl",
+                isSyncingAct && "animate-pulse"
+              )}>
+                {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Calendar className="h-6 w-6" />}
               </div>
               <div className="text-left">
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Atendimento</DialogTitle>
@@ -750,7 +765,8 @@ export default function CasesPage() {
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
             <Button variant="ghost" onClick={() => setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">Cancelar</Button>
-            <Button onClick={handleScheduleMeeting} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95">
+            <Button onClick={handleScheduleMeeting} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 gap-3">
+              {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
               CONFIRMAR AGENDAMENTO
             </Button>
           </DialogFooter>
@@ -763,7 +779,7 @@ export default function CasesPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
             <div className="flex flex-row items-center gap-5">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                <Clock className="h-6 w-6" />
+                {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Clock className="h-6 w-6" />}
               </div>
               <div className="text-left">
                 <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">
@@ -949,9 +965,11 @@ export default function CasesPage() {
             </button>
             <Button 
               onClick={handleLaunchDeadline} 
+              disabled={isSyncingAct}
               className="bg-[#f5d030] hover:bg-[#ffcc00] text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
             >
-              <Calendar className="h-5 w-5" /> CONFIRMAR LANÇAMENTO
+              {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <Calendar className="h-5 w-5" />}
+              CONFIRMAR LANÇAMENTO
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -961,7 +979,7 @@ export default function CasesPage() {
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           <div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Gavel className="h-6 w-6 text-amber-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Agendar Audiência</DialogTitle></div></DialogHeader></div>
           <div className="p-8 space-y-6"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label><Select value={hearingData.type} onValueChange={v => setHearingData({...hearingData, type: v})}><SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="UNA">UNA</SelectItem><SelectItem value="INSTRUÇÃO">INSTRUÇÃO</SelectItem><SelectItem value="CONCILIAÇÃO">CONCILIAÇÃO</SelectItem></SelectContent></Select></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={hearingData.date} onChange={e => setHearingData({...hearingData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={hearingData.time} onChange={e => setHearingData({...hearingData, time: e.target.value})} /></div></div></div>
-          <DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsHearingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleHearing} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar</Button></DialogFooter>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsHearingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleHearing} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl gap-2">{isSyncingAct && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirmar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

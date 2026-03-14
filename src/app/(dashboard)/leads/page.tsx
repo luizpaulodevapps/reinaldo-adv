@@ -174,6 +174,7 @@ export default function LeadsPage() {
 
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeData, setIntakeData] = useState({ date: "", time: "", type: "online", locationType: "sede", customAddress: "", observations: "", autoMeet: true })
+  const [isSyncingIntake, setIsSyncingIntake] = useState(false)
 
   const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
   const [deadlineData, setDeadlineData] = useState({ 
@@ -270,6 +271,7 @@ export default function LeadsPage() {
 
   const handleScheduleIntake = async () => {
     if (!db || !activeLead || !intakeData.date || !intakeData.time) return
+    setIsSyncingIntake(true)
     const finalLocation = intakeData.type === 'online' ? 'GOOGLE MEET RGMJ' : (intakeData.locationType === 'sede' ? 'Sede RGMJ' : intakeData.customAddress)
     
     // 1. Salva no Firestore
@@ -295,6 +297,7 @@ export default function LeadsPage() {
     const appointmentId = (appointmentRes as any).id;
 
     // 2. Sincroniza com Google Calendar + Meet
+    let meetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
       if (accessToken) {
@@ -312,6 +315,7 @@ export default function LeadsPage() {
         })
 
         if (calRes && calRes.hangoutLink) {
+          meetLink = calRes.hangoutLink;
           updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
             meetingUrl: calRes.hangoutLink,
             updatedAt: serverTimestamp()
@@ -326,10 +330,12 @@ export default function LeadsPage() {
     // 3. Disparo WhatsApp
     if (activeLead.phone) {
       const cleanPhone = activeLead.phone.replace(/\D/g, "");
-      const msg = `Olá ${activeLead.name}! Seu atendimento de TRIAGEM foi agendado para o dia ${new Date(intakeData.date).toLocaleDateString('pt-BR')} às ${intakeData.time}. Modalidade: ${intakeData.type === 'online' ? 'VIRTUAL (Meet)' : 'PRESENCIAL'}. Dr. Reinaldo - RGMJ.`
+      const meetPart = meetLink ? ` Link da reunião: ${meetLink}` : "";
+      const msg = `Olá ${activeLead.name}! Seu atendimento de TRIAGEM foi agendado para o dia ${new Date(intakeData.date).toLocaleDateString('pt-BR')} às ${intakeData.time}.${meetPart} Modalidade: ${intakeData.type === 'online' ? 'VIRTUAL (Meet)' : 'PRESENCIAL'}. Dr. Reinaldo - RGMJ.`
       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
     }
 
+    setIsSyncingIntake(false)
     setIsSchedulingIntake(false)
     toast({ title: "Rito de Agendamento Concluído" })
   }
@@ -771,7 +777,7 @@ export default function LeadsPage() {
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
             <div className="flex flex-row items-center gap-5">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                <Clock className="h-6 w-6" />
+                {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Clock className="h-6 w-6" />}
               </div>
               <div className="text-left">
                 <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">
@@ -957,9 +963,11 @@ export default function LeadsPage() {
             </button>
             <Button 
               onClick={handleLaunchDeadline} 
+              disabled={isSyncingAct}
               className="bg-[#f5d030] hover:bg-[#ffcc00] text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
             >
-              <Calendar className="h-5 w-5" /> CONFIRMAR LANÇAMENTO
+              {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <Calendar className="h-5 w-5" />}
+              CONFIRMAR LANÇAMENTO
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -975,7 +983,7 @@ export default function LeadsPage() {
           <Switch checked={intakeData.autoMeet} onCheckedChange={v => setIntakeData({...intakeData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
         </div>
       )}
-      </div></ScrollArea><DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar Agenda</Button></DialogFooter></DialogContent></Dialog>
+      </div></ScrollArea><DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl gap-2">{isSyncingIntake && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirmar Agenda</Button></DialogFooter></DialogContent></Dialog>
     </div>
   )
 }

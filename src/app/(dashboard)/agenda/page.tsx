@@ -389,6 +389,7 @@ export default function MasterAgendaPage() {
     }
 
     // Sincronismo com Google Calendar + Meet + Mensagem
+    let generatedMeetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
       if (accessToken) {
@@ -407,6 +408,7 @@ export default function MasterAgendaPage() {
         })
         
         if (calRes && calRes.hangoutLink) {
+          generatedMeetLink = calRes.hangoutLink;
           updateDocumentNonBlocking(doc(db, targetCollection, finalDocId), {
             meetingUrl: calRes.hangoutLink,
             calendarEventId: calRes.id,
@@ -422,7 +424,8 @@ export default function MasterAgendaPage() {
     // WhatsApp
     if (newEventData.partyContact && !editingEventId) {
       const cleanPhone = newEventData.partyContact.replace(/\D/g, "");
-      const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}. Dr. Reinaldo - RGMJ.`
+      const meetPart = generatedMeetLink ? ` Link da reunião: ${generatedMeetLink}` : "";
+      const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}.${meetPart} Dr. Reinaldo - RGMJ.`
       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
     }
 
