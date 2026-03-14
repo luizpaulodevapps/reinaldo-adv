@@ -64,7 +64,8 @@ import {
   Stamp,
   Signature,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Gavel
 } from "lucide-react"
 import { 
   Select, 
@@ -222,7 +223,11 @@ function SettingsContent() {
     city: "",
     state: "",
     phone: "",
-    email: ""
+    email: "",
+    openingHours: "Segunda a Sexta, das 09:00 às 18:00",
+    responsibleLawyer: "Dr. Reinaldo Gonçalves Miguel de Jesus",
+    oabNumber: "",
+    logoUrl: ""
   })
 
   const [googleConfig, setGoogleConfig] = useState({
@@ -311,6 +316,24 @@ function SettingsContent() {
     toast({ title: "Hub Workspace Sincronizado" })
   }
 
+  const handleCepBlur = async () => {
+    const cep = firmFormData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        setFirmFormData(prev => ({
+          ...prev,
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }))
+      }
+    } catch (e) { console.error(e) }
+  }
+
   const renderMessagePreview = (template: string) => {
     const mockData: Record<string, string> = {
       "{{NOME_CLIENTE}}": "LUIZ PAULO",
@@ -370,10 +393,54 @@ function SettingsContent() {
             </CardHeader>
             <CardContent className="p-10 space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3"><Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL</Label><Input value={firmFormData.name} onChange={(e) => setFirmFormData({...firmFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
-                <div className="space-y-3"><Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CNPJ</Label><Input value={firmFormData.cnpj} onChange={(e) => setFirmFormData({...firmFormData, cnpj: maskCNPJ(e.target.value)})} className="bg-black/40 h-14 text-white font-mono" placeholder="00.000.000/0000-00" /></div>
+                <div className="space-y-3"><Label className={labelMini}>RAZÃO SOCIAL</Label><Input value={firmFormData.name} onChange={(e) => setFirmFormData({...firmFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+                <div className="space-y-3"><Label className={labelMini}>CNPJ</Label><Input value={firmFormData.cnpj} onChange={(e) => setFirmFormData({...firmFormData, cnpj: maskCNPJ(e.target.value)})} className="bg-black/40 h-14 text-white font-mono" placeholder="00.000.000/0000-00" /></div>
               </div>
-              <Button onClick={() => { setDocumentNonBlocking(doc(db!, 'settings', 'firm'), {...firmFormData, updatedAt: serverTimestamp()}, {merge: true}); toast({title: "Dados Salvos"}); }} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] px-10 shadow-2xl">SALVAR IDENTIDADE</Button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-white/5 pt-10">
+                <div className="space-y-3"><Label className={labelMini}>Advogado Responsável (Diretor)</Label><div className="relative"><UserCog className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" /><Input value={firmFormData.responsibleLawyer} onChange={(e) => setFirmFormData({...firmFormData, responsibleLawyer: e.target.value.toUpperCase()})} className="bg-black/40 h-14 pl-12 text-white font-bold" /></div></div>
+                <div className="space-y-3"><Label className={labelMini}>Inscrição OAB</Label><div className="relative"><Gavel className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" /><Input value={firmFormData.oabNumber} onChange={(e) => setFirmFormData({...firmFormData, oabNumber: e.target.value.toUpperCase()})} className="bg-black/40 h-14 pl-12 text-white font-black" placeholder="EX: SP 000.000" /></div></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-white/5 pt-10">
+                <div className="space-y-3"><Label className={labelMini}>E-mail Institucional</Label><Input value={firmFormData.email} onChange={(e) => setFirmFormData({...firmFormData, email: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="atendimento@rgmj.adv.br" /></div>
+                <div className="space-y-3"><Label className={labelMini}>WhatsApp / Telefone</Label><Input value={firmFormData.phone} onChange={(e) => setFirmFormData({...firmFormData, phone: maskPhone(e.target.value)})} className="bg-black/40 h-14 text-white font-bold" placeholder="(11) 96828-5695" /></div>
+              </div>
+
+              <div className="space-y-3 border-t border-white/5 pt-10">
+                <Label className={labelMini}>Horário de Funcionamento</Label>
+                <div className="relative">
+                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                  <Input value={firmFormData.openingHours} onChange={(e) => setFirmFormData({...firmFormData, openingHours: e.target.value.toUpperCase()})} className="bg-black/40 h-14 pl-12 text-white font-bold" placeholder="EX: SEGUNDA A SEXTA, DAS 09:00 ÀS 18:00" />
+                </div>
+              </div>
+
+              <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-8 shadow-inner border-t border-white/5 pt-10">
+                <div className="flex items-center gap-4 pb-4 border-b border-white/5">
+                  <MapPin className="h-6 w-6 text-primary" />
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Endereço da Sede</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="space-y-2"><Label className={labelMini}>CEP</Label><Input value={firmFormData.zipCode} onChange={e => setFirmFormData({...firmFormData, zipCode: maskCEP(e.target.value)})} onBlur={handleCepBlur} className="bg-black/40 h-12 text-white font-mono" placeholder="00000-000" /></div>
+                  <div className="md:col-span-2 space-y-2"><Label className={labelMini}>Logradouro</Label><Input value={firmFormData.address} onChange={e => setFirmFormData({...firmFormData, address: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white font-bold" /></div>
+                  <div className="space-y-2"><Label className={labelMini}>Número</Label><Input value={firmFormData.number} onChange={e => setFirmFormData({...firmFormData, number: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2"><Label className={labelMini}>Bairro</Label><Input value={firmFormData.neighborhood} onChange={e => setFirmFormData({...firmFormData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white" /></div>
+                  <div className="space-y-2"><Label className={labelMini}>Cidade</Label><Input value={firmFormData.city} onChange={e => setFirmFormData({...firmFormData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white font-bold" /></div>
+                  <div className="space-y-2"><Label className={labelMini}>UF</Label><Input value={firmFormData.state} onChange={e => setFirmFormData({...firmFormData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white font-bold" /></div>
+                </div>
+              </div>
+
+              <div className="space-y-3 border-t border-white/5 pt-10">
+                <Label className={labelMini}>Logo Institucional (URL .png)</Label>
+                <div className="flex gap-6 items-center">
+                  <Input value={firmFormData.logoUrl} onChange={e => setFirmFormData({...firmFormData, logoUrl: e.target.value})} className="bg-black/40 h-14 text-white font-mono text-xs" placeholder="https://..." />
+                  {firmFormData.logoUrl && <div className="w-20 h-20 bg-white p-2 rounded-xl flex items-center justify-center border border-white/10"><img src={firmFormData.logoUrl} className="max-h-full max-w-full object-contain" /></div>}
+                </div>
+              </div>
+
+              <Button onClick={() => { setDocumentNonBlocking(doc(db!, 'settings', 'firm'), {...firmFormData, updatedAt: serverTimestamp()}, {merge: true}); toast({title: "Dados Salvos"}); }} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] px-12 shadow-2xl hover:scale-[1.02] transition-all">SALVAR IDENTIDADE ESTRATÉGICA</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -680,7 +747,7 @@ function SettingsContent() {
                   <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Configuração de Rito: {messageFormData.profileName}</DialogTitle>
                   <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground mt-1">DEFINA OS TEMPLATES DE COMUNICAÇÃO E AGENDA.</DialogDescription>
                 </div>
-                <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-7 px-4 text-[9px] font-black uppercase tracking-widest">Sincronismo Ativo</Badge>
+                <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-7 px-4 text-[9px] font-black uppercase tracking-widest">Sincronisno Ativo</Badge>
               </div>
             </DialogHeader>
           </div>
@@ -755,7 +822,7 @@ function SettingsContent() {
                         <p className="text-white text-[13px] leading-relaxed whitespace-pre-wrap font-normal italic">{renderMessagePreview(messageFormData.clientTemplate)}</p>
                         <div className="flex items-center justify-end gap-1.5 mt-3">
                           <span className="text-[9px] text-white/40 font-medium">{new Date().getHours()}:{new Date().getMinutes().toString().padStart(2, '0')}</span>
-                          <div className="flex"><CheckCircle2 className="w-3 h-3 text-sky-400 -mr-1.5" /><CheckCircle2 className="w-3 h-3 text-sky-400" /></div>
+                          <div className="flex"><CheckCircle2 className="w-3.5 h-3.5 text-sky-400 -mr-1.5" /><CheckCircle2 className="w-3.5 h-3.5 text-sky-400" /></div>
                         </div>
                       </div>
                     </div>
