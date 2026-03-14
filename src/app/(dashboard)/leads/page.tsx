@@ -62,6 +62,10 @@ import {
   Copy,
   FileDown,
   History,
+  Calculator,
+  Star,
+  TriangleAlert,
+  CalendarDays,
   ChevronDown
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -114,6 +118,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ActivityManager } from "@/components/leads/activity-manager"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -716,7 +721,7 @@ export default function LeadsPage() {
       
       {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] max-h-[95vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] h-[95vh] sm:h-auto sm:max-h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
             <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
@@ -734,7 +739,7 @@ export default function LeadsPage() {
             <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 w-full">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
               
               {/* SEÇÃO DESPACHO IA */}
