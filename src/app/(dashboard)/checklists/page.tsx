@@ -51,7 +51,9 @@ import {
   History,
   Brain,
   Calculator,
-  Save
+  Save,
+  Library,
+  CloudLightning
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -68,7 +70,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc, writeBatch } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -116,6 +118,47 @@ const REUSE_PRIORITIES = [
   { id: "baixa", label: "Baixa" },
 ]
 
+const PRESET_MATRICES = [
+  {
+    title: "TRIAGEM INICIAL TRABALHISTA",
+    category: "Entrevista de Triagem",
+    legalArea: "Trabalhista",
+    description: "Matriz completa para captura de DNA em Reclamações Trabalhistas. Inclui balizas para jornada, verbas rescisórias e danos morais.",
+    items: [
+      { label: "IDENTIFICACAO: NOME COMPLETO", type: "text", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "fullName", reusePriority: "alta", balizaObrigatoria: true },
+      { label: "IDENTIFICACAO: CPF", type: "cpf_cnpj", required: true, reuseEnabled: true, reuseTarget: "client", targetField: "cpf", reusePriority: "alta", balizaObrigatoria: true },
+      { label: "VINCULO: DATA ADMISSAO", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "startDate", reusePriority: "media", balizaObrigatoria: true },
+      { label: "VINCULO: DATA DEMISSAO", type: "date", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "endDate", reusePriority: "media", balizaObrigatoria: true },
+      { label: "VINCULO: ULTIMO SALARIO", type: "number", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "value", reusePriority: "media", balizaObrigatoria: false },
+      { label: "JORNADA: HORARIO TRABALHO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "workHours", reusePriority: "alta", balizaObrigatoria: true },
+      { label: "JORNADA: FAZIA HORAS EXTRAS?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "DANOS: SOFREU ASSEDIO OU ACIDENTE?", type: "text", required: false, reuseEnabled: false, balizaObrigatoria: true },
+    ]
+  },
+  {
+    title: "ACAO INDENIZATORIA CIVEL",
+    category: "Entrevista de Triagem",
+    legalArea: "Cível",
+    description: "Estrutura focada em Responsabilidade Civil, Danos Morais e Materiais. Captura o nexo causal e a extensão do dano.",
+    items: [
+      { label: "FATOS: RESUMO DO OCORRIDO", type: "text", required: true, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "summary", reusePriority: "alta", balizaObrigatoria: true },
+      { label: "DANO: VALOR DO PREJUIZO MATERIAL", type: "number", required: false, reuseEnabled: true, reuseTarget: "caseDetails", targetField: "materialDamage", reusePriority: "media", balizaObrigatoria: false },
+      { label: "REU: DADOS DA EMPRESA/PESSOA", type: "text", required: true, reuseEnabled: true, reuseTarget: "distribution", targetField: "defendantName", reusePriority: "alta", balizaObrigatoria: true },
+    ]
+  },
+  {
+    title: "DIVORCIO E ALIMENTOS",
+    category: "Entrevista de Triagem",
+    legalArea: "Família",
+    description: "Matriz para ritos de Família. Coleta dados sobre bens, filhos e binômio necessidade/possibilidade.",
+    items: [
+      { label: "FAMILIA: POSSUI FILHOS MENORES?", type: "boolean_partial", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "BENS: RELACAO DE PATRIMONIO", type: "text", required: true, reuseEnabled: false, balizaObrigatoria: true },
+      { label: "ALIMENTOS: RENDA MENSAL ESTIMADA", type: "number", required: true, reuseEnabled: false, balizaObrigatoria: true },
+    ]
+  }
+]
+
 type EditorStep = "geral" | "perguntas" | "revisao"
 
 const EDITOR_STEPS: Array<{ id: EditorStep; label: string; icon: any }> = [
@@ -129,6 +172,7 @@ export default function LaboratorioChecklistsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
+  const [isInjecting, setIsInjecting] = useState(false)
   
   const [viewingList, setViewingList] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -200,6 +244,30 @@ export default function LaboratorioChecklistsPage() {
       setEditingModel(null)
       setModelFormData({ title: "", area: "Trabalhista", googleDocId: "", tags: "" })
       setIsModelDialogOpen(true)
+    }
+  }
+
+  const handleInjectPresets = async () => {
+    if (!db) return
+    setIsInjecting(true)
+    try {
+      const batch = writeBatch(db)
+      PRESET_MATRICES.forEach(matrix => {
+        const newDocRef = doc(collection(db, "checklists"))
+        batch.set(newDocRef, {
+          ...matrix,
+          id: newDocRef.id,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          isPreset: true
+        })
+      })
+      await batch.commit()
+      toast({ title: "Biblioteca Injetada", description: "As matrizes DNA padrão RGMJ foram restauradas." })
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro na Injeção" })
+    } finally {
+      setIsInjecting(false)
     }
   }
 
@@ -333,9 +401,14 @@ export default function LaboratorioChecklistsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black h-14 w-14 rounded-xl shadow-2xl hover:scale-105 transition-all">
-            <Plus className="h-6 w-6" />
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleInjectPresets} disabled={isInjecting} variant="outline" className="glass border-primary/30 text-primary font-black text-[10px] uppercase tracking-widest h-14 px-6 rounded-xl gap-3">
+              {isInjecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />} INJETAR BIBLIOTECA
+            </Button>
+            <Button onClick={handleOpenCreate} className="gold-gradient text-background font-black h-14 w-14 rounded-xl shadow-2xl hover:scale-105 transition-all">
+              <Plus className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -358,41 +431,49 @@ export default function LaboratorioChecklistsPage() {
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditando biblioteca de matrizes...</span>
               </div>
-            ) : filteredChecklists.map((list) => (
-              <Card key={list.id} className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col rounded-[2.5rem] shadow-2xl border min-h-[400px]">
-                <div className="p-10 space-y-8 flex-1 relative">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="text-[9px] uppercase font-black border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">
-                      {list.category?.toUpperCase() || "ENTREVISTA DE TRIAGEM"}
-                    </Badge>
-                    <div className="flex gap-4">
-                      <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Eye className="h-5 w-5" /></button>
-                      <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all hover:scale-110"><Edit3 className="h-5 w-5" /></button>
-                      <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
+            ) : filteredChecklists.length > 0 ? (
+              filteredChecklists.map((list) => (
+                <Card key={list.id} className="bg-[#0d1117] border-primary/20 hover:border-primary/50 transition-all group overflow-hidden flex flex-col rounded-[2.5rem] shadow-2xl border min-h-[400px]">
+                  <div className="p-10 space-y-8 flex-1 relative">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-4 h-7 rounded-full tracking-widest">
+                        {list.category?.toUpperCase() || "ENTREVISTA DE TRIAGEM"}
+                      </Badge>
+                      <div className="flex gap-4">
+                        <button onClick={() => { setViewingList(list); setIsViewDialogOpen(true); }} className="text-white/20 hover:text-primary transition-all hover:scale-110"><Eye className="h-5 w-5" /></button>
+                        <button onClick={() => handleOpenEdit(list)} className="text-white/20 hover:text-white transition-all hover:scale-110"><Edit3 className="h-5 w-5" /></button>
+                        <button onClick={() => deleteDocumentNonBlocking(doc(db!, "checklists", list.id))} className="text-white/20 hover:text-rose-500 transition-all hover:scale-110"><Trash2 className="h-5 w-5" /></button>
+                      </div>
                     </div>
+                    
+                    <h3 className="text-2xl font-black text-[#F5D030] uppercase tracking-tighter leading-none group-hover:brightness-125 transition-all">
+                      {list.title}
+                    </h3>
+                    
+                    <div className="flex items-center gap-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
+                      <Scale className="h-4 w-4 opacity-50" /> {list.legalArea?.toUpperCase() || "TRABALHISTA"}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 italic uppercase font-medium tracking-wide">
+                      {list.description || "Padrão básico estruturado para triagem técnica. Você pode editar ou adicionar novos campos a qualquer momento."}
+                    </p>
                   </div>
                   
-                  <h3 className="text-2xl font-black text-[#F5D030] uppercase tracking-tighter leading-none group-hover:brightness-125 transition-all">
-                    {list.title}
-                  </h3>
-                  
-                  <div className="flex items-center gap-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
-                    <Scale className="h-4 w-4 opacity-50" /> {list.legalArea?.toUpperCase() || "TRABALHISTA"}
+                  <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
+                    <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
+                      <Layers className="h-5 w-5 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all group-hover:translate-x-2" />
                   </div>
-                  
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 italic uppercase font-medium tracking-wide">
-                    {list.description || "Padrão básico estruturado para triagem técnica. Você pode editar ou adicionar novos campos a qualquer momento."}
-                  </p>
-                </div>
-                
-                <div className="px-10 py-8 bg-black/40 border-t border-white/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
-                  <div className="flex items-center gap-4 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
-                    <Layers className="h-5 w-5 opacity-50" /> {list.items?.length || 0} CAMPOS DNA
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/5 group-hover:text-primary transition-all group-hover:translate-x-2" />
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[3rem] border-dashed border-2 border-white/5 opacity-20 text-center">
+                <CloudLightning className="h-16 w-16 text-muted-foreground mb-4 mx-auto" />
+                <p className="text-[11px] font-black uppercase tracking-[0.4em]">Biblioteca de Matrizes Vazia</p>
+                <Button onClick={handleInjectPresets} variant="outline" className="mt-6 border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest">Restaurar Modelos DNA RGMJ</Button>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -641,7 +722,7 @@ export default function LaboratorioChecklistsPage() {
                       </div>
                     </Card>
                     <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-3xl space-y-6 shadow-xl">
-                      <div className="flex items-center gap-3 border-b border-primary/10 pb-4">
+                      <div className="flex items-center gap-3 border-primary/10 pb-4">
                         <Layers className="h-5 w-5 text-primary" />
                         <h4 className="text-xs font-black text-white uppercase tracking-widest">Resumo Técnico</h4>
                       </div>
@@ -697,7 +778,7 @@ export default function LaboratorioChecklistsPage() {
                 <p className="text-base text-white/80 leading-relaxed font-medium uppercase">{viewingList?.description || "Sem descrição técnica."}</p>
               </div>
               <div className="space-y-6">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-2">
                   <Layers className="h-5 w-5 text-primary" />
                   <h4 className="text-sm font-black text-white uppercase tracking-widest">DNA de Captura ({viewingList?.items?.length || 0})</h4>
                 </div>
