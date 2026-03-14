@@ -80,7 +80,7 @@ function WhatsAppWidget() {
   const handleOpenWhatsApp = () => {
     setHasNotification(false)
     setIsPopupOpen(false)
-    window.open("https://wa.me/5511999999999?text=Olá Dr. Reinaldo, gostaria de uma consultoria estratégica.", "_blank")
+    window.open("https://wa.me/5511968285695?text=Olá Dr. Reinaldo, gostaria de uma consultoria estratégica.", "_blank")
   }
 
   if (!isVisible) return null
