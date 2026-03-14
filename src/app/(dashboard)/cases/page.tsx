@@ -36,7 +36,9 @@ import {
   Building2,
   ListTodo,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  AlertCircle,
+  ZapOff
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -101,7 +103,7 @@ export default function CasesPage() {
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
 
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
-  const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "" })
+  const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "", priority: "normal", calculationType: "Dias Úteis (CPC)" })
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
   const [diligenceData, setDiligenceData] = useState({
     title: "",
@@ -233,10 +235,11 @@ export default function CasesPage() {
     const payload = {
       title: deadlineData.title.toUpperCase(),
       dueDate: deadlineData.date,
-      description: deadlineData.description,
+      description: deadlineData.description.toUpperCase(),
+      priority: deadlineData.priority,
+      calculationType: deadlineData.calculationType,
       processId: activeActionProcess.processNumber || activeActionProcess.id,
       status: "Aberto",
-      calculationType: "Dias Úteis (CPC)",
       createdAt: serverTimestamp()
     }
     await addDocumentNonBlocking(collection(db, "deadlines"), payload)
@@ -521,11 +524,110 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* DIÁLOGO LANÇAR PRAZO - RECALIBRADO CONFORME REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[550px] p-0 overflow-hidden shadow-2xl rounded-2xl font-sans">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+            <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500">
+                <AlarmClock className="h-6 w-6" />
+              </div>
+              <div>
+                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo</DialogTitle>
+                <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">CONTROLE TÁTICO DE VENCIMENTOS RGMJ.</DialogDescription>
+              </div>
+            </DialogHeader>
+          </div>
+
+          <ScrollArea className="max-h-[65vh]">
+            <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Ato *</Label>
+                <Input 
+                  placeholder="EX: RÉPLICA" 
+                  className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase placeholder:opacity-20" 
+                  value={deadlineData.title} 
+                  onChange={e => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} 
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data Vencimento *</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-500/40" />
+                    <Input 
+                      type="date" 
+                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold" 
+                      value={deadlineData.date} 
+                      onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Regra de Contagem</Label>
+                  <Select value={deadlineData.calculationType} onValueChange={(v) => setDeadlineData({...deadlineData, calculationType: v})}>
+                    <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="Dias Úteis (CPC)" className="text-[10px] font-bold">🏛️ DIAS ÚTEIS (CPC)</SelectItem>
+                      <SelectItem value="Dias Corridos" className="text-[10px] font-bold">📅 DIAS CORRIDOS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Detalhamento / Providência</Label>
+                <Textarea 
+                  placeholder="DESCREVA A TAREFA TÉCNICA OU ALERTA ESTRATÉGICO..." 
+                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase"
+                  value={deadlineData.description}
+                  onChange={e => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                    <Zap className="h-3 w-3" /> Nível de Urgência
+                  </Label>
+                  <Select value={deadlineData.priority} onValueChange={(v) => setDeadlineData({...deadlineData, priority: v})}>
+                    <SelectTrigger className="bg-black/40 border-white/10 h-10 text-white font-black text-[10px] uppercase">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      <SelectItem value="normal" className="text-[10px] font-bold">NORMAL</SelectItem>
+                      <SelectItem value="urgente" className="text-[10px] font-bold text-rose-500">🔥 URGENTE / FATAL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-start gap-3 opacity-40">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 mt-0.5" />
+                  <p className="text-[8px] font-black text-muted-foreground uppercase leading-relaxed tracking-wider">Auditado pelo Radar de Riscos RGMJ.</p>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Cancelar</Button>
+            <Button 
+              onClick={handleLaunchDeadline} 
+              className="bg-[#e11d48] hover:bg-[#be123c] text-white font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-2xl shadow-[0_10px_30px_rgba(225,29,72,0.3)] transition-all hover:scale-[1.03] active:scale-95"
+            >
+              Registrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHearingOpen} onOpenChange={setIsHearingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><AlarmClock className="h-6 w-6 text-rose-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Lançar Prazo</DialogTitle></div></DialogHeader></div>
-          <div className="p-8 space-y-6"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Ato</Label><Input placeholder="EX: RÉPLICA" className="glass h-12 text-white font-bold" value={deadlineData.title} onChange={e => setDeadlineData({...deadlineData, title: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data Vencimento</Label><Input type="date" className="glass h-12 text-white" value={deadlineData.date} onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} /></div></div>
-          <DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleLaunchDeadline} className="bg-rose-600 hover:bg-rose-500 text-white font-black uppercase text-[10px] px-8 h-12 rounded-xl">Registrar</Button></DialogFooter>
+          <div className="p-6 bg-[#0a0f1e] border-b border-white/5"><DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left"><Gavel className="h-6 w-6 text-amber-500" /><div><DialogTitle className="text-white font-bold uppercase tracking-widest text-sm">Agendar Audiência</DialogTitle></div></DialogHeader></div>
+          <div className="p-8 space-y-6"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Tipo</Label><Select value={hearingData.type} onValueChange={v => setHearingData({...hearingData, type: v})}><SelectTrigger className="glass h-12 text-white uppercase font-bold text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#0d121f] text-white"><SelectItem value="UNA">UNA</SelectItem><SelectItem value="INSTRUÇÃO">INSTRUÇÃO</SelectItem><SelectItem value="CONCILIAÇÃO">CONCILIAÇÃO</SelectItem></SelectContent></Select></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Data</Label><Input type="date" className="glass h-12 text-white" value={hearingData.date} onChange={e => setHearingData({...hearingData, date: e.target.value})} /></div><div className="space-y-2"><Label className="text-[10px] font-black text-muted-foreground uppercase">Hora</Label><Input type="time" className="glass h-12 text-white" value={hearingData.time} onChange={e => setHearingData({...hearingData, time: e.target.value})} /></div></div></div>
+          <DialogFooter className="p-6 bg-black/40 border-t border-white/5"><Button variant="ghost" onClick={() => setIsHearingOpen(false)} className="text-muted-foreground uppercase font-black text-[10px]">Cancelar</Button><Button onClick={handleScheduleHearing} className="gold-gradient text-background font-black uppercase text-[10px] px-8 h-12 rounded-xl">Confirmar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
