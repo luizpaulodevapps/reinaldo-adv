@@ -18,9 +18,10 @@ import {
   Save, 
   ChevronRight, 
   ListChecks,
-  Bookmark
+  Bookmark,
+  MapPin
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, maskCEP } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/firebase"
 
@@ -37,6 +38,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
   const [isSaved, setIsSaved] = useState(false)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [activeGroup, setActiveGroup] = useState<string>("")
+  const [loadingCep, setLoadingCepFields] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
 
   const questionGroups = useMemo(() => {
@@ -59,7 +61,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
 
   useEffect(() => {
     if (typeof window !== 'undefined' && template?.id) {
-      const cacheKey = `rgmj_interview_v2_${template.id}`
+      const cacheKey = `rgmj_interview_v3_${template.id}`
       const savedData = localStorage.getItem(cacheKey)
       if (savedData) {
         try { setResponses(JSON.parse(savedData)) } catch (e) { console.error(e) }
@@ -69,7 +71,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
 
   useEffect(() => {
     if (typeof window !== 'undefined' && template?.id && Object.keys(responses).length > 0) {
-      const cacheKey = `rgmj_interview_v2_${template.id}`
+      const cacheKey = `rgmj_interview_v3_${template.id}`
       localStorage.setItem(cacheKey, JSON.stringify(responses))
       setIsSaved(true)
       const timer = setTimeout(() => setIsSaved(false), 2000)
@@ -80,6 +82,35 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
   const handleInputChange = (label: string, value: any) => {
     setResponses(prev => ({ ...prev, [label]: value }))
     if (value && errors[label]) setErrors(prev => ({ ...prev, [label]: false }))
+  }
+
+  const handleCepSearch = async (label: string) => {
+    const cepValue = responses[label + "_cep"]?.replace(/\D/g, "")
+    if (!cepValue || cepValue.length !== 8) return
+
+    setLoadingCepFields(prev => ({ ...prev, [label]: true }))
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepValue}/json/`)
+      const data = await response.json()
+      if (!data.erro) {
+        const fullAddress = `${data.logradouro.toUpperCase()}, ${data.bairro.toUpperCase()} - ${data.localidade.toUpperCase()}/${data.uf.toUpperCase()}`
+        setResponses(prev => ({
+          ...prev,
+          [label]: fullAddress
+        }))
+        toast({ title: "Endereço Localizado" })
+      } else {
+        toast({ variant: "destructive", title: "CEP não encontrado" })
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro na busca de CEP" })
+    } finally {
+      setLoadingCepFields(prev => ({ ...prev, [label]: false }))
+    }
+  }
+
+  const handleCepChange = (label: string, val: string) => {
+    setResponses(prev => ({ ...prev, [label + "_cep"]: maskCEP(val) }))
   }
 
   const totalRequired = template?.items?.filter((i: any) => i.required || i.balizaObrigatoria).length || 0
@@ -107,7 +138,7 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
     try {
       const templateSnapshot = (template.items || []).map((item: any) => ({ ...item }))
       await onSubmit({ responses, templateSnapshot })
-      if (typeof window !== 'undefined') localStorage.removeItem(`rgmj_interview_v2_${template.id}`)
+      if (typeof window !== 'undefined') localStorage.removeItem(`rgmj_interview_v3_${template.id}`)
     } catch (error) {
       toast({ variant: "destructive", title: "Falha no Protocolo" })
     } finally {
@@ -219,6 +250,42 @@ export function DynamicInterviewExecution({ template, onSubmit, onCancel }: Dyna
                   </div>
 
                   <div className={cn("pl-5 transition-all duration-300", errors[field.label] ? "border-l border-rose-500/30" : "border-l border-white/5")}>
+                    {field.type === 'cep' && (
+                      <div className="space-y-4">
+                        <div className="flex items-end gap-4">
+                          <div className="space-y-2 w-48">
+                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Digitar CEP</Label>
+                            <div className="relative">
+                              <Input
+                                placeholder="00000-000"
+                                className={cn("bg-black/40 border-white/10 h-14 text-white font-mono text-lg focus:ring-primary/50", errors[field.label] && "border-rose-500/30")}
+                                value={responses[field.label + "_cep"] || ""}
+                                onChange={(e) => handleCepChange(field.label, e.target.value)}
+                                onBlur={() => handleCepSearch(field.label)}
+                              />
+                              {loadingCep[field.label] && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            className="h-14 px-6 border-primary/20 text-primary uppercase font-black text-[10px] gap-3"
+                            onClick={() => handleCepSearch(field.label)}
+                            disabled={loadingCep[field.label]}
+                          >
+                            <MapPin className="h-4 w-4" /> Buscar Endereço
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Endereço Localizado / Complemento</Label>
+                          <Textarea 
+                            className={cn("bg-black/40 border-white/10 min-h-[100px] text-white focus:ring-1 focus:ring-primary/50 text-sm leading-relaxed resize-none p-6 rounded-2xl shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5", !!responses[field.label] && "border-emerald-500/20")} 
+                            value={responses[field.label] || ""} 
+                            onChange={(e) => handleInputChange(field.label, e.target.value)}
+                            placeholder="LOGRADOURO, Nº, BAIRRO, CIDADE/UF..."
+                          />
+                        </div>
+                      </div>
+                    )}
                     {field.type === 'text' && <Textarea className={cn("bg-black/40 border-white/10 min-h-[140px] text-white focus:ring-1 focus:ring-primary/50 text-sm leading-relaxed resize-none p-6 rounded-2xl shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5", !!responses[field.label] && "border-emerald-500/20")} value={responses[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)} />}
                     {field.type === 'number' && <div className="relative max-w-sm"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-sm">R$</span><Input type="number" className={cn("bg-black/40 border-white/10 h-16 pl-14 text-white text-xl font-black rounded-2xl shadow-inner", errors[field.label] && "border-rose-500/30 bg-rose-500/5")} value={responses[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)} /></div>}
                     {(field.type === 'boolean' || field.type === 'boolean_partial') && (
