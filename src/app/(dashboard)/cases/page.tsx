@@ -49,7 +49,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, limit } from "firebase/firestore"
 import { cn, maskCurrency, parseCurrencyToNumber } from "@/lib/utils"
 import { 
@@ -78,6 +78,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { pushActToGoogleCalendar } from "@/services/google-calendar"
+import { setupClientWorkspace } from "@/services/google-drive"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -101,6 +102,7 @@ export default function CasesPage() {
   
   const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
   const [isSyncingAct, setIsSyncingAct] = useState(false)
+  const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
 
   // Estados para Atendimento Wizard (Rito de 5 Passos)
   const [meetingData, setMeetingData] = useState({ 
@@ -139,6 +141,10 @@ export default function CasesPage() {
   const { data: processesData, isLoading } = useCollection(processesQuery)
   const processes = processesData || []
 
+  // Busca configurações do Google para o RootFolderID
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleConfig } = useDoc(googleSettingsRef)
+
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
       if (proc.status === "Arquivado") return false
@@ -157,6 +163,53 @@ export default function CasesPage() {
     const ticket = active > 0 ? totalValue / active : 0
     return { active, totalValue, ticket }
   }, [filteredProcesses])
+
+  const handleSyncDrive = async (proc: any) => {
+    if (!db || !proc || !googleConfig?.rootFolderId) {
+      toast({ 
+        variant: "destructive", 
+        title: "Configuração Pendente", 
+        description: "O Root Folder ID do Google Drive não foi configurado nas definições." 
+      })
+      return
+    }
+
+    const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+    if (!accessToken) {
+      toast({ 
+        variant: "destructive", 
+        title: "Google Workspace Desconectado", 
+        description: "Por favor, realize o login com Google novamente." 
+      })
+      return
+    }
+
+    setSyncingDriveId(proc.id)
+    try {
+      await setupClientWorkspace({
+        accessToken,
+        rootFolderId: googleConfig.rootFolderId,
+        clientName: proc.clientName,
+        processInfo: {
+          number: proc.processNumber,
+          description: proc.description || "DEMANDA"
+        }
+      });
+
+      toast({ 
+        title: "Dossiê Sincronizado", 
+        description: "Estrutura de pastas RGMJ criada no Google Drive com sucesso." 
+      })
+    } catch (error) {
+      toast({ 
+        variant: "destructive", 
+        title: "Erro no Sincronismo", 
+        description: "Falha ao criar infraestrutura no Drive. Verifique permissões." 
+      })
+    } finally {
+      setSyncingDriveId(null)
+    }
+  }
 
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
@@ -210,8 +263,9 @@ export default function CasesPage() {
       }
     } catch (e) { console.warn("Calendar error", e) }
 
-    if (activeActionProcess.phone) {
-      const cleanPhone = activeActionProcess.phone.replace(/\D/g, "");
+    if (activeActionProcess.phone || activeActionProcess.clientPhone) {
+      const contact = activeActionProcess.phone || activeActionProcess.clientPhone || "";
+      const cleanPhone = contact.replace(/\D/g, "");
       const meetPart = meetLink ? ` Link da Reunião: ${meetLink}` : "";
       const locPart = meetingData.type === 'presencial' ? ` Local: ${finalLocation}` : "";
       const msg = `Olá ${activeActionProcess.clientName}! Confirmamos seu AGENDAMENTO para o dia ${new Date(meetingData.date).toLocaleDateString('pt-BR')} às ${meetingData.time}.${locPart}${meetPart} Dr. Reinaldo - RGMJ.`
@@ -328,7 +382,7 @@ export default function CasesPage() {
         </div>
       </div>
 
-      {/* Lista de Processos - Fidelidade à Imagem */}
+      {/* Lista de Processos */}
       <div className="space-y-6">
         {isLoading ? (
           <div className="py-32 flex flex-col items-center justify-center space-y-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Auditando Acervo...</span></div>
@@ -409,8 +463,14 @@ export default function CasesPage() {
               {/* Footer Card: Ações Secundárias */}
               <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
                 <div className="flex gap-4">
-                  <Button variant="outline" className="h-11 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-primary hover:text-background transition-all">
-                    <FolderSync className="h-4 w-4" /> SINCRONIZAR DRIVE
+                  <Button 
+                    onClick={() => handleSyncDrive(proc)}
+                    disabled={syncingDriveId === proc.id}
+                    variant="outline" 
+                    className="h-11 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-primary hover:text-background transition-all"
+                  >
+                    {syncingDriveId === proc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderSync className="h-4 w-4" />}
+                    SINCRONIZAR DRIVE
                   </Button>
                   <Button variant="outline" className="h-11 border-white/10 text-white/40 font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-white/5 transition-all">
                     <ExternalLink className="h-4 w-4" /> PORTAL JUDICIÁRIO
@@ -450,11 +510,11 @@ export default function CasesPage() {
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={meetingData.type} onValueChange={(v: any) => setMeetingData({...meetingData, type: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
-                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
                       <Video className={cn("h-8 w-8", meetingData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase">Virtual</span>
                     </div>
-                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
                       <MapPin className={cn("h-8 w-8", meetingData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase">Presencial</span>
                     </div>
@@ -497,10 +557,10 @@ export default function CasesPage() {
                   ) : (
                     <div className="space-y-6">
                       <RadioGroup value={meetingData.locationType} onValueChange={v => setMeetingData({...meetingData, locationType: v})} className="grid grid-cols-2 gap-4">
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
                           <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Sede RGMJ</span>
                         </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
                           <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
                         </div>
                       </RadioGroup>
@@ -536,7 +596,7 @@ export default function CasesPage() {
           </ScrollArea>
 
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-            <Button variant="ghost" onClick={() => meetingStep > 1 ? setMeetingStep(meetingStep - 1) : setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">
+            <Button variant="ghost" onClick={() => meetingStep > 1 ? setMeetingStep(meetingStep - 1) : setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
               {meetingStep > 1 ? "ANTERIOR" : "CANCELAR"}
             </Button>
             {meetingStep < 5 ? (
@@ -584,7 +644,7 @@ export default function CasesPage() {
             </div>
           </ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-xl">
-            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">CANCELAR</Button>
+            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] hover:text-white">CANCELAR</Button>
             <Button onClick={handleLaunchDeadline} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">{isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 mr-3" />} CONFIRMAR</Button>
           </DialogFooter>
         </DialogContent>
