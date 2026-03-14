@@ -253,16 +253,9 @@ export default function PrazosSubpage() {
 
       {/* DIÁLOGO DE VISUALIZAÇÃO DE DETALHES (DOSSIÊ DO PRAZO) */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
-          {/* Header Superior Estilo Imagem */}
-          <div className="p-10 bg-[#0a0f1e] flex items-center justify-between relative shadow-2xl border-b border-white/5">
-            <button 
-              onClick={() => setIsViewOpen(false)}
-              className="absolute right-6 top-6 text-white/40 hover:text-white transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans h-[90vh]">
+          {/* Header Superior Estilo Imagem - Sem o botão X manual redundante */}
+          <div className="p-10 bg-[#0a0f1e] flex items-center justify-between relative shadow-2xl border-b border-white/5 flex-none">
             <div className="flex items-center gap-8">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/30 text-primary shadow-[0_0_20px_rgba(245,208,48,0.15)]">
                 <FileText className="h-8 w-8" />
@@ -286,7 +279,7 @@ export default function PrazosSubpage() {
             </Button>
           </div>
 
-          <ScrollArea className="max-h-[70vh]">
+          <ScrollArea className="flex-1">
             <div className="p-12 space-y-12 bg-[#0a0f1e]/50">
               {/* Grid de Dados */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -357,8 +350,8 @@ export default function PrazosSubpage() {
 
       {/* DIÁLOGO DE GESTÃO DE PRAZO (CRIAÇÃO/EDIÇÃO) */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans h-[90vh] flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
             <div className="flex items-center gap-5">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
                 <Clock className="h-6 w-6" />
@@ -374,7 +367,7 @@ export default function PrazosSubpage() {
             </div>
           </div>
 
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="flex-1">
             <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
               <div className="space-y-3">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Título do Ato *</Label>
@@ -425,7 +418,7 @@ export default function PrazosSubpage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none">
             <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">Abortar</Button>
             <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl hover:scale-105 transition-all">
               <Save className="h-5 w-5 mr-3" /> {editingDeadline ? "ATUALIZAR REGISTRO" : "LANÇAR NO RADAR"}

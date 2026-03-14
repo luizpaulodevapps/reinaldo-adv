@@ -736,7 +736,6 @@ export default function LeadsPage() {
                 </DialogDescription>
               </div>
             </DialogHeader>
-            <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
           <ScrollArea className="flex-1 w-full h-full">
