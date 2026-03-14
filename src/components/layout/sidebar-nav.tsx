@@ -80,11 +80,11 @@ const menuGroups = [
   {
     title: "FINANCEIRO",
     items: [
-      { name: "CENTRAL", href: "/billing", icon: Calculator },
+      { name: "CAIXA DA BANCA", href: "/billing", icon: Calculator },
       { name: "REEMBOLSOS", href: "/reimbursements", icon: Receipt },
       { name: "CONTAS A RECEBER", href: "/receivables", icon: ArrowUpRight },
       { name: "CONTAS A PAGAR", href: "/payables", icon: ArrowDownRight },
-      { name: "REPASSES", href: "/financial", icon: Wallet },
+      { name: "MINHA CARTEIRA", href: "/financial", icon: Wallet },
       { name: "FLUXO DE CAIXA", href: "/cash-flow", icon: TrendingUp },
     ]
   },

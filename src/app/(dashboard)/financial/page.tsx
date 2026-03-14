@@ -27,7 +27,8 @@ import {
   History,
   LayoutGrid,
   CalendarDays,
-  Target
+  Target,
+  User as UserIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,7 +75,6 @@ export default function FinancialPage() {
         end: format(today, 'yyyy-MM-dd')
       }
     }
-    // Default Monthly
     return {
       start: format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
       end: format(endOfMonth(currentMonth), 'yyyy-MM-dd')
@@ -118,31 +118,30 @@ export default function FinancialPage() {
   const stats = useMemo(() => {
     if (!transactions) return { entradas: 0, saidas: 0, saldo: 0, pendentes: 0, liquidados: 0 }
     
+    // Para repasses, consideramos 'Entrada (Receita)' o que o advogado tem a receber (crédito dele)
     const entradas = transactions
       .filter(t => t.type?.includes('Entrada'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    const saidas = transactions
-      .filter(t => t.type?.includes('Saída'))
-      .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-
     const pendentes = transactions
-      .filter(t => t.status === 'Pendente')
+      .filter(t => t.status === 'Pendente' && t.type?.includes('Entrada'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
     const liquidados = transactions
-      .filter(t => t.status === 'Liquidado' || t.status === 'Pago' || t.status === 'Recebido')
+      .filter((t) => (t.status === 'Liquidado' || t.status === 'Recebido' || t.status === 'Pago') && t.type?.includes('Entrada'))
       .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    return { entradas, saidas, saldo: entradas - saidas, pendentes, liquidados }
+    return { entradas, saidas: 0, saldo: entradas, pendentes, liquidados }
   }, [transactions])
 
   const teamBalanceList = useMemo(() => {
     if (!teamMembers || !transactions || !isAdmin) return []
     return teamMembers.map(member => {
+      // Aqui, para o dashboard de admin, precisamos filtrar todas as transações globais por membro
+      // (Isso pode exigir uma query global se a banca for muito grande, mas para o MVP usamos o que está no ciclo)
       const memberTrans = (transactions || []).filter(t => t.responsibleStaffId === member.id)
-      const pending = memberTrans.filter(t => t.status === 'Pendente').reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-      const liquidated = memberTrans.filter(t => t.status === 'Liquidado' || t.status === 'Pago').reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+      const pending = memberTrans.filter(t => t.status === 'Pendente' && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+      const liquidated = memberTrans.filter(t => (t.status === 'Liquidado' || t.status === 'Recebido') && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
       return { ...member, pending, liquidated }
     })
   }, [teamMembers, transactions, isAdmin])
@@ -194,7 +193,7 @@ export default function FinancialPage() {
             <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
             <ChevronRight className="h-2 w-2" />
             <span className="text-white uppercase tracking-tighter">
-              {isAdmin ? "Controladoria de Repasses" : "Minha Carteira Digital"}
+              {isAdmin && !selectedStaffMember ? "Controladoria de Repasses" : "Minha Carteira Digital"}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -210,7 +209,6 @@ export default function FinancialPage() {
         </div>
         
         <div className="flex flex-col md:flex-row items-center gap-4">
-          {/* Seletor de Ciclo Tático */}
           <div className="bg-white/5 p-1 rounded-xl border border-white/5 flex gap-1">
             {[
               { id: 'weekly', label: 'SEMANAL' },
@@ -246,20 +244,22 @@ export default function FinancialPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-3xl flex flex-col justify-center shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Scale className="h-12 w-12" /></div>
-          <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Scale className="h-3.5 w-3.5" /> Honorários Ciclo</p>
+          <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Scale className="h-3.5 w-3.5" /> Honorários Acumulados</p>
           <div className="text-3xl font-black text-white tracking-tighter tabular-nums">R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-3xl flex flex-col justify-center shadow-xl">
-          <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-3 flex items-center gap-3"><AlertCircle className="h-3.5 w-3.5" /> Aguardando (Pendente)</p>
+          <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-3 flex items-center gap-3"><AlertCircle className="h-3.5 w-3.5" /> Saldo Pendente</p>
           <div className="text-3xl font-black text-rose-400 tracking-tighter tabular-nums">R$ {stats.pendentes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-3xl flex flex-col justify-center shadow-xl">
-          <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-3"><CheckCircle2 className="h-3.5 w-3.5" /> Total Liquidado</p>
+          <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-3"><CheckCircle2 className="h-3.5 w-3.5" /> Total Pago/Recebido</p>
           <div className="text-3xl font-black text-white tracking-tighter tabular-nums">R$ {stats.liquidados.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="glass border-white/5 p-8 rounded-3xl flex flex-col justify-center shadow-xl">
-          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-3"><Wallet className="h-3.5 w-3.5" /> Saldo Líquido</p>
-          <div className="text-3xl font-black text-white tracking-tighter tabular-nums">R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-3"><UserIcon className="h-3.5 w-3.5" /> Carteira Ativa</p>
+          <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">
+            {selectedStaffMember ? `Auditoria de repasses para ${selectedStaffMember.name}.` : "Extrato consolidado de comissões e parcerias."}
+          </div>
         </Card>
       </div>
 
@@ -268,9 +268,11 @@ export default function FinancialPage() {
           <div className="p-8 border-b border-white/5 bg-[#0a0f1e]/40 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <History className="h-6 w-6 text-primary" />
-              <h3 className="text-lg font-black text-white uppercase tracking-tighter">Equipe & Carteiras Ativas</h3>
+              <h3 className="text-lg font-black text-white uppercase tracking-tighter">Equipe & Carteiras de Repasse</h3>
             </div>
-            <Badge variant="outline" className="border-primary/30 text-primary font-black uppercase text-[10px] px-4 py-1.5 rounded-full tracking-widest">Auditoria em Lote</Badge>
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="border-primary/30 text-primary font-black uppercase text-[10px] px-4 py-1.5 rounded-full tracking-widest">Auditoria em Lote</Badge>
+            </div>
           </div>
           
           <div className="min-h-[500px]">
@@ -330,14 +332,14 @@ export default function FinancialPage() {
                 <Target className="h-7 w-7" />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Extrato de Movimentação</h3>
-                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-2 opacity-40">HISTÓRICO COMPLETO DO CICLO {cycleMode.toUpperCase()}.</p>
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Extrato de Repasses</h3>
+                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-2 opacity-40">MOVIMENTAÇÃO DE COMISSÕES DO CICLO {cycleMode.toUpperCase()}.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                <Input placeholder="Filtrar lançamentos..." className="h-12 bg-black/40 border-white/10 text-xs w-72 pl-12 rounded-xl text-white font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Input placeholder="Filtrar por cliente ou processo..." className="h-12 bg-black/40 border-white/10 text-xs w-72 pl-12 rounded-xl text-white font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               {isAdmin && <Button onClick={() => setIsNewTitleOpen(true)} className="gold-gradient text-background font-black h-12 px-8 uppercase text-[10px] tracking-widest rounded-xl shadow-xl flex items-center gap-3"><Plus className="h-4 w-4" /> NOVO TÍTULO</Button>}
             </div>
@@ -414,7 +416,7 @@ export default function FinancialPage() {
       <Dialog open={isNewTitleOpen} onOpenChange={setIsNewTitleOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-[2.5rem] font-sans">
           <div className="p-10 bg-[#0a0f1e] border-b border-white/5 shadow-2xl">
-            <DialogHeader className="text-left">
+            <DialogHeader>
               <DialogTitle className="text-white font-headline text-3xl uppercase tracking-tighter flex items-center gap-4">
                 <Landmark className="h-8 w-8 text-primary" /> Lançamento de Repasse
               </DialogTitle>
