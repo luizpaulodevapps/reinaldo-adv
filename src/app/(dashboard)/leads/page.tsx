@@ -168,11 +168,8 @@ export default function LeadsPage() {
   const [interviewAnalysis, setInterviewAnalysis] = useState<AnalyzeInterviewOutput | null>(null)
 
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
-  const [strategicSummary, setStrategicSummary] = useState<GenerateCaseSummaryOutput | null>(null)
-
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
-  // Step Wizard para Agendamento de Intake
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeStep, setIntakeStep] = useState(1)
   const [intakeData, setIntakeData] = useState({ 
@@ -183,7 +180,6 @@ export default function LeadsPage() {
     customAddress: "", 
     observations: "", 
     autoMeet: true,
-    // Novos campos de endereço
     zipCode: "",
     address: "",
     number: "",
@@ -194,25 +190,12 @@ export default function LeadsPage() {
   const [isSyncingIntake, setIsSyncingIntake] = useState(false)
   const [loadingIntakeCep, setLoadingIntakeCep] = useState(false)
 
-  const currentTabIndex = DOSSIER_TABS.indexOf(activeDossierTab)
-  const canGoBack = currentTabIndex > 0
-  const canGoNext = currentTabIndex < DOSSIER_TABS.length - 1
-
-  const handleNextTab = () => { if (canGoNext) setActiveDossierTab(DOSSIER_TABS[currentTabIndex + 1]) }
-  const handlePrevTab = () => { if (canGoBack) setActiveDossierTab(DOSSIER_TABS[currentTabIndex - 1]) }
-
-  const templatesQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "checklists"), orderBy("title", "asc"))
-  }, [db, user])
-  const { data: templates } = useCollection(templatesQuery)
-
   const leadInterviewsQuery = useMemoFirebase(() => {
     const leadId = activeLead?.id || selectedLead?.id
     if (!user || !db || !leadId) return null
     return collection(db!, "leads", leadId, "interviews")
   }, [db, user, activeLead?.id, selectedLead?.id])
-  const { data: leadInterviewsRaw, isLoading: isLoadingInterviews } = useCollection(leadInterviewsQuery)
+  const { data: leadInterviewsRaw } = useCollection(leadInterviewsQuery)
   
   const leadInterviews = useMemo(() => {
     if (!leadInterviewsRaw) return []
@@ -225,7 +208,6 @@ export default function LeadsPage() {
 
   useEffect(() => {
     if (activeLead) {
-      setStrategicSummary(null)
       setIntakeData({ 
         date: activeLead.scheduledDate || "", 
         time: activeLead.scheduledTime || "09:00", 
@@ -288,7 +270,6 @@ export default function LeadsPage() {
       }
     }
     
-    // 1. Salva no Firestore
     const payload = { 
       scheduledDate: intakeData.date, 
       scheduledTime: intakeData.time, 
@@ -316,7 +297,6 @@ export default function LeadsPage() {
     })
     const appointmentId = (appointmentRes as any).id;
 
-    // 2. Sincroniza com Google Calendar + Meet
     let meetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
@@ -342,11 +322,8 @@ export default function LeadsPage() {
           })
         }
       }
-    } catch (e) {
-      console.warn("Calendar sync failed", e)
-    }
+    } catch (e) { console.warn("Calendar sync failed", e) }
 
-    // 3. Disparo WhatsApp
     if (activeLead.phone) {
       const cleanPhone = activeLead.phone.replace(/\D/g, "");
       const meetPart = meetLink ? ` Link da reunião: ${meetLink}` : "";
@@ -360,92 +337,12 @@ export default function LeadsPage() {
     toast({ title: "Atendimento Protocolado" })
   }
 
-  const handleStartInterview = (t: any) => { setExecutingTemplate(t); setIsInterviewDialogOpen(true); }
-
-  const handleFinishInterview = async (payload: { responses: any; templateSnapshot: any[] }) => {
-    if (!db || !activeLead || !user) return
-    const leadId = activeLead.id
-    
-    addDocumentNonBlocking(collection(db!, "leads", leadId, "interviews"), { 
-      clientId: leadId, 
-      clientName: activeLead.name, 
-      templateId: executingTemplate.id, 
-      interviewType: executingTemplate.title, 
-      responses: payload.responses, 
-      templateSnapshot: payload.templateSnapshot, 
-      interviewerId: user.uid, 
-      interviewerName: user.displayName, 
-      status: "Concluída", 
-      createdAt: serverTimestamp(), 
-      updatedAt: serverTimestamp() 
-    })
-    
-    if (activeLead.status === 'novo') {
-      updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { 
-        status: "atendimento", 
-        updatedAt: serverTimestamp() 
-      })
-    }
-    
-    setIsInterviewDialogOpen(false)
-    setExecutingTemplate(null)
-    setActiveDossierTab("dossies")
-    toast({ title: "Protocolo Concluído" })
-  }
-
-  const handleRunInterviewAnalysis = async (interview: any) => {
-    setIsAiAnalyzing(true); setInterviewAnalysis(null)
-    try {
-      const result = await aiAnalyzeFullInterview({ clientName: activeLead.name, interviewType: interview.interviewType, responses: interview.responses })
-      setInterviewAnalysis(result)
-      if (db) updateDocumentNonBlocking(doc(db, "leads", activeLead.id, "interviews", interview.id), { aiAnalysis: result, updatedAt: serverTimestamp() })
-    } catch (e) { toast({ variant: "destructive", title: "Erro na análise" }) } finally { setIsAiAnalyzing(false) }
-  }
-
-  const handleGenerateStrategicSummary = async () => {
-    if (!activeLead) return
-    setIsGeneratingSummary(true)
-    const interviewContext = (leadInterviews || []).map(int => {
-      const responses = Object.entries(int.responses || {}).map(([q, a]) => `${q}: ${a}`).join("\n")
-      return `ENTREVISTA (${int.interviewType}):\n${responses}`
-    }).join("\n\n")
-    try {
-      const result = await generateCaseSummary({ 
-        caseId: activeLead.id, 
-        clientName: activeLead.name, 
-        caseTitle: activeLead.demandTitle || "Demanda Estratégica", 
-        caseDescription: interviewContext || activeLead.notes || "Aguardando entrevistas.", 
-        currentStatus: "Triagem", 
-        lastEvents: ["Entrevista"], 
-        nextDeadlines: ["Protocolo"], 
-        relatedParties: [activeLead.defendantName || "Réu"], 
-        financialStatus: "" 
-      })
-      setStrategicSummary(result)
-      toast({ title: "DNA Consolidado" })
-    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }) } finally { setIsGeneratingSummary(false) }
-  }
-
-  const handleConvertProcess = async (data: any) => {
-    if (!db || !activeLead) return
-    await addDocumentNonBlocking(collection(db!, "processes"), { ...data, leadId: activeLead.id, status: "Em Andamento", createdAt: serverTimestamp() })
-    updateDocumentNonBlocking(doc(db!, "leads", activeLead.id), { status: "arquivado", convertedAt: serverTimestamp(), updatedAt: serverTimestamp() })
-    setIsConversionOpen(false); setIsSheetOpen(false); toast({ title: "Processo Ativo" })
-  }
-
   const handleDragStart = (id: string) => setDraggedLeadId(id)
   const handleDragOver = (e: React.DragEvent) => e.preventDefault()
   const handleDrop = async (status: string) => {
     if (!draggedLeadId || !db) return
     updateDocumentNonBlocking(doc(db, "leads", draggedLeadId), { status, updatedAt: serverTimestamp() })
     setDraggedLeadId(null)
-  }
-
-  const handleDeleteLead = (id: string) => { 
-    if (!db || !confirm("Excluir Lead?")) return; 
-    deleteDocumentNonBlocking(doc(db, "leads", id)); 
-    toast({ title: "Lead Removido" }); 
-    setIsSheetOpen(false); 
   }
 
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
@@ -477,7 +374,7 @@ export default function LeadsPage() {
                 {leadsInCol.map((lead) => (
                   <Card key={lead.id} draggable onDragStart={() => handleDragStart(lead.id)} className={cn("glass hover-gold transition-all cursor-grab active:cursor-grabbing border-white/5 shadow-lg rounded-xl overflow-hidden", draggedLeadId === lead.id && "opacity-50")} onClick={() => handleOpenLead(lead)}>
                     <CardContent className="p-4 space-y-4">
-                      <div className="font-bold text-sm text-white group-hover:text-primary uppercase truncate">{lead.name}</div>
+                      <div className="font-bold text-sm text-white group-hover:text-primary uppercase truncate leading-none">{lead.name}</div>
                       <div className="flex items-center justify-between pt-4 border-t border-white/5">
                         <div className="flex gap-1.5">
                           {lead.cpf && <Badge variant="outline" className="text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase">CPF OK</Badge>}
@@ -508,9 +405,6 @@ export default function LeadsPage() {
                       </SheetDescription>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 pr-8">
-                    <Button onClick={() => setIsEditModeOpen(true)} variant="outline" className="h-11 text-[10px] font-black uppercase px-6 rounded-xl text-primary border-white/10 hover:bg-primary/5">EDITAR QUALIFICAÇÃO</Button>
-                  </div>
                 </div>
               </SheetHeader>
               
@@ -520,10 +414,6 @@ export default function LeadsPage() {
                     <TabsList className="bg-white/5 border border-white/10 h-14 p-1.5 gap-1.5 w-full justify-start rounded-2xl shadow-2xl">
                       <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 tracking-[0.2em]"><LayoutGrid className="h-4 w-4" /> OVERVIEW</TabsTrigger>
                       <TabsTrigger value="atividades" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 tracking-[0.2em]"><History className="h-4 w-4" /> ATRIBUIÇÕES</TabsTrigger>
-                      <TabsTrigger value="captura" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 tracking-[0.2em]"><Zap className="h-4 w-4" /> CAPTURA DNA</TabsTrigger>
-                      <TabsTrigger value="dossies" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 tracking-[0.2em]"><MessageSquare className="h-4 w-4" /> DOSSIÊS</TabsTrigger>
-                      <TabsTrigger value="burocracia" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 tracking-[0.2em]"><ClipboardList className="h-4 w-4" /> BUROCRACIA</TabsTrigger>
-                      <TabsTrigger value="revisao" className="data-[state=active]:bg-primary data-[state=active]:text-background text-muted-foreground font-black text-[11px] uppercase h-full px-8 rounded-xl gap-3 tracking-[0.2em]"><ShieldCheck className="h-4 w-4" /> REVISÃO</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="animate-in fade-in duration-500 outline-none w-full space-y-8">
@@ -534,26 +424,10 @@ export default function LeadsPage() {
                             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center"><ArrowRight className="h-5 w-5 text-amber-500" /></div>
                           </div>
                           <div className="space-y-4">
-                            <p className="text-3xl font-black text-white uppercase tracking-tighter">{activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : "AGUARDANDO DEFINIÇÃO"}</p>
+                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : "AGUARDANDO DEFINIÇÃO"}</p>
                             <Badge variant="outline" className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] h-8 px-4 border-white/10">{activeLead.meetingLocation || "LOCAL NÃO INFORMADO"}</Badge>
                           </div>
                         </Card>
-                        <Card className="glass border-primary/15 p-10 rounded-3xl shadow-2xl bg-primary/5 relative overflow-hidden">
-                          <h4 className="text-xs font-black text-primary uppercase tracking-[0.3em] flex items-center gap-3 mb-6"><Brain className="h-5 w-5" /> Síntese Estratégica IA</h4>
-                          <p className="text-base text-white/80 leading-relaxed italic font-medium">{activeLead.aiSummary || "Aguardando capturas de DNA jurídico."}</p>
-                        </Card>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="atividades" className="w-full"><ActivityManager leadId={activeLead.id} /></TabsContent>
-                    <TabsContent value="captura" className="w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {templates?.map(t => (
-                          <Button key={t.id} onClick={() => handleStartInterview(t)} variant="outline" className="glass border-white/10 text-white font-black uppercase text-xs h-20 gap-6 rounded-2xl justify-start px-8 hover:border-primary/40 hover:bg-primary/5 transition-all group">
-                            <Zap className="h-6 w-6 text-primary shrink-0" />
-                            <div className="flex flex-col items-start min-w-0"><span className="truncate w-full text-left tracking-tight text-sm">{t.title}</span><span className="text-[9px] opacity-40 uppercase tracking-widest mt-1">Iniciar Rito Digital</span></div>
-                          </Button>
-                        ))}
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -564,7 +438,6 @@ export default function LeadsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* DIÁLOGO AGENDAR INTAKE - STEP WIZARD */}
       <Dialog open={isSchedulingIntake} onOpenChange={setIsSchedulingIntake}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[80vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -584,16 +457,15 @@ export default function LeadsPage() {
 
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-8">
-              
               {intakeStep === 1 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={intakeData.type} onValueChange={(v: any) => setIntakeData({...intakeData, type: v})} className="grid grid-cols-2 gap-6">
                     <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'online'})}>
-                      <Video className={cn("h-8 w-8", intakeData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase">Virtual</span>
+                      <Video className={cn("h-8 w-8", intakeData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                     </div>
                     <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'presencial'})}>
-                      <MapPin className={cn("h-8 w-8", intakeData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase">Presencial</span>
+                      <MapPin className={cn("h-8 w-8", intakeData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                     </div>
                   </RadioGroup>
                 </div>
@@ -624,7 +496,7 @@ export default function LeadsPage() {
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística de Atendimento</Label>
                   {intakeData.type === 'online' ? (
                     <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
-                      <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase">Google Meet RGMJ</h4>
+                      <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet RGMJ</h4>
                       <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
                         <Switch checked={intakeData.autoMeet} onCheckedChange={v => setIntakeData({...intakeData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
                         <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
@@ -634,10 +506,10 @@ export default function LeadsPage() {
                     <div className="space-y-6">
                       <RadioGroup value={intakeData.locationType} onValueChange={v => setIntakeData({...intakeData, locationType: v})} className="grid grid-cols-2 gap-4">
                         <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}>
-                          <Building className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Sede RGMJ</span>
+                          <Building className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
                         </div>
                         <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'custom' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'custom'})}>
-                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
+                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                         </div>
                       </RadioGroup>
                       {intakeData.locationType === 'sede' ? (
@@ -697,7 +569,7 @@ export default function LeadsPage() {
                           <ShieldCheck className="h-8 w-8" />
                         </div>
                         <div className="space-y-2">
-                          <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeLead?.name}</h4>
+                          <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeLead?.name}</h4>
                           <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(intakeData.date).toLocaleDateString()} às {intakeData.time}</p>
                         </div>
                         <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
@@ -708,12 +580,11 @@ export default function LeadsPage() {
                       </Card>
                     </div>
                   )}
-
                 </div>
               </ScrollArea>
 
               <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-                <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">
+                <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
                   {intakeStep > 1 ? "ANTERIOR" : "CANCELAR"}
                 </Button>
                 {intakeStep < 5 ? (
@@ -730,7 +601,7 @@ export default function LeadsPage() {
             </DialogContent>
           </Dialog>
         </div>
-      )}
+      </Sheet>
     </div>
   )
 }

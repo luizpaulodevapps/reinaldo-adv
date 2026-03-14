@@ -1,6 +1,7 @@
+
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -52,7 +53,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc, limit } from "firebase/firestore"
+import { collection, query, orderBy, serverTimestamp, doc, limit, where } from "firebase/firestore"
 import { cn, maskCurrency, parseCurrencyToNumber, maskCEP } from "@/lib/utils"
 import { 
   Sheet, 
@@ -389,7 +390,7 @@ export default function CasesPage() {
           <div className="text-4xl font-black text-white tracking-tighter tabular-nums">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
         </Card>
         <Card className="bg-[#141B2D] border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Briefcase className="h-12 w-12" /></div>
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-12 w-12" /></div>
           <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Briefcase className="h-3.5 w-3.5" /> TICKET MÉDIO</p>
           <div className="text-4xl font-black text-white tracking-tighter tabular-nums">R$ {stats.ticket.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
         </Card>
@@ -548,7 +549,7 @@ export default function CasesPage() {
               <div className={cn("w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500", isSyncingAct && "animate-pulse")}>
                 {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Calendar className="h-6 w-6" />}
               </div>
-              <div>
+              <div className="text-left">
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Atendimento</DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Passo {meetingStep} de 5</Badge>
@@ -566,11 +567,11 @@ export default function CasesPage() {
                   <RadioGroup value={meetingData.type} onValueChange={(v: any) => setMeetingData({...meetingData, type: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
                     <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
                       <Video className={cn("h-8 w-8", meetingData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} />
-                      <span className="text-sm font-black text-white uppercase">Virtual</span>
+                      <span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                     </div>
                     <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
                       <MapPin className={cn("h-8 w-8", meetingData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} />
-                      <span className="text-sm font-black text-white uppercase">Presencial</span>
+                      <span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                     </div>
                   </RadioGroup>
                 </div>
@@ -602,7 +603,7 @@ export default function CasesPage() {
                   {meetingData.type === 'online' ? (
                     <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                       <Video className="h-12 w-12 text-emerald-500 mx-auto" />
-                      <h4 className="text-xl font-black text-white uppercase">Google Meet Hub</h4>
+                      <h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet Hub</h4>
                       <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
                         <Switch checked={meetingData.autoMeet} onCheckedChange={v => setMeetingData({...meetingData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
                         <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
@@ -633,7 +634,7 @@ export default function CasesPage() {
                                   value={meetingData.zipCode} 
                                   onChange={e => setMeetingData({...meetingData, zipCode: maskCEP(e.target.value)})} 
                                   onBlur={handleMeetingCepBlur}
-                                  className="bg-black/40 h-12 text-white font-mono rounded-xl" 
+                                  className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" 
                                   placeholder="00000-000"
                                 />
                                 {loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
@@ -673,7 +674,7 @@ export default function CasesPage() {
                       <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                         <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
                         <div className="space-y-2">
-                          <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{activeActionProcess?.clientName}</h4>
+                          <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeActionProcess?.clientName}</h4>
                           <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(meetingData.date).toLocaleDateString()} às {meetingData.time}</p>
                         </div>
                         <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
@@ -692,7 +693,7 @@ export default function CasesPage() {
                   {meetingStep > 1 ? "ANTERIOR" : "CANCELAR"}
                 </Button>
                 {meetingStep < 5 ? (
-                  <Button onClick={() => setMeetingStep(meetingStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] gap-3">
+                  <Button onClick={() => setMeetingStep(meetingStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] gap-3">
                     PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
                   </Button>
                 ) : (

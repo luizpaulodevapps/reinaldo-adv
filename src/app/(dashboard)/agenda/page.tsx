@@ -48,7 +48,8 @@ import {
   TriangleAlert,
   CalendarDays,
   ShieldCheck,
-  FileText
+  FileText,
+  Save
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -84,11 +85,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { pushActToGoogleCalendar } from "@/services/google-calendar"
-import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 
 type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendimento'
 
@@ -100,10 +99,8 @@ export default function MasterAgendaPage() {
   const [viewingEvent, setViewingEvent] = useState<any>(null)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   
-  // Estados para Wizard de Atendimento
+  // Estados para Wizard
   const [currentStep, setCurrentStep] = useState(1)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [deadlineDuration, setDeadlineDuration] = useState("")
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false)
   const [loadingMeetingCep, setLoadingMeetingCep] = useState(false)
 
@@ -123,7 +120,6 @@ export default function MasterAgendaPage() {
     publicationText: "",
     partyContact: "",
     assigneeId: "",
-    // Campos de Endereço Completo
     zipCode: "",
     address: "",
     number: "",
@@ -159,7 +155,6 @@ export default function MasterAgendaPage() {
     }
   }
 
-  // Queries da Pauta
   const staffQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "staff_profiles"), orderBy("name", "asc")) : null, [db, user])
   const { data: staffMembers } = useCollection(staffQuery)
 
@@ -351,7 +346,6 @@ export default function MasterAgendaPage() {
       finalDocId = (docRefRes as any).id;
     }
 
-    // SINCRONISMO GOOGLE HUB
     let generatedMeetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
@@ -381,7 +375,6 @@ export default function MasterAgendaPage() {
       }
     } catch (e) { console.warn("Google Sync Error", e) }
 
-    // PROTOCOLO WHATSAPP
     if (newEventData.partyContact || (createMode === 'atendimento' && newEventData.clientName)) {
       const contact = newEventData.partyContact || "";
       if (contact) {
@@ -407,10 +400,11 @@ export default function MasterAgendaPage() {
     setViewingEvent(null)
   }
 
+  const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-10 animate-in fade-in duration-1000">
       <div className="xl:col-span-3 space-y-6">
-        {/* Header Calendário */}
         <div className="flex flex-col md:flex-row items-center justify-between bg-white/[0.02] p-6 rounded-2xl border border-white/5 gap-6 shadow-xl">
           <div className="flex items-center gap-6">
             <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
@@ -423,7 +417,7 @@ export default function MasterAgendaPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 bg-black/20 px-6 py-3 rounded-xl border border-white/5 shadow-inner overflow-x-auto scrollbar-hide max-w-full">
+          <div className="flex items-center gap-6 bg-black/20 px-6 py-3 rounded-xl border border-white/5 shadow-inner">
             {[
               { label: 'Audiências', color: 'bg-rose-500', glow: 'rgba(239,68,68,0.6)' },
               { label: 'Freelance', color: 'bg-cyan-400', glow: 'rgba(34,211,238,0.6)' },
@@ -439,7 +433,6 @@ export default function MasterAgendaPage() {
           </div>
         </div>
 
-        {/* Grade do Calendário */}
         <div className="glass rounded-[2rem] overflow-hidden border-white/5 shadow-2xl bg-white/[0.01]">
           <div className="grid grid-cols-7 border-b border-white/5 bg-white/[0.03]">
             {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map(day => (
@@ -494,7 +487,6 @@ export default function MasterAgendaPage() {
         </div>
       </div>
 
-      {/* Lado Direito: Pauta do Dia */}
       <div className="xl:col-span-1 space-y-6">
         <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl shadow-xl">
           <h3 className="text-primary font-black uppercase tracking-[0.3em] text-[11px] mb-1">Pauta do Dia</h3>
@@ -559,7 +551,6 @@ export default function MasterAgendaPage() {
         </Button>
       </div>
 
-      {/* DIÁLOGO DE CRIAÇÃO MULTIMODAL - WIZARD RECONSTRUÍDO */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[90vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -580,8 +571,8 @@ export default function MasterAgendaPage() {
                   {editingEventId ? "Retificar Registro" : createMode === 'audiencia' ? "Injetar Audiência" : createMode === 'prazo' ? "Lançar Prazo" : "Rito de Atendimento"}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Sincronismo Digital</Badge>
-                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">Step {currentStep} de {createMode === 'atendimento' ? '5' : '3'}</span>
+                  <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Passo {currentStep} de 5</Badge>
+                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">Sincronismo Digital</span>
                 </div>
               </div>
             </div>
@@ -589,159 +580,71 @@ export default function MasterAgendaPage() {
           
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-10">
-              
-              {/* WIZARD ATENDIMENTO */}
               {createMode === 'atendimento' && (
-                <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  
+                <div className="space-y-10 animate-in fade-in duration-500">
                   {currentStep === 1 && (
                     <div className="space-y-8 animate-in zoom-in-95 duration-300">
-                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 1: Modalidade do Atendimento</Label>
-                      <RadioGroup 
-                        value={newEventData.meetingType} 
-                        onValueChange={(v: any) => setNewEventData({...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                      >
-                        <div className={cn(
-                          "p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 text-center group",
-                          newEventData.meetingType === "online" ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20"
-                        )} onClick={() => setNewEventData({...newEventData, meetingType: "online", location: "Google Meet"})}>
-                          <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-2", newEventData.meetingType === "online" ? "bg-emerald-500 text-background" : "bg-white/5 text-muted-foreground")}>
-                            <Video className="h-8 w-8" />
-                          </div>
-                          <RadioGroupItem value="online" className="sr-only" />
-                          <span className="text-sm font-black text-white uppercase tracking-widest">Atendimento Virtual</span>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Sincronismo com Google Meet</p>
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
+                      <RadioGroup value={newEventData.meetingType} onValueChange={(v: any) => setNewEventData({...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
+                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, meetingType: 'online'})}>
+                          <Video className={cn("h-8 w-8", newEventData.meetingType === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                         </div>
-                        <div className={cn(
-                          "p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 text-center group",
-                          newEventData.meetingType === "presencial" ? "bg-primary/10 border-primary shadow-[0_0_30px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20"
-                        )} onClick={() => setNewEventData({...newEventData, meetingType: "presencial", location: "Sede RGMJ"})}>
-                          <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-2", newEventData.meetingType === "presencial" ? "bg-primary text-background" : "bg-white/5 text-muted-foreground")}>
-                            <MapPin className="h-8 w-8" />
-                          </div>
-                          <RadioGroupItem value="presencial" className="sr-only" />
-                          <span className="text-sm font-black text-white uppercase tracking-widest">Atendimento Presencial</span>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Sede da Banca ou Local Externo</p>
+                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, meetingType: 'presencial'})}>
+                          <MapPin className={cn("h-8 w-8", newEventData.meetingType === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                         </div>
                       </RadioGroup>
                     </div>
                   )}
-
                   {currentStep === 2 && (
                     <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 2: Cronograma Tático</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] shadow-2xl">
-                        <div className="space-y-3">
-                          <Label className={labelMini}>Data do Compromisso</Label>
-                          <div className="relative">
-                            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
-                            <Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 border-white/10 h-16 pl-14 text-white font-black text-lg rounded-2xl" />
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          <Label className={labelMini}>Horário Inicial</Label>
-                          <div className="relative">
-                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
-                            <Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 border-white/10 h-16 pl-14 text-white font-black text-lg rounded-2xl" />
-                          </div>
-                        </div>
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">2. Cronograma</Label>
+                      <div className="grid grid-cols-2 gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-2xl shadow-xl">
+                        <div className="space-y-2"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-14 text-white font-bold" /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Hora</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-14 text-white font-bold" /></div>
                       </div>
                     </div>
                   )}
-
                   {currentStep === 3 && (
                     <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 3: Identificação & Pauta</Label>
-                      <div className="space-y-8">
-                        <div className="space-y-3">
-                          <Label className={labelMini}>Título da Pauta *</Label>
-                          <Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} placeholder="EX: REUNIÃO TÁTICA: CLIENTE X" className="bg-black/40 border-white/10 h-16 text-white font-black text-lg px-8 rounded-2xl" />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className={labelMini}>Nome do Cliente / Lead</Label>
-                          <Input value={newEventData.clientName} onChange={e => setNewEventData({...newEventData, clientName: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-bold px-8 rounded-xl" />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className={labelMini}>Notas Estratégicas / Objetivos</Label>
-                          <Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 border-white/10 min-h-[150px] text-white p-6 rounded-2xl text-sm" placeholder="Descreva os pontos a serem abordados..." />
-                        </div>
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação</Label>
+                      <div className="space-y-6">
+                        <div className="space-y-2"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Notas Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Descreva os objetivos..." /></div>
                       </div>
                     </div>
                   )}
-
                   {currentStep === 4 && (
                     <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo 4: Logística {newEventData.meetingType === 'online' ? 'Digital' : 'Física'}</Label>
-                      
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística</Label>
                       {newEventData.meetingType === 'online' ? (
                         <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
-                          <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20">
-                            <Video className="h-10 w-10 text-emerald-500" />
-                          </div>
-                          <div className="space-y-2">
-                            <h4 className="text-xl font-black text-white uppercase tracking-widest leading-none">Google Meet RGMJ</h4>
-                            <p className="text-[10px] text-emerald-500/60 font-black uppercase tracking-[0.2em]">O Link será gerado automaticamente no próximo passo.</p>
-                          </div>
-                          <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                          <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet Hub</h4>
+                          <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
                             <Switch checked={newEventData.autoMeet} onCheckedChange={v => setNewEventData({...newEventData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
-                            <Label className="text-[10px] font-black text-white uppercase">Habilitar Conference Data?</Label>
+                            <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
                           </div>
                         </Card>
                       ) : (
-                        <div className="space-y-8">
-                          <RadioGroup value={newEventData.locationType} onValueChange={v => setNewEventData({...newEventData, locationType: v, location: v === 'sede' ? 'Sede RGMJ' : ''})} className="grid grid-cols-2 gap-6">
-                            <div className={cn("p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'sede', location: 'Sede RGMJ'})}>
-                              <Building2 className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Sede RGMJ</span>
+                        <div className="space-y-6">
+                          <RadioGroup value={newEventData.locationType} onValueChange={v => setNewEventData({...newEventData, locationType: v})} className="grid grid-cols-2 gap-4">
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                              <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
                             </div>
-                            <div className={cn("p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
-                              <MapPin className="h-5 w-5 text-primary" /><span className="text-[11px] font-black text-white uppercase">Endereço Externo</span>
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
+                              <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                             </div>
                           </RadioGroup>
-                          
-                          {newEventData.locationType === 'sede' ? (
-                            <div className="space-y-3 animate-in fade-in">
-                              <Label className={labelMini}>Localização do Atendimento</Label>
-                              <Input value="SEDE RGMJ" disabled className="bg-black/40 border-white/10 h-16 text-white font-black text-lg px-8 rounded-2xl opacity-50" />
-                            </div>
-                          ) : (
+                          {newEventData.locationType === 'externo' && (
                             <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <div className="space-y-2">
-                                  <Label className={labelMini}>CEP</Label>
-                                  <div className="relative">
-                                    <Input 
-                                      value={newEventData.zipCode} 
-                                      onChange={e => setNewEventData({...newEventData, zipCode: maskCEP(e.target.value)})} 
-                                      onBlur={handleMeetingCepBlur}
-                                      className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" 
-                                      placeholder="00000-000"
-                                    />
-                                    {loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
-                                  </div>
-                                </div>
-                                <div className="md:col-span-2 space-y-2">
-                                  <Label className={labelMini}>Logradouro</Label>
-                                  <Input value={newEventData.address} onChange={e => setNewEventData({...newEventData, address: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className={labelMini}>Nº</Label>
-                                  <Input value={newEventData.number} onChange={e => setNewEventData({...newEventData, number: e.target.value})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-                                </div>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="space-y-2"><Label className={labelMini}>CEP</Label><div className="relative"><Input value={newEventData.zipCode} onChange={e => setNewEventData({...newEventData, zipCode: maskCEP(e.target.value)})} onBlur={handleMeetingCepBlur} className="bg-black/40 h-12 text-white font-mono rounded-xl" placeholder="00000-000" />{loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}</div></div>
+                                <div className="md:col-span-2 space-y-2"><Label className={labelMini}>Logradouro</Label><Input value={newEventData.address} onChange={e => setNewEventData({...newEventData, address: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>Nº</Label><Input value={newEventData.number} onChange={e => setNewEventData({...newEventData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="space-y-2">
-                                  <Label className={labelMini}>Bairro</Label>
-                                  <Input value={newEventData.neighborhood} onChange={e => setNewEventData({...newEventData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className={labelMini}>Cidade</Label>
-                                  <Input value={newEventData.city} onChange={e => setNewEventData({...newEventData, city: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className={labelMini}>UF</Label>
-                                  <Input value={newEventData.state} onChange={e => setNewEventData({...newEventData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 border-white/10 h-12 text-white rounded-xl" />
-                                </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2"><Label className={labelMini}>Bairro</Label><Input value={newEventData.neighborhood} onChange={e => setNewEventData({...newEventData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>Cidade</Label><Input value={newEventData.city} onChange={e => setNewEventData({...newEventData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>UF</Label><Input value={newEventData.state} onChange={e => setNewEventData({...newEventData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" /></div>
                               </div>
                             </div>
                           )}
@@ -749,93 +652,49 @@ export default function MasterAgendaPage() {
                       )}
                     </div>
                   )}
-
                   {currentStep === 5 && (
-                    <div className="space-y-8 animate-in zoom-in-95 duration-300">
-                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">Passo Final: Resumo da Pauta</Label>
-                      <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-10 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-10 opacity-5"><ShieldCheck className="h-32 w-32" /></div>
-                        <div className="grid grid-cols-2 gap-10">
-                          <div className="space-y-1">
-                            <p className="text-[9px] font-black text-primary uppercase">Modalidade</p>
-                            <p className="text-lg font-black text-white uppercase">{newEventData.meetingType}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[9px] font-black text-primary uppercase">Cronograma</p>
-                            <p className="text-lg font-black text-white uppercase">{new Date(newEventData.date).toLocaleDateString()} — {newEventData.time}</p>
-                          </div>
-                          <div className="space-y-1 col-span-2">
-                            <p className="text-[9px] font-black text-primary uppercase">Identificação</p>
-                            <p className="text-2xl font-black text-white uppercase tracking-tighter">{newEventData.title}</p>
-                          </div>
-                          <div className="space-y-1 col-span-2">
-                            <p className="text-[9px] font-black text-primary uppercase">Logística</p>
-                            <p className="text-base font-bold text-white uppercase flex items-center gap-3">
-                              <MapPin className="h-4 w-4 text-primary" /> {newEventData.meetingType === 'online' ? 'GOOGLE MEET' : (newEventData.locationType === 'sede' ? 'SEDE RGMJ' : `${newEventData.address}, ${newEventData.number}`)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-4">
-                          <CheckCircle2 className="h-6 w-6 text-emerald-500" />
-                          <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest leading-relaxed">
-                            O rito de sincronismo disparará o convite para o Google Calendar do responsável e preparará a mensagem oficial de WhatsApp para o cliente.
-                          </p>
-                        </div>
+                    <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Consolidação</Label>
+                      <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
+                        <div className="space-y-2"><h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{newEventData.title}</h4><p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(newEventData.date).toLocaleDateString()} às {newEventData.time}</p></div>
+                        <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner"><p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">Sincronismo Workspace Ativo. O rito disparará o convite Google e preparará a mensagem WhatsApp.</p></div>
                       </Card>
                     </div>
                   )}
-
                 </div>
               )}
-
-              {/* OUTROS FORMULÁRIOS (PRAZO / AUDIÊNCIA / DILIGÊNCIA) - MANTER SIMPLICIDADE OU ADAPTAR SE NECESSÁRIO */}
               {createMode !== 'atendimento' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                    <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
                    <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12" /></div>
-                    <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-12" /></div>
+                    <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
+                    <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
                   </div>
-                  <div className="space-y-3">
-                    <Label className={labelMini}>Localização / Juízo</Label>
-                    <Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="FÓRUM, VARA OU ENDEREÇO COMPLETO..." />
-                  </div>
+                  <div className="space-y-3"><Label className={labelMini}>Localização / Juízo</Label><Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold" /></div>
                   <div className="space-y-3"><Label className={labelMini}>Notas / Referências</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[100px] text-white" /></div>
                 </div>
               )}
-
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-xl">
             <Button variant="ghost" onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : setIsCreateOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12">
               {currentStep > 1 ? "ANTERIOR" : "CANCELAR"}
             </Button>
-            
             {createMode === 'atendimento' ? (
               currentStep < 5 ? (
-                <Button 
-                  onClick={() => setCurrentStep(currentStep + 1)} 
-                  className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.2em] px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.03] active:scale-95 gap-3"
-                >
+                <Button onClick={() => setCurrentStep(currentStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] gap-3">
                   PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button 
-                  onClick={handleSaveEvent} 
-                  disabled={isSyncingWorkspace || !newEventData.title || !newEventData.date}
-                  className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
-                >
+                <Button onClick={handleSaveEvent} disabled={isSyncingWorkspace} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.02] gap-4">
                   {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-                  {editingEventId ? "ATUALIZAR REGISTRO" : "CONFIRMAR E SINCRONIZAR"}
+                  CONFIRMAR E SINCRONIZAR
                 </Button>
               )
             ) : (
-              <Button 
-                onClick={handleSaveEvent} 
-                disabled={isSyncingWorkspace || !newEventData.title || !newEventData.date}
-                className="gold-gradient text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
-              >
+              <Button onClick={handleSaveEvent} disabled={isSyncingWorkspace} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.02] gap-4">
                 {isSyncingWorkspace ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 mr-3" />}
                 {editingEventId ? "ATUALIZAR REGISTRO" : "CONFIRMAR E SINCRONIZAR"}
               </Button>
@@ -844,7 +703,6 @@ export default function MasterAgendaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO VISUALIZAÇÃO DETALHADA - SEM ALTERAÇÕES CRÍTICAS AQUI */}
       <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[750px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[85vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -875,22 +733,22 @@ export default function MasterAgendaPage() {
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className={labelMini}>Cliente / Lead</Label>
-                  <p className="text-lg font-black text-white uppercase">{viewingEvent?.clientName || 'NÃO VINCULADO'}</p>
+                  <p className="text-lg font-black text-white uppercase leading-none">{viewingEvent?.clientName || 'NÃO VINCULADO'}</p>
                 </div>
                 <div className="space-y-2">
                   <Label className={labelMini}>Processo / CNJ</Label>
-                  <p className="text-sm font-mono font-bold text-white/60">{viewingEvent?.processNumber || '---'}</p>
+                  <p className="text-sm font-mono font-bold text-white/60 leading-none">{viewingEvent?.processNumber || '---'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-8 border-y border-white/5 py-10">
                 <div className="flex items-center gap-4">
                   <CalendarIcon className="h-6 w-6 text-primary" />
-                  <div><p className={labelMini}>Data</p><p className="text-base font-bold text-white uppercase">{viewingEvent?.date ? format(viewingEvent.date, "dd 'de' MMMM", { locale: ptBR }) : '---'}</p></div>
+                  <div><p className={labelMini}>Data</p><p className="text-base font-bold text-white uppercase leading-none">{viewingEvent?.date ? format(viewingEvent.date, "dd 'de' MMMM", { locale: ptBR }) : '---'}</p></div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Clock className="h-6 w-6 text-primary" />
-                  <div><p className={labelMini}>Horário</p><p className="text-base font-bold text-white font-mono">{viewingEvent?.date ? format(viewingEvent.date, "HH:mm") : '--:--'}</p></div>
+                  <div><p className={labelMini}>Horário</p><p className="text-base font-bold text-white font-mono leading-none">{viewingEvent?.date ? format(viewingEvent.date, "HH:mm") : '--:--'}</p></div>
                 </div>
               </div>
 
@@ -905,7 +763,7 @@ export default function MasterAgendaPage() {
                   <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between shadow-inner">
                     <div className="flex items-center gap-4">
                       <MapPin className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-bold text-white uppercase">{viewingEvent.location}</span>
+                      <span className="text-sm font-bold text-white uppercase leading-none">{viewingEvent.location}</span>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")} className="h-10 w-10 text-primary hover:bg-primary/10 rounded-xl"><Navigation className="h-5 w-5" /></Button>
                   </div>
@@ -922,11 +780,11 @@ export default function MasterAgendaPage() {
           </ScrollArea>
 
           <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
-            <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12">FECHAR</Button>
+            <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12 hover:text-white transition-colors">FECHAR</Button>
             <Button 
               variant="outline" 
               onClick={() => handleOpenSchedule(viewingEvent.date || new Date(), viewingEvent.eventType, viewingEvent)}
-              className="border-primary/30 text-primary font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-primary hover:text-background"
+              className="border-primary/30 text-primary font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-primary hover:text-background transition-all"
             >
               <Edit3 className="h-4 w-4 mr-3" /> RETIFICAR ATO
             </Button>
@@ -936,5 +794,3 @@ export default function MasterAgendaPage() {
     </div>
   )
 }
-
-const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
