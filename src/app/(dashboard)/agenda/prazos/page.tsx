@@ -20,7 +20,8 @@ import {
   Calendar,
   Eye,
   ShieldAlert,
-  Zap
+  Zap,
+  X
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
@@ -171,7 +172,6 @@ export default function PrazosSubpage() {
             return (
               <Card key={d.id} className="bg-[#0d1117] border-white/5 hover:border-primary/20 transition-all group overflow-hidden rounded-2xl shadow-2xl">
                 <CardContent className="p-0 flex flex-col md:flex-row min-h-[160px]">
-                  {/* Bloco de Data - Estética Imagem */}
                   <div className={cn(
                     "p-8 md:w-40 flex flex-col items-center justify-center bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/5 group-hover:bg-primary/5 transition-all flex-none",
                     isExp && "bg-rose-500/5",
@@ -188,7 +188,6 @@ export default function PrazosSubpage() {
                     </span>
                   </div>
 
-                  {/* Conteúdo Central */}
                   <div className="flex-1 p-10 space-y-5 flex flex-col justify-center min-w-0 cursor-pointer" onClick={() => handleOpenView(d)}>
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-4 h-6 bg-primary/5 tracking-[0.15em] rounded-full">
@@ -208,7 +207,6 @@ export default function PrazosSubpage() {
                     </div>
                   </div>
 
-                  {/* Ações Laterais - Estética Imagem Alinhada */}
                   <div className="p-10 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 gap-4 flex-none bg-white/[0.01]">
                     <Button 
                       onClick={() => handleMarkAsDone(d.id)}
@@ -253,74 +251,107 @@ export default function PrazosSubpage() {
         </div>
       )}
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO DE DETALHES */}
+      {/* DIÁLOGO DE VISUALIZAÇÃO DE DETALHES (DOSSIÊ DO PRAZO) */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center justify-between flex-none shadow-xl">
-            <div className="flex items-center gap-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-2xl">
-                <FileText className="h-7 w-7" />
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
+          {/* Header Superior Estilo Imagem */}
+          <div className="p-10 bg-[#0a0f1e] flex items-center justify-between relative shadow-2xl border-b border-white/5">
+            <button 
+              onClick={() => setIsViewOpen(false)}
+              className="absolute right-6 top-6 text-white/40 hover:text-white transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            <div className="flex items-center gap-8">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/30 text-primary shadow-[0_0_20px_rgba(245,208,48,0.15)]">
+                <FileText className="h-8 w-8" />
               </div>
-              <div className="text-left">
-                <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase bg-primary/5 px-3 h-6 mb-2">DOSSIÊ DO PRAZO</Badge>
-                <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter leading-none">
+              <div className="text-left space-y-1.5">
+                <Badge className="bg-[#f5d030]/10 text-[#f5d030] border-0 text-[10px] font-black uppercase tracking-[0.2em] px-4 h-6 rounded-full">
+                  DOSSIÊ DO PRAZO
+                </Badge>
+                <DialogTitle className="text-3xl font-black text-white uppercase tracking-tighter leading-tight">
                   {viewingDeadline?.title}
                 </DialogTitle>
               </div>
             </div>
-            <Button onClick={() => handleOpenEdit(viewingDeadline)} variant="outline" className="glass border-white/10 text-white font-black text-[10px] h-11 px-6 rounded-xl hover:bg-primary hover:text-background transition-all">
-              <Edit3 className="h-4 w-4 mr-2" /> EDITAR
+
+            <Button 
+              onClick={() => handleOpenEdit(viewingDeadline)} 
+              variant="outline" 
+              className="bg-white/5 border-white/10 text-white font-black text-[11px] uppercase tracking-widest h-12 px-8 rounded-xl hover:bg-primary hover:text-background transition-all"
+            >
+              <Edit3 className="h-4 w-4 mr-3" /> EDITAR
             </Button>
           </div>
 
-          <ScrollArea className="max-h-[60vh]">
-            <div className="p-10 space-y-10">
-              <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Vencimento Fatal</Label>
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    <span className={cn("text-base font-black uppercase", viewingDeadline?.dueDate && isBefore(parseISO(viewingDeadline.dueDate), startOfDay(new Date())) ? "text-rose-500" : "text-white")}>
-                      {viewingDeadline?.dueDate ? format(parseISO(viewingDeadline.dueDate), "dd/MM/yyyy", { locale: ptBR }) : '---'}
+          <ScrollArea className="max-h-[70vh]">
+            <div className="p-12 space-y-12 bg-[#0a0f1e]/50">
+              {/* Grid de Dados */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.25em]">Vencimento Fatal</Label>
+                  <div className="p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center gap-5 shadow-inner">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-primary border border-white/5">
+                      <Calendar className="h-6 w-6" />
+                    </div>
+                    <span className={cn(
+                      "text-xl font-black uppercase tracking-tight", 
+                      viewingDeadline?.dueDate && isBefore(parseISO(viewingDeadline.dueDate.split('T')[0]), startOfDay(new Date())) ? "text-rose-500" : "text-white"
+                    )}>
+                      {viewingDeadline?.dueDate ? format(parseISO(viewingDeadline.dueDate.split('T')[0]), "dd/MM/yyyy", { locale: ptBR }) : '---'}
                     </span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Protocolo CNJ</Label>
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-4">
-                    <Scale className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-bold text-white font-mono">{viewingDeadline?.processId || 'NÃO VINCULADO'}</span>
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.25em]">Protocolo CNJ</Label>
+                  <div className="p-6 rounded-2xl bg-black/40 border border-white/5 flex items-center gap-5 shadow-inner">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-primary border border-white/5">
+                      <Scale className="h-6 w-6" />
+                    </div>
+                    <span className="text-sm font-bold text-white font-mono tracking-widest truncate">
+                      {viewingDeadline?.processId || 'NÃO VINCULADO'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Providência / Detalhamento</Label>
-                <div className="p-8 rounded-3xl bg-primary/5 border border-primary/20 shadow-inner">
-                  <p className="text-base text-white/90 leading-relaxed font-serif text-justify whitespace-pre-wrap uppercase font-bold italic">
-                    {viewingDeadline?.description || "SEM DETALHAMENTO TÉCNICO REGISTRADO."}
+              {/* Seção de Detalhamento com Borda Ouro e Serif */}
+              <div className="space-y-4">
+                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.25em]">Providência / Detalhamento</Label>
+                <div className="p-10 rounded-[2.5rem] bg-black/20 border-2 border-[#f5d030]/20 shadow-[0_0_40px_rgba(245,208,48,0.05)]">
+                  <p className="text-xl text-white/90 leading-relaxed font-serif font-black italic text-justify uppercase tracking-tight">
+                    {viewingDeadline?.description || "SEM DETALHAMENTO TÉCNICO REGISTRADO NA BASE."}
                   </p>
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-white/[0.01] border border-white/5 flex items-start gap-4">
-                <ShieldAlert className="h-5 w-5 text-primary/40 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                  Este prazo está sob auditoria constante. Certifique-se de registrar o cumprimento logo após a execução para manter o Radar de Riscos saneado.
+              {/* Alerta de Auditoria */}
+              <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start gap-6 shadow-inner">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-none mt-1">
+                  <ShieldAlert className="h-5 w-5 text-amber-500" />
+                </div>
+                <p className="text-[11px] text-muted-foreground uppercase font-black tracking-widest leading-relaxed opacity-60">
+                  Este prazo está sob auditoria constante. Certifique-se de registrar o cumprimento logo após a execução para manter o Radar de Riscos saneado e a soberania operacional.
                 </p>
               </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex justify-between items-center flex-none rounded-b-3xl">
-            <div className="flex items-center gap-3">
-              <Zap className="h-4 w-4 text-emerald-500 animate-pulse" />
-              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Soberania Técnica RGMJ</span>
+          {/* Footer Estilo Imagem */}
+          <div className="p-10 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
+            <div className="flex items-center gap-4">
+              <Zap className="h-5 w-5 text-emerald-500 animate-pulse" />
+              <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Soberania Técnica RGMJ</span>
             </div>
-            <Button variant="ghost" onClick={() => setIsViewOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-10 h-12 hover:text-white">
+            <button 
+              onClick={() => setIsViewOpen(false)} 
+              className="text-muted-foreground uppercase font-black text-[12px] tracking-[0.3em] px-10 h-14 hover:text-white transition-colors"
+            >
               FECHAR DOSSIÊ
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
