@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -313,7 +314,6 @@ export default function LaboratorioChecklistsPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col font-sans">
-          {/* Header Editor */}
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-6">
@@ -534,7 +534,6 @@ export default function LaboratorioChecklistsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE VISUALIZAÇÃO DETALHADA */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="glass border-white/10 bg-[#05070a] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl flex flex-col h-[80vh] font-sans">
           <div className="p-10 bg-[#0a0f1e] border-b border-white/5 flex-none shadow-xl">
