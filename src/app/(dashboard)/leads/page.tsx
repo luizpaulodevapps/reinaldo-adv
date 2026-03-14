@@ -560,28 +560,30 @@ export default function LeadsPage() {
                       )}
                     </div>
                   )}
-
-                  {intakeStep === 5 && (
-                    <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Consolidação de Triagem</Label>
-                      <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
-                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl">
-                          <ShieldCheck className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeLead?.name}</h4>
-                          <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(intakeData.date).toLocaleDateString()} às {intakeData.time}</p>
-                        </div>
-                        <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
-                          <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                            {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : `Atendimento Presencial em: ${intakeData.locationType === 'sede' ? 'Sede RGMJ' : `${intakeData.address}, ${intakeData.number}`}`}
-                          </p>
-                        </div>
-                      </Card>
-                    </div>
-                  )}
                 </div>
-              </ScrollArea>
+              )}
+
+              {intakeStep === 5 && (
+                <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Consolidação de Triagem</Label>
+                  <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl">
+                      <ShieldCheck className="h-8 w-8" />
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeLead?.name}</h4>
+                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(intakeData.date).toLocaleDateString()} às {intakeData.time}</p>
+                    </div>
+                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
+                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
+                        {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : `Atendimento Presencial em: ${intakeData.locationType === 'sede' ? 'Sede RGMJ' : `${intakeData.address}, ${intakeData.number}`}`}
+                      </p>
+                    </div>
+                  </Card>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
 
               <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
                 <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
