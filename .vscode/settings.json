@@ -3,6 +3,7 @@
         "/^firebase deploy --only firestore:rules$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "npx next": true
     }
 }

@@ -585,25 +585,23 @@ export default function LeadsPage() {
             </div>
           </ScrollArea>
 
-              <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-                <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
-                  {intakeStep > 1 ? "ANTERIOR" : "CANCELAR"}
-                </Button>
-                {intakeStep < 5 ? (
-                  <Button onClick={() => setIntakeStep(intakeStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 gap-3">
-                    PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 gap-4">
-                    {isSyncingIntake ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-                    CONFIRMAR E SINCRONIZAR
-                  </Button>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </Sheet>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
+            <Button variant="ghost" onClick={() => intakeStep > 1 ? setIntakeStep(intakeStep - 1) : setIsSchedulingIntake(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
+              {intakeStep > 1 ? "ANTERIOR" : "CANCELAR"}
+            </Button>
+            {intakeStep < 5 ? (
+              <Button onClick={() => setIntakeStep(intakeStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 gap-3">
+                PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 gap-4">
+                {isSyncingIntake ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                CONFIRMAR E SINCRONIZAR
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
