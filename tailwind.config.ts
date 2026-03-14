@@ -10,42 +10,51 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
+        body: ['Montserrat', 'sans-serif'],
         display: ['Playfair Display', 'serif'],
-        sans: ['PT Sans', 'sans-serif'],
+        sans: ['Montserrat', 'sans-serif'],
         serif: ['Playfair Display', 'serif'],
       },
       colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        background: '#0D1422',
+        foreground: '#C7C7C7',
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: '#DFC88E',
+          foreground: '#0D1422',
+        },
+        gold: {
+          100: "#DFC88E",
+          200: "#A37F35",
+          300: "#9F762C"
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: '#111827',
+          foreground: '#FFFFFF',
+        },
+        card: {
+          DEFAULT: '#141B2D',
+          foreground: '#FFFFFF',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: '#111827',
+          foreground: '#8A8A8A',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: '#DFC88E',
+          foreground: '#FFFFFF',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: '#BD4073',
+          foreground: '#FFFFFF',
         },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
+        border: 'rgba(223,200,142,0.2)',
+        input: '#111827',
+        ring: '#DFC88E',
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: '12px',
+        md: '10px',
+        sm: '8px',
       },
     },
   },

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -19,9 +18,6 @@ import {
   Building2,
   Handshake,
   Calculator,
-  ArrowUpRight,
-  ArrowDownRight,
-  TrendingUp,
   CalendarDays,
   User as UserIcon,
   Receipt,
@@ -55,51 +51,40 @@ import {
 
 const menuGroups = [
   {
-    title: "ESTRATÉGICO",
+    title: "PRINCIPAL",
     items: [
       { name: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
-      { name: "RELATÓRIOS BI", href: "/reports", icon: BarChart3 },
-      { name: "LABORATÓRIO", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
-    ]
-  },
-  {
-    title: "COMERCIAL",
-    items: [
-      { name: "TRIAGEM", href: "/leads", icon: Zap },
-      { name: "CLIENTES", href: "/clients", icon: Users },
     ]
   },
   {
     title: "OPERACIONAL",
     items: [
+      { name: "CLIENTES", href: "/clients", icon: Users },
       { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
       { name: "AGENDA", href: "/agenda", icon: CalendarDays },
-      { name: "MODELOS", href: "/drafting", icon: BookOpen },
-    ]
-  },
-  {
-    title: "FINANCEIRO",
-    items: [
-      { name: "CAIXA DA BANCA", href: "/billing", icon: Calculator },
-      { name: "REEMBOLSOS", href: "/reimbursements", icon: Receipt },
-      { name: "CONTAS A RECEBER", href: "/receivables", icon: ArrowUpRight },
-      { name: "CONTAS A PAGAR", href: "/payables", icon: ArrowDownRight },
-      { name: "MINHA CARTEIRA", href: "/financial", icon: Wallet },
-      { name: "FLUXO DE CAIXA", href: "/cash-flow", icon: TrendingUp },
-    ]
-  },
-  {
-    title: "PARCERIAS",
-    items: [
-      { name: "CORRESPONDENTES", href: "/correspondents", icon: Handshake },
     ]
   },
   {
     title: "GESTÃO",
     items: [
-      { name: "FÓRUNS", href: "/courts", icon: Building2 },
+      { name: "FINANCEIRO", href: "/billing", icon: Calculator },
+      { name: "RELATÓRIOS", href: "/reports", icon: BarChart3 },
+      { name: "CORRESPONDENTES", href: "/correspondents", icon: Handshake },
+    ]
+  },
+  {
+    title: "SISTEMA",
+    items: [
+      { name: "CONFIGURAÇÕES", href: "/settings", icon: Settings },
       { name: "EQUIPE", href: "/staff", icon: Users2 },
-      { name: "AJUSTES", href: "/settings", icon: Settings },
+      { name: "LABORATÓRIO", href: "/checklists", icon: ClipboardCheck, roleRequired: "admin" },
+    ]
+  },
+  {
+    title: "PESSOAL",
+    items: [
+      { name: "MINHA CARTEIRA", href: "/financial", icon: Wallet },
+      { name: "REEMBOLSOS", href: "/reimbursements", icon: Receipt },
     ]
   }
 ]
@@ -111,7 +96,7 @@ export function SidebarNav() {
   const auth = useAuth()
 
   const displayName = profile?.name || user?.displayName || "Membro RGMJ"
-  const userRoleDisplay = role === 'admin' ? 'Administrador' : 'Corpo Técnico'
+  const userRoleDisplay = role === 'admin' ? 'Sócio Fundador' : 'Advogado'
 
   const handleLogout = async () => {
     if (!auth) return
@@ -125,39 +110,39 @@ export function SidebarNav() {
   const isCollapsed = state === "collapsed"
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#02040a] font-sans">
+    <Sidebar collapsible="icon" className="border-r border-gold-200/10 bg-[#090E1A] font-sans">
       <SidebarHeader className={cn("py-8 transition-all duration-300 flex items-center", isCollapsed ? "px-0 justify-center" : "px-6")}>
         <div className={cn(
           "flex items-center gap-4 transition-all",
           isCollapsed ? "justify-center" : ""
         )}>
           <div className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-500",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-all duration-500",
             isCollapsed 
-              ? "bg-primary/10 border-primary/40 shadow-[0_0_15px_rgba(245,208,48,0.2)]" 
-              : "bg-primary/10 border-primary/20 shadow-2xl shadow-primary/5"
+              ? "bg-gold-200/10 border-gold-200/40 shadow-[0_0_15px_rgba(223,200,142,0.2)]" 
+              : "bg-gold-200/10 border-gold-200/20 shadow-2xl"
           )}>
-            <Scale className="h-5 w-5 text-primary" />
+            <Scale className="h-5 w-5 text-gold-100" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden animate-in fade-in duration-500">
-              <span className="text-sm font-bold text-white uppercase tracking-wider leading-none">RGMJ ADVOGADOS</span>
-              <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em] mt-1.5 opacity-60">Comando Central</span>
+              <span className="text-sm font-bold text-white uppercase tracking-wider leading-none font-serif">RGMJ</span>
+              <span className="text-[8px] text-gold-100 font-black uppercase tracking-[0.4em] mt-1.5 opacity-60">Advocacia de Elite</span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent className={cn("px-3 space-y-2", isCollapsed && "px-0")}>
+      <SidebarContent className={cn("px-3 space-y-1", isCollapsed && "px-0")}>
         {menuGroups.map((group, idx) => (
           <SidebarGroup key={idx} className="py-1">
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[9px] font-black text-white/20 tracking-[0.4em] uppercase px-3 mb-2">
+              <SidebarGroupLabel className="text-[8px] font-black text-white/20 tracking-[0.4em] uppercase px-3 mb-2">
                 {group.title}
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu className="gap-1.5">
+              <SidebarMenu className="gap-1">
                 {group.items.map((item) => {
                   if (item.roleRequired === 'admin' && role !== 'admin') return null
                   const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
@@ -168,20 +153,20 @@ export function SidebarNav() {
                         asChild
                         isActive={isActive}
                         className={cn(
-                          "relative flex items-center transition-all duration-200 h-10 rounded-xl",
-                          isCollapsed ? "justify-center px-0 w-10 mx-auto" : "gap-4 px-4",
+                          "relative flex items-center transition-all duration-200 h-9 rounded-lg",
+                          isCollapsed ? "justify-center px-0 w-9 mx-auto" : "gap-3 px-3",
                           isActive 
-                            ? "bg-primary/10 text-primary border border-primary/40 shadow-[0_0_15px_rgba(245,208,48,0.1)]" 
-                            : "text-white/40 hover:text-white hover:bg-white/[0.05] border border-transparent"
+                            ? "bg-gold-200/10 text-gold-100 border border-gold-200/20" 
+                            : "text-muted-foreground hover:text-white hover:bg-white/[0.03] border border-transparent"
                         )}
                       >
                         <Link href={item.href}>
                           <item.icon className={cn(
-                            "h-5 w-5 transition-colors shrink-0",
-                            isActive ? "text-primary" : "text-white/20 group-hover:text-primary/50"
+                            "h-4.5 w-4.5 transition-colors shrink-0",
+                            isActive ? "text-gold-100" : "text-white/20 group-hover:text-gold-100/50"
                           )} />
                           {!isCollapsed && (
-                            <span className="text-[11px] uppercase tracking-widest font-black whitespace-nowrap">
+                            <span className="text-[10px] uppercase tracking-widest font-black whitespace-nowrap">
                               {item.name}
                             </span>
                           )}
@@ -197,42 +182,42 @@ export function SidebarNav() {
       </SidebarContent>
 
       <SidebarFooter className={cn(
-        "p-3 bg-black/20 mt-auto border-t border-white/5 transition-all duration-300 flex flex-col", 
+        "p-3 bg-black/20 mt-auto border-t border-gold-200/10 transition-all duration-300 flex flex-col", 
         isCollapsed ? "items-center px-0 py-4" : "px-3 py-3"
       )}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button 
               className={cn(
-                "w-full flex items-center rounded-2xl hover:bg-white/5 transition-all outline-none border border-transparent group",
-                isCollapsed ? "justify-center h-12" : "gap-4 px-3 py-3"
+                "w-full flex items-center rounded-xl hover:bg-white/5 transition-all outline-none border border-transparent group",
+                isCollapsed ? "justify-center h-10" : "gap-3 px-2 py-2"
               )}
             >
               <Avatar className={cn(
                 "shrink-0 border transition-all",
-                isCollapsed ? "h-10 w-10 border-primary/20" : "h-9 w-9 border-white/10"
+                isCollapsed ? "h-8 w-8 border-gold-200/20" : "h-8 w-8 border-white/10"
               )}>
-                <AvatarFallback className="bg-secondary text-white text-[10px] font-black uppercase">
+                <AvatarFallback className="bg-secondary text-gold-100 text-[10px] font-black uppercase">
                   {displayName.substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
               {!isCollapsed && (
                 <div className="flex flex-col text-left overflow-hidden animate-in fade-in duration-500">
-                  <span className="text-xs font-bold truncate text-white uppercase tracking-tight">{displayName}</span>
-                  <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5">{userRoleDisplay}</span>
+                  <span className="text-[11px] font-bold truncate text-white uppercase tracking-tight">{displayName}</span>
+                  <span className="text-[8px] text-gold-100 font-black uppercase tracking-widest mt-0.5">{userRoleDisplay}</span>
                 </div>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align={isCollapsed ? "center" : "end"} side={isCollapsed ? "right" : "bottom"} className="w-64 bg-[#0d1117] border-white/10 text-white p-2 rounded-2xl shadow-2xl">
-            <DropdownMenuItem asChild className="rounded-xl h-11 px-4 mb-1">
-              <Link href="/settings?tab=geral" className="flex items-center gap-4 text-xs uppercase font-bold text-white">
-                <UserIcon className="h-5 w-5 text-primary" /> Perfil de Usuário
+          <DropdownMenuContent align={isCollapsed ? "center" : "end"} side={isCollapsed ? "right" : "bottom"} className="w-64 bg-[#0d1117] border-white/10 text-white p-2 rounded-xl shadow-2xl">
+            <DropdownMenuItem asChild className="rounded-lg h-10 px-3 mb-1">
+              <Link href="/settings?tab=geral" className="flex items-center gap-3 text-[11px] uppercase font-bold text-white">
+                <UserIcon className="h-4 w-4 text-gold-100" /> Perfil de Usuário
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/5 mb-1" />
-            <DropdownMenuItem onClick={handleLogout} className="rounded-xl h-11 px-4 text-rose-400 hover:bg-rose-400/10 text-xs uppercase font-bold">
-              <LogOut className="h-5 w-5 mr-4" /> Encerrar Sessão
+            <DropdownMenuItem onClick={handleLogout} className="rounded-lg h-10 px-3 text-rose-400 hover:bg-rose-400/10 text-[11px] uppercase font-bold">
+              <LogOut className="h-4 w-4 mr-3" /> Encerrar Sessão
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

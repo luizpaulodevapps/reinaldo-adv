@@ -45,7 +45,6 @@ export function DashboardClientLayout({
     }
   }, [profileData, profile, setProfile]);
 
-  // Bloqueio de usuários inativos ou sem perfil
   useEffect(() => {
     if (user && profileData && profileData.isActive === false && auth) {
       signOut(auth).then(() => router.push('/login'));
@@ -53,7 +52,6 @@ export function DashboardClientLayout({
   }, [user, profileData, auth, router]);
 
   useEffect(() => {
-    // Auto-criação de perfil APENAS para os Owners mestres
     if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email || '')) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
       const isOwner = true;
@@ -77,21 +75,20 @@ export function DashboardClientLayout({
 
   if (isUserLoading || !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-4 font-sans">
-        <div className="w-16 h-16 rounded-[1.5rem] bg-[#1e1b2e] flex items-center justify-center animate-pulse border border-white/5">
-          <Scale className="text-primary h-8 w-8" />
+      <div className="flex h-screen w-full items-center justify-center bg-[#0D1422] flex-col gap-4 font-sans">
+        <div className="w-16 h-16 rounded-xl bg-gold-200/10 flex items-center justify-center animate-pulse border border-gold-200/20">
+          <Scale className="text-gold-100 h-8 w-8" />
         </div>
-        <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-[10px]">
+        <p className="text-gold-100/40 font-bold tracking-[0.3em] uppercase text-[10px]">
           {!user ? 'Redirecionando...' : 'Ecossistema RGMJ'}
         </p>
       </div>
     );
   }
 
-  // Se não for owner e não tiver perfil, é um intruso ou acesso revogado
   if (!isProfileLoading && profileData === null && !OWNERS.includes(user.email || '')) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#0a0a14] flex-col gap-8 font-sans p-10 text-center">
+      <div className="flex h-screen w-full items-center justify-center bg-[#0D1422] flex-col gap-8 font-sans p-10 text-center">
         <div className="w-24 h-24 rounded-[2rem] bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-2xl">
           <ShieldAlert className="h-12 w-12" />
         </div>
@@ -110,29 +107,29 @@ export function DashboardClientLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen bg-[#0a0a14] w-full font-sans">
+      <div className="flex min-h-screen bg-background w-full font-sans">
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-[#0a0a14]/80 backdrop-blur-md sticky top-0 z-40">
+          <header className="h-16 px-6 flex items-center justify-between border-b border-gold-200/10 bg-background/80 backdrop-blur-md sticky top-0 z-40">
             <div className="flex items-center gap-6">
               <div className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-white/5 transition-all">
                 <SidebarTrigger className="text-white scale-110" />
               </div>
-              <div className="hidden lg:flex items-center gap-3 border-l border-white/10 pl-6 h-8">
-                <Scale className="text-primary h-5 w-5" />
-                <span className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Comando RGMJ</span>
+              <div className="hidden lg:flex items-center gap-3 border-l border-gold-200/10 pl-6 h-8">
+                <Scale className="text-gold-100 h-5 w-5" />
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Comando RGMJ</span>
               </div>
             </div>
             
             <div className="flex items-center gap-6">
               {profile?.isOwner && (
-                <div className="hidden xl:flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                  <ShieldCheck className="h-3 w-3 text-primary" />
-                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Sócio Fundador</span>
+                <div className="hidden xl:flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-200/10 border border-gold-200/20">
+                  <ShieldCheck className="h-3 w-3 text-gold-100" />
+                  <span className="text-[9px] font-black text-gold-100 uppercase tracking-widest">Sócio Fundador</span>
                 </div>
               )}
               <NotificationCenter />
-              <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+              <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sincronizado</span>
               </div>
@@ -140,7 +137,7 @@ export function DashboardClientLayout({
           </header>
 
           <main className="flex-1 overflow-x-hidden">
-            <div className="py-8 px-6 lg:py-12 lg:px-16 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <div className="py-8 px-6 lg:py-10 lg:px-12 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
               {children}
             </div>
           </main>
