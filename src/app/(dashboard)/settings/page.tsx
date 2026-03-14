@@ -141,10 +141,20 @@ function SettingsContent() {
 
   const filteredTeam = useMemo(() => {
     if (!team) return []
-    return team.filter(m => 
+    // Filtro por busca
+    const searchResult = team.filter(m => 
       m.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
       m.email?.toLowerCase().includes(userSearchTerm.toLowerCase())
     )
+    
+    // Saneamento de Duplicidade: Garante unicidade por E-mail
+    const seenEmails = new Set();
+    return searchResult.filter(m => {
+      const email = m.email?.toLowerCase();
+      if (!email || seenEmails.has(email)) return false;
+      seenEmails.add(email);
+      return true;
+    });
   }, [team, userSearchTerm])
 
   // Estados Financeiros
@@ -272,8 +282,8 @@ function SettingsContent() {
       email: userFormData.email.toLowerCase(),
       updatedAt: serverTimestamp()
     }
-    const userId = editingUser?.id || crypto.randomUUID()
-    setDocumentNonBlocking(doc(db!, "staff_profiles", userId), { ...payload, id: userId }, { merge: true })
+    const emailId = payload.email
+    setDocumentNonBlocking(doc(db!, "staff_profiles", emailId), { ...payload, id: emailId }, { merge: true })
     setIsUserDialogOpen(false)
     toast({ title: "Acesso Atualizado" })
   }
@@ -656,7 +666,7 @@ function SettingsContent() {
               <div className="divide-y divide-white/5">
                 {isTeamLoading ? (
                   <div className="py-20 flex justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
-                ) : team?.map(member => (
+                ) : filteredTeam.map(member => (
                   <div key={member.id} className="p-8 flex items-center justify-between hover:bg-white/[0.01] transition-all group">
                     <div className="flex items-center gap-6">
                       <Avatar className="h-14 w-14 border-2 border-primary/20">

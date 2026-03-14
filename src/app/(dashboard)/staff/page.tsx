@@ -108,10 +108,20 @@ export default function StaffPage() {
 
   const filtered = useMemo(() => {
     if (!employees) return []
-    return employees.filter(e => 
+    const searchResult = employees.filter(e => 
       e.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.role?.toLowerCase().includes(searchTerm.toLowerCase())
+      e.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.email?.toLowerCase().includes(searchTerm.toLowerCase())
     )
+
+    // Saneamento de Duplicidade: Garante unicidade por E-mail no RH
+    const seenEmails = new Set();
+    return searchResult.filter(e => {
+      const email = e.email?.toLowerCase();
+      if (!email || seenEmails.has(email)) return false;
+      seenEmails.add(email);
+      return true;
+    });
   }, [employees, searchTerm])
 
   const handleSave = () => {
@@ -129,14 +139,14 @@ export default function StaffPage() {
       updatedAt: serverTimestamp()
     }
 
-    // 1. Salva na coleção de RH (Employees) - Non-blocking
+    // 1. Salva na coleção de RH (Employees) - Identidade Única por E-mail
     setDocumentNonBlocking(doc(db!, "employees", emailId), {
       ...payload,
       id: emailId,
       createdAt: editingStaff?.createdAt || serverTimestamp()
     }, { merge: true })
 
-    // 2. Se habilitado, salvar na Soberania Digital (Profiles)
+    // 2. Se habilitado, salvar na Soberania Digital (Profiles) - Identidade Única por E-mail
     if (formData.createSystemAccess) {
       const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
       const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
