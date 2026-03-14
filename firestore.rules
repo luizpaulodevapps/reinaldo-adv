@@ -5,8 +5,7 @@ service cloud.firestore {
     /**
      * RGMJ ADVOGADOS - SOBERANIA OPERACIONAL
      * 
-     * Filosofia: Se logou, tem acesso colaborativo aos dados da banca para garantir a 
-     * fluidez processual. Restrições aplicadas apenas a notificações e perfis.
+     * Filosofia: Identidade baseada em E-mail para sincronismo com Google Workspace.
      */
 
     // --- Global Helper Functions ---
@@ -15,25 +14,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function getEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isUser(emailId) {
+      return isSignedIn() && getEmail() == emailId;
     }
 
     function isAdmin() {
       return isSignedIn() && 
-        (get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data.role == 'admin' || 
-         get(/databases/$(database)/documents/staff_profiles/$(request.auth.uid)).data.isOwner == true);
+        (get(/databases/$(database)/documents/staff_profiles/$(getEmail())).data.role == 'admin' || 
+         get(/databases/$(database)/documents/staff_profiles/$(getEmail())).data.isOwner == true);
     }
 
     // --- Collection Rules ---
 
-    // Perfis de Equipe: Leitura para todos, escrita apenas pelo próprio usuário ou administradores
-    match /staff_profiles/{userId} {
+    // Perfis de Equipe: ID do documento é o e-mail em minúsculas
+    match /staff_profiles/{emailId} {
       allow read: if isSignedIn();
-      allow write: if isUser(userId) || isAdmin();
+      allow write: if isUser(emailId) || isAdmin();
     }
 
-    // Leads e Entrevistas: Soberania total para o rito de triagem
+    // Leads e Entrevistas
     match /leads/{leadId} {
       allow read, write: if isSignedIn();
       
@@ -46,7 +49,6 @@ service cloud.firestore {
       }
     }
 
-    // Clientes e Processos: Base de dados central colaborativa
     match /clients/{clientId} {
       allow read, write: if isSignedIn();
     }
@@ -55,7 +57,6 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // Agenda e Atos Judiciais
     match /hearings/{id} {
       allow read, write: if isSignedIn();
     }
@@ -76,7 +77,6 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // Financeiro e Logística
     match /financial_titles/{id} {
       allow read, write: if isSignedIn();
     }
@@ -93,7 +93,6 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // Estruturas de Apoio e Biblioteca Técnica
     match /courts/{id} {
       allow read, write: if isSignedIn();
     }
@@ -126,17 +125,13 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // Notificações: Apenas o destinatário tem soberania sobre seus alertas
     match /notifications/{id} {
-      allow read: if isSignedIn()
-                  && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn()
-                    && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn()
-                            && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // --- Collection Group Rules (para queries globais de inteligência) ---
+    // --- Collection Group Rules ---
 
     match /{path=**}/interviews/{interviewId} {
       allow read: if isSignedIn();

@@ -1,11 +1,10 @@
-
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { useFirebase, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
-import { doc, serverTimestamp, query, collection, where } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { Scale, ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { NotificationCenter } from "@/components/notifications/notification-center";
@@ -33,14 +32,13 @@ export function DashboardClientLayout({
     }
   }, [user, isUserLoading, router]);
 
-  // Rito de busca de perfil por e-mail (Soberania de Acesso Automático)
-  const profileQuery = useMemoFirebase(() => {
+  // Rito de busca direta pelo e-mail (Document ID = email)
+  const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
-    return query(collection(db, 'staff_profiles'), where('email', '==', user.email?.toLowerCase()));
+    return doc(db, 'staff_profiles', user.email?.toLowerCase() || 'unauthorized');
   }, [user, db]);
 
-  const { data: profileSearch, isLoading: isProfileLoading } = useCollection(profileQuery);
-  const profileData = profileSearch && profileSearch.length > 0 ? profileSearch[0] : null;
+  const { data: profileData, isLoading: isProfileLoading } = useDoc(profileRef);
 
   useEffect(() => {
     if (profileData && !profile) {
@@ -58,16 +56,16 @@ export function DashboardClientLayout({
   // Auto-criação de perfil para Sócios Fundadores (Whitelisted)
   useEffect(() => {
     if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email || '')) {
-      const newProfileRef = doc(db, 'staff_profiles', user.uid);
-      const isOwner = true;
+      const emailId = user.email?.toLowerCase() || '';
+      const newProfileRef = doc(db, 'staff_profiles', emailId);
       
       const initialProfile = {
-        id: user.uid,
-        googleId: user.uid,
+        id: emailId,
+        uid: user.uid,
         name: user.displayName || 'Sócio Fundador',
-        email: user.email?.toLowerCase() || '',
+        email: emailId,
         role: 'admin',
-        isOwner: isOwner,
+        isOwner: true,
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -78,20 +76,21 @@ export function DashboardClientLayout({
     }
   }, [user, db, profileData, isProfileLoading, setProfile, profile]);
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || (isProfileLoading && !profileData)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0D1422] flex-col gap-4 font-sans">
         <div className="w-16 h-16 rounded-xl bg-gold-200/10 flex items-center justify-center animate-pulse border border-gold-200/20">
           <Scale className="text-gold-100 h-8 w-8" />
         </div>
         <p className="text-gold-100/40 font-bold tracking-[0.3em] uppercase text-[10px]">
-          {!user ? 'Redirecionando...' : 'Ecossistema RGMJ'}
+          Sincronizando Ecossistema RGMJ
         </p>
       </div>
     );
   }
 
-  if (!isProfileLoading && profileData === null && !OWNERS.includes(user.email || '')) {
+  // Se não tem perfil e não é um owner autorizado na lista, bloqueia.
+  if (!isProfileLoading && profileData === null && !OWNERS.includes(user?.email || '')) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0D1422] flex-col gap-8 font-sans p-10 text-center">
         <div className="w-24 h-24 rounded-[2rem] bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-2xl">
@@ -100,7 +99,8 @@ export function DashboardClientLayout({
         <div className="space-y-2">
           <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acesso Não Autorizado</h2>
           <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest max-w-md mx-auto leading-relaxed">
-            Seu e-mail não possui soberania de acesso neste ecossistema. Contate o Sócio Fundador para liberação.
+            Seu e-mail Google (<span className="text-white">{user?.email}</span>) não possui soberania de acesso neste ecossistema. 
+            Contate o Sócio Fundador para liberação no módulo de Equipe.
           </p>
         </div>
         <Button onClick={() => auth && signOut(auth).then(() => router.push('/'))} className="gold-gradient text-background font-black h-12 px-10 rounded-xl uppercase text-[10px]">

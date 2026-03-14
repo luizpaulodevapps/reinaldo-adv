@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -119,32 +118,32 @@ export default function StaffPage() {
       return
     }
 
+    const emailId = formData.email.toLowerCase();
     const payload = {
       ...formData,
       name: formData.name.toUpperCase(),
-      email: formData.email.toLowerCase(),
+      email: emailId,
       baseSalary: parseCurrencyToNumber(formData.salaryFormatted),
       updatedAt: serverTimestamp()
     }
 
     try {
-      let memberId = editingStaff?.id || crypto.randomUUID()
-      await setDocumentNonBlocking(doc(db!, "employees", memberId), {
+      // Salva na coleção de RH (Employees) - Usamos o email como ID para consistência
+      await setDocumentNonBlocking(doc(db!, "employees", emailId), {
         ...payload,
-        id: memberId,
+        id: emailId,
         createdAt: editingStaff?.createdAt || serverTimestamp()
       }, { merge: true })
 
+      // Se habilitado, salva na coleção de Soberania Digital (Profiles)
       if (formData.createSystemAccess) {
         const roleConfig = STAFF_ROLES.find(r => r.id === formData.role)
         const systemRole = roleConfig?.defaultSystemRole || 'lawyer'
         
-        const profileId = editingStaff?.id || payload.email.toLowerCase()
-
-        await setDocumentNonBlocking(doc(db!, "staff_profiles", profileId), {
-          id: profileId,
+        await setDocumentNonBlocking(doc(db!, "staff_profiles", emailId), {
+          id: emailId,
           name: payload.name,
-          email: payload.email.toLowerCase(),
+          email: emailId,
           role: systemRole,
           isOwner: payload.isOwner,
           isActive: payload.status === 'Ativo',
@@ -385,7 +384,7 @@ export default function StaffPage() {
                   <div className="space-y-2">
                     <Label className={labelMini}>E-mail Google (Gmail/Workspace) *</Label>
                     <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} className={inputClass} placeholder="obrigatorio@gmail.com" />
-                    <p className="text-[8px] text-amber-500 font-bold uppercase">Essencial para sincronismo de Agenda/Drive.</p>
+                    <p className="text-[8px] text-amber-500 font-bold uppercase">O acesso será vinculado a este e-mail automaticamente.</p>
                   </div>
                   <div className="space-y-2">
                     <Label className={labelMini}>Status Atual</Label>
@@ -407,7 +406,7 @@ export default function StaffPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label className={labelMini}>Modelo de Contrato</Label>
+                    <Label className={labelMini}>Modelo de Contratação</Label>
                     <Select value={formData.paymentType} onValueChange={(v) => setFormData({...formData, paymentType: v})}>
                       <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#0d121f] text-white">
