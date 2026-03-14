@@ -524,7 +524,16 @@ export default function CasesPage() {
                           <div className="flex items-start justify-between">
                             <div className="space-y-3 flex-1 min-w-0">
                               <div className="flex items-center gap-4"><h3 className="text-[#F5D030] font-black text-lg uppercase tracking-tighter leading-none">PROCESSO:</h3><Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] h-5 px-2 rounded-full font-black">ATIVO</Badge></div>
-                              <div className="flex items-center gap-2 text-muted-foreground"><span className="text-base font-bold text-white uppercase truncate tracking-tight">{proc.defendantName || "NÃO MAPEADO"}</span><span className="text-[10px] font-black uppercase tracking-widest opacity-40">vs</span><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary shadow-lg"><UserIcon className="h-5 w-5" /></div><span className="text-xl font-black text-white uppercase tracking-tighter">{proc.clientName}</span></div></div>
+                              <div className="flex items-center gap-4 text-muted-foreground">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-primary shadow-lg">
+                                    <UserIcon className="h-5 w-5" />
+                                  </div>
+                                  <span className="text-xl font-black text-white uppercase tracking-tighter">{proc.clientName}</span>
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-40">vs</span>
+                                <span className="text-base font-bold text-white uppercase truncate tracking-tight">{proc.defendantName || "NÃO MAPEADO"}</span>
+                              </div>
                             </div>
                             
                             <div className="flex items-center gap-12 shrink-0 ml-8">
