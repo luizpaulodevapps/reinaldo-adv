@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -40,7 +41,10 @@ import {
   ZapOff,
   X,
   Calculator,
-  Library
+  Library,
+  Star,
+  TriangleAlert,
+  CalendarDays
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,6 +71,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ProcessForm } from "@/components/cases/process-form"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { DraftingTool } from "@/components/drafting/drafting-tool"
@@ -76,7 +81,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
-import { format, addDays, addBusinessDays } from "date-fns"
+import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -106,12 +111,19 @@ export default function CasesPage() {
   const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
 
-  // Estados para Lançamento de Prazo com IA e Calculadora
+  // Estados para Lançamento de Prazo com IA e Calculadora (Fidelidade Modelo)
   const [publicationText, setPublicationText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deadlineDuration, setDeadlineDuration] = useState("")
   const [meetingData, setMeetingData] = useState({ title: "", date: "", time: "", type: "online", notes: "" })
-  const [deadlineData, setDeadlineData] = useState({ title: "", date: "", description: "", priority: "normal", calculationType: "Dias Úteis (CPC)" })
+  const [deadlineData, setDeadlineData] = useState({ 
+    title: "", 
+    pubDate: format(new Date(), 'yyyy-MM-dd'),
+    fatalDate: "", 
+    description: "", 
+    priority: "normal", 
+    calculationType: "Dias Úteis (CPC/CLT)" 
+  })
   const [hearingData, setHearingData] = useState({ type: "UNA", date: "", time: "", location: "" })
   const [diligenceData, setDiligenceData] = useState({
     title: "",
@@ -242,7 +254,8 @@ export default function CasesPage() {
     if (!db || !activeActionProcess) return
     const payload = {
       title: deadlineData.title.toUpperCase(),
-      dueDate: deadlineData.date,
+      dueDate: deadlineData.fatalDate, // Salvamos a data fatal como data do compromisso
+      pubDate: deadlineData.pubDate,
       description: deadlineData.description.toUpperCase(),
       priority: deadlineData.priority,
       calculationType: deadlineData.calculationType,
@@ -254,7 +267,7 @@ export default function CasesPage() {
     setIsDeadlineOpen(false)
     setPublicationText("")
     setDeadlineDuration("")
-    toast({ title: "Prazo Lançado" })
+    toast({ title: "Prazo Injetado no Radar" })
   }
 
   const handleAiParsePublication = async () => {
@@ -265,7 +278,7 @@ export default function CasesPage() {
       setDeadlineData({
         ...deadlineData,
         title: result.deadlineType || "PRAZO JUDICIAL",
-        date: result.dueDate || "",
+        fatalDate: result.dueDate || "",
         description: result.summary || ""
       })
       toast({ title: "Inteligência RGMJ Concluída", description: "Dados extraídos do despacho." })
@@ -283,17 +296,18 @@ export default function CasesPage() {
       return
     }
     
-    const today = new Date()
+    const baseDate = parseISO(deadlineData.pubDate)
     let calculatedDate: Date
     
-    if (deadlineData.calculationType === "Dias Úteis (CPC)") {
-      calculatedDate = addBusinessDays(today, days)
+    // O rito exclui o dia da publicação (começa a contar no próximo)
+    if (deadlineData.calculationType.includes("Úteis")) {
+      calculatedDate = addBusinessDays(baseDate, days)
     } else {
-      calculatedDate = addDays(today, days)
+      calculatedDate = addDays(baseDate, days)
     }
     
-    setDeadlineData({ ...deadlineData, date: format(calculatedDate, 'yyyy-MM-dd') })
-    toast({ title: "Vencimento Projetado", description: `Data fatal ajustada para ${format(calculatedDate, 'dd/MM/yyyy')}.` })
+    setDeadlineData({ ...deadlineData, fatalDate: format(calculatedDate, 'yyyy-MM-dd') })
+    toast({ title: "Vencimento Projetado", description: `Data fatal calculada para ${format(calculatedDate, 'dd/MM/yyyy')}.` })
   }
 
   const handleScheduleHearing = async () => {
@@ -459,10 +473,6 @@ export default function CasesPage() {
           <>
             <div className={cn("grid gap-4 transition-all", viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1")}>
               {filteredProcesses.map((proc) => {
-                const hasPauta = (allHearings || []).some(h => h.processId === proc.id || h.processNumber === proc.processNumber) || (allAppointments || []).some(a => a.processId === proc.id || a.processNumber === proc.processNumber);
-                const hasPrazos = (allDeadlines || []).some(d => d.processId === proc.id || d.processId === proc.processNumber);
-                const hasFinancial = (allFinancial || []).some(f => f.processId === proc.id || f.processNumber === proc.processNumber);
-
                 return (
                   <Card key={proc.id} className={cn("glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer", viewMode === "list" ? "rounded-xl" : "rounded-3xl")} onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) handleOpenView(proc); }}>
                     <CardContent className={cn("p-6", viewMode === "list" ? "" : "flex-col space-y-6")}>
@@ -580,49 +590,119 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE MODELO REFERÊNCIA */}
+      {/* DIÁLOGO LANÇAR PRAZO - FIDELIDADE ABSOLUTA AO MODELO REFERÊNCIA */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between">
             <DialogHeader className="flex flex-row items-center gap-5 space-y-0 text-left">
-              <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-xl">
-                <AlarmClock className="h-6 w-6" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                <Clock className="h-6 w-6" />
               </div>
               <div>
-                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo</DialogTitle>
-                <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">CONTROLE TÁTICO DE VENCIMENTOS RGMJ.</DialogDescription>
+                <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl flex items-center gap-3">
+                  Lançar Prazo Judicial
+                </DialogTitle>
+                <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">
+                  Configure o compromisso fatal para: <span className="text-white">{activeActionProcess?.clientName}</span>
+                </DialogDescription>
               </div>
             </DialogHeader>
             <button onClick={() => setIsDeadlineOpen(false)} className="text-white/20 hover:text-white transition-colors"><X className="h-6 w-6" /></button>
           </div>
 
-          <ScrollArea className="max-h-[75vh]">
+          <ScrollArea className="max-h-[80vh]">
             <div className="p-10 space-y-10 bg-[#0a0f1e]/50">
               
-              {/* ÁREA DE IA */}
-              <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-4 shadow-inner">
-                <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                  <Brain className="h-4 w-4" /> Análise de Despacho (IA)
-                </Label>
+              {/* SEÇÃO DESPACHO IA */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                    <FileText className="h-4 w-4" /> Texto da Publicação / Despacho
+                  </Label>
+                  <Button 
+                    onClick={handleAiParsePublication} 
+                    disabled={isAnalyzing || !publicationText}
+                    variant="outline" 
+                    className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] tracking-widest hover:bg-primary/10 transition-all gap-2"
+                  >
+                    {isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                    ANALISAR COM IA
+                  </Button>
+                </div>
                 <Textarea 
-                  placeholder="Cole aqui o texto da publicação ou despacho para extração automática..." 
-                  className="bg-black/40 border-white/10 min-h-[100px] text-white text-xs font-bold p-4 rounded-xl resize-none uppercase"
+                  placeholder="Cole aqui o texto oficial do Diário da Justiça para que a IA ajude no preenchimento..." 
+                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase"
                   value={publicationText}
                   onChange={(e) => setPublicationText(e.target.value.toUpperCase())}
                 />
-                <Button 
-                  onClick={handleAiParsePublication} 
-                  disabled={isAnalyzing || !publicationText}
-                  variant="outline" 
-                  className="w-full h-12 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary hover:text-background transition-all"
-                >
-                  {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  ANALISAR COM IA RGMJ
-                </Button>
               </div>
 
-              {/* CALCULADORA DE VENCIMENTO */}
-              <div className="p-8 rounded-[2rem] border-2 border-primary/20 bg-primary/5 space-y-6 shadow-2xl relative overflow-hidden">
+              {/* TIPO E CONTADORES */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                <div className="md:col-span-7 space-y-3">
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Tipo de Prazo *</Label>
+                  <Select value={deadlineData.title} onValueChange={v => setDeadlineData({...deadlineData, title: v})}>
+                    <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-bold text-sm">
+                      <SelectValue placeholder="Selecione o tipo..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0d121f] text-white">
+                      {["Manifestação", "Petição Inicial", "Réplica", "Recurso Ordinário", "Contestação", "Cumprimento de Sentença"].map(t => (
+                        <SelectItem key={t} value={t.toUpperCase()}>{t.toUpperCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-5 flex gap-2">
+                  <div className="flex-1 bg-primary/5 border border-primary/20 rounded-xl p-3 text-center">
+                    <p className="text-[8px] font-black text-primary uppercase mb-1">Dias Úteis</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Star className="h-3 w-3 text-primary fill-primary" />
+                      <span className="text-xl font-black text-white">0</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center">
+                    <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Corridos</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <CalendarDays className="h-3 w-3 text-muted-foreground opacity-40" />
+                      <span className="text-xl font-black text-white">0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* METODOLOGIA */}
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Metodologia de Contagem</Label>
+                <RadioGroup 
+                  value={deadlineData.calculationType} 
+                  onValueChange={(v) => setDeadlineData({...deadlineData, calculationType: v})}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                >
+                  <div className={cn(
+                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
+                    deadlineData.calculationType === "Dias Úteis (CPC/CLT)" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
+                  )} onClick={() => setDeadlineData({...deadlineData, calculationType: "Dias Úteis (CPC/CLT)"})}>
+                    <RadioGroupItem value="Dias Úteis (CPC/CLT)" className="border-primary text-primary" />
+                    <div>
+                      <p className="text-[11px] font-black text-white uppercase">Dias Úteis (CPC/CLT)</p>
+                      <p className="text-[9px] text-muted-foreground uppercase mt-0.5">Exclui sábados e domingos</p>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
+                    deadlineData.calculationType === "Dias Corridos (Material)" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
+                  )} onClick={() => setDeadlineData({...deadlineData, calculationType: "Dias Corridos (Material)"})}>
+                    <RadioGroupItem value="Dias Corridos (Material)" className="border-primary text-primary" />
+                    <div>
+                      <p className="text-[11px] font-black text-white uppercase">Dias Corridos (Material)</p>
+                      <p className="text-[9px] text-muted-foreground uppercase mt-0.5">Conta todos os dias</p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* CALCULADORA */}
+              <div className="p-8 rounded-3xl border-2 border-primary/20 bg-primary/5 space-y-6 shadow-2xl relative overflow-hidden group">
                 <div className="flex items-center gap-3">
                   <Calculator className="h-5 w-5 text-primary" />
                   <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Calculadora de Vencimento</h4>
@@ -633,7 +713,7 @@ export default function CasesPage() {
                     <Input 
                       type="number" 
                       placeholder="Ex: 5, 15, 30..." 
-                      className="bg-black/40 border-white/10 h-14 text-white font-black text-lg text-center"
+                      className="bg-black/60 border-white/10 h-16 text-white font-black text-2xl text-center rounded-2xl focus:border-primary/50"
                       value={deadlineDuration}
                       onChange={(e) => setDeadlineDuration(e.target.value)}
                     />
@@ -641,98 +721,71 @@ export default function CasesPage() {
                   <Button 
                     onClick={handleApplyDeadlineCalculation}
                     variant="outline" 
-                    className="h-14 px-10 border-primary text-primary font-black uppercase text-[11px] tracking-widest gap-3 hover:bg-primary hover:text-background transition-all shadow-lg"
+                    className="h-16 px-10 border-primary text-primary font-black uppercase text-xs tracking-widest gap-3 hover:bg-primary hover:text-background transition-all rounded-2xl"
                   >
-                    <Zap className="h-4 w-4" /> Aplicar Prazo
+                    <Zap className="h-5 w-5" /> APLICAR PRAZO
                   </Button>
                 </div>
-                <p className="text-[9px] text-muted-foreground italic font-medium uppercase tracking-tight opacity-50">
+                <p className="text-[10px] text-muted-foreground italic font-medium uppercase tracking-tight opacity-50">
                   O cálculo excluirá o dia da publicação e seguirá a metodologia acima.
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Ato *</Label>
-                <Input 
-                  placeholder="EX: RÉPLICA À CONTESTAÇÃO" 
-                  className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase placeholder:opacity-20 rounded-xl" 
-                  value={deadlineData.title} 
-                  onChange={e => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} 
-                />
-              </div>
-
+              {/* DATAS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data Vencimento *</Label>
+                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data da Publicação *</Label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
                     <Input 
                       type="date" 
                       className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold rounded-xl" 
-                      value={deadlineData.date} 
-                      onChange={e => setDeadlineData({...deadlineData, date: e.target.value})} 
+                      value={deadlineData.pubDate} 
+                      onChange={e => setDeadlineData({...deadlineData, pubDate: e.target.value})} 
                     />
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Regra de Contagem</Label>
-                  <Select value={deadlineData.calculationType} onValueChange={(v) => setDeadlineData({...deadlineData, calculationType: v})}>
-                    <SelectTrigger className="bg-black/40 border-white/10 h-14 text-white font-black text-[10px] uppercase rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <Library className="h-4 w-4 opacity-40" />
-                        <SelectValue />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="Dias Úteis (CPC)" className="text-[10px] font-bold">🏛️ DIAS ÚTEIS (CPC)</SelectItem>
-                      <SelectItem value="Dias Corridos" className="text-[10px] font-bold">📅 DIAS CORRIDOS</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <TriangleAlert className="h-3.5 w-3.5" /> Data Fatal (Vencimento) *
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-500/40" />
+                    <Input 
+                      type="date" 
+                      className="bg-black/40 border-rose-500/30 h-14 pl-12 text-rose-400 font-black rounded-xl focus:border-rose-500" 
+                      value={deadlineData.fatalDate} 
+                      onChange={e => setDeadlineData({...deadlineData, fatalDate: e.target.value})} 
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* OBSERVAÇÕES */}
               <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Detalhamento / Providência</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Observações Estratégicas</Label>
                 <Textarea 
-                  placeholder="DESCREVA A TAREFA TÉCNICA OU ALERTA ESTRATÉGICO..." 
-                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase"
+                  placeholder="Observações internas sobre o cumprimento deste prazo..." 
+                  className="bg-black/40 border-white/10 min-h-[140px] text-white text-xs font-bold p-6 rounded-2xl resize-none uppercase"
                   value={deadlineData.description}
                   onChange={e => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})}
                 />
               </div>
-
-              <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-inner">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                  <div className="space-y-3 flex-1 w-full">
-                    <Label className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-3">
-                      <Zap className="h-4 w-4" /> Nível de Urgência
-                    </Label>
-                    <Select value={deadlineData.priority} onValueChange={(v) => setDeadlineData({...deadlineData, priority: v})}>
-                      <SelectTrigger className="bg-black/40 border-white/10 h-12 text-white font-black text-[10px] uppercase rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0d121f] text-white">
-                        <SelectItem value="normal" className="text-[10px] font-bold">NORMAL</SelectItem>
-                        <SelectItem value="urgente" className="text-[10px] font-bold text-rose-500">🔥 URGENTE / FATAL</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-start gap-4 opacity-40 w-full md:w-auto">
-                    <ShieldCheck className="h-5 w-5 text-emerald-500 mt-0.5" />
-                    <p className="text-[9px] font-black text-muted-foreground uppercase leading-relaxed tracking-wider max-w-[150px]">Auditado pelo Radar de Riscos RGMJ.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">CANCELAR</Button>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+            <button 
+              onClick={() => setIsDeadlineOpen(false)} 
+              className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors"
+            >
+              CANCELAR
+            </button>
             <Button 
               onClick={handleLaunchDeadline} 
-              className="bg-[#e11d48] hover:bg-[#be123c] text-white font-black uppercase text-[13px] tracking-[0.2em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(225,29,72,0.3)] transition-all hover:scale-[1.03] active:scale-95"
+              className="bg-[#f5d030] hover:bg-[#ffcc00] text-background font-black uppercase text-[12px] tracking-[0.25em] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.03] active:scale-95 gap-4"
             >
-              REGISTRAR
+              <Calendar className="h-5 w-5" /> CONFIRMAR LANÇAMENTO
             </Button>
           </DialogFooter>
         </DialogContent>
