@@ -1,4 +1,3 @@
-
 'use client';
 
 import { SidebarNav } from "@/components/layout/sidebar-nav"
@@ -55,7 +54,7 @@ export function DashboardClientLayout({
 
   useEffect(() => {
     // Auto-criação de perfil APENAS para os Owners mestres
-    if (user && db && profileData === null && !isProfileLoading && OWNERS.includes(user.email || '')) {
+    if (user && db && profileData === null && !isProfileLoading && !profile && OWNERS.includes(user.email || '')) {
       const newProfileRef = doc(db, 'staff_profiles', user.uid);
       const isOwner = true;
       
@@ -74,7 +73,7 @@ export function DashboardClientLayout({
       setDocumentNonBlocking(newProfileRef, initialProfile, { merge: true });
       setProfile(initialProfile);
     }
-  }, [user, db, profileData, isProfileLoading, setProfile]);
+  }, [user, db, profileData, isProfileLoading, setProfile, profile]);
 
   if (isUserLoading || !user) {
     return (
