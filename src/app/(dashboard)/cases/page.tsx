@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -10,12 +11,8 @@ import {
   Loader2, 
   Zap,
   ChevronRight,
-  ChevronLeft,
   MoreVertical,
   Edit3,
-  Archive,
-  List,
-  LayoutGrid,
   Gavel,
   ShieldCheck,
   TrendingUp,
@@ -23,10 +20,7 @@ import {
   User as UserIcon,
   Calendar,
   Clock,
-  History,
   AlarmClock,
-  FilePlus,
-  FolderPlus,
   DollarSign,
   Brain,
   Sparkles,
@@ -34,11 +28,9 @@ import {
   Trash2,
   Target,
   Building2,
-  ListTodo,
   ExternalLink,
   ChevronDown,
   AlertCircle,
-  ZapOff,
   X,
   Calculator,
   Library,
@@ -48,13 +40,16 @@ import {
   Video,
   MapPin,
   Globe,
-  Save
+  Save,
+  FolderSync,
+  LayoutGrid,
+  List
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, limit } from "firebase/firestore"
-import { cn } from "@/lib/utils"
+import { cn, maskCurrency, parseCurrencyToNumber } from "@/lib/utils"
 import { 
   Sheet, 
   SheetContent, 
@@ -98,22 +93,16 @@ export default function CasesPage() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingProcess, setEditingProcess] = useState<any>(null)
-  const [listLimit, setListLimit] = useState(25)
-  
-  const [viewingProcess, setViewingProcess] = useState<any>(null)
-  const [isViewOpen, setIsViewOpen] = useState(false)
+  const [listLimit, setListLimit] = useState(50)
   
   const [activeActionProcess, setActiveActionProcess] = useState<any>(null)
   const [isMeetingOpen, setIsMeetingOpen] = useState(false)
   const [meetingStep, setMeetingStep] = useState(1)
   
   const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
-  const [isHearingOpen, setIsHearingOpen] = useState(false)
-  const [isFinancialOpen, setIsFinancialOpen] = useState(false)
-  const [isDiligenceOpen, setIsDiligenceOpen] = useState(false)
   const [isSyncingAct, setIsSyncingAct] = useState(false)
 
-  // Estados para Atendimento Wizard (Rito de 5 Passos conforme solicitado)
+  // Estados para Atendimento Wizard (Rito de 5 Passos)
   const [meetingData, setMeetingData] = useState({ 
     title: "", 
     date: format(new Date(), 'yyyy-MM-dd'), 
@@ -125,7 +114,15 @@ export default function CasesPage() {
     autoMeet: true
   })
 
-  const [deadlineData, setDeadlineData] = useState({ title: "", pubDate: format(new Date(), 'yyyy-MM-dd'), fatalDate: "", description: "", priority: "normal", calculationType: "Dias Úteis (CPC/CLT)" })
+  // Estados para Prazo
+  const [deadlineData, setDeadlineData] = useState({ 
+    title: "", 
+    pubDate: format(new Date(), 'yyyy-MM-dd'), 
+    fatalDate: "", 
+    description: "", 
+    priority: "normal", 
+    calculationType: "Dias Úteis (CPC/CLT)" 
+  })
   const [publicationText, setPublicationText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deadlineDuration, setDeadlineDuration] = useState("")
@@ -145,18 +142,27 @@ export default function CasesPage() {
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
       if (proc.status === "Arquivado") return false
-      const matchesSearch = proc.processNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || proc.description?.toLowerCase().includes(searchTerm.toLowerCase()) || proc.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || proc.defendantName?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesSearch = proc.processNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           proc.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           proc.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           proc.defendantName?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesArea = activeArea === "todos" || proc.caseType?.toLowerCase() === activeArea.toLowerCase()
       return matchesSearch && matchesArea
     })
   }, [processes, searchTerm, activeArea])
+
+  const stats = useMemo(() => {
+    const active = filteredProcesses.length
+    const totalValue = filteredProcesses.reduce((acc, p) => acc + (parseCurrencyToNumber(p.value) || 0), 0)
+    const ticket = active > 0 ? totalValue / active : 0
+    return { active, totalValue, ticket }
+  }, [filteredProcesses])
 
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess) return
     setIsSyncingAct(true)
     const finalLocation = meetingData.type === 'online' ? (meetingData.location || 'GOOGLE MEET RGMJ') : (meetingData.locationType === 'sede' ? 'Sede RGMJ' : meetingData.location)
     
-    // 1. Injeção no Firestore (Atendimento)
     const payload: any = {
       title: meetingData.title.toUpperCase() || `REUNIÃO: ${activeActionProcess.clientName}`,
       type: "Atendimento",
@@ -175,7 +181,6 @@ export default function CasesPage() {
     const docRefRes = await addDocumentNonBlocking(collection(db, "appointments"), payload)
     const docRefId = (docRefRes as any).id;
 
-    // 2. Sincronismo Workspace
     let meetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
@@ -205,10 +210,8 @@ export default function CasesPage() {
       }
     } catch (e) { console.warn("Calendar error", e) }
 
-    // 3. Disparo WhatsApp com o Link Gerado
-    if (activeActionProcess.phone || activeActionProcess.registrationData?.phone) {
-      const phone = activeActionProcess.phone || activeActionProcess.registrationData?.phone;
-      const cleanPhone = phone.replace(/\D/g, "");
+    if (activeActionProcess.phone) {
+      const cleanPhone = activeActionProcess.phone.replace(/\D/g, "");
       const meetPart = meetLink ? ` Link da Reunião: ${meetLink}` : "";
       const locPart = meetingData.type === 'presencial' ? ` Local: ${finalLocation}` : "";
       const msg = `Olá ${activeActionProcess.clientName}! Confirmamos seu AGENDAMENTO para o dia ${new Date(meetingData.date).toLocaleDateString('pt-BR')} às ${meetingData.time}.${locPart}${meetPart} Dr. Reinaldo - RGMJ.`
@@ -231,6 +234,7 @@ export default function CasesPage() {
       priority: deadlineData.priority, 
       calculationType: deadlineData.calculationType, 
       processId: activeActionProcess.processNumber || activeActionProcess.id, 
+      clientName: activeActionProcess.clientName,
       status: "Aberto", 
       createdAt: serverTimestamp() 
     }); 
@@ -259,76 +263,170 @@ export default function CasesPage() {
     setDeadlineData({ ...deadlineData, fatalDate: format(calculatedDate, 'yyyy-MM-dd') }); 
   }
 
-  const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
+  const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 font-sans pb-20">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
+      {/* Breadcrumbs & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-bold text-muted-foreground/40 mb-3">
-            <Link href="/" className="hover:text-primary transition-colors">INÍCIO</Link>
-            <ChevronRight className="h-2 w-2" />
-            <span className="text-white">ACERVO DE PROCESSOS</span>
+          <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
+            <span>INÍCIO</span><ChevronRight className="h-2 w-2" /><span>DASHBOARD</span><ChevronRight className="h-2 w-2" /><span className="text-white">ACERVO DE PROCESSOS</span>
           </div>
-          <h1 className="text-xl font-bold text-white mb-1 uppercase tracking-tight">Gestão de Processos</h1>
+          <h1 className="text-4xl font-black text-white mb-1 uppercase tracking-tighter">Gestão de Processos</h1>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] opacity-40">CONTROLE JURÍDICO ESTRATÉGICO RGMJ.</p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar..." className="pl-12 glass border-white/5 h-11 text-xs text-white rounded-xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input placeholder="Pesquisar..." className="pl-12 glass border-white/5 h-12 text-xs text-white rounded-xl focus:ring-primary/50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <Button onClick={() => { setEditingProcess(null); setIsSheetOpen(true); }} className="gold-gradient text-background font-black gap-3 px-8 h-11 uppercase text-[10px] tracking-widest rounded-xl shadow-2xl">
+          <Button onClick={() => { setEditingProcess(null); setIsSheetOpen(true); }} className="gold-gradient text-background font-black gap-3 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-[0_15px_40px_rgba(245,208,48,0.2)] hover:scale-105 transition-all">
             <Plus className="h-4 w-4" /> NOVO PROCESSO
           </Button>
         </div>
       </div>
 
-      <div className="space-y-4">
+      {/* Stats BI Topo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-[#141B2D] border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Scale className="h-12 w-12" /></div>
+          <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Zap className="h-3.5 w-3.5" /> PROCESSOS ATIVOS</p>
+          <div className="text-4xl font-black text-white tracking-tighter">{stats.active}</div>
+        </Card>
+        <Card className="bg-[#141B2D] border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp className="h-12 w-12" /></div>
+          <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><DollarSign className="h-3.5 w-3.5" /> VALOR SOB GESTÃO</p>
+          <div className="text-4xl font-black text-white tracking-tighter tabular-nums">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
+        </Card>
+        <Card className="bg-[#141B2D] border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Target className="h-12 w-12" /></div>
+          <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><Briefcase className="h-3.5 w-3.5" /> TICKET MÉDIO</p>
+          <div className="text-4xl font-black text-white tracking-tighter tabular-nums">R$ {stats.ticket.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
+        </Card>
+      </div>
+
+      {/* Filtros e Tabs */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-6">
+        <div className="flex flex-wrap gap-8 items-center">
+          {AREAS.map(area => (
+            <button 
+              key={area.id} 
+              onClick={() => setActiveArea(area.id)}
+              className={cn(
+                "text-[10px] font-black uppercase tracking-[0.25em] transition-all relative pb-2",
+                activeArea === area.id ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-white"
+              )}
+            >
+              {area.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+          <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10", viewMode === "list" && "bg-primary text-background")}><List className="h-4 w-4" /></Button>
+          <Button onClick={() => setViewMode("grid")} variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className={cn("h-10 w-10", viewMode === "grid" && "bg-primary text-background")}><LayoutGrid className="h-4 w-4" /></Button>
+        </div>
+      </div>
+
+      {/* Lista de Processos - Fidelidade à Imagem */}
+      <div className="space-y-6">
         {isLoading ? (
-          <div className="py-32 flex justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+          <div className="py-32 flex flex-col items-center justify-center space-y-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><span className="text-[10px] font-black uppercase tracking-widest">Auditando Acervo...</span></div>
         ) : filteredProcesses.map((proc) => (
-          <Card key={proc.id} className="glass border-white/5 hover-gold transition-all group overflow-hidden cursor-pointer rounded-xl" onClick={() => setViewingProcess(proc)}>
-            <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-8 flex-1 min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-lg flex-none"><UserIcon className="h-7 w-7" /></div>
-                <div className="space-y-2 flex-1 min-w-0">
-                  {/* VISUALIZAÇÃO DE ELITE: CLIENTE vs RÉU - HIERARQUIA COMPLETA */}
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight truncate max-w-[40%]">{proc.clientName}</h3>
-                    <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest shrink-0">vs</span>
-                    <h3 className="text-base font-bold text-white/60 uppercase truncate max-w-[40%]">{proc.defendantName || "NÃO MAPEADO"}</h3>
+          <Card key={proc.id} className="bg-[#0d1117] border-white/5 hover:border-primary/30 transition-all group overflow-hidden rounded-2xl shadow-2xl relative">
+            <CardContent className="p-10 space-y-10">
+              {/* Header Card: Título e Ações Rápidas */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-primary font-black uppercase tracking-[0.3em] text-[11px]">PROCESSO:</span>
+                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-5 px-2 text-[8px] font-black uppercase tracking-widest">ATIVO</Badge>
                   </div>
                   <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase h-6 px-3 rounded-full bg-primary/5">{proc.caseType}</Badge>
-                      <span className="text-[11px] font-mono font-bold text-muted-foreground/40 tracking-widest">{proc.processNumber}</span>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">{proc.clientName}</h3>
+                    <span className="text-[10px] font-black text-muted-foreground/20 uppercase tracking-widest">vs</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"><UserIcon className="h-5 w-5 text-muted-foreground/40" /></div>
+                      <h3 className="text-xl font-bold text-white/60 uppercase tracking-tight">{proc.defendantName || "NÃO MAPEADO"}</h3>
                     </div>
-                    {proc.court && <span className="text-[10px] font-black text-muted-foreground/20 uppercase tracking-widest truncate">| {proc.court}</span>}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary"><CalendarDays className="h-5 w-5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary"><Clock className="h-5 w-5" /></button>
+                  <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary"><DollarSign className="h-5 w-5" /></button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"><MoreVertical className="h-5 w-5" /></button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
+                      <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="gap-2 text-[10px] font-black uppercase"><Edit3 className="h-3.5 w-3.5" /> Editar Dossiê</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db!, "processes", proc.id))} className="gap-2 text-[10px] font-black uppercase text-rose-500"><Trash2 className="h-3.5 w-3.5" /> Arquivar Feito</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              {/* Grid de Metadados Internos */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+                <div className="space-y-2">
+                  <Label className={labelMini}>PROTOCOLO CNJ</Label>
+                  <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 shadow-inner">
+                    <span className="text-[11px] font-mono font-bold text-white/80 truncate tracking-wider">{proc.processNumber || "---"}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className={labelMini}>ÁREA / MATÉRIA</Label>
+                  <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 gap-3">
+                    <Tag className="h-4 w-4 text-primary/40" />
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{proc.caseType?.toUpperCase()}</span>
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <Label className={labelMini}>JUÍZO / COMARCA</Label>
+                  <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 gap-3 overflow-hidden">
+                    <Gavel className="h-4 w-4 text-primary/40 flex-none" />
+                    <span className="text-[10px] font-black text-white/60 uppercase truncate">{proc.vara || "---"} — ({proc.court || "---"})</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className={labelMini}>VALOR DA CAUSA</Label>
+                  <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 gap-3">
+                    <TrendingUp className="h-4 w-4 text-emerald-500/40" />
+                    <span className="text-xs font-black text-emerald-400 tabular-nums">R$ {maskCurrency(proc.value || 0)}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className={labelMini}>RESPONSÁVEL</Label>
+                  <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center"><UserIcon className="h-3 w-3 text-primary" /></div>
+                    <span className="text-[9px] font-black text-white/40 uppercase truncate">{proc.responsibleStaffName || "NÃO ATRIBUÍDO"}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <button onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="h-12 px-6 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex items-center gap-3 border border-emerald-500/20 shadow-lg"><Video className="h-4 w-4" /> ATENDIMENTO</button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl text-white/20 hover:text-white border border-white/5 bg-white/[0.02]"><MoreVertical className="h-6 w-6" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
-                    <DropdownMenuLabel className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] px-3 py-2">GESTÃO DO CASO</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewingProcess(proc); setIsViewOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5"><History className="h-4 w-4 text-muted-foreground" /> Ver Processo Completo</DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-emerald-400"><Calendar className="h-4 w-4" /> Agendar Atendimento</DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5 text-rose-400"><AlarmClock className="h-4 w-4" /> Lançar Prazo Fatal</DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-white/5 my-1" />
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest cursor-pointer h-11 rounded-lg hover:bg-white/5"><Edit3 className="h-4 w-4 text-muted-foreground" /> Editar Processo</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
+              {/* Footer Card: Ações Secundárias */}
+              <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
+                <div className="flex gap-4">
+                  <Button variant="outline" className="h-11 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-primary hover:text-background transition-all">
+                    <FolderSync className="h-4 w-4" /> SINCRONIZAR DRIVE
+                  </Button>
+                  <Button variant="outline" className="h-11 border-white/10 text-white/40 font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-white/5 transition-all">
+                    <ExternalLink className="h-4 w-4" /> PORTAL JUDICIÁRIO
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2.5 opacity-20 group-hover:opacity-40 transition-opacity">
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest">PROTOCOLO: {proc.id.substring(0,8).toUpperCase()}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* DIÁLOGO AGENDAR REUNIÃO - STEP WIZARD (FLUXO DO MEET) */}
+      {/* DIÁLOGO ATENDIMENTO (Wizard 5 Steps) */}
       <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[80vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -348,7 +446,6 @@ export default function CasesPage() {
 
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-10">
-              
               {meetingStep === 1 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
@@ -407,7 +504,7 @@ export default function CasesPage() {
                           <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
                         </div>
                       </RadioGroup>
-                      {meetingStep === 4 && meetingData.locationType === 'externo' && (
+                      {meetingData.locationType === 'externo' && (
                         <div className="space-y-2 animate-in fade-in">
                           <Label className={labelMini}>Endereço do Atendimento</Label>
                           <Input value={meetingData.location} onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl" placeholder="DIGITE O LOCAL..." />
@@ -435,7 +532,6 @@ export default function CasesPage() {
                   </Card>
                 </div>
               )}
-
             </div>
           </ScrollArea>
 
@@ -457,11 +553,15 @@ export default function CasesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* DIÁLOGO PRAZO JUDICIAL */}
       <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-5 flex-none shadow-xl">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><Clock className="h-6 w-6" /></div>
-            <div className="text-left"><DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo Judicial</DialogTitle></div>
+            <div className="text-left">
+              <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo Judicial</DialogTitle>
+              <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">CONTROLE TÁTICO DE VENCIMENTOS RGMJ.</DialogDescription>
+            </div>
           </div>
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-10 pb-20">
@@ -470,7 +570,7 @@ export default function CasesPage() {
                   <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="h-4 w-4" /> Despacho IA</Label>
                   <Button onClick={handleAiParsePublication} disabled={isAnalyzing || !publicationText} variant="outline" className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] gap-2">{isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />} ANALISAR COM IA</Button>
                 </div>
-                <Textarea placeholder="COLE O TEXTO AQUI..." className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl" value={publicationText} onChange={(e) => setPublicationText(e.target.value.toUpperCase())} />
+                <Textarea placeholder="COLE O TEXTO AQUI..." className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none" value={publicationText} onChange={(e) => setPublicationText(e.target.value.toUpperCase())} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={deadlineData.title} onChange={(e) => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
@@ -480,6 +580,7 @@ export default function CasesPage() {
                 <div className="space-y-3"><Label className={labelMini}>Data Publicação</Label><Input type="date" value={deadlineData.pubDate} onChange={e => setDeadlineData({...deadlineData, pubDate: e.target.value})} className="bg-black/40 h-12" /></div>
                 <div className="space-y-3"><Label className="text-[10px] font-black text-rose-500 uppercase">Data Fatal *</Label><Input type="date" value={deadlineData.fatalDate} onChange={e => setDeadlineData({...deadlineData, fatalDate: e.target.value})} className="bg-black/40 border-rose-500/30 h-12 text-rose-400 font-black" /></div>
               </div>
+              <div className="space-y-3"><Label className={labelMini}>Providência / Tarefa *</Label><Input value={deadlineData.description} onChange={(e) => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
             </div>
           </ScrollArea>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-xl">
@@ -490,7 +591,7 @@ export default function CasesPage() {
       </Dialog>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-4xl">
+        <SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-[1200px]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
             <SheetHeader>
               <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
