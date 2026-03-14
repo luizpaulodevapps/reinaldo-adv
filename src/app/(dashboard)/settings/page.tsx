@@ -56,7 +56,11 @@ import {
   Tag,
   UserPlus,
   UserCog,
-  UserCheck
+  UserCheck,
+  TrendingUp,
+  Landmark,
+  Scale,
+  DollarSign
 } from "lucide-react"
 import { 
   Select, 
@@ -71,7 +75,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn, maskPhone, maskCEP } from "@/lib/utils"
+import { cn, maskPhone, maskCEP, maskCNPJ } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -89,8 +93,6 @@ const MESSAGE_PLACEHOLDERS = [
   { tag: "{{LOCAL_ATO}}", desc: "Endereço físico (Somente Audiência Física)" },
   { tag: "{{LINK_ATO}}", desc: "Link eletrônico (Tribunal/Virtual)" },
   { tag: "{{SENHA_ATO}}", desc: "Senha/Código de acesso (Virtual)" },
-  { tag: "{{REGRAS_CONDUCAO}}", desc: "Orientações de comportamento/vídeo" },
-  { tag: "{{ALERTA_LEGAL}}", desc: "Avisos sobre revelia ou testemunhas" },
   { tag: "{{NOME_ADVOGADO}}", desc: "Nome do advogado responsável" },
   { tag: "{{DESC_CURTA}}", desc: "Breve resumo do objeto/pauta" },
 ]
@@ -98,39 +100,21 @@ const MESSAGE_PLACEHOLDERS = [
 const DEFAULT_TEMPLATES = {
   "Audiência Física": {
     profileName: "AUDIÊNCIA PRESENCIAL RGMJ",
-    calendarTemplate: "Título: 🏛️ AUDIÊNCIA FÍSICA: {{NOME_CLIENTE}}\n\nLOCALIZAÇÃO:\nEndereço: {{LOCAL_ATO}}\nFórum/Vara: {{FORUM_VARA}}\n\nPROCESSO: {{NUMERO_PROCESSO}}\n\nALERTA:\n{{ALERTA_LEGAL}}",
-    clientTemplate: "Prezado(a) {{NOME_CLIENTE}},\n\nConfirmamos sua AUDIÊNCIA PRESENCIAL no dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nENDEREÇO: {{LOCAL_ATO}}\nFórum: {{FORUM_VARA}}\n\nIMPORTANTE: Chegar com 30 minutos de antecedência portando RG original.\n\nAtenciosamente,\nRGMJ Advogados.",
+    calendarTemplate: "🏛️ AUDIÊNCIA FÍSICA: {{NOME_CLIENTE}}\nLOCAL: {{LOCAL_ATO}}\nFÓRUM: {{FORUM_VARA}}\nPROCESSO: {{NUMERO_PROCESSO}}",
+    clientTemplate: "Prezado(a) {{NOME_CLIENTE}}, confirmamos sua audiência presencial em {{DATA_ATO}} às {{HORA_ATO}} no endereço: {{LOCAL_ATO}}.",
     reminderMinutes: 120,
     calendarColorId: "11",
     useMeetLink: false,
     sendWhatsApp: true
   },
   "Audiência Virtual": {
-    profileName: "AUDIÊNCIA VIRTUAL (TELEPRESENCIAL)",
-    calendarTemplate: "Título: 🖥️ AUDIÊNCIA VIRTUAL: {{NOME_CLIENTE}}\n\nACESSO DIGITAL:\nLink: {{LINK_ATO}}\nSenha: {{SENHA_ATO}}\n\nPROCESSO: {{NUMERO_PROCESSO}}\n\nREGRAS:\n{{REGRAS_CONDUCAO}}",
-    clientTemplate: "Olá {{NOME_CLIENTE}},\n\nSua AUDIÊNCIA VIRTUAL está confirmada para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLINK DE ACESSO: {{LINK_ATO}}\nSENHA: {{SENHA_ATO}}\n\nINSTRUÇÕES:\n1. Conecte-se 15 minutos antes.\n2. Utilize fones de ouvido.\n3. Esteja em ambiente silencioso.\n\n{{ALERTA_LEGAL}}",
+    profileName: "AUDIÊNCIA VIRTUAL",
+    calendarTemplate: "🖥️ AUDIÊNCIA VIRTUAL: {{NOME_CLIENTE}}\nLINK: {{LINK_ATO}}\nPROCESSO: {{NUMERO_PROCESSO}}",
+    clientTemplate: "Olá {{NOME_CLIENTE}}, sua audiência virtual está confirmada para {{DATA_ATO}} às {{HORA_ATO}}. Link: {{LINK_ATO}}",
     reminderMinutes: 60,
     calendarColorId: "9",
     useMeetLink: true,
     sendWhatsApp: true
-  },
-  "Atendimento": {
-    profileName: "TRIAGEM INICIAL (LEAD)",
-    calendarTemplate: "Título: ⚡ ATENDIMENTO: {{NOME_CLIENTE}}\n\nSALA DE VIDEO: {{LINK_ATO}}\n\nBREVE RELATO:\n{{DESC_CURTA}}",
-    clientTemplate: "Olá {{NOME_CLIENTE}},\n\nAgendamos seu atendimento com o Dr. Reinaldo Gonçalves para o dia {{DATA_ATO}} às {{HORA_ATO}}.\n\nLink da sala virtual: {{LINK_ATO}}\n\nAté breve!",
-    reminderMinutes: 30,
-    calendarColorId: "7",
-    useMeetLink: true,
-    sendWhatsApp: true
-  },
-  "Prazo": {
-    profileName: "ALERTA DE PRAZO JUDICIAL",
-    calendarTemplate: "Título: ⏰ PRAZO: {{NUMERO_PROCESSO}} - {{DESC_CURTA}}\n\nPROVIDÊNCIA:\n{{ALERTA_LEGAL}}\n\nRESPONSÁVEL: {{NOME_ADVOGADO}}",
-    clientTemplate: "",
-    reminderMinutes: 1440,
-    calendarColorId: "4",
-    useMeetLink: false,
-    sendWhatsApp: false
   }
 }
 
@@ -142,7 +126,7 @@ function SettingsContent() {
   const db = useFirestore()
   const { user, profile, role } = useUser()
 
-  const canManageUsers = role === 'admin'
+  const isAdmin = role === 'admin'
 
   // Estados CRUD Usuários
   const [userSearchTerm, setUserSearchTerm] = useState("")
@@ -169,6 +153,26 @@ function SettingsContent() {
     )
   }, [team, userSearchTerm])
 
+  // Estados Financeiros (Parâmetros Fiscais)
+  const [financialSettings, setFinancialSettings] = useState({
+    issRate: 2.0,
+    irRate: 1.5,
+    successFeeDefault: 20,
+    consultationValue: 350,
+    masterBank: "BANCO ITAÚ",
+    masterAgency: "0000",
+    masterAccount: "00000-0",
+    masterPix: "rgmj.adv@gmail.com",
+    autoGenerateInvoices: true
+  })
+
+  const finRef = useMemoFirebase(() => db ? doc(db, 'settings', 'financial') : null, [db])
+  const { data: finData } = useDoc(finRef)
+
+  useEffect(() => {
+    if (finData) setFinancialSettings(prev => ({ ...prev, ...finData }))
+  }, [finData])
+
   // Outros estados
   const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
   const [editingModel, setEditingModel] = useState<any>(null)
@@ -180,8 +184,6 @@ function SettingsContent() {
   })
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
-  const [editingMessage, setEditingMessage] = useState<any>(null)
-  const [lastFocusedField, setLastFocusedField] = useState<"calendar" | "client">("calendar")
   const [messageFormData, setMessageFormData] = useState({
     profileName: "",
     eventType: "Audiência Virtual",
@@ -194,7 +196,6 @@ function SettingsContent() {
     sendWhatsApp: true
   })
 
-  const [loadingFirmCep, setLoadingFirmCep] = useState(false)
   const [firmFormData, setFirmFormData] = useState({
     name: "RGMJ ADVOGADOS",
     cnpj: "",
@@ -246,41 +247,13 @@ function SettingsContent() {
   }, [db, user])
   const { data: messageTemplates } = useCollection(messagesQuery)
 
-  const [drawerWidth, setDrawerWidth] = useState("extra-largo") 
-
-  const [profileFormData, setProfileFormData] = useState({
-    name: profile?.name || "",
-    email: profile?.email || ""
-  })
-
-  useEffect(() => {
-    if (profile) {
-      setProfileFormData({
-        name: profile.name || "",
-        email: profile.email || ""
-      })
-      if (profile.themePreferences) {
-        setDrawerWidth(profile.themePreferences.drawerWidth || "extra-largo")
-      }
-    }
-  }, [profile])
-
-  // Handlers CRUD Usuários
-  const handleOpenCreateUser = () => {
-    setEditingUser(null)
-    setUserFormData({ name: "", email: "", role: "lawyer", isActive: true })
-    setIsUserDialogOpen(true)
-  }
-
-  const handleOpenEditUser = (member: any) => {
-    setEditingUser(member)
-    setUserFormData({ 
-      name: member.name || "", 
-      email: member.email || "", 
-      role: member.role || "lawyer", 
-      isActive: member.isActive ?? true 
-    })
-    setIsUserDialogOpen(true)
+  const handleSaveFinancial = () => {
+    if (!db) return
+    setDocumentNonBlocking(doc(db, 'settings', 'financial'), {
+      ...financialSettings,
+      updatedAt: serverTimestamp()
+    }, { merge: true })
+    toast({ title: "Parâmetros Fiscais Atualizados" })
   }
 
   const handleSaveUser = () => {
@@ -291,195 +264,16 @@ function SettingsContent() {
       email: userFormData.email.toLowerCase(),
       updatedAt: serverTimestamp()
     }
-
-    if (editingUser) {
-      updateDocumentNonBlocking(doc(db!, "staff_profiles", editingUser.id), payload)
-      toast({ title: "Acesso Atualizado" })
-    } else {
-      addDocumentNonBlocking(collection(db!, "staff_profiles"), {
-        ...payload,
-        createdAt: serverTimestamp(),
-        id: crypto.randomUUID()
-      })
-      toast({ title: "Novo Acesso Liberado" })
-    }
+    const userId = editingUser?.id || crypto.randomUUID()
+    setDocumentNonBlocking(doc(db!, "staff_profiles", userId), { ...payload, id: userId }, { merge: true })
     setIsUserDialogOpen(false)
-  }
-
-  const handleDeleteUser = (id: string) => {
-    if (!db || !confirm("Revogar este acesso permanentemente?")) return
-    deleteDocumentNonBlocking(doc(db!, "staff_profiles", id))
-    toast({ variant: "destructive", title: "Acesso Revogado" })
-  }
-
-  // Outros Handlers
-  const handleUpdateMyProfile = () => {
-    if (!user || !db || !profileFormData.name) return
-    const docRef = doc(db!, "staff_profiles", user.uid)
-    updateDocumentNonBlocking(docRef, {
-      name: profileFormData.name.toUpperCase(),
-      updatedAt: serverTimestamp()
-    })
-    toast({ title: "Perfil Atualizado" })
+    toast({ title: "Acesso Atualizado" })
   }
 
   const handleSaveGoogleConfig = () => {
     if (!db) return
-    const docRef = doc(db, 'settings', 'google')
-    setDocumentNonBlocking(docRef, {
-      ...googleConfig,
-      updatedAt: serverTimestamp()
-    }, { merge: true })
-    toast({ title: "Gateway Google Sincronizado" })
-  }
-
-  const handleApplyTheme = () => {
-    if (!user || !db) return
-    const docRef = doc(db!, "staff_profiles", user.uid)
-    updateDocumentNonBlocking(docRef, {
-      themePreferences: { drawerWidth, updatedAt: new Date().toISOString() },
-      updatedAt: serverTimestamp()
-    })
-    toast({ title: "Preferências Salvas" })
-  }
-
-  const handleSaveFirmProfile = () => {
-    if (!db || !firmFormData.name) return
-    const docRef = doc(db, 'settings', 'firm')
-    setDocumentNonBlocking(docRef, {
-      ...firmFormData,
-      name: firmFormData.name.toUpperCase(),
-      updatedAt: serverTimestamp()
-    }, { merge: true })
-    toast({ title: "Dados da Banca Atualizados" })
-  }
-
-  const handleFirmCepBlur = async () => {
-    const cep = firmFormData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
-    setLoadingFirmCep(true)
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await response.json()
-      if (!data.erro) {
-        setFirmFormData(prev => ({
-          ...prev,
-          address: data.logradouro.toUpperCase(),
-          neighborhood: data.bairro.toUpperCase(),
-          city: data.localidade.toUpperCase(),
-          state: data.uf.toUpperCase()
-        }))
-      }
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoadingFirmCep(false)
-    }
-  }
-
-  const handleOpenCreateModel = () => {
-    setEditingModel(null)
-    setModelFormData({ title: "", area: "Trabalhista", googleDocId: "", tags: "" })
-    setIsModelDialogOpen(true)
-  }
-
-  const handleOpenEditModel = (model: any) => {
-    setEditingModel(model)
-    setModelFormData({
-      title: model.title,
-      area: model.area,
-      googleDocId: model.googleDocId || "",
-      tags: (model.tags || []).join(", ")
-    })
-    setIsModelDialogOpen(true)
-  }
-
-  const handleSaveModel = () => {
-    if (!db || !modelFormData.title) return
-    const tagsArray = modelFormData.tags.split(",").map(t => t.trim().toUpperCase()).filter(t => t !== "")
-    const payload = {
-      title: modelFormData.title.toUpperCase(),
-      area: modelFormData.area,
-      googleDocId: modelFormData.googleDocId,
-      tags: tagsArray,
-      updatedAt: serverTimestamp()
-    }
-    if (editingModel) {
-      updateDocumentNonBlocking(doc(db!, "document_templates", editingModel.id), payload)
-    } else {
-      addDocumentNonBlocking(collection(db!, "document_templates"), { ...payload, createdAt: serverTimestamp() })
-    }
-    setIsModelDialogOpen(false)
-    toast({ title: "Acervo Atualizado" })
-  }
-
-  const handleDeleteModel = (id: string) => {
-    if (!db || !confirm("Remover este modelo?")) return
-    deleteDocumentNonBlocking(doc(db!, "document_templates", id))
-    toast({ variant: "destructive", title: "Modelo Removido" })
-  }
-
-  const handleOpenCreateMessage = () => {
-    setEditingMessage(null)
-    setMessageFormData({
-      profileName: "",
-      eventType: "Audiência Virtual",
-      calendarTemplate: "",
-      clientTemplate: "",
-      isActive: true,
-      reminderMinutes: 60,
-      calendarColorId: "1",
-      useMeetLink: true,
-      sendWhatsApp: true
-    })
-    setIsMessageDialogOpen(true)
-  }
-
-  const loadDefaultTemplate = (type: string) => {
-    const preset = DEFAULT_TEMPLATES[type as keyof typeof DEFAULT_TEMPLATES]
-    if (preset) {
-      setMessageFormData({
-        ...messageFormData,
-        ...preset,
-        eventType: type,
-        isActive: true
-      })
-      toast({ title: `Modelo de ${type} Carregado` })
-    }
-  }
-
-  const handleOpenEditMessage = (template: any) => {
-    setEditingMessage(template)
-    setMessageFormData({ ...messageFormData, ...template })
-    setIsMessageDialogOpen(true)
-  }
-
-  const handleInjectTag = (tag: string) => {
-    const field = lastFocusedField === "calendar" ? "calendarTemplate" : "clientTemplate"
-    const currentValue = (messageFormData[field as keyof typeof messageFormData] || "") as string
-    setMessageFormData(prev => ({
-      ...prev,
-      [field]: currentValue + ` ${tag}`
-    }))
-  }
-
-  const handleSaveMessageTemplate = () => {
-    if (!db || !messageFormData.profileName) {
-      toast({ variant: "destructive", title: "Nome do perfil é obrigatório" })
-      return
-    }
-    const payload = {
-      ...messageFormData,
-      profileName: messageFormData.profileName.toUpperCase(),
-      updatedAt: serverTimestamp()
-    }
-    if (editingMessage) {
-      updateDocumentNonBlocking(doc(db!, "notification_templates", editingMessage.id), payload)
-    } else {
-      addDocumentNonBlocking(collection(db!, "notification_templates"), { ...payload, createdAt: serverTimestamp() })
-    }
-    setIsMessageDialogOpen(false)
-    toast({ title: "Perfil de Notificação Salvo" })
+    setDocumentNonBlocking(doc(db, 'settings', 'google'), { ...googleConfig, updatedAt: serverTimestamp() }, { merge: true })
+    toast({ title: "Hub Workspace Sincronizado" })
   }
 
   const tabTriggerClass = "data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-[0_0_20px_rgba(245,208,48,0.3)] text-muted-foreground font-black text-[10px] uppercase h-full px-10 rounded-full transition-all tracking-[0.1em] border border-transparent data-[state=active]:border-black/10"
@@ -488,9 +282,7 @@ function SettingsContent() {
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
       <div className="space-y-2">
         <h1 className="text-4xl font-black text-white tracking-tight uppercase tracking-tighter">Configurações do Sistema</h1>
-        <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.2em] opacity-60">
-          GESTÃO DE INFRAESTRUTURA, PESSOAS E PARÂMETROS ESTRATÉGICOS.
-        </p>
+        <p className="text-muted-foreground text-sm font-black uppercase tracking-[0.2em] opacity-60">GESTÃO DE INFRAESTRUTURA, PESSOAS E PARÂMETROS ESTRATÉGICOS.</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -498,7 +290,7 @@ function SettingsContent() {
           <TabsList className="bg-transparent h-12 p-0 gap-1 justify-start">
             <TabsTrigger value="geral" className={tabTriggerClass}>Geral</TabsTrigger>
             <TabsTrigger value="seo" className={tabTriggerClass}>Google Hub</TabsTrigger>
-            <TabsTrigger value="usuarios" className={tabTriggerClass}>Usuarios</TabsTrigger>
+            <TabsTrigger value="usuarios" className={tabTriggerClass}>Usuários</TabsTrigger>
             <TabsTrigger value="financeiro" className={tabTriggerClass}>Financeiro</TabsTrigger>
             <TabsTrigger value="tags" className={tabTriggerClass}>Dicionário de Tags</TabsTrigger>
             <TabsTrigger value="kit" className={tabTriggerClass}>Kit Cliente</TabsTrigger>
@@ -508,406 +300,163 @@ function SettingsContent() {
           </TabsList>
         </div>
 
-        <TabsContent value="geral" className="mt-0 space-y-10">
-          <Card className="glass border-white/5 overflow-hidden shadow-2xl">
+        <TabsContent value="geral" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
             <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                  <Building2 className="h-6 w-6" />
-                </div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><Building2 className="h-6 w-6" /></div>
                 <div>
-                  <CardTitle className="text-xl font-black text-white uppercase tracking-tighter">Identidade Institucional</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">DADOS OFICIAIS DA SEDE RGMJ.</p>
+                  <CardTitle className="text-xl font-black text-white uppercase tracking-tighter">Perfil Institucional</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">DADOS OFICIAIS DA BANCA RGMJ.</p>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-10 space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DA BANCA</Label>
-                  <Input value={firmFormData.name} onChange={(e) => setFirmFormData({...firmFormData, name: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black text-sm" />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CNPJ DA BANCA</Label>
-                  <Input value={firmFormData.cnpj} onChange={(e) => setFirmFormData({...firmFormData, cnpj: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-sm" placeholder="00.000.000/0000-00" />
-                </div>
+                <div className="space-y-3"><Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL</Label><Input value={firmFormData.name} onChange={(e) => setFirmFormData({...firmFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+                <div className="space-y-3"><Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CNPJ</Label><Input value={firmFormData.cnpj} onChange={(e) => setFirmFormData({...firmFormData, cnpj: maskCNPJ(e.target.value)})} className="bg-black/40 h-14 text-white font-mono" placeholder="00.000.000/0000-00" /></div>
               </div>
-
-              <div className="border-t border-white/5 pt-10 space-y-8">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Localização da Sede</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase">CEP</Label>
-                    <div className="relative">
-                      <Input value={firmFormData.zipCode} onChange={(e) => setFirmFormData({...firmFormData, zipCode: e.target.value})} onBlur={handleFirmCepBlur} className="glass border-white/10 h-12 text-white font-mono" placeholder="00000-000" />
-                      {loadingFirmCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
-                    </div>
-                  </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase">LOGRADOURO</Label>
-                    <Input value={firmFormData.address} onChange={(e) => setFirmFormData({...firmFormData, address: e.target.value.toUpperCase()})} className="glass border-white/10 h-12 text-white" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase">NÚMERO</Label>
-                    <Input value={firmFormData.number} onChange={(e) => setFirmFormData({...firmFormData, number: e.target.value})} className="glass border-white/10 h-12 text-white" />
-                  </div>
-                </div>
-              </div>
-              <Button onClick={handleSaveFirmProfile} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] tracking-widest px-10 shadow-2xl hover:scale-[1.02] transition-transform">
-                <Save className="h-5 w-5 mr-3" /> SALVAR DADOS DA BANCA
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="glass border-white/5 overflow-hidden shadow-2xl">
-            <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e]">
-              <div className="flex items-center gap-6">
-                <Avatar className="h-16 w-16 border-2 border-primary/20">
-                  <AvatarFallback className="text-xl font-black text-primary bg-secondary uppercase">{profileFormData.name.substring(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-xl font-black text-white uppercase tracking-tighter">Meu Perfil</CardTitle>
-                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">CONFIGURAÇÕES DE USUÁRIO.</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-10 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NOME DE EXIBIÇÃO</Label>
-                  <Input value={profileFormData.name} onChange={(e) => setProfileFormData({...profileFormData, name: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-bold" />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">INTERFACE (DRAWER)</Label>
-                  <Select value={drawerWidth} onValueChange={setDrawerWidth}>
-                    <SelectTrigger className="glass border-white/10 h-14 text-white font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] text-white">
-                      <SelectItem value="padrão">PADRÃO</SelectItem>
-                      <SelectItem value="largo">LARGO</SelectItem>
-                      <SelectItem value="extra-largo">EXTRA-LARGO</SelectItem>
-                      <SelectItem value="full">MAXIMIZADO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <Button onClick={handleUpdateMyProfile} className="gold-gradient text-background font-black gap-3 h-14 px-10 uppercase text-[11px] rounded-xl">
-                  <Save className="h-5 w-5" /> SALVAR MEUS DADOS
-                </Button>
-                <Button onClick={handleApplyTheme} variant="outline" className="border-white/10 text-white font-black h-14 px-8 uppercase text-[11px] rounded-xl hover:bg-white/5">
-                  APLICAR TEMA
-                </Button>
-              </div>
+              <Button onClick={() => { setDocumentNonBlocking(doc(db!, 'settings', 'firm'), {...firmFormData, updatedAt: serverTimestamp()}, {merge: true}); toast({title: "Dados Salvos"}); }} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] px-10 shadow-2xl">SALVAR IDENTIDADE</Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="seo" className="mt-0 space-y-8">
-          <Card className="glass border-[#1a1f2e] bg-[#05070a] overflow-hidden shadow-2xl rounded-[2rem] border">
-            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e]/40 flex flex-row items-center justify-between">
+        <TabsContent value="financeiro" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-primary shadow-xl">
-                  <CloudLightning className="h-7 w-7 text-[#f5d030]" />
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 shadow-xl"><CreditCard className="h-7 w-7" /></div>
+                <div>
+                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Parâmetros Fiscais & Repasses</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">REGRAS DE TRIBUTAÇÃO E HONORÁRIOS DA BANCA.</p>
                 </div>
-                <div className="space-y-1">
-                  <CardTitle className="text-xl font-black text-white uppercase tracking-tight">Google Workspace Hub</CardTitle>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-40">Infraestrutura de APIs RGMJ.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#0d121f] border border-white/5 shadow-inner">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Gateway Ativo</span>
               </div>
             </CardHeader>
-            
             <CardContent className="p-12 space-y-12">
-              <div className="p-8 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-6">
-                <div className="flex items-center gap-3">
-                  <ShieldAlert className="h-5 w-5 text-amber-500" />
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest">URIs de Redirecionamento Autorizadas</h4>
-                </div>
-                <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                  Cadastre estas URLs no <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-primary underline">Google Cloud Console</a> para habilitar o rito de autenticação:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    "http://localhost:9002",
-                    "https://reinaldo-adv.vercel.app"
-                  ].map(uri => (
-                    <div key={uri} className="flex items-center justify-between p-4 rounded-xl bg-black/40 border border-white/10 group">
-                      <code className="text-[10px] text-primary font-black">{uri}</code>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white" onClick={() => {
-                        navigator.clipboard.writeText(uri)
-                        toast({ title: "URI Copiada" })
-                      }}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                 <div className="space-y-4">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Conta Mestre (Admin)</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#f5d030]/40" />
-                    <Input 
-                      value={googleConfig.masterEmail} 
-                      onChange={(e) => setGoogleConfig({...googleConfig, masterEmail: e.target.value})} 
-                      className="bg-black/40 border-white/5 h-16 pl-14 text-white font-bold text-sm rounded-xl focus:ring-1 focus:ring-primary/50" 
-                    />
-                  </div>
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Alíquota ISS (%)</Label>
+                  <Input type="number" value={financialSettings.issRate} onChange={e => setFinancialSettings({...financialSettings, issRate: Number(e.target.value)})} className="bg-black/40 h-16 text-2xl font-black text-white text-center rounded-xl" />
                 </div>
                 <div className="space-y-4">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Root Folder ID (Google Drive)</Label>
-                  <div className="relative">
-                    <Database className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#f5d030]/40" />
-                    <Input 
-                      value={googleConfig.rootFolderId} 
-                      onChange={(e) => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})} 
-                      className="bg-black/40 border-white/5 h-16 pl-14 text-white font-mono text-xs rounded-xl focus:ring-1 focus:ring-primary/50" 
-                    />
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Retenção IR (%)</Label>
+                  <Input type="number" value={financialSettings.irRate} onChange={e => setFinancialSettings({...financialSettings, irRate: Number(e.target.value)})} className="bg-black/40 h-16 text-2xl font-black text-white text-center rounded-xl" />
+                </div>
+                <div className="space-y-4">
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Honorário de Êxito Padrão (%)</Label>
+                  <Input type="number" value={financialSettings.successFeeDefault} onChange={e => setFinancialSettings({...financialSettings, successFeeDefault: Number(e.target.value)})} className="bg-black/40 h-16 text-2xl font-black text-white text-center rounded-xl" />
+                </div>
+              </div>
+
+              <div className="p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 space-y-8 shadow-inner">
+                <div className="flex items-center gap-4 pb-4 border-b border-white/5">
+                  <Landmark className="h-6 w-6 text-primary" />
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Domicílio Bancário Oficial</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Instituição / Banco</Label><Input value={financialSettings.masterBank} onChange={e => setFinancialSettings({...financialSettings, masterBank: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white font-bold" /></div>
+                  <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Chave PIX (Honorários)</Label><Input value={financialSettings.masterPix} onChange={e => setFinancialSettings({...financialSettings, masterPix: e.target.value})} className="bg-black/40 h-12 text-white font-bold" /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Agência</Label><Input value={financialSettings.masterAgency} onChange={e => setFinancialSettings({...financialSettings, masterAgency: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
+                    <div className="space-y-3"><Label className="text-[10px] font-black text-muted-foreground uppercase">Conta</Label><Input value={financialSettings.masterAccount} onChange={e => setFinancialSettings({...financialSettings, masterAccount: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-4">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Client ID (OAuth 2.0)</Label>
-                  <Input 
-                    value={googleConfig.clientId} 
-                    onChange={(e) => setGoogleConfig({...googleConfig, clientId: e.target.value})} 
-                    className="bg-black/40 border-white/5 h-16 text-white font-mono text-xs rounded-xl px-6 focus:ring-1 focus:ring-primary/50" 
-                  />
-                </div>
               </div>
 
-              <div className="pt-10 border-t border-white/5">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[
-                    { id: 'isCalendarActive', label: 'Google Calendar', icon: Calendar },
-                    { id: 'isTasksActive', label: 'Google Tasks', icon: ListTodo },
-                    { id: 'isDriveActive', label: 'Google Drive', icon: Database },
-                    { id: 'isMeetActive', label: 'Google Meet', icon: Video },
-                    { id: 'isDocsActive', label: 'Google Docs', icon: FileText },
-                  ].map((service) => (
-                    <div key={service.id} className="p-6 rounded-[1.25rem] bg-[#0d121f]/40 border border-white/5 flex items-center justify-between group hover:border-primary/20 transition-all shadow-lg shadow-black/20">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
-                          <service.icon className="h-5 w-5" />
-                        </div>
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{service.label}</span>
-                      </div>
-                      <Switch 
-                        checked={(googleConfig as any)[service.id]} 
-                        onCheckedChange={(v) => setGoogleConfig({...googleConfig, [service.id]: v})}
-                        className="data-[state=checked]:bg-emerald-500 scale-110"
-                      />
-                    </div>
-                  ))}
+              <div className="flex items-center justify-between p-8 rounded-2xl bg-primary/5 border border-primary/20 shadow-xl">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest">Faturamento Automático</h4>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Gerar títulos de contas a receber automaticamente no fechamento de acordos.</p>
                 </div>
+                <Switch checked={financialSettings.autoGenerateInvoices} onCheckedChange={v => setFinancialSettings({...financialSettings, autoGenerateInvoices: v})} className="data-[state=checked]:bg-emerald-500 scale-125" />
               </div>
 
-              <div className="pt-6">
-                <Button 
-                  onClick={handleSaveGoogleConfig} 
-                  className="gold-gradient h-16 rounded-xl font-black uppercase text-xs tracking-[0.2em] px-12 shadow-2xl hover:scale-[1.02] transition-transform flex items-center gap-4 text-background"
-                >
-                  <Save className="h-5 w-5" /> Sincronizar Gateway Google
-                </Button>
-              </div>
+              <Button onClick={handleSaveFinancial} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] tracking-widest px-12 shadow-[0_20px_50px_rgba(245,208,48,0.2)] hover:scale-[1.02] transition-transform">
+                <Save className="h-5 w-5 mr-3" /> CONSOLIDAR PARÂMETROS FINANCEIROS
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="usuarios" className="mt-0 space-y-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-8">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Gestão de Acessos</h2>
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">CONTROLE DE PERMISSÕES E USUÁRIOS DA BANCA.</p>
-            </div>
-            {canManageUsers && (
-              <div className="flex items-center gap-4 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Buscar usuários..." 
-                    className="pl-10 glass border-white/5 h-11 text-xs text-white"
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                  />
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
+            <CardHeader className="p-10 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400 shadow-xl"><Users className="h-7 w-7" /></div>
+                <div>
+                  <CardTitle className="text-2xl font-black text-white uppercase tracking-tighter">Equipe & Acessos</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">GERENCIAMENTO DE SOBERANIA DIGITAL E MEMBROS.</p>
                 </div>
-                <Button onClick={handleOpenCreateUser} className="gold-gradient text-background font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl gap-2 shadow-2xl">
-                  <UserPlus className="h-4 w-4" /> NOVO ACESSO
-                </Button>
               </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isTeamLoading ? (
-              <div className="col-span-full py-20 flex flex-col items-center justify-center">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-widest mt-4">Sincronizando usuários...</span>
-              </div>
-            ) : filteredTeam.length > 0 ? (
-              filteredTeam.map((member) => (
-                <Card key={member.id} className="glass border-white/5 hover-border-primary/30 transition-all group shadow-2xl rounded-2xl overflow-hidden flex flex-col">
-                  <CardContent className="p-8 space-y-6 flex-1">
-                    <div className="flex items-start justify-between">
+              <Button onClick={() => { setEditingUser(null); setIsUserDialogOpen(true); }} className="gold-gradient text-background font-black text-[10px] uppercase h-12 px-8 rounded-xl shadow-xl">
+                <UserPlus className="h-4 w-4 mr-2" /> LIBERAR ACESSO
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-white/5">
+                {isTeamLoading ? (
+                  <div className="py-20 flex justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                ) : team?.map(member => (
+                  <div key={member.id} className="p-8 flex items-center justify-between hover:bg-white/[0.01] transition-all group">
+                    <div className="flex items-center gap-6">
                       <Avatar className="h-14 w-14 border-2 border-primary/20">
-                        <AvatarFallback className="bg-secondary text-primary font-black uppercase">{member.name?.substring(0, 2) || "??"}</AvatarFallback>
+                        <AvatarFallback className="bg-secondary text-primary font-black uppercase">{member.name?.substring(0, 2)}</AvatarFallback>
                       </Avatar>
-                      <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary bg-primary/5 px-3">
-                        {member.role?.toUpperCase() || "USER"}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{member.name}</h3>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">
-                        <Mail className="h-3 w-3 opacity-50" /> {member.email}
+                      <div className="space-y-1">
+                        <h4 className="font-black text-white uppercase text-lg tracking-tight group-hover:text-primary transition-colors">{member.name}</h4>
+                        <div className="flex items-center gap-4">
+                          <Badge variant="outline" className="text-[9px] font-black border-white/10 text-muted-foreground uppercase">{member.role?.toUpperCase()}</Badge>
+                          <span className="text-[10px] text-muted-foreground/40 font-bold lowercase">{member.email}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center pt-6 border-t border-white/5 mt-auto">
-                      <div className="flex gap-2">
-                        {canManageUsers && (
-                          <>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white" onClick={() => handleOpenEditUser(member)}>
-                              <Settings2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-rose-500" onClick={() => handleDeleteUser(member.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">
-                        {member.isActive ? (
-                          <span className="flex items-center gap-1.5 text-emerald-500"><ShieldCheck className="h-3 w-3" /> Ativo</span>
-                        ) : (
-                          <span className="flex items-center gap-1.5 text-rose-500"><ShieldAlert className="h-3 w-3" /> Inativo</span>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-4">
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingUser(member); setUserFormData({...member}); setIsUserDialogOpen(true); }} className="h-10 w-10 text-white/20 hover:text-white"><UserCog className="h-5 w-5" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteDocumentNonBlocking(doc(db!, "staff_profiles", member.id))} className="h-10 w-10 text-white/10 hover:text-rose-500"><Trash2 className="h-5 w-5" /></Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
-                <Users className="h-14 w-14 text-primary mx-auto" />
-                <p className="text-sm font-black uppercase tracking-[0.4em]">Nenhum usuário localizado</p>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="financeiro" className="mt-0">
-          <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
-            <CreditCard className="h-14 w-14 text-primary mx-auto" />
-            <div className="space-y-2">
-              <p className="text-sm font-black uppercase tracking-[0.4em]">Parâmetros Fiscais</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest">Configuração de impostos e taxas da banca em desenvolvimento.</p>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="tags" className="mt-0 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MESSAGE_PLACEHOLDERS.map((p) => (
-              <Card key={p.tag} className="glass border-white/5 p-6 hover:border-primary/30 transition-all group shadow-xl">
-                <div className="flex items-center justify-between mb-3">
-                  <code className="text-primary font-black text-sm uppercase tracking-tight">{p.tag}</code>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={() => {
-                    navigator.clipboard.writeText(p.tag)
-                    toast({ title: "Tag Copiada!" })
-                  }}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">{p.desc}</p>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="kit" className="mt-0 space-y-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 border-b border-white/5 pb-8">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Perfis de Comunicação</h2>
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">TEMPLATES PADRONIZADOS RGMJ.</p>
-            </div>
-            <Button onClick={handleOpenCreateMessage} className="gold-gradient font-black text-xs uppercase tracking-widest h-14 px-10 rounded-xl gap-3 shadow-2xl">
-              <Plus className="h-5 w-5" /> NOVO PERFIL DE NOTIFICAÇÃO
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Object.entries(DEFAULT_TEMPLATES).map(([type, template]) => (
-              <Card key={type} className="glass border-white/5 p-8 hover:border-primary/40 transition-all group shadow-2xl flex flex-col h-full rounded-2xl">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                    {type.includes("Virtual") ? <Video className="h-6 w-6" /> : type === "Prazo" ? <Clock className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
-                  </div>
-                  <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/30 text-primary px-3">SISTEMA</Badge>
-                </div>
-                <h3 className="text-sm font-black text-white uppercase tracking-tight mb-6 flex-1">{type}</h3>
-                <Button variant="outline" onClick={() => loadDefaultTemplate(type)} className="w-full h-12 text-[10px] font-black uppercase border-primary/30 text-primary hover:bg-primary hover:text-background rounded-xl">Customizar</Button>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="modelos" className="mt-0 space-y-10">
-          <div className="flex items-center justify-between border-b border-white/5 pb-8">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Acervo de Minutas</h2>
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">KITS DOCUMENTAIS ESTRATÉGICOS.</p>
-            </div>
-            <Button onClick={handleOpenCreateModel} className="gold-gradient font-black text-xs uppercase tracking-widest h-14 px-10 rounded-xl shadow-2xl">
-              <Plus className="h-5 w-5 mr-3" /> NOVO MODELO
-            </Button>
-          </div>
-
+        <TabsContent value="tags" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {models?.map((model) => (
-              <Card key={model.id} className="glass border-white/5 p-8 hover:border-primary/40 transition-all group shadow-2xl rounded-2xl">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleOpenEditModel(model)} className="text-white/20 hover:text-white bg-white/5 p-2 rounded-lg transition-colors"><Settings2 className="h-4 w-4" /></button>
-                    <button onClick={() => handleDeleteModel(model.id)} className="text-white/20 hover:text-rose-500 bg-white/5 p-2 rounded-lg transition-colors"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </div>
-                <h3 className="text-sm font-black text-white uppercase tracking-tight mb-4">{model.title}</h3>
-                <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/20 text-primary bg-primary/5">{model.area}</Badge>
+            {MESSAGE_PLACEHOLDERS.map((p) => (
+              <Card key={p.tag} className="glass border-white/5 p-8 hover:border-primary/30 transition-all group shadow-xl rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5"><Tag className="h-10 w-10" /></div>
+                <code className="text-primary font-black text-sm uppercase tracking-tight block mb-4">{p.tag}</code>
+                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-relaxed">{p.desc}</p>
               </Card>
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="backup" className="mt-0">
-          <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl text-center space-y-6 opacity-30">
-            <History className="h-14 w-14 text-primary mx-auto" />
+        <TabsContent value="kit" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 p-12 rounded-[3rem] text-center space-y-8 opacity-40 shadow-inner">
+            <Smartphone className="h-20 w-20 mx-auto text-primary" />
             <div className="space-y-2">
-              <p className="text-sm font-black uppercase tracking-[0.4em]">Soberania de Dados</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest">O sistema realiza backups automáticos diários em Google Cloud Storage.</p>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Perfis de Notificação</h3>
+              <p className="text-sm font-bold uppercase tracking-widest max-w-md mx-auto">Configure os modelos de WhatsApp e Agenda para automação de lembretes aos clientes.</p>
             </div>
-          </div>
+            <Button disabled className="h-14 px-10 rounded-xl font-black uppercase text-xs tracking-widest">EM BREVE (API V3)</Button>
+          </Card>
         </TabsContent>
 
         <TabsContent value="licenca" className="mt-0">
-          <Card className="glass border-primary/20 p-10 rounded-2xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-10 opacity-5"><ShieldCheck className="h-40 w-40" /></div>
-            <div className="flex items-center gap-8">
-              <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
-                <ShieldCheck className="h-10 w-10 text-primary" />
+          <Card className="glass border-primary/20 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden bg-primary/5">
+            <div className="absolute top-0 right-0 p-16 opacity-5"><ShieldCheck className="h-64 w-64 text-white" /></div>
+            <div className="flex items-center gap-10">
+              <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl">
+                <ShieldCheck className="h-12 w-12 text-primary" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-white uppercase tracking-widest">Licença LexFlow ERP</h3>
-                <p className="text-[11px] text-primary font-black uppercase tracking-widest">STATUS: ATIVO • PLANO ESTRATÉGICO</p>
+              <div className="space-y-3">
+                <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Licença LexFlow ERP</h3>
+                <div className="flex items-center gap-4">
+                  <Badge className="bg-primary text-background font-black uppercase text-[10px] h-7 px-4 rounded-full">ATIVO • PLANO SOBERANO</Badge>
+                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-40">Validade: Ilimitada (Enterprise)</span>
+                </div>
               </div>
             </div>
           </Card>
@@ -916,40 +465,37 @@ function SettingsContent() {
 
       {/* DIÁLOGO USUÁRIOS */}
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-3xl">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                {editingUser ? "Retificar Acesso" : "Novo Acesso RGMJ"}
-              </DialogTitle>
+              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingUser ? "Retificar Acesso" : "Novo Acesso RGMJ"}</DialogTitle>
             </DialogHeader>
           </div>
-          <div className="p-8 space-y-6 bg-[#0a0f1e]/50">
-            <div className="space-y-2">
+          <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
+            <div className="space-y-3">
               <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nome Completo *</Label>
-              <Input value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white uppercase font-bold" />
+              <Input value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">E-mail Google *</Label>
-              <Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase()})} className="glass border-white/10 h-14 text-white font-medium" placeholder="usuario@gmail.com" />
+              <Input value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="usuario@gmail.com" />
             </div>
             <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nível de Acesso</Label>
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Perfil de Comando</Label>
                 <Select value={userFormData.role} onValueChange={(v) => setUserFormData({...userFormData, role: v})}>
-                  <SelectTrigger className="glass border-white/10 h-14 text-white font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-black/40 h-14 text-white font-black text-[10px] uppercase"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-[#0d121f] text-white">
                     <SelectItem value="admin">ADMINISTRADOR</SelectItem>
                     <SelectItem value="lawyer">ADVOGADO</SelectItem>
-                    <SelectItem value="financial">FINANCEIRO</SelectItem>
                     <SelectItem value="assistant">ASSISTENTE</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status da Conta</Label>
-                <div className="h-14 flex items-center justify-between px-4 glass border-white/10 rounded-xl">
-                  <span className="text-[10px] font-black text-white uppercase">{userFormData.isActive ? "ATIVO" : "BLOQUEADO"}</span>
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</Label>
+                <div className="h-14 flex items-center justify-between px-4 bg-black/40 rounded-xl">
+                  <span className="text-[10px] font-black text-white">{userFormData.isActive ? "ATIVO" : "BLOQUEADO"}</span>
                   <Switch checked={userFormData.isActive} onCheckedChange={(v) => setUserFormData({...userFormData, isActive: v})} className="data-[state=checked]:bg-emerald-500" />
                 </div>
               </div>
@@ -957,107 +503,9 @@ function SettingsContent() {
           </div>
           <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
             <Button variant="ghost" onClick={() => setIsUserDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
-            <Button onClick={handleSaveUser} className="gold-gradient text-background font-black h-14 px-10 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest flex items-center gap-3">
+            <Button onClick={handleSaveUser} className="gold-gradient text-background font-black h-14 px-10 rounded-xl shadow-2xl uppercase text-[11px] flex items-center gap-3">
               <UserCheck className="h-5 w-5" /> CONFIRMAR ACESSO
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl">
-            <DialogHeader>
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                {editingModel ? "Retificar Modelo" : "Novo Modelo Estratégico"}
-              </DialogTitle>
-            </DialogHeader>
-          </div>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="p-10 space-y-8 bg-[#0a0f1e]/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">TÍTULO DA MINUTA *</Label>
-                  <Input value={modelFormData.title} onChange={(e) => setModelFormData({...modelFormData, title: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black text-sm" />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ÁREA DE ATUAÇÃO</Label>
-                  <Select value={modelFormData.area} onValueChange={(v) => setModelFormData({...modelFormData, area: v})}>
-                    <SelectTrigger className="glass border-white/10 h-14 text-white uppercase text-[11px] font-black tracking-widest"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#0d121f] text-white">
-                      {LEGAL_AREAS.map(area => <SelectItem key={area} value={area}>{area.toUpperCase()}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ID GOOGLE DOC (MODELO BASE)</Label>
-                <Input value={modelFormData.googleDocId} onChange={(e) => setModelFormData({...modelFormData, googleDocId: e.target.value})} className="glass border-white/10 h-14 text-white font-mono text-xs" />
-              </div>
-              <div className="space-y-3">
-                <Label className="text-[11px] font-black text-primary uppercase tracking-widest">TAGS DINÂMICAS (SEPARAR POR VÍRGULA)</Label>
-                <Input value={modelFormData.tags} onChange={(e) => setModelFormData({...modelFormData, tags: e.target.value})} className="glass border-primary/20 h-14 text-white font-bold text-xs" placeholder="{{NOME}}, {{CPF}}, {{DATA}}..." />
-              </div>
-            </div>
-          </ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsModelDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">ABORTAR</Button>
-            <Button onClick={handleSaveModel} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-10 h-14 rounded-xl shadow-2xl">SALVAR ACERVO</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1100px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl font-sans flex flex-col rounded-3xl">
-          <div className="flex-none p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between z-10 shadow-xl">
-            <DialogHeader><DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">{editingMessage ? "Retificar Perfil" : "Novo Rito de Notificação"}</DialogTitle></DialogHeader>
-          </div>
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-            <div className="lg:col-span-8 h-full flex flex-col border-r border-white/5 bg-[#0a0f1e]/50 overflow-hidden">
-              <ScrollArea className="flex-1">
-                <div className="p-10 space-y-10 pb-32">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NOME DO PERFIL ESTRATÉGICO *</Label>
-                      <Input value={messageFormData.profileName} onChange={(e) => setMessageFormData({...messageFormData, profileName: e.target.value.toUpperCase()})} className="glass border-white/10 h-14 text-white font-black text-sm" />
-                    </div>
-                    <div className="space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">TIPO DE ATO</Label>
-                      <Select value={messageFormData.eventType} onValueChange={(v) => setMessageFormData({...messageFormData, eventType: v})}>
-                        <SelectTrigger className="glass border-white/10 h-14 text-white font-black uppercase text-[11px] tracking-widest"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-[#0d121f] text-white">
-                          <SelectItem value="Audiência Física">🏛️ AUDIÊNCIA FÍSICA</SelectItem>
-                          <SelectItem value="Audiência Virtual">🖥️ AUDIÊNCIA VIRTUAL</SelectItem>
-                          <SelectItem value="Atendimento">⚡ ATENDIMENTO</SelectItem>
-                          <SelectItem value="Prazo">⏰ PRAZO JUDICIAL</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="p-8 rounded-3xl bg-primary/5 border border-primary/20 space-y-6">
-                    <Label className="text-[11px] font-black text-primary uppercase tracking-widest">CONTEÚDO DO ATO (AGENDA/WHATSAPP)</Label>
-                    <Textarea onFocus={() => setLastFocusedField("calendar")} value={messageFormData.calendarTemplate} onChange={(e) => setMessageFormData({...messageFormData, calendarTemplate: e.target.value})} className="glass min-h-[200px] text-white text-xs font-mono leading-relaxed resize-none p-6 rounded-2xl" placeholder="Use as tags para preenchimento dinâmico..." />
-                  </div>
-                </div>
-              </ScrollArea>
-            </div>
-            <div className="lg:col-span-4 h-full bg-black/40 flex flex-col border-l border-white/5 overflow-hidden">
-              <div className="p-8 border-b border-white/5 flex-none bg-black/20"><h4 className="text-sm font-black text-white uppercase tracking-[0.2em]">Tags Rápidas</h4></div>
-              <ScrollArea className="flex-1">
-                <div className="p-8 space-y-3">
-                  {MESSAGE_PLACEHOLDERS.map((p) => (
-                    <button key={p.tag} onClick={() => handleInjectTag(p.tag)} className="w-full text-left p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-primary/50 transition-all flex flex-col gap-2 group">
-                      <code className="text-primary font-black text-[10px]">{p.tag}</code>
-                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">{p.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </div>
-          <DialogFooter className="p-8 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setIsMessageDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8">CANCELAR</Button>
-            <Button onClick={handleSaveMessageTemplate} className="gold-gradient text-background font-black h-14 px-12 rounded-xl shadow-2xl uppercase text-[11px] tracking-widest">SALVAR PERFIL</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
