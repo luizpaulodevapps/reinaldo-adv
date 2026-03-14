@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useMemo } from "react"
@@ -15,7 +16,9 @@ import {
   CheckCircle2,
   Building2,
   BadgeCheck,
-  Scale
+  Scale,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react"
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase"
 import { doc } from "firebase/firestore"
@@ -48,7 +51,6 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
 
     const value = Number(transaction.value || 0)
     
-    // Placeholder para valor por extenso (em produção, usar biblioteca como 'extenso')
     const extenso = "reais" 
 
     const map: Record<string, string> = {
@@ -82,13 +84,13 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
               "w-12 h-12 rounded-xl flex items-center justify-center border shadow-xl",
               isReceipt ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-rose-500/10 border-rose-500/20 text-rose-500"
             )}>
-              <FileText className="h-6 w-6" />
+              {isReceipt ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownRight className="h-6 w-6" />}
             </div>
             <div>
               <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
                 {isReceipt ? "Emissão de Recibo" : "Comprovante de Pagamento"}
               </DialogTitle>
-              <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">
+              <DialogDescription className="text-[10px] font-black text-muted-foreground opacity-50 tracking-widest">
                 RGMJ ADVOGADOS • DOCUMENTAÇÃO OFICIAL
               </DialogDescription>
             </div>
@@ -105,7 +107,6 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
 
         <ScrollArea className="flex-1 bg-white p-12 md:p-20 overflow-y-auto">
           <div className="max-w-[210mm] mx-auto text-black font-serif space-y-16 print:p-0">
-            {/* Cabeçalho */}
             <div className="flex items-start justify-between border-b-2 border-black pb-8">
               <div className="space-y-2">
                 {docSettings?.logoUrl ? (
@@ -131,7 +132,6 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
               </div>
             </div>
 
-            {/* Valor em destaque */}
             <div className="flex justify-end">
               <div className="bg-black/5 border-2 border-black p-4 px-8 rounded-lg">
                 <span className="text-xs font-sans font-black uppercase block mb-1">Valor Total</span>
@@ -139,7 +139,6 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
               </div>
             </div>
 
-            {/* Texto do Documento */}
             <div className="space-y-10 min-h-[200px]">
               <p className="text-lg leading-loose text-justify whitespace-pre-wrap">
                 {renderedText}
@@ -149,7 +148,6 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
               </p>
             </div>
 
-            {/* Assinatura e Carimbo */}
             <div className="grid grid-cols-2 gap-20 pt-20">
               <div className="text-center space-y-4">
                 <div className="h-[1px] bg-black w-full" />

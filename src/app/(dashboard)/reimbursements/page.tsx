@@ -20,7 +20,9 @@ import {
   Landmark,
   ShieldCheck,
   History,
-  Navigation
+  Navigation,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -91,7 +93,6 @@ export default function ReimbursementsPage() {
     await updateDocumentNonBlocking(doc(db, "reimbursements", processingItem.id), updateData)
 
     if (action === 'Pago') {
-      // Injeta na central financeira como um Repasse/Saída já liquidado
       await addDocumentNonBlocking(collection(db, "financial_titles"), {
         type: "Saída (Despesa)",
         category: "Reembolso",
@@ -107,7 +108,6 @@ export default function ReimbursementsPage() {
         updatedAt: serverTimestamp()
       })
 
-      // Notificação para o solicitante
       await addDocumentNonBlocking(collection(db, "notifications"), {
         userId: processingItem.requesterId,
         title: "Reembolso Pago",
@@ -206,7 +206,7 @@ export default function ReimbursementsPage() {
                       r.status === 'Pago' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : 
                       r.status === 'Recusado' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-primary/10 border-primary/20 text-primary"
                     )}>
-                      <Receipt className="h-7 w-7" />
+                      <ArrowDownRight className="h-7 w-7" />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-4">
@@ -267,7 +267,6 @@ export default function ReimbursementsPage() {
         </div>
       </Card>
 
-      {/* DIÁLOGO NOVA SOLICITAÇÃO */}
       <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
@@ -282,7 +281,6 @@ export default function ReimbursementsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO AUDITORIA (ADMIN) */}
       <Dialog open={isProcessDialogOpen} onOpenChange={setIsProcessDialogOpen}>
         <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[600px] p-0 overflow-hidden shadow-2xl font-sans rounded-3xl">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5">
