@@ -3,24 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * RGMJ ADVOGADOS - POLÍTICA DE SOBERANIA TOTAL (REVISADA)
+     * RGMJ ADVOGADOS - SOBERANIA TOTAL (REVISÃO DEFINITIVA)
      * 
-     * Conforme diretriz da cúpula: "Se logou, está permitido".
-     * Este ecossistema opera em regime de confiança total entre os membros autenticados.
-     * 
-     * Saneamos a trava explicitando as coleções de topo para evitar erros de propagação.
+     * Diretriz: "Se logou, está permitido".
+     * Este comando remove qualquer trava granular, garantindo acesso total 
+     * a todos os módulos (Processos, Notificações, Financeiro, etc) para usuários autenticados.
      */
 
-    // Acesso explícito para listagem de notificações e perfis
-    match /notifications/{id} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /staff_profiles/{id} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Soberania total para qualquer documento em qualquer profundidade
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
