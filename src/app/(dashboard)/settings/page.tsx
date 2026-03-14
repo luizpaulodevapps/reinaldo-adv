@@ -280,6 +280,29 @@ function SettingsContent() {
     toast({ title: "Hub Workspace Sincronizado" })
   }
 
+  const renderMessagePreview = (template: string) => {
+    const mockData: Record<string, string> = {
+      "{{NOME_CLIENTE}}": "LUIZ PAULO",
+      "{{CLIENTE_CPF}}": "000.000.000-00",
+      "{{NUMERO_PROCESSO}}": "0001234-56.2024.5.02.0000",
+      "{{FORUM_VARA}}": "TRT 2ª REGIÃO - 45ª VARA DO TRABALHO",
+      "{{DATA_ATO}}": "15/05/2024",
+      "{{HORA_ATO}}": "14:30",
+      "{{LOCAL_ATO}}": "RUA DO FÓRUM, Nº 123 - CENTRO",
+      "{{LINK_ATO}}": "meet.google.com/rgmj-atend",
+      "{{SENHA_ATO}}": "RGMJ2024",
+      "{{NOME_ADVOGADO}}": "DR. REINALDO GONÇALVES",
+      "{{DESC_CURTA}}": "REUNIÃO TÁTICA DE ALINHAMENTO"
+    }
+    
+    let rendered = template;
+    Object.entries(mockData).forEach(([tag, val]) => {
+      rendered = rendered.replaceAll(tag, val);
+    });
+    
+    return rendered;
+  }
+
   const tabTriggerClass = "data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-[0_0_20px_rgba(245,208,48,0.3)] text-muted-foreground font-black text-[10px] uppercase h-full px-10 rounded-full transition-all tracking-[0.1em] border border-transparent data-[state=active]:border-black/10"
 
   return (
@@ -481,53 +504,123 @@ function SettingsContent() {
 
       {/* DIÁLOGO CUSTOMIZAR RITO / MENSAGEM */}
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
-        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[800px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[90vh]">
+        <DialogContent className="glass border-primary/20 bg-[#0a0f1e] sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[90vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 shadow-xl flex-none">
             <DialogHeader className="text-left">
-              <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Configuração de Rito: {messageFormData.profileName}</DialogTitle>
-              <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground mt-1">DEFINA OS TEMPLATES DE COMUNICAÇÃO E AGENDA.</DialogDescription>
+              <div className="flex items-center justify-between w-full">
+                <div className="space-y-1">
+                  <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Configuração de Rito: {messageFormData.profileName}</DialogTitle>
+                  <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground mt-1">DEFINA OS TEMPLATES DE COMUNICAÇÃO E AGENDA.</DialogDescription>
+                </div>
+                <Badge className="bg-emerald-500/10 text-emerald-500 border-0 h-7 px-4 text-[9px] font-black uppercase tracking-widest">Sincronismo Ativo</Badge>
+              </div>
             </DialogHeader>
           </div>
           
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
-            <div className="p-10 space-y-10">
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template do Calendário Google</h4>
+            <div className="p-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
+              
+              {/* Lado Esquerdo: Editor */}
+              <div className="lg:col-span-7 space-y-10">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template do Calendário Google</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Título do Evento na Agenda</Label>
+                    <Input value={messageFormData.calendarTemplate} onChange={e => setMessageFormData({...messageFormData, calendarTemplate: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" />
+                    <p className="text-[8px] text-primary/60 font-bold uppercase">Use as tags do dicionário para injeção dinâmica.</p>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Título do Evento na Agenda</Label>
-                  <Input value={messageFormData.calendarTemplate} onChange={e => setMessageFormData({...messageFormData, calendarTemplate: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" />
-                  <p className="text-[8px] text-primary/60 font-bold uppercase">Use as tags do dicionário para injeção dinâmica.</p>
+
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Template WhatsApp (Cliente)</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Corpo da Mensagem de Confirmação</Label>
+                    <Textarea 
+                      value={messageFormData.clientTemplate} 
+                      onChange={e => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} 
+                      className="bg-black/40 min-h-[200px] text-white text-xs font-bold leading-relaxed resize-none p-6 rounded-2xl shadow-inner focus:ring-primary/50" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-black text-white uppercase tracking-widest">Gerar Meet Link?</Label>
+                      <Switch checked={messageFormData.useMeetLink} onCheckedChange={v => setMessageFormData({...messageFormData, useMeetLink: v})} className="data-[state=checked]:bg-emerald-500" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-black text-white uppercase tracking-widest">Notificar WhatsApp?</Label>
+                      <Switch checked={messageFormData.sendWhatsApp} onCheckedChange={v => setMessageFormData({...messageFormData, sendWhatsApp: v})} className="data-[state=checked]:bg-emerald-500" />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Antecedência Alerta (Minutos)</Label>
+                    <Input type="number" value={messageFormData.reminderMinutes} onChange={e => setMessageFormData({...messageFormData, reminderMinutes: Number(e.target.value)})} className="bg-black/40 h-14 text-white font-black text-center text-lg" />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Lembrete WhatsApp (Cliente)</h4>
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Corpo da Mensagem</Label>
-                  <Textarea value={messageFormData.clientTemplate} onChange={e => setMessageFormData({...messageFormData, clientTemplate: e.target.value})} className="bg-black/40 min-h-[150px] text-white text-xs font-bold leading-relaxed resize-none p-6 rounded-2xl" />
-                </div>
-              </div>
+              {/* Lado Direito: Simulador de Preview */}
+              <div className="lg:col-span-5 space-y-8">
+                <div className="sticky top-0 space-y-6">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <Smartphone className="h-5 w-5 text-primary" />
+                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Simulador de Entrega (WhatsApp)</h4>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-black text-white uppercase tracking-widest">Gerar Meet Link?</Label>
-                    <Switch checked={messageFormData.useMeetLink} onCheckedChange={v => setMessageFormData({...messageFormData, useMeetLink: v})} className="data-[state=checked]:bg-emerald-500" />
+                  <div className="bg-[#0b141a] rounded-[2rem] p-8 border border-white/5 shadow-2xl relative overflow-hidden min-h-[400px] flex flex-col">
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }} />
+                    
+                    <div className="flex items-center gap-4 mb-8 relative z-10 border-b border-white/5 pb-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/20">
+                        <Scale className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-white uppercase tracking-wider">RGMJ ADVOGADOS</p>
+                        <p className="text-[8px] text-emerald-500 font-bold uppercase">Online agora</p>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-end relative z-10">
+                      <div className="bg-[#1f2c33] p-6 rounded-tr-3xl rounded-bl-3xl rounded-br-3xl shadow-xl max-w-[90%] animate-in fade-in slide-in-from-left-4 duration-500">
+                        <div className="absolute -left-3 top-0 w-0 h-0 border-t-[15px] border-t-[#1f2c33] border-l-[15px] border-l-transparent" />
+                        
+                        <p className="text-white text-[13px] leading-relaxed whitespace-pre-wrap font-normal italic">
+                          {renderMessagePreview(messageFormData.clientTemplate)}
+                        </p>
+                        
+                        <div className="flex items-center justify-end gap-1.5 mt-3">
+                          <span className="text-[9px] text-white/40 font-medium">{new Date().getHours()}:{new Date().getMinutes().toString().padStart(2, '0')}</span>
+                          <div className="flex">
+                            <CheckCircle2 className="w-3 h-3 text-sky-400 -mr-1.5" />
+                            <CheckCircle2 className="w-3 h-3 text-sky-400" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 pt-4 border-t border-white/5 text-center relative z-10">
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-30 flex items-center justify-center gap-2">
+                        <ShieldCheck className="h-3 w-3" /> SOBERANIA TÉCNICA RGMJ
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-black text-white uppercase tracking-widest">Notificar WhatsApp?</Label>
-                    <Switch checked={messageFormData.sendWhatsApp} onCheckedChange={v => setMessageFormData({...messageFormData, sendWhatsApp: v})} className="data-[state=checked]:bg-emerald-500" />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Antecedência Alerta (Minutos)</Label>
-                  <Input type="number" value={messageFormData.reminderMinutes} onChange={e => setMessageFormData({...messageFormData, reminderMinutes: Number(e.target.value)})} className="bg-black/40 h-14 text-white font-black text-center text-lg" />
+
+                  <Card className="glass border-primary/20 bg-primary/5 p-6 rounded-2xl shadow-xl">
+                    <div className="flex items-start gap-4">
+                      <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-white/70 font-bold uppercase leading-relaxed tracking-wider">
+                        Os dados acima são fictícios para fins de teste. No envio real, o sistema cruzará os dados do <span className="text-primary">LEAD/PROCESSO</span> com o template configurado.
+                      </p>
+                    </div>
+                  </Card>
                 </div>
               </div>
             </div>
