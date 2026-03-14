@@ -35,7 +35,7 @@ const NOTIFICATION_COLORS: Record<string, string> = {
 }
 
 export function NotificationCenter() {
-  const db = useFirestore()
+  const db = useFirestore()  
   const { user } = useUser()
   const [open, setOpen] = useState(false)
 
@@ -63,9 +63,12 @@ export function NotificationCenter() {
   const handleMarkAllAsRead = async () => {
     if (!db || !notifications) return
     const unread = notifications.filter(n => !n.read)
+    if (unread.length === 0) return
+    const batch = writeBatch(db)
     unread.forEach(n => {
-      updateDocumentNonBlocking(doc(db, "notifications", n.id), { read: true })
+      batch.update(doc(db, "notifications", n.id), { read: true })
     })
+    await batch.commit()
   }
 
   return (

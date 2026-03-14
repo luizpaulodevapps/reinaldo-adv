@@ -122,11 +122,12 @@ service cloud.firestore {
 
     // Notificações: Apenas o destinatário tem soberania sobre seus alertas
     match /notifications/{id} {
-      allow read, write: if isSignedIn() && (
-        resource == null || 
-        resource.data.userId == request.auth.uid ||
-        (request.resource != null && request.resource.data.userId == request.auth.uid)
-      );
+      allow read: if isSignedIn()
+                  && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+                            && resource.data.userId == request.auth.uid;
     }
 
     // --- Collection Group Rules (para queries globais de inteligência) ---
