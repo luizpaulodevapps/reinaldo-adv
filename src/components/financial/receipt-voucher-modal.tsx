@@ -1,8 +1,7 @@
-
 "use client"
 
 import { useMemo } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { 
@@ -15,7 +14,8 @@ import {
   X,
   CheckCircle2,
   Building2,
-  BadgeCheck
+  BadgeCheck,
+  Scale
 } from "lucide-react"
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase"
 import { doc } from "firebase/firestore"
@@ -48,7 +48,7 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
 
     const value = Number(transaction.value || 0)
     
-    // Função simples de extenso (apenas placeholder para demonstração funcional)
+    // Placeholder para valor por extenso (em produção, usar biblioteca como 'extenso')
     const extenso = "reais" 
 
     const map: Record<string, string> = {
@@ -104,7 +104,6 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
         </div>
 
         <ScrollArea className="flex-1 bg-white p-12 md:p-20 overflow-y-auto">
-          {/* DOCUMENTO REAL (VISUAL PRINT) */}
           <div className="max-w-[210mm] mx-auto text-black font-serif space-y-16 print:p-0">
             {/* Cabeçalho */}
             <div className="flex items-start justify-between border-b-2 border-black pb-8">
@@ -182,7 +181,7 @@ export function ReceiptVoucherModal({ open, onOpenChange, transaction }: Receipt
           </div>
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-white uppercase font-black text-[11px] px-10 h-12">FECHAR</Button>
         </DialogFooter>
-      </Dialog>
+      </DialogContent>
     </Dialog>
   )
 }
