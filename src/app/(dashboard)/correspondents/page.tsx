@@ -27,7 +27,9 @@ import {
   Gavel,
   Zap,
   Mail,
-  Phone
+  Phone,
+  Edit3,
+  Trash2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,7 +40,8 @@ import {
   useUser, 
   useMemoFirebase, 
   addDocumentNonBlocking, 
-  updateDocumentNonBlocking 
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking
 } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
@@ -164,11 +167,24 @@ export default function CorrespondentsModule() {
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Filtrar diligência, cidade ou tipo..." className="pl-12 glass border-white/5 h-12 text-xs text-white rounded-xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input placeholder="Filtrar..." className="pl-12 glass border-white/5 h-12 text-xs text-white rounded-xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <Button onClick={() => { setEditingItem(null); setIsDiligenceOpen(true); }} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl">
-            <Plus className="h-4 w-4" /> NOVA ORDEM FREELANCE
-          </Button>
+          
+          {activeTab === 'diligencias' && (
+            <Button onClick={() => { setEditingItem(null); setIsDiligenceOpen(true); }} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl">
+              <Plus className="h-4 w-4" /> NOVA ORDEM FREELANCE
+            </Button>
+          )}
+          {activeTab === 'freelancers' && (
+            <Button onClick={() => { setEditingItem(null); setIsFreelancerOpen(true); }} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl">
+              <UserPlus className="h-4 w-4" /> NOVO CORRESPONDENTE
+            </Button>
+          )}
+          {activeTab === 'entidades' && (
+            <Button onClick={() => { setEditingItem(null); setIsCounterpartyOpen(true); }} className="gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl">
+              <Building2 className="h-4 w-4" /> NOVO SOLICITANTE
+            </Button>
+          )}
         </div>
       </div>
 
@@ -265,7 +281,7 @@ export default function CorrespondentsModule() {
                 <Card key={f.id} className="glass border-white/5 p-8 rounded-3xl hover:border-primary/30 transition-all group cursor-pointer shadow-xl" onClick={() => { setEditingItem(f); setIsFreelancerOpen(true); }}>
                   <div className="flex items-start justify-between mb-6">
                     <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-lg">
-                      <AvatarFallback className="bg-secondary text-primary font-black text-lg">{f.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback className="bg-secondary text-primary font-black text-lg">{f.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/20 text-primary bg-primary/5 px-3">CORRESPONDENTE</Badge>
                   </div>
