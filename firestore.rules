@@ -36,6 +36,11 @@ service cloud.firestore {
       allow write: if isUser(emailId) || isAdmin();
     }
 
+    // Preferências de Notificação: Usuário acessa seu próprio ID
+    match /notification_preferences/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // Leads e Entrevistas
     match /leads/{leadId} {
       allow read, write: if isSignedIn();

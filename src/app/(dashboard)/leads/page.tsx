@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -107,7 +106,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from "@/firebase"
 import { cn, maskCEP } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { BurocraciaView } from "@/components/leads/burocracia-view"
@@ -246,11 +245,7 @@ export default function LeadsPage() {
           state: data.uf.toUpperCase()
         }))
       }
-    } catch (e) {
-      console.error("CEP error")
-    } finally {
-      setLoadingIntakeCep(false)
-    }
+    } catch (e) { console.error("CEP error") } finally { setLoadingIntakeCep(false) }
   }
 
   const handleOpenLead = (lead: any) => { 
@@ -260,51 +255,55 @@ export default function LeadsPage() {
   }
 
   const handleScheduleIntake = async () => {
-    if (!db || !activeLead || !intakeData.date || !intakeData.time) return
+    if (!db || !activeLead || !intakeData.date) {
+      toast({ variant: "destructive", title: "Dados Incompletos" })
+      return
+    }
     setIsSyncingIntake(true)
     
     let finalLocation = ""
     if (intakeData.type === 'online') {
-      finalLocation = googleSettings.isMeetActive ? 'GOOGLE MEET RGMJ' : 'REUNIÃO ONLINE'
+      finalLocation = "GOOGLE MEET RGMJ"
     } else {
       if (intakeData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        finalLocation = (intakeData.address || "") + ", " + (intakeData.number || "") + " - " + (intakeData.neighborhood || "") + ", " + (intakeData.city || "") + "/" + (intakeData.state || "")
+        const addr = intakeData.address || ""
+        const num = intakeData.number || ""
+        const neigh = intakeData.neighborhood || ""
+        const cit = intakeData.city || ""
+        const st = intakeData.state || ""
+        finalLocation = `${addr}, ${num} - ${neigh}, ${cit}/${st}`
       }
     }
     
-    const payload = { 
+    const timeVal = intakeData.time || "09:00"
+    const dateTimeStr = intakeData.date + "T" + timeVal + ":00";
+    const appRef = doc(collection(db, "appointments"));
+    const docRefId = appRef.id;
+
+    updateDocumentNonBlocking(doc(db, "leads", activeLead.id), { 
       scheduledDate: intakeData.date, 
       scheduledTime: intakeData.time, 
       meetingType: intakeData.type, 
       meetingLocation: finalLocation, 
-      zipCode: intakeData.zipCode,
-      address: intakeData.address,
-      number: intakeData.number,
-      neighborhood: intakeData.neighborhood,
-      city: intakeData.city,
-      state: intakeData.state,
       updatedAt: serverTimestamp() 
-    }
-    const preparedGoogleToken = googleSettings.isCalendarActive
-      ? await getValidGoogleAccessToken(auth)
-      : null
-    updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
+    })
     
-    const appointmentRes = await addDocumentNonBlocking(collection(db, "appointments"), { 
+    setDocumentNonBlocking(appRef, { 
+      id: docRefId,
       title: "TRIAGEM: " + activeLead.name, 
       type: "Atendimento", 
-      startDateTime: intakeData.date + "T" + intakeData.time + ":00", 
+      startDateTime: dateTimeStr, 
       clientId: activeLead.id, 
       clientName: activeLead.name, 
       location: finalLocation, 
       status: "Agendado", 
-      createdAt: serverTimestamp() 
-    })
-    const appointmentId = (appointmentRes as any).id;
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true })
 
-    let meetLink = "";
+    const preparedGoogleToken = googleSettings.isCalendarActive ? await getValidGoogleAccessToken(auth) : null;
     const calendarSync = await syncActToGoogleCalendar({
       auth,
       accessToken: preparedGoogleToken,
@@ -313,7 +312,7 @@ export default function LeadsPage() {
         title: "[TRIAGEM] " + activeLead.name,
         description: "Atendimento inicial do lead RGMJ.",
         location: finalLocation,
-        startDateTime: intakeData.date + "T" + intakeData.time + ":00",
+        startDateTime: dateTimeStr,
         type: 'atendimento',
         clientName: activeLead.name,
         useMeet: intakeData.type === 'online' && intakeData.autoMeet
@@ -321,34 +320,12 @@ export default function LeadsPage() {
     })
 
     if (calendarSync.status === 'synced') {
-      meetLink = calendarSync.meetingUrl || ""
-      updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
-        meetingUrl: meetLink,
+      updateDocumentNonBlocking(appRef, {
+        meetingUrl: calendarSync.meetingUrl || "",
         calendarEventId: calendarSync.calendarEventId,
         calendarSyncStatus: 'synced',
-        calendarSyncError: null,
         updatedAt: serverTimestamp()
       })
-    } else {
-      updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
-        calendarSyncStatus: calendarSync.status,
-        calendarSyncError: calendarSync.errorMessage || null,
-        updatedAt: serverTimestamp()
-      })
-
-      toast({
-        variant: 'destructive',
-        title: 'Triagem salva no sistema',
-        description: calendarSync.errorMessage || 'Google Calendar não sincronizou.'
-      })
-    }
-
-    if (activeLead.phone) {
-      const cleanPhone = activeLead.phone.replace(/\D/g, "");
-      const meetPart = meetLink ? (" Link da reunião: " + meetLink) : "";
-      const locPart = intakeData.type === 'presencial' ? (" Local: " + finalLocation) : "";
-      const msg = "Olá " + activeLead.name + "! Seu atendimento de TRIAGEM foi agendado para o dia " + new Date(intakeData.date).toLocaleDateString('pt-BR') + " às " + intakeData.time + "." + locPart + meetPart + " Dr. Reinaldo - RGMJ."
-      window.open("https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(msg), "_blank")
     }
 
     setIsSyncingIntake(false)
@@ -420,7 +397,7 @@ export default function LeadsPage() {
                     <div className="space-y-1">
                       <SheetTitle className="text-2xl font-black uppercase text-white tracking-tight leading-none">{activeLead.name}</SheetTitle>
                       <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-widest opacity-50">
-                        {activeLead.scheduledDate ? ("TRIAGEM AGENDADA: " + new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime) : 'AGUARDANDO AGENDAMENTO'}
+                        {activeLead.scheduledDate ? ("TRIAGEM: " + activeLead.scheduledDate) : 'AGUARDANDO AGENDAMENTO'}
                       </SheetDescription>
                     </div>
                   </div>
@@ -443,7 +420,7 @@ export default function LeadsPage() {
                             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center"><ArrowRight className="h-5 w-5 text-amber-500" /></div>
                           </div>
                           <div className="space-y-4">
-                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? (new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime) : "AGUARDANDO DEFINIÇÃO"}</p>
+                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? (activeLead.scheduledDate + " " + activeLead.scheduledTime) : "AGUARDANDO DEFINIÇÃO"}</p>
                             <Badge variant="outline" className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] h-8 px-4 border-white/10">{activeLead.meetingLocation || "LOCAL NÃO INFORMADO"}</Badge>
                           </div>
                         </Card>
@@ -472,7 +449,6 @@ export default function LeadsPage() {
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Atendimento</DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Passo {intakeStep} de 5</Badge>
-                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">{activeLead?.name}</span>
                 </div>
               </div>
             </div>
@@ -509,7 +485,7 @@ export default function LeadsPage() {
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação do Lead</Label>
                   <div className="space-y-6">
                     <div className="space-y-2"><Label className={labelMini}>Identificação do Compromisso</Label><Input value={"TRIAGEM: " + (activeLead?.name || "")} className="bg-black/40 h-14 text-white font-black" disabled /></div>
-                    <div className="space-y-2"><Label className={labelMini}>Pauta / Observações</Label><Textarea value={intakeData.observations} onChange={e => setIntakeData({...intakeData, observations: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Assuntos a tratar no primeiro contato..." /></div>
+                    <div className="space-y-2"><Label className={labelMini}>Pauta / Observações</Label><Textarea value={intakeData.observations} onChange={e => setIntakeData({...intakeData, observations: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Assuntos a tratar..." /></div>
                   </div>
                 </div>
               )}
@@ -519,7 +495,7 @@ export default function LeadsPage() {
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística de Atendimento</Label>
                   {intakeData.type === 'online' ? (
                     <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
-                      <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet RGMJ</h4>
+                      <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet Hub</h4>
                       <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
                         <Switch checked={intakeData.autoMeet} onCheckedChange={v => setIntakeData({...intakeData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
                         <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
@@ -528,19 +504,14 @@ export default function LeadsPage() {
                   ) : (
                     <div className="space-y-6">
                       <RadioGroup value={intakeData.locationType} onValueChange={v => setIntakeData({...intakeData, locationType: v})} className="grid grid-cols-2 gap-4">
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'sede'})}>
                           <Building className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
                         </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'custom' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'custom'})}>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", intakeData.locationType === 'custom' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, locationType: 'custom'})}>
                           <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                         </div>
                       </RadioGroup>
-                      {intakeData.locationType === 'sede' ? (
-                        <div className="space-y-2 animate-in fade-in">
-                          <Label className={labelMini}>Endereço do Atendimento</Label>
-                          <Input value="SEDE RGMJ" disabled className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl border-primary/20 opacity-50" />
-                        </div>
-                      ) : (
+                      {intakeData.locationType === 'custom' && (
                         <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
@@ -588,7 +559,7 @@ export default function LeadsPage() {
 
               {intakeStep === 5 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Consolidação de Triagem</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Consolidação</Label>
                   <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl">
                       <ShieldCheck className="h-8 w-8" />
@@ -599,7 +570,7 @@ export default function LeadsPage() {
                     </div>
                     <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
                       <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                        {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : ("Atendimento Presencial em: " + (intakeData.locationType === 'sede' ? 'Sede RGMJ' : (intakeData.address + ", " + intakeData.number)))}
+                        {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : "Atendimento Presencial Programado."}
                       </p>
                     </div>
                   </Card>
@@ -613,11 +584,11 @@ export default function LeadsPage() {
               {intakeStep > 1 ? "ANTERIOR" : "CANCELAR"}
             </Button>
             {intakeStep < 5 ? (
-              <Button onClick={() => setIntakeStep(intakeStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 gap-3">
+              <Button onClick={() => setIntakeStep(intakeStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] gap-3">
                 PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-95 gap-4">
+              <Button onClick={handleScheduleIntake} disabled={isSyncingIntake} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] gap-4">
                 {isSyncingIntake ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
                 CONFIRMAR E SINCRONIZAR
               </Button>

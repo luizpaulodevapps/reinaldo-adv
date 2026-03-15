@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -54,8 +53,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
-import { collection, query, orderBy, serverTimestamp, doc, limit, where } from "firebase/firestore"
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from "@/firebase"
+import { collection, query, orderBy, serverTimestamp, doc, limit } from "firebase/firestore"
 import { cn, maskCurrency, parseCurrencyToNumber, maskCEP } from "@/lib/utils"
 import { 
   Sheet, 
@@ -78,7 +77,6 @@ import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
@@ -178,90 +176,80 @@ export default function CasesPage() {
   }, [filteredProcesses])
 
   const handleSyncDrive = async (proc: any) => {
-    if (!db || !proc) {
-      toast({ variant: "destructive", title: "Configuração Pendente" })
-      return
-    }
-
+    if (!db || !proc) return
     if (!googleConfig.isDriveActive) {
-      toast({ variant: "destructive", title: "Google Drive Desativado", description: "Ative o Drive no Hub Google para liberar o sincronismo de dossiês." })
+      toast({ variant: "destructive", title: "Drive Desativado" })
       return
     }
-
-    if (!googleConfig.rootFolderId) {
-      toast({ variant: "destructive", title: "Configuração Pendente", description: "Defina a pasta raiz do Google Drive nas configurações do sistema." })
-      return
-    }
-
     const accessToken = await getValidGoogleAccessToken(auth);
-    if (!accessToken) {
-      toast({ variant: "destructive", title: "Google Desconectado" })
-      return
-    }
-
+    if (!accessToken) return
     setSyncingDriveId(proc.id)
     try {
       const workspace = await setupClientWorkspace({
         accessToken,
         rootFolderId: googleConfig.rootFolderId,
         clientName: proc.clientName,
-        processInfo: {
-          number: proc.processNumber,
-          description: proc.description || "DEMANDA"
-        }
+        processInfo: { number: proc.processNumber, description: proc.description || "DEMANDA" }
       });
       updateDocumentNonBlocking(doc(db, "processes", proc.id), {
         driveFolderId: workspace.processFolderId || workspace.clientFolderId,
         driveFolderUrl: workspace.processFolderUrl || workspace.clientFolderUrl,
         updatedAt: serverTimestamp()
       })
-      toast({ title: "Dossiê Sincronizado", description: "Estrutura real criada no Google Drive." })
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro no Sincronismo",
-        description: error instanceof Error ? error.message : "Falha ao criar a estrutura no Google Drive."
-      })
+      toast({ title: "Dossiê Sincronizado" })
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro Sincronismo" })
     } finally {
       setSyncingDriveId(null)
     }
   }
 
   const handleScheduleMeeting = async () => {
-    if (!db || !activeActionProcess) return
+    if (!db || !activeActionProcess || !meetingData.date) {
+      toast({ variant: "destructive", title: "Dados Incompletos" })
+      return
+    }
     setIsSyncingAct(true)
     
     let finalLocation = ""
     if (meetingData.type === 'online') {
-      finalLocation = meetingData.location || (googleConfig.isMeetActive ? 'GOOGLE MEET RGMJ' : 'REUNIÃO ONLINE')
+      finalLocation = meetingData.location || "GOOGLE MEET RGMJ"
     } else {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        finalLocation = (meetingData.address || "") + ", " + (meetingData.number || "") + " - " + (meetingData.neighborhood || "") + ", " + (meetingData.city || "") + "/" + (meetingData.state || "")
+        const addr = meetingData.address || ""
+        const num = meetingData.number || ""
+        const neigh = meetingData.neighborhood || ""
+        const cit = meetingData.city || ""
+        const st = meetingData.state || ""
+        finalLocation = `${addr}, ${num} - ${neigh}, ${cit}/${st}`
       }
     }
     
     const dateTimeStr = meetingData.date + "T" + (meetingData.time || "09:00") + ":00";
+    const appRef = doc(collection(db, "appointments"));
+    const docRefId = appRef.id;
+
     const payload: any = {
+      id: docRefId,
       title: meetingData.title.toUpperCase() || ("REUNIÃO: " + activeActionProcess.clientName),
       type: "Atendimento",
       startDateTime: dateTimeStr,
       clientName: activeActionProcess.clientName,
       processId: activeActionProcess.id,
+      processNumber: activeActionProcess.processNumber,
       meetingType: meetingData.type,
       location: finalLocation,
       notes: meetingData.notes,
       status: "Agendado",
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     }
-    const preparedGoogleToken = googleConfig.isCalendarActive
-      ? await getValidGoogleAccessToken(auth)
-      : null
-    
-    const docRefRes = await addDocumentNonBlocking(collection(db, "appointments"), payload)
-    const docRefId = (docRefRes as any).id;
 
+    setDocumentNonBlocking(appRef, payload, { merge: true });
+
+    const preparedGoogleToken = googleConfig.isCalendarActive ? await getValidGoogleAccessToken(auth) : null;
     const calendarSync = await syncActToGoogleCalendar({
       auth,
       accessToken: preparedGoogleToken,
@@ -279,24 +267,11 @@ export default function CasesPage() {
     })
 
     if (calendarSync.status === 'synced') {
-      updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
+      updateDocumentNonBlocking(appRef, {
         meetingUrl: calendarSync.meetingUrl || "",
         calendarEventId: calendarSync.calendarEventId,
         calendarSyncStatus: 'synced',
-        calendarSyncError: null,
         updatedAt: serverTimestamp()
-      })
-    } else {
-      updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
-        calendarSyncStatus: calendarSync.status,
-        calendarSyncError: calendarSync.errorMessage || null,
-        updatedAt: serverTimestamp()
-      })
-
-      toast({
-        variant: 'destructive',
-        title: 'Atendimento salvo no sistema',
-        description: calendarSync.errorMessage || 'Google Calendar não sincronizou.'
       })
     }
 
@@ -306,9 +281,11 @@ export default function CasesPage() {
   }
 
   const handleLaunchDeadline = async () => { 
-    if (!db || !activeActionProcess) return; 
+    if (!db || !activeActionProcess || !deadlineData.fatalDate) return; 
     setIsSyncingAct(true); 
-    await addDocumentNonBlocking(collection(db, "deadlines"), { 
+    const deadRef = doc(collection(db, "deadlines"));
+    await setDocumentNonBlocking(deadRef, { 
+      id: deadRef.id,
       title: deadlineData.title.toUpperCase(), 
       dueDate: deadlineData.fatalDate, 
       pubDate: deadlineData.pubDate, 
@@ -316,8 +293,9 @@ export default function CasesPage() {
       processId: activeActionProcess.processNumber || activeActionProcess.id, 
       clientName: activeActionProcess.clientName,
       status: "Aberto", 
-      createdAt: serverTimestamp() 
-    }); 
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true }); 
     setIsSyncingAct(false); 
     setIsDeadlineOpen(false); 
     toast({ title: "Prazo Injetado" }); 
@@ -342,8 +320,6 @@ export default function CasesPage() {
     setDeadlineData({ ...deadlineData, fatalDate: format(calculatedDate, 'yyyy-MM-dd') }); 
   }
 
-  const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
-
   const handleMeetingCepBlur = async () => {
     const cep = meetingData.zipCode?.replace(/\D/g, "")
     if (!cep || cep.length !== 8) return
@@ -360,12 +336,10 @@ export default function CasesPage() {
           state: data.uf.toUpperCase()
         }))
       }
-    } catch (e) {
-      console.error("CEP error")
-    } finally {
-      setLoadingMeetingCep(false)
-    }
+    } catch (e) { console.error("CEP error") } finally { setLoadingMeetingCep(false) }
   }
+
+  const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
@@ -614,14 +588,14 @@ export default function CasesPage() {
                   ) : (
                     <div className="space-y-6">
                       <RadioGroup value={meetingData.locationType} onValueChange={v => setMeetingData({...meetingData, locationType: v})} className="grid grid-cols-2 gap-4">
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
-                          <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Sede RGMJ</span>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                          <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
                         </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", meetingData.locationType === 'custom' ? "bg-primary/10 border-primary shadow-lg" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'custom'})}>
-                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
+                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
+                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                         </div>
                       </RadioGroup>
-                      {meetingData.locationType === 'custom' && (
+                      {meetingData.locationType === 'externo' && (
                         <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
@@ -660,7 +634,7 @@ export default function CasesPage() {
 
               {meetingStep === 5 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Consolidação do Registro</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Consolidação</Label>
                   <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
                     <div className="space-y-2">
@@ -669,7 +643,7 @@ export default function CasesPage() {
                     </div>
                     <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
                       <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                        {meetingData.type === 'online' ? "Sincronismo Workspace Ativo. Meet link será injetado." : "Atendimento Presencial Selecionado."}
+                        {meetingData.type === 'online' ? "Sincronismo Workspace Ativo. O Meet link será gerado." : "Atendimento Presencial Programado."}
                       </p>
                     </div>
                   </Card>
