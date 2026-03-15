@@ -1,11 +1,9 @@
-
 'use server';
 
 /**
  * @fileOverview Serviço de integração tática com Google Calendar API para a banca RGMJ.
  * 
  * - pushActToGoogleCalendar: Injeta qualquer ato jurídico (audiência, prazo, diligência) na agenda do responsável.
- * - Suporta geração automática de Google Meet links via conferenceData.
  */
 
 interface CalendarEventParams {
@@ -27,23 +25,31 @@ export async function pushActToGoogleCalendar({ accessToken, act }: CalendarEven
   if (!accessToken) return { success: false, error: 'Token de acesso não fornecido.' };
 
   const colorMap: Record<string, string> = {
-    audiencia: "11", // Vermelho/Rose
-    freelance: "7",  // Turquesa/Cyan
-    prazo: "4",      // Amarelo/Gold
+    audiencia: "11", // Vermelho
+    freelance: "7",  // Turquesa
+    prazo: "4",      // Ouro
     diligencia: "9", // Azul
     atendimento: "5" // Amarelo
   };
 
   const isDeadline = act.type === 'prazo';
   
+  // Garante que o formato do fuso horário esteja correto para o Google
+  const formatDateTime = (dt: string) => {
+    if (!dt) return "";
+    if (dt.includes('Z') || dt.includes('-') && dt.lastIndexOf('-') > 10) return dt;
+    // Assume Brasília (-03:00) se for naive
+    return `${dt}-03:00`;
+  }
+
   const start = isDeadline 
     ? { date: act.startDateTime.split('T')[0] } 
-    : { dateTime: act.startDateTime, timeZone: 'America/Sao_Paulo' };
+    : { dateTime: formatDateTime(act.startDateTime), timeZone: 'America/Sao_Paulo' };
     
   const end = isDeadline 
     ? { date: act.startDateTime.split('T')[0] } 
     : { 
-        dateTime: act.endDateTime || new Date(new Date(act.startDateTime).getTime() + 60 * 60 * 1000).toISOString(), 
+        dateTime: formatDateTime(act.endDateTime || new Date(new Date(act.startDateTime).getTime() + 60 * 60 * 1000).toISOString()), 
         timeZone: 'America/Sao_Paulo' 
       };
 
@@ -63,7 +69,6 @@ export async function pushActToGoogleCalendar({ accessToken, act }: CalendarEven
     },
   };
 
-  // Solicitar criação de Meet se for atendimento ou audiência virtual
   if (act.useMeet) {
     body.conferenceData = {
       createRequest: {
@@ -87,14 +92,12 @@ export async function pushActToGoogleCalendar({ accessToken, act }: CalendarEven
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Google Calendar Error:', error);
-      throw new Error('Falha ao sincronizar com Google Workspace.');
+      const errorText = await response.text();
+      console.error('Google Calendar Error:', errorText);
+      throw new Error(`Google API Error: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Retorna o link do Meet se gerado
     const hangoutLink = data.hangoutLink || (data.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri);
     
     return {
@@ -103,34 +106,6 @@ export async function pushActToGoogleCalendar({ accessToken, act }: CalendarEven
     };
   } catch (error) {
     console.error('RGMJ Calendar Push Error:', error);
-    throw error;
-  }
-}
-
-export async function listGoogleEvents(accessToken: string, timeMin?: string) {
-  try {
-    const queryParams = new URLSearchParams({
-      timeMin: timeMin || new Date().toISOString(),
-      singleEvents: 'true',
-      orderBy: 'startTime',
-    });
-
-    const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${queryParams.toString()}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) throw new Error('Falha na auditoria da agenda Google.');
-    const data = await response.json();
-    return data.items || [];
-  } catch (error) {
-    console.error('RGMJ Calendar List Error:', error);
     throw error;
   }
 }

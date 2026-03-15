@@ -23,10 +23,17 @@ export default function GoogleLoginButton() {
 
     try {
       const provider = new GoogleAuthProvider()
-      provider.addScope('profile')
-      provider.addScope('email')
+      provider.addScope('https://www.googleapis.com/auth/calendar.events')
+      provider.addScope('https://www.googleapis.com/auth/drive.file')
       
-      await signInWithPopup(auth, provider)
+      const result = await signInWithPopup(auth, provider)
+      
+      // Captura o Access Token para operações de Workspace (Calendar/Drive)
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        localStorage.setItem('google_access_token', credential.accessToken);
+      }
+
       router.push('/dashboard')
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {

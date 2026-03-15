@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect, useRef } from "react"
@@ -196,21 +195,13 @@ export default function CasesPage() {
 
   const handleSyncDrive = async (proc: any) => {
     if (!db || !proc || !googleConfig?.rootFolderId) {
-      toast({ 
-        variant: "destructive", 
-        title: "Configuração Pendente", 
-        description: "O Root Folder ID do Google Drive não foi configurado." 
-      })
+      toast({ variant: "destructive", title: "Configuração Pendente" })
       return
     }
 
     const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
     if (!accessToken) {
-      toast({ 
-        variant: "destructive", 
-        title: "Google Workspace Desconectado", 
-        description: "Login com Google necessário." 
-      })
+      toast({ variant: "destructive", title: "Google Desconectado" })
       return
     }
 
@@ -225,7 +216,7 @@ export default function CasesPage() {
           description: proc.description || "DEMANDA"
         }
       });
-      toast({ title: "Dossiê Sincronizado", description: "Pastas criadas no Drive." })
+      toast({ title: "Dossiê Sincronizado" })
     } catch (error) {
       toast({ variant: "destructive", title: "Erro no Sincronismo" })
     } finally {
@@ -248,31 +239,23 @@ export default function CasesPage() {
       }
     }
     
+    const dateTimeStr = `${meetingData.date}T${meetingData.time}:00`;
     const payload: any = {
       title: meetingData.title.toUpperCase() || `REUNIÃO: ${activeActionProcess.clientName}`,
       type: "Atendimento",
-      startDateTime: `${meetingData.date}T${meetingData.time}:00`,
-      clientId: activeActionProcess.clientId || "",
+      startDateTime: dateTimeStr,
       clientName: activeActionProcess.clientName,
       processId: activeActionProcess.id,
       meetingType: meetingData.type,
-      locationType: meetingData.locationType,
       location: finalLocation,
       notes: meetingData.notes,
       status: "Agendado",
-      zipCode: meetingData.zipCode,
-      address: meetingData.address,
-      number: meetingData.number,
-      neighborhood: meetingData.neighborhood,
-      city: meetingData.city,
-      state: meetingData.state,
       createdAt: serverTimestamp()
     }
     
     const docRefRes = await addDocumentNonBlocking(collection(db, "appointments"), payload)
     const docRefId = (docRefRes as any).id;
 
-    let meetLink = "";
     try {
       const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
       if (accessToken) {
@@ -282,7 +265,7 @@ export default function CasesPage() {
             title: payload.title,
             description: payload.notes,
             location: payload.location,
-            startDateTime: payload.startDateTime,
+            startDateTime: dateTimeStr,
             type: 'atendimento',
             processNumber: activeActionProcess.processNumber,
             clientName: payload.clientName,
@@ -290,25 +273,15 @@ export default function CasesPage() {
           }
         })
 
-        if (calRes && (calRes.id || calRes.hangoutLink)) {
-          meetLink = calRes.hangoutLink || "";
+        if (calRes?.hangoutLink || calRes?.id) {
           updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
-            meetingUrl: meetLink,
+            meetingUrl: calRes.hangoutLink || "",
             calendarEventId: calRes.id,
             updatedAt: serverTimestamp()
           })
         }
       }
     } catch (e) { console.warn("Calendar sync failed", e) }
-
-    if (activeActionProcess.phone || activeActionProcess.clientPhone) {
-      const contact = activeActionProcess.phone || activeActionProcess.clientPhone || "";
-      const cleanPhone = contact.replace(/\D/g, "");
-      const meetPart = meetLink ? ` Link da Reunião: ${meetLink}` : "";
-      const locPart = meetingData.type === 'presencial' ? ` Local: ${finalLocation}` : "";
-      const msg = `Olá ${activeActionProcess.clientName}! Confirmamos seu AGENDAMENTO para o dia ${new Date(meetingData.date).toLocaleDateString('pt-BR')} às ${meetingData.time}.${locPart}${meetPart} Dr. Reinaldo - RGMJ.`
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
-    }
 
     setIsSyncingAct(false)
     setIsMeetingOpen(false)
@@ -323,8 +296,6 @@ export default function CasesPage() {
       dueDate: deadlineData.fatalDate, 
       pubDate: deadlineData.pubDate, 
       description: deadlineData.description.toUpperCase(), 
-      priority: deadlineData.priority, 
-      calculationType: deadlineData.calculationType, 
       processId: activeActionProcess.processNumber || activeActionProcess.id, 
       clientName: activeActionProcess.clientName,
       status: "Aberto", 
@@ -332,7 +303,7 @@ export default function CasesPage() {
     }); 
     setIsSyncingAct(false); 
     setIsDeadlineOpen(false); 
-    toast({ title: "Prazo Injetado no Radar" }); 
+    toast({ title: "Prazo Injetado" }); 
   }
 
   const handleAiParsePublication = async () => { 
@@ -341,8 +312,7 @@ export default function CasesPage() {
     try { 
       const result = await aiParseDjePublication({ publicationText }); 
       setDeadlineData({ ...deadlineData, title: result.deadlineType?.toUpperCase() || "PRAZO JUDICIAL", fatalDate: result.dueDate || "", description: result.summary?.toUpperCase() || "" }); 
-      toast({ title: "Inteligência RGMJ Concluída" }); 
-    } catch (e) { toast({ variant: "destructive", title: "Erro na Análise IA" }); } finally { setIsAnalyzing(false); } 
+    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }); } finally { setIsAnalyzing(false); } 
   }
 
   const handleApplyDeadlineCalculation = () => { 
@@ -446,34 +416,16 @@ export default function CasesPage() {
                         <MoreVertical className="h-6 w-6 text-muted-foreground group-hover/menu:text-primary transition-colors" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[320px] bg-[#0d121f] border-white/10 text-white p-2 rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] font-sans">
-                      <div className="px-4 py-3 border-b border-white/5 mb-2">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Gestão do Caso</p>
-                      </div>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 cursor-pointer group">
-                        <History className="h-5 w-5 text-muted-foreground/40 group-hover:text-white" /> VER PROCESSO COMPLETO
+                    <DropdownMenuContent align="end" className="w-[320px] bg-[#0d121f] border-white/10 text-white p-2 rounded-2xl shadow-2xl font-sans">
+                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
+                        <Calendar className="h-5 w-5" /> AGENDAR ATENDIMENTO
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer group">
-                        <Calendar className="h-5 w-5" /> AGENDAR REUNIÃO/ATEND.
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer group">
-                        <ListChecks className="h-5 w-5" /> AGENDAR DILIGÊNCIA
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer group">
+                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer">
                         <AlarmClock className="h-5 w-5" /> LANÇAR PRAZO FATAL
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-[#f5d030]/10 text-[#f5d030] cursor-pointer group">
-                        <Gavel className="h-5 w-5" /> AGENDAR AUDIÊNCIA
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-sky-500/10 text-sky-400 cursor-pointer group">
-                        <DollarSign className="h-5 w-5" /> EVENTO FINANCEIRO
-                      </DropdownMenuItem>
                       <div className="h-px bg-white/5 my-2" />
-                      <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer group">
+                      <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer">
                         <Edit3 className="h-5 w-5" /> EDITAR PROCESSO
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db!, "processes", proc.id))} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600/10 text-rose-600 cursor-pointer group">
-                        <Trash2 className="h-5 w-5" /> ARQUIVAR PROCESSO
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -498,14 +450,14 @@ export default function CasesPage() {
                   <Label className={labelMini}>JUÍZO / COMARCA</Label>
                   <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 gap-3 overflow-hidden">
                     <Gavel className="h-4 w-4 text-primary/40 flex-none" />
-                    <span className="text-[10px] font-black text-white/60 uppercase truncate">{proc.vara || "---"} — ({proc.court || "---"})</span>
+                    <span className="text-[10px] font-black text-white/60 uppercase truncate">{proc.vara || "---"}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className={labelMini}>VALOR DA CAUSA</Label>
                   <div className="h-12 bg-black/40 border border-white/5 rounded-xl flex items-center px-4 gap-3">
                     <TrendingUp className="h-4 w-4 text-emerald-500/40" />
-                    <span className="text-xs font-black text-emerald-400 tabular-nums">R$ {maskCurrency(proc.value || 0)}</span>
+                    <span className="text-xs font-black text-emerald-400">R$ {maskCurrency(proc.value || 0)}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -532,10 +484,6 @@ export default function CasesPage() {
                     <ExternalLink className="h-4 w-4" /> PORTAL JUDICIÁRIO
                   </Button>
                 </div>
-                <div className="flex items-center gap-2.5 opacity-20 group-hover:opacity-40 transition-opacity">
-                  <FileText className="h-3.5 w-3.5" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">PROTOCOLO: {proc.id.substring(0,8).toUpperCase()}</span>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -549,11 +497,10 @@ export default function CasesPage() {
               <div className={cn("w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500", isSyncingAct && "animate-pulse")}>
                 {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Calendar className="h-6 w-6" />}
               </div>
-              <div className="text-left">
+              <div>
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Atendimento</DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Passo {meetingStep} de 5</Badge>
-                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-50">{activeActionProcess?.clientName}</span>
                 </div>
               </div>
             </div>
@@ -579,7 +526,7 @@ export default function CasesPage() {
 
               {meetingStep === 2 && (
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">2. Cronograma do Atendimento</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">2. Cronograma</Label>
                   <div className="grid grid-cols-2 gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-2xl shadow-xl">
                     <div className="space-y-2"><Label className={labelMini}>Data</Label><Input type="date" className="bg-black/40 h-14 text-white font-bold rounded-xl" value={meetingData.date} onChange={e => setMeetingData({...meetingData, date: e.target.value})} /></div>
                     <div className="space-y-2"><Label className={labelMini}>Hora</Label><Input type="time" className="bg-black/40 h-14 text-white font-bold rounded-xl" value={meetingData.time} onChange={e => setMeetingData({...meetingData, time: e.target.value})} /></div>
@@ -599,7 +546,7 @@ export default function CasesPage() {
 
               {meetingStep === 4 && (
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística do Encontro</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística</Label>
                   {meetingData.type === 'online' ? (
                     <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                       <Video className="h-12 w-12 text-emerald-500 mx-auto" />
@@ -619,12 +566,7 @@ export default function CasesPage() {
                           <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase">Externo</span>
                         </div>
                       </RadioGroup>
-                      {meetingData.locationType === 'sede' ? (
-                        <div className="space-y-2 animate-in fade-in">
-                          <Label className={labelMini}>Endereço do Atendimento</Label>
-                          <Input value="SEDE RGMJ" disabled className="bg-black/40 h-14 text-white font-bold px-6 rounded-xl border-primary/20 opacity-50" />
-                        </div>
-                      ) : (
+                      {meetingData.locationType === 'custom' && (
                         <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
@@ -649,20 +591,6 @@ export default function CasesPage() {
                               <Input value={meetingData.number} onChange={e => setMeetingData({...meetingData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" />
                             </div>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label className={labelMini}>Bairro</Label>
-                              <Input value={meetingData.neighborhood} onChange={e => setMeetingData({...meetingData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className={labelMini}>Cidade</Label>
-                              <Input value={meetingData.city} onChange={e => setMeetingData({...meetingData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className={labelMini}>UF</Label>
-                              <Input value={meetingData.state} onChange={e => setMeetingData({...meetingData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" />
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -677,12 +605,7 @@ export default function CasesPage() {
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
                     <div className="space-y-2">
                       <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeActionProcess?.clientName}</h4>
-                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(meetingData.date).toLocaleDateString()} às {meetingData.time}</p>
-                    </div>
-                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
-                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                        O rito de sincronismo disparará o convite Google e preparará o disparo WhatsApp com o link tático.
-                      </p>
+                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{meetingData.date} às {meetingData.time}</p>
                     </div>
                   </Card>
                 </div>
@@ -690,88 +613,86 @@ export default function CasesPage() {
             </div>
           </ScrollArea>
 
-              <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-                <Button variant="ghost" onClick={() => meetingStep > 1 ? setMeetingStep(meetingStep - 1) : setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
-                  {meetingStep > 1 ? "ANTERIOR" : "CANCELAR"}
-                </Button>
-                {meetingStep < 5 ? (
-                  <Button onClick={() => setMeetingStep(meetingStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] gap-3">
-                    PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleScheduleMeeting} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-[0_15px_40px_rgba(245,208,48,0.25)] transition-all hover:scale-[1.02] gap-4">
-                    {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-                    CONFIRMAR E SINCRONIZAR
-                  </Button>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
+            <Button variant="ghost" onClick={() => meetingStep > 1 ? setMeetingStep(meetingStep - 1) : setIsMeetingOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white">
+              {meetingStep > 1 ? "ANTERIOR" : "CANCELAR"}
+            </Button>
+            {meetingStep < 5 ? (
+              <Button onClick={() => setMeetingStep(meetingStep + 1)} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-xl transition-all hover:scale-[1.02] gap-3">
+                PRÓXIMO RITO <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleScheduleMeeting} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] gap-4">
+                {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                CONFIRMAR E SINCRONIZAR
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-          <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-            <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
-              <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-5 flex-none shadow-xl">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><Clock className="h-6 w-6" /></div>
-                <div className="text-left">
-                  <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo Judicial</DialogTitle>
-                  <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">CONTROLE TÁTICO DE VENCIMENTOS RGMJ.</DialogDescription>
+      <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-5 flex-none shadow-xl">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><Clock className="h-6 w-6" /></div>
+            <div className="text-left">
+              <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo Judicial</DialogTitle>
+            </div>
+          </div>
+          <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
+            <div className="p-10 space-y-10 pb-20">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="h-4 w-4" /> Despacho IA</Label>
+                  <Button onClick={handleAiParsePublication} disabled={isAnalyzing || !publicationText} variant="outline" className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] gap-2">{isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />} ANALISAR COM IA</Button>
                 </div>
+                <Textarea placeholder="COLE O TEXTO AQUI..." className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none" value={publicationText} onChange={(e) => setPublicationText(e.target.value.toUpperCase())} />
               </div>
-              <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
-                <div className="p-10 space-y-10 pb-20">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="h-4 w-4" /> Despacho IA</Label>
-                      <Button onClick={handleAiParsePublication} disabled={isAnalyzing || !publicationText} variant="outline" className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] gap-2">{isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />} ANALISAR COM IA</Button>
-                    </div>
-                    <Textarea placeholder="COLE O TEXTO AQUI..." className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none" value={publicationText} onChange={(e) => setPublicationText(e.target.value.toUpperCase())} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={deadlineData.title} onChange={(e) => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
-                    <div className="space-y-3"><Label className={labelMini}>Duração (Dias)</Label><div className="flex gap-4"><Input type="number" className="bg-black/60 h-14 text-white font-black text-center" value={deadlineDuration} onChange={(e) => setDeadlineDuration(e.target.value)} /><Button onClick={handleApplyDeadlineCalculation} variant="outline" className="h-14 border-primary text-primary font-black text-[10px] px-6">CALCULAR</Button></div></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Data Publicação</Label><Input type="date" value={deadlineData.pubDate} onChange={e => setDeadlineData({...deadlineData, pubDate: e.target.value})} className="bg-black/40 h-12" /></div>
-                    <div className="space-y-3"><Label className="text-[10px] font-black text-rose-500 uppercase">Data Fatal *</Label><Input type="date" value={deadlineData.fatalDate} onChange={e => setDeadlineData({...deadlineData, fatalDate: e.target.value})} className="bg-black/40 border-rose-500/30 h-12 text-rose-400 font-black" /></div>
-                  </div>
-                  <div className="space-y-3"><Label className={labelMini}>Providência / Tarefa *</Label><Input value={deadlineData.description} onChange={(e) => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
-                </div>
-              </ScrollArea>
-              <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-xl">
-                <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] hover:text-white">CANCELAR</Button>
-                <Button onClick={handleLaunchDeadline} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">{isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 mr-3" />} CONFIRMAR</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={deadlineData.title} onChange={(e) => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
+                <div className="space-y-3"><Label className={labelMini}>Duração (Dias)</Label><div className="flex gap-4"><Input type="number" className="bg-black/60 h-14 text-white font-black text-center" value={deadlineDuration} onChange={(e) => setDeadlineDuration(e.target.value)} /><Button onClick={handleApplyDeadlineCalculation} variant="outline" className="h-14 border-primary text-primary font-black text-[10px] px-6">CALCULAR</Button></div></div>
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-3"><Label className={labelMini}>Data Publicação</Label><Input type="date" value={deadlineData.pubDate} onChange={e => setDeadlineData({...deadlineData, pubDate: e.target.value})} className="bg-black/40 h-12" /></div>
+                <div className="space-y-3"><Label className="text-[10px] font-black text-rose-500 uppercase">Data Fatal *</Label><Input type="date" value={deadlineData.fatalDate} onChange={e => setDeadlineData({...deadlineData, fatalDate: e.target.value})} className="bg-black/40 border-rose-500/30 h-12 text-rose-400 font-black" /></div>
+              </div>
+              <div className="space-y-3"><Label className={labelMini}>Providência / Tarefa *</Label><Input value={deadlineData.description} onChange={(e) => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-xl">
+            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">CANCELAR</Button>
+            <Button onClick={handleLaunchDeadline} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">
+              {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 mr-3" />} CONFIRMAR
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-[1200px]">
-              <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
-                <SheetHeader>
-                  <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
-                    {editingProcess ? "Retificar Dossiê" : "Novo Processo"}
-                  </SheetTitle>
-                  <SheetDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-[0.2em] mt-1">
-                    {editingProcess ? "Ajuste de metadados processuais." : "Injeção estratégica de novo feito no acervo."}
-                  </SheetDescription>
-                </SheetHeader>
-              </div>
-              <ProcessForm 
-                initialData={editingProcess}
-                onSubmit={(data) => {
-                  if (editingProcess) {
-                    updateDocumentNonBlocking(doc(db!, "processes", editingProcess.id), { ...data, updatedAt: serverTimestamp() })
-                    toast({ title: "Processo Atualizado" })
-                  } else {
-                    addDocumentNonBlocking(collection(db!, "processes"), { ...data, status: "Em Andamento", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
-                    toast({ title: "Processo Protocolado" })
-                  }
-                  setIsSheetOpen(false)
-                }}
-                onCancel={() => setIsSheetOpen(false)}
-              />
-            </SheetContent>
-          </Sheet>
-        </div>
-      )
-    }
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="flex flex-col h-full glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl sm:max-w-[1200px]">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex-none">
+            <SheetHeader>
+              <SheetTitle className="text-white font-headline text-3xl uppercase tracking-tighter">
+                {editingProcess ? "Retificar Dossiê" : "Novo Processo"}
+              </SheetTitle>
+            </SheetHeader>
+          </div>
+          <ProcessForm 
+            initialData={editingProcess}
+            onSubmit={(data) => {
+              if (editingProcess) {
+                updateDocumentNonBlocking(doc(db!, "processes", editingProcess.id), { ...data, updatedAt: serverTimestamp() })
+                toast({ title: "Atualizado" })
+              } else {
+                addDocumentNonBlocking(collection(db!, "processes"), { ...data, status: "Em Andamento", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+                toast({ title: "Protocolado" })
+              }
+              setIsSheetOpen(false)
+            }}
+            onCancel={() => setIsSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
+}
