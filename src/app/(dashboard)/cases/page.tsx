@@ -54,7 +54,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, limit, where } from "firebase/firestore"
 import { cn, maskCurrency, parseCurrencyToNumber, maskCEP } from "@/lib/utils"
 import { 
@@ -83,6 +83,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { pushActToGoogleCalendar } from "@/services/google-calendar"
+import { getValidGoogleAccessToken } from "@/services/google-token"
 import { setupClientWorkspace } from "@/services/google-drive"
 
 const AREAS = [
@@ -140,6 +141,7 @@ export default function CasesPage() {
   const [deadlineDuration, setDeadlineDuration] = useState("")
 
   const db = useFirestore()
+  const auth = useAuth()
   const { user, profile } = useUser()
   const { toast } = useToast()
 
@@ -179,7 +181,7 @@ export default function CasesPage() {
       return
     }
 
-    const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+    const accessToken = await getValidGoogleAccessToken(auth);
     if (!accessToken) {
       toast({ variant: "destructive", title: "Google Desconectado" })
       return
@@ -237,7 +239,7 @@ export default function CasesPage() {
     const docRefId = (docRefRes as any).id;
 
     try {
-      const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+      const accessToken = await getValidGoogleAccessToken(auth);
       if (accessToken) {
         const calRes = await pushActToGoogleCalendar({
           accessToken,

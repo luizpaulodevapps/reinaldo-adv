@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { useAuth as getAuth } from '@/firebase'
 import { Button } from '@/components/ui/button'
+import { storeGoogleToken } from '@/services/google-token'
 
 export default function GoogleLoginButton() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function GoogleLoginButton() {
       // Captura o Access Token para operações de Workspace (Calendar/Drive)
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
-        localStorage.setItem('google_access_token', credential.accessToken);
+        storeGoogleToken(credential.accessToken);
       }
 
       router.push('/dashboard')

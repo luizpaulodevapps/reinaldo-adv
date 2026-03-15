@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileOverview Serviço de integração tática com Google Calendar API para a banca RGMJ.
  * 

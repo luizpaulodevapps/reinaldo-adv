@@ -55,7 +55,7 @@ import {
   Archive,
   RotateCcw
 } from "lucide-react"
-import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
+import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
 import { 
   format, 
@@ -92,6 +92,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { pushActToGoogleCalendar } from "@/services/google-calendar"
+import { getValidGoogleAccessToken } from "@/services/google-token"
 
 type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendimento'
 
@@ -132,6 +133,7 @@ export default function MasterAgendaPage() {
   })
 
   const db = useFirestore()
+  const auth = useAuth()
   const { user, profile } = useUser()
   const { toast } = useToast()
 
@@ -352,7 +354,7 @@ export default function MasterAgendaPage() {
 
     let generatedMeetLink = "";
     try {
-      const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+      const accessToken = await getValidGoogleAccessToken(auth);
       if (accessToken) {
         const calRes = await pushActToGoogleCalendar({
           accessToken,

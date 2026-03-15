@@ -107,7 +107,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, where, limit, orderBy } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { cn, maskCEP } from "@/lib/utils"
 import { DynamicInterviewExecution } from "@/components/interviews/dynamic-interview-execution"
 import { BurocraciaView } from "@/components/leads/burocracia-view"
@@ -124,6 +124,7 @@ import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
 import { pushActToGoogleCalendar } from "@/services/google-calendar"
+import { getValidGoogleAccessToken } from "@/services/google-token"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -134,6 +135,7 @@ const columns = [
 
 export default function LeadsPage() {
   const db = useFirestore()
+  const auth = useAuth()
   const { user, profile } = useUser()
   const { toast } = useToast()
   const [listLimit, setListLimit] = useState(50)
@@ -296,7 +298,7 @@ export default function LeadsPage() {
 
     let meetLink = "";
     try {
-      const accessToken = localStorage.getItem('google_access_token') || localStorage.getItem('access_token');
+      const accessToken = await getValidGoogleAccessToken(auth);
       if (accessToken) {
         const calRes = await pushActToGoogleCalendar({
           accessToken,
