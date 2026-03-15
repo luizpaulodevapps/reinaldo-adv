@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -78,10 +79,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { getValidGoogleAccessToken } from "@/services/google-token"
-import { syncActToGoogleCalendar } from "@/services/google-calendar-sync"
+import { syncActToGoogleCalendar, updateActInGoogleCalendar } from "@/services/google-calendar-sync"
 import { setupClientWorkspace } from "@/services/google-drive"
 import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
 
@@ -104,6 +104,8 @@ export default function CasesPage() {
   const [activeActionProcess, setActiveActionProcess] = useState<any>(null)
   const [isMeetingOpen, setIsMeetingOpen] = useState(false)
   const [meetingStep, setMeetingStep] = useState(1)
+  const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
+  const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null)
   
   const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
   const [isSyncingAct, setIsSyncingAct] = useState(false)
@@ -126,18 +128,6 @@ export default function CasesPage() {
     city: "",
     state: ""
   })
-
-  const [deadlineData, setDeadlineData] = useState({ 
-    title: "", 
-    pubDate: format(new Date(), 'yyyy-MM-dd'), 
-    fatalDate: "", 
-    description: "", 
-    priority: "normal", 
-    calculationType: "Dias Úteis (CPC/CLT)" 
-  })
-  const [publicationText, setPublicationText] = useState("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [deadlineDuration, setDeadlineDuration] = useState("")
 
   const db = useFirestore()
   const auth = useAuth()
@@ -204,6 +194,51 @@ export default function CasesPage() {
     }
   }
 
+  const handleOpenAtendimento = (proc: any, existing?: any) => {
+    setActiveActionProcess(proc)
+    setMeetingStep(1)
+    if (existing) {
+      setEditingMeetingId(existing.id)
+      setEditingCalendarId(existing.calendarEventId)
+      setMeetingData({
+        title: existing.title,
+        date: existing.startDateTime.split('T')[0],
+        time: existing.startDateTime.split('T')[1].substring(0, 5),
+        type: existing.meetingType || "online",
+        location: existing.location,
+        locationType: existing.locationType || "sede",
+        notes: existing.notes || "",
+        autoMeet: existing.autoMeet ?? true,
+        zipCode: existing.zipCode || "",
+        address: existing.address || "",
+        number: existing.number || "",
+        neighborhood: existing.neighborhood || "",
+        city: existing.city || "",
+        state: existing.state || ""
+      })
+    } else {
+      setEditingMeetingId(null)
+      setEditingCalendarId(null)
+      setMeetingData({ 
+        title: "REUNIÃO TÁTICA", 
+        date: format(new Date(), 'yyyy-MM-dd'), 
+        time: "09:00", 
+        type: "online", 
+        location: "Google Meet",
+        locationType: "sede",
+        notes: "",
+        autoMeet: true,
+        zipCode: "",
+        address: "",
+        number: "",
+        neighborhood: "",
+        city: "",
+        state: ""
+      })
+    }
+    setIsMeetingOpen(true)
+  }
+
   const handleScheduleMeeting = async () => {
     if (!db || !activeActionProcess || !meetingData.date) {
       toast({ variant: "destructive", title: "Dados Incompletos" })
@@ -218,53 +253,56 @@ export default function CasesPage() {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        const addr = meetingData.address || ""
-        const num = meetingData.number || ""
-        const neigh = meetingData.neighborhood || ""
-        const cit = meetingData.city || ""
-        const st = meetingData.state || ""
-        finalLocation = `${addr}, ${num} - ${neigh}, ${cit}/${st}`
+        finalLocation = (meetingData.address || "") + ", " + (meetingData.number || "") + " - " + (meetingData.neighborhood || "") + ", " + (meetingData.city || "") + "/" + (meetingData.state || "")
       }
     }
     
     const dateTimeStr = meetingData.date + "T" + (meetingData.time || "09:00") + ":00";
-    const appRef = doc(collection(db, "appointments"));
-    const docRefId = appRef.id;
+    const appRef = editingMeetingId ? doc(db, "appointments", editingMeetingId) : doc(collection(db, "appointments"));
+    const finalDocId = appRef.id;
 
     const payload: any = {
-      id: docRefId,
-      title: meetingData.title.toUpperCase() || ("REUNIÃO: " + activeActionProcess.clientName),
+      id: finalDocId,
+      title: meetingData.title.toUpperCase(),
       type: "Atendimento",
       startDateTime: dateTimeStr,
       clientName: activeActionProcess.clientName,
       processId: activeActionProcess.id,
       processNumber: activeActionProcess.processNumber,
       meetingType: meetingData.type,
+      locationType: meetingData.locationType,
       location: finalLocation,
+      zipCode: meetingData.zipCode,
+      address: meetingData.address,
+      number: meetingData.number,
+      neighborhood: meetingData.neighborhood,
+      city: meetingData.city,
+      state: meetingData.state,
       notes: meetingData.notes,
+      autoMeet: meetingData.autoMeet,
       status: "Agendado",
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }
+
+    if (!editingMeetingId) payload.createdAt = serverTimestamp()
 
     setDocumentNonBlocking(appRef, payload, { merge: true });
 
     const preparedGoogleToken = googleConfig.isCalendarActive ? await getValidGoogleAccessToken(auth) : null;
-    const calendarSync = await syncActToGoogleCalendar({
-      auth,
-      accessToken: preparedGoogleToken,
-      googleSettings: googleConfig,
-      act: {
-        title: payload.title,
-        description: payload.notes,
-        location: payload.location,
-        startDateTime: dateTimeStr,
-        type: 'atendimento',
-        processNumber: activeActionProcess.processNumber,
-        clientName: payload.clientName,
-        useMeet: meetingData.type === 'online' && meetingData.autoMeet
-      }
-    })
+    const actForGoogle = {
+      title: payload.title,
+      description: payload.notes,
+      location: payload.location,
+      startDateTime: dateTimeStr,
+      type: 'atendimento' as const,
+      processNumber: activeActionProcess.processNumber,
+      clientName: payload.clientName,
+      useMeet: meetingData.type === 'online' && meetingData.autoMeet
+    }
+
+    const calendarSync = editingCalendarId 
+      ? await updateActInGoogleCalendar({ auth, calendarEventId: editingCalendarId, accessToken: preparedGoogleToken, googleSettings: googleConfig, act: actForGoogle })
+      : await syncActToGoogleCalendar({ auth, accessToken: preparedGoogleToken, googleSettings: googleConfig, act: actForGoogle })
 
     if (calendarSync.status === 'synced') {
       updateDocumentNonBlocking(appRef, {
@@ -277,47 +315,7 @@ export default function CasesPage() {
 
     setIsSyncingAct(false)
     setIsMeetingOpen(false)
-    toast({ title: "Atendimento Protocolado" })
-  }
-
-  const handleLaunchDeadline = async () => { 
-    if (!db || !activeActionProcess || !deadlineData.fatalDate) return; 
-    setIsSyncingAct(true); 
-    const deadRef = doc(collection(db, "deadlines"));
-    await setDocumentNonBlocking(deadRef, { 
-      id: deadRef.id,
-      title: deadlineData.title.toUpperCase(), 
-      dueDate: deadlineData.fatalDate, 
-      pubDate: deadlineData.pubDate, 
-      description: deadlineData.description.toUpperCase(), 
-      processId: activeActionProcess.processNumber || activeActionProcess.id, 
-      clientName: activeActionProcess.clientName,
-      status: "Aberto", 
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    }, { merge: true }); 
-    setIsSyncingAct(false); 
-    setIsDeadlineOpen(false); 
-    toast({ title: "Prazo Injetado" }); 
-  }
-
-  const handleAiParsePublication = async () => { 
-    if (!publicationText) return; 
-    setIsAnalyzing(true); 
-    try { 
-      const result = await aiParseDjePublication({ publicationText }); 
-      setDeadlineData({ ...deadlineData, title: result.deadlineType?.toUpperCase() || "PRAZO JUDICIAL", fatalDate: result.dueDate || "", description: result.summary?.toUpperCase() || "" }); 
-    } catch (e) { toast({ variant: "destructive", title: "Erro IA" }); } finally { setIsAnalyzing(false); } 
-  }
-
-  const handleApplyDeadlineCalculation = () => { 
-    const days = parseInt(deadlineDuration); 
-    if (isNaN(days)) return; 
-    const baseDate = parseISO(deadlineData.pubDate); 
-    let calculatedDate: Date; 
-    if (deadlineData.calculationType.includes("Úteis")) calculatedDate = addBusinessDays(baseDate, days); 
-    else calculatedDate = addDays(baseDate, days); 
-    setDeadlineData({ ...deadlineData, fatalDate: format(calculatedDate, 'yyyy-MM-dd') }); 
+    toast({ title: editingMeetingId ? "Registro Retificado" : "Atendimento Protocolado" })
   }
 
   const handleMeetingCepBlur = async () => {
@@ -342,7 +340,7 @@ export default function CasesPage() {
   const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20 max-w-[1800px] w-[95%] mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground/40 mb-4">
@@ -431,16 +429,14 @@ export default function CasesPage() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[320px] bg-[#0d121f] border-white/10 text-white p-2 rounded-2xl shadow-2xl font-sans">
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer">
-                        <History className="h-5 w-5" /> DOSSIÊ COMPLETO
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
+                      <div className="px-4 py-2 text-[9px] font-black text-primary uppercase tracking-[0.2em] opacity-50 border-b border-white/5 mb-2">Gestão do Caso</div>
+                      <DropdownMenuItem onClick={() => handleOpenAtendimento(proc)} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
                         <Calendar className="h-5 w-5" /> AGENDAR ATENDIMENTO
                       </DropdownMenuItem>
                       <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer">
                         <Navigation className="h-5 w-5" /> GESTÃO DE DILIGÊNCIAS
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer">
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer">
                         <AlarmClock className="h-5 w-5" /> LANÇAR PRAZO FATAL
                       </DropdownMenuItem>
                       <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-500/10 text-amber-400 cursor-pointer">
@@ -527,7 +523,9 @@ export default function CasesPage() {
                 {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Calendar className="h-6 w-6" />}
               </div>
               <div>
-                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Agendar Atendimento</DialogTitle>
+                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
+                  {editingMeetingId ? "Retificar Atendimento" : "Agendar Atendimento"}
+                </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Passo {meetingStep} de 5</Badge>
                 </div>
@@ -667,43 +665,6 @@ export default function CasesPage() {
               </Button>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[750px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex flex-row items-center gap-5 flex-none shadow-xl">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl"><Clock className="h-6 w-6" /></div>
-            <div className="text-left">
-              <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">Lançar Prazo Judicial</DialogTitle>
-            </div>
-          </div>
-          <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
-            <div className="p-10 space-y-10 pb-20">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="h-4 w-4" /> Despacho IA</Label>
-                  <Button onClick={handleAiParsePublication} disabled={isAnalyzing || !publicationText} variant="outline" className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] gap-2">{isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />} ANALISAR COM IA</Button>
-                </div>
-                <Textarea placeholder="COLE O TEXTO AQUI..." className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none" value={publicationText} onChange={(e) => setPublicationText(e.target.value.toUpperCase())} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={deadlineData.title} onChange={(e) => setDeadlineData({...deadlineData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
-                <div className="space-y-3"><Label className={labelMini}>Duração (Dias)</Label><div className="flex gap-4"><Input type="number" className="bg-black/60 h-14 text-white font-black text-center" value={deadlineDuration} onChange={(e) => setDeadlineDuration(e.target.value)} /><Button onClick={handleApplyDeadlineCalculation} variant="outline" className="h-14 border-primary text-primary font-black text-[10px] px-6">CALCULAR</Button></div></div>
-              </div>
-              <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-3"><Label className={labelMini}>Data Publicação</Label><Input type="date" value={deadlineData.pubDate} onChange={e => setDeadlineData({...deadlineData, pubDate: e.target.value})} className="bg-black/40 h-12" /></div>
-                <div className="space-y-3"><Label className="text-[10px] font-black text-rose-500 uppercase">Data Fatal *</Label><Input type="date" value={deadlineData.fatalDate} onChange={e => setDeadlineData({...deadlineData, fatalDate: e.target.value})} className="bg-black/40 border-rose-500/30 h-12 text-rose-400 font-black" /></div>
-              </div>
-              <div className="space-y-3"><Label className={labelMini}>Providência / Tarefa *</Label><Input value={deadlineData.description} onChange={(e) => setDeadlineData({...deadlineData, description: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
-            </div>
-          </ScrollArea>
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-xl">
-            <Button variant="ghost" onClick={() => setIsDeadlineOpen(false)} className="text-muted-foreground uppercase font-black text-[11px]">CANCELAR</Button>
-            <Button onClick={handleLaunchDeadline} disabled={isSyncingAct} className="gold-gradient text-background font-black uppercase text-[11px] px-12 h-14 rounded-xl shadow-2xl">
-              {isSyncingAct ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 mr-3" />} CONFIRMAR
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
