@@ -1,10 +1,9 @@
 
-'use server';
-
 /**
  * @fileOverview Serviço de integração profunda com Google Docs API.
- * 
+ *
  * - createFormattedPetition: Cria e formata uma Petição Inicial completa.
+ * - createRGMJDocument: Cria um documento Google Docs com conteúdo e formatação padrão RGMJ.
  */
 
 interface PetitionParams {
@@ -96,4 +95,70 @@ export async function createFormattedPetition(params: PetitionParams) {
     console.error('Erro Google Docs API:', error);
     throw error;
   }
+}
+
+/**
+ * Cria um documento Google Docs com título e conteúdo de texto puro,
+ * aplicando formatação padrão RGMJ (Arial, justificado, 12pt).
+ */
+export async function createRGMJDocument({
+  accessToken,
+  title,
+  content,
+}: {
+  accessToken: string;
+  title: string;
+  content: string;
+}): Promise<{ documentId: string; url: string }> {
+  const createResponse = await fetch('https://docs.googleapis.com/v1/documents', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+
+  if (!createResponse.ok) {
+    const err = await createResponse.text();
+    throw new Error(`Falha ao criar documento Google Docs: ${err}`);
+  }
+
+  const doc = await createResponse.json();
+  const documentId: string = doc.documentId;
+
+  await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [
+        {
+          insertText: { location: { index: 1 }, text: content },
+        },
+        {
+          updateParagraphStyle: {
+            range: { startIndex: 1, endIndex: Math.min(content.length + 1, 50000) },
+            paragraphStyle: {
+              alignment: 'JUSTIFIED',
+              lineSpacing: 115,
+              spaceAbove: { magnitude: 6, unit: 'PT' },
+            },
+            fields: 'alignment,lineSpacing,spaceAbove',
+          },
+        },
+        {
+          updateTextStyle: {
+            range: { startIndex: 1, endIndex: Math.min(content.length + 1, 50000) },
+            textStyle: {
+              fontSize: { magnitude: 12, unit: 'PT' },
+              weightedFontFamily: { fontFamily: 'Arial' },
+            },
+            fields: 'fontSize,weightedFontFamily',
+          },
+        },
+      ],
+    }),
+  });
+
+  return {
+    documentId,
+    url: `https://docs.google.com/document/d/${documentId}/edit`,
+  };
 }

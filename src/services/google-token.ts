@@ -1,9 +1,14 @@
 'use client';
 
-import { Auth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { Auth, GoogleAuthProvider, reauthenticateWithPopup, signInWithPopup } from 'firebase/auth';
+import { GOOGLE_WORKSPACE_SCOPES } from '@/services/google-workspace';
 
 const TOKEN_KEY = 'google_access_token';
 const EXPIRY_KEY = 'google_token_expiry';
+
+export interface GoogleAccessTokenOptions {
+  forceRefresh?: boolean;
+}
 
 /** Margem de segurança: renova 5 minutos antes de expirar */
 const EXPIRY_MARGIN_MS = 5 * 60 * 1000;
@@ -37,47 +42,41 @@ export function clearGoogleToken() {
   localStorage.removeItem(EXPIRY_KEY);
 }
 
+export function createGoogleWorkspaceProvider() {
+  const provider = new GoogleAuthProvider();
+  GOOGLE_WORKSPACE_SCOPES.forEach((scope) => provider.addScope(scope));
+  provider.setCustomParameters({ include_granted_scopes: 'true' });
+  return provider;
+}
+
 /**
- * Renova o token silenciosamente via popup de re-autenticação.
+ * Renova o token do Google via popup de autenticação.
  * Retorna o novo access token ou null se o usuário cancelar.
  */
-async function refreshToken(auth: Auth): Promise<string | null> {
+export async function refreshGoogleAccessToken(auth: Auth): Promise<string | null> {
   try {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
-    provider.setCustomParameters({ prompt: 'none' });
-
-    const result = await signInWithPopup(auth, provider);
+    const provider = createGoogleWorkspaceProvider();
+    const result = auth.currentUser
+      ? await reauthenticateWithPopup(auth.currentUser, provider)
+      : await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
 
     if (credential?.accessToken) {
       storeGoogleToken(credential.accessToken);
       return credential.accessToken;
     }
+
     return null;
   } catch (error: any) {
-    // Se prompt:none falhar (ex: precisa de consentimento), tenta com consentimento
-    if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
+    if (
+      error?.code === 'auth/popup-blocked' ||
+      error?.code === 'auth/cancelled-popup-request' ||
+      error?.code === 'auth/popup-closed-by-user'
+    ) {
       return null;
     }
 
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/calendar.events');
-      provider.addScope('https://www.googleapis.com/auth/drive.file');
-
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-
-      if (credential?.accessToken) {
-        storeGoogleToken(credential.accessToken);
-        return credential.accessToken;
-      }
-    } catch (retryError) {
-      console.error('Google token refresh failed:', retryError);
-    }
-
+    console.error('Google token refresh failed:', error);
     return null;
   }
 }
@@ -90,11 +89,14 @@ async function refreshToken(auth: Auth): Promise<string | null> {
  * @param auth - Instância do Firebase Auth
  * @returns access token válido ou null se não conseguir obter
  */
-export async function getValidGoogleAccessToken(auth: Auth): Promise<string | null> {
-  if (isTokenValid()) {
+export async function getValidGoogleAccessToken(
+  auth: Auth,
+  options: GoogleAccessTokenOptions = {}
+): Promise<string | null> {
+  if (!options.forceRefresh && isTokenValid()) {
     return localStorage.getItem(TOKEN_KEY);
   }
 
   // Token expirado ou inexistente — renova
-  return refreshToken(auth);
+  return refreshGoogleAccessToken(auth);
 }

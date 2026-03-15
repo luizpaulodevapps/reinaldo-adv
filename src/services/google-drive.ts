@@ -1,10 +1,14 @@
-'use server';
-
 /**
  * @fileOverview Serviço de automação de Infraestrutura Documental no Google Drive.
  * 
  * - setupClientWorkspace: Cria a arquitetura de pastas jurídica para Clientes e Processos.
  */
+
+import {
+  extractGoogleDriveFolderId,
+  isValidGoogleDriveFolderId,
+  toGoogleDriveFolderUrl,
+} from '@/services/google-workspace';
 
 interface DriveFolderParams {
   accessToken: string;
@@ -18,6 +22,11 @@ interface DriveFolderParams {
 
 export async function setupClientWorkspace(params: DriveFolderParams) {
   const { accessToken, rootFolderId, clientName, processInfo } = params;
+  const normalizedRootFolderId = extractGoogleDriveFolderId(rootFolderId);
+
+  if (!isValidGoogleDriveFolderId(normalizedRootFolderId)) {
+    throw new Error('ID da pasta raiz do Google Drive inválido. Cole o ID ou a URL da pasta compartilhada.');
+  }
 
   async function createFolder(name: string, parentId: string) {
     const response = await fetch('https://www.googleapis.com/drive/v3/files', {
@@ -44,8 +53,9 @@ export async function setupClientWorkspace(params: DriveFolderParams) {
 
   try {
     // 1. Criar Pasta do Cliente
-    const clientFolder = await createFolder(clientName.toUpperCase(), rootFolderId);
+    const clientFolder = await createFolder(clientName.toUpperCase(), normalizedRootFolderId);
     const clientFolderId = clientFolder.id;
+    let processFolderId: string | undefined;
 
     // 2. Criar Subpastas Padrão do Cliente
     const clientSubfolders = [
@@ -66,6 +76,7 @@ export async function setupClientWorkspace(params: DriveFolderParams) {
       const procFolderName = `${processInfo.number} - ${processInfo.description.toUpperCase()}`;
       const procFolder = await createFolder(procFolderName, folderMap["04_PROCESSOS"]);
       const procFolderId = procFolder.id;
+      processFolderId = procFolderId;
 
       const procActs = [
         "01_DISTRIBUICAO",
@@ -81,7 +92,13 @@ export async function setupClientWorkspace(params: DriveFolderParams) {
       }
     }
 
-    return { success: true, clientFolderId };
+    return {
+      success: true,
+      clientFolderId,
+      clientFolderUrl: toGoogleDriveFolderUrl(clientFolderId),
+      processFolderId,
+      processFolderUrl: processFolderId ? toGoogleDriveFolderUrl(processFolderId) : '',
+    };
   } catch (error) {
     console.error('RGMJ Infrastructure Error:', error);
     throw error;

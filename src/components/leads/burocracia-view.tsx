@@ -31,10 +31,12 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { updateDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase"
+import { updateDocumentNonBlocking, useAuth, useDoc, useMemoFirebase } from "@/firebase"
 import { doc, serverTimestamp } from "firebase/firestore"
 import { useFirestore } from "@/firebase"
 import { setupClientWorkspace } from "@/services/google-drive"
+import { getValidGoogleAccessToken } from "@/services/google-token"
+import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
 
 interface BurocraciaViewProps {
   lead: any
@@ -59,13 +61,14 @@ const DOCUMENT_KITS = {
 }
 
 export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps) {
-  const [generating, setGenerating] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const { toast } = useToast()
   const db = useFirestore()
+  const auth = useAuth()
 
   const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
-  const { data: googleConfig } = useDoc(googleSettingsRef)
+  const { data: googleSettingsData } = useDoc(googleSettingsRef)
+  const googleConfig = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
 
   const availableData = useMemo(() => {
     const data: Record<string, any> = {
@@ -104,18 +107,42 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
   const kit = DOCUMENT_KITS[lead?.type as keyof typeof DOCUMENT_KITS] || DOCUMENT_KITS["Geral"]
 
   const handleGenerateDocument = (docId: string, title: string) => {
-    setGenerating(docId)
-    setTimeout(() => {
-      setGenerating(null)
+    if (!googleConfig.isDocsActive) {
       toast({
-        title: "Documento Gerado!",
-        description: `${title} foi salvo no Google Drive.`,
+        variant: "destructive",
+        title: "Google Docs Desativado",
+        description: "Ative o Google Docs no Hub Google para liberar a automação documental.",
       })
-    }, 2000)
+      return
+    }
+
+    toast({
+      variant: "destructive",
+      title: "Automação Documental Indisponível",
+      description: `${title} ainda não possui um gerador real conectado a templates do Google Docs.`,
+    })
   }
 
   const handleManualSync = async () => {
-    if (!db || !lead || !googleConfig?.rootFolderId) {
+    if (!db || !lead) {
+      toast({ 
+        variant: "destructive", 
+        title: "Configuração Pendente", 
+        description: "A integração do Google Drive não está pronta para este lead." 
+      })
+      return
+    }
+
+    if (!googleConfig.isDriveActive) {
+      toast({
+        variant: "destructive",
+        title: "Google Drive Desativado",
+        description: "Ative o Google Drive no Hub Google para liberar a criação de pastas.",
+      })
+      return
+    }
+
+    if (!googleConfig.rootFolderId) {
       toast({ 
         variant: "destructive", 
         title: "Configuração Pendente", 
@@ -124,30 +151,48 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       return
     }
 
+    const accessToken = await getValidGoogleAccessToken(auth)
+    if (!accessToken) {
+      toast({
+        variant: "destructive",
+        title: "Google Desconectado",
+        description: "Reconecte a conta Google para criar a estrutura no Drive.",
+      })
+      return
+    }
+
     setSyncing(true)
     try {
-      // Simulação de chamada real - Em produção usaria o token do usuário logado
-      // await setupClientWorkspace({
-      //   accessToken: "USER_TOKEN",
-      //   rootFolderId: googleConfig.rootFolderId,
-      //   clientName: lead.name,
-      //   processInfo: lead.processNumber ? { number: lead.processNumber, description: lead.demandTitle || lead.notes?.substring(0, 30) || "DEMANDA" } : undefined
-      // });
+      const workspace = await setupClientWorkspace({
+        accessToken,
+        rootFolderId: googleConfig.rootFolderId,
+        clientName: lead.name,
+        processInfo: lead.processNumber ? {
+          number: lead.processNumber,
+          description: lead.demandTitle || lead.notes?.substring(0, 30) || "DEMANDA"
+        } : undefined
+      })
 
       const isReadyForClientFolder = lead.status === "burocracia" || lead.status === "distribuicao"
       const newDriveStatus = isReadyForClientFolder ? "pasta_cliente" : "pasta_lead"
       
       await updateDocumentNonBlocking(doc(db, "leads", lead.id), {
         driveStatus: newDriveStatus,
+        driveFolderId: workspace.processFolderId || workspace.clientFolderId,
+        driveFolderUrl: workspace.processFolderUrl || workspace.clientFolderUrl,
         updatedAt: serverTimestamp()
       })
       
       toast({ 
         title: "Infraestrutura Sincronizada", 
-        description: "Roteiro de pastas criado seguindo o padrão estratégico RGMJ." 
+        description: "Estrutura real criada no Google Drive seguindo o padrão operacional RGMJ." 
       })
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro no Sincronismo", description: "Falha ao criar infraestrutura no Drive." })
+      toast({
+        variant: "destructive",
+        title: "Erro no Sincronismo",
+        description: error instanceof Error ? error.message : "Falha ao criar infraestrutura no Drive."
+      })
     } finally {
       setSyncing(false)
     }
@@ -220,6 +265,16 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderSync className="h-4 w-4" />}
               SINC. WORKSPACE
             </Button>
+            {lead.driveFolderUrl && (
+              <Button
+                onClick={() => window.open(lead.driveFolderUrl, "_blank")}
+                variant="outline"
+                className="w-full h-10 border-emerald-500/30 text-emerald-500 font-black text-[10px] uppercase tracking-wider gap-3 rounded-lg"
+              >
+                <ExternalLink className="h-4 w-4" />
+                ABRIR PASTA
+              </Button>
+            )}
           </Card>
         </div>
 
@@ -232,7 +287,6 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {kit.map((doc) => {
-              const isGen = generating === doc.id
               return (
                 <Card key={doc.id} className="glass border-white/5 hover:border-primary/40 transition-all group overflow-hidden shadow-lg rounded-xl">
                   <CardContent className="p-4 flex items-center justify-between gap-5">
@@ -256,10 +310,9 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
                     </div>
                     <Button 
                       onClick={() => handleGenerateDocument(doc.id, doc.title)}
-                      disabled={isGen}
                       className="h-9 px-5 font-black uppercase text-[10px] tracking-wider rounded-lg transition-all flex-none"
                     >
-                      {isGen ? <Loader2 className="h-4 w-4 animate-spin" /> : "GERAR .DOCX"}
+                      {googleConfig.isDocsActive ? "AUTOMAÇÃO DOCS" : "DOCS OFF"}
                     </Button>
                   </CardContent>
                 </Card>

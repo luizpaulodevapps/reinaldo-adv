@@ -82,6 +82,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  DEFAULT_GOOGLE_WORKSPACE_SETTINGS,
+  extractGoogleDriveFolderId,
+  getGoogleWorkspaceRuntimeContext,
+  isValidGoogleDriveFolderId,
+  normalizeGoogleWorkspaceSettings,
+  toGoogleDriveFolderUrl,
+} from "@/services/google-workspace"
 
 const LEGAL_AREAS = ["Trabalhista", "Cível", "Criminal", "Família", "Previdenciário", "Tributário", "Geral"]
 
@@ -113,14 +121,9 @@ function SettingsContent() {
   const [activeTab, setActiveTab] = useState(initialTab)
   const db = useFirestore()
   const { user, profile, role } = useUser()
+  const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : ""
 
   const isAdmin = role === 'admin'
-
-  // Redirect URIs para o Hub
-  const REDIRECT_URIS = [
-    "http://localhost:9002/api/auth/callback/google",
-    "https://reinaldo-adv.vercel.app/api/auth/callback/google"
-  ]
 
   // Estados CRUD Usuários
   const [userSearchTerm, setUserSearchTerm] = useState("")
@@ -240,16 +243,7 @@ function SettingsContent() {
     logoUrl: ""
   })
 
-  const [googleConfig, setGoogleConfig] = useState({
-    masterEmail: "",
-    rootFolderId: "1GKfATRstMYs02aDZJNwyKCO7IdR5hZav",
-    clientId: "",
-    isDriveActive: true,
-    isDocsActive: true,
-    isCalendarActive: true,
-    isTasksActive: true,
-    isMeetActive: true
-  })
+  const [googleConfig, setGoogleConfig] = useState(DEFAULT_GOOGLE_WORKSPACE_SETTINGS)
 
   const firmRef = useMemoFirebase(() => db ? doc(db, 'settings', 'firm') : null, [db])
   const { data: firmData } = useDoc(firmRef)
@@ -262,8 +256,19 @@ function SettingsContent() {
   }, [firmData])
 
   useEffect(() => {
-    if (googleData) setGoogleConfig(prev => ({ ...prev, ...googleData }))
+    if (googleData) setGoogleConfig(normalizeGoogleWorkspaceSettings(googleData))
   }, [googleData])
+
+  const googleRuntime = useMemo(() => getGoogleWorkspaceRuntimeContext(runtimeOrigin), [runtimeOrigin])
+  const connectedGoogleEmail = user?.email?.toLowerCase() || ""
+  const normalizedRootFolderId = extractGoogleDriveFolderId(googleConfig.rootFolderId)
+  const rootFolderUrl = toGoogleDriveFolderUrl(normalizedRootFolderId)
+  const isRootFolderValid = !googleConfig.isDriveActive || isValidGoogleDriveFolderId(normalizedRootFolderId)
+  const isMasterEmailAligned = !!(
+    googleConfig.masterEmail &&
+    connectedGoogleEmail &&
+    googleConfig.masterEmail === connectedGoogleEmail
+  )
 
   const handleSaveFinancial = () => {
     if (!db) return
@@ -322,8 +327,29 @@ function SettingsContent() {
 
   const handleSaveGoogleConfig = () => {
     if (!db) return
-    setDocumentNonBlocking(doc(db, 'settings', 'google'), { ...googleConfig, updatedAt: serverTimestamp() }, { merge: true })
-    toast({ title: "Hub Workspace Sincronizado" })
+    const normalized = normalizeGoogleWorkspaceSettings(googleConfig)
+
+    if (normalized.masterEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.masterEmail)) {
+      toast({
+        variant: "destructive",
+        title: "E-mail Mestre Inválido",
+        description: "Informe um e-mail Google válido para auditoria operacional do Workspace.",
+      })
+      return
+    }
+
+    if (normalized.isDriveActive && !isValidGoogleDriveFolderId(normalized.rootFolderId)) {
+      toast({
+        variant: "destructive",
+        title: "Pasta Raiz Inválida",
+        description: "Cole o ID ou a URL de uma pasta real do Google Drive. O sistema salva apenas o ID operacional.",
+      })
+      return
+    }
+
+    setGoogleConfig(normalized)
+    setDocumentNonBlocking(doc(db, 'settings', 'google'), { ...normalized, updatedAt: serverTimestamp() }, { merge: true })
+    toast({ title: "Hub Workspace Sincronizado", description: "As integrações Google agora obedecem a essas flags em runtime." })
   }
 
   const handleCepBlur = async () => {
@@ -471,41 +497,87 @@ function SettingsContent() {
                 <div className="space-y-3">
                   <Label className={labelMini}>E-mail Mestre (Admin Workspace)</Label>
                   <Input value={googleConfig.masterEmail} onChange={e => setGoogleConfig({...googleConfig, masterEmail: e.target.value.toLowerCase()})} className="bg-black/40 h-14 text-white font-bold" placeholder="rgmj.adv@gmail.com" />
+                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">
+                    Usado para conferência operacional. O sincronismo sempre roda com a conta Google autenticada no app.
+                  </p>
                 </div>
                 <div className="space-y-3">
-                  <Label className={labelMini}>ID da Pasta Raiz (Google Drive)</Label>
-                  <Input value={googleConfig.rootFolderId} onChange={e => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})} className="bg-black/40 h-14 text-white font-mono text-xs" />
-                  <p className="text-[8px] text-primary/60 font-bold uppercase">Esta pasta conterá todos os dossiês de clientes e processos.</p>
+                  <Label className={labelMini}>Pasta Raiz Operacional (Google Drive)</Label>
+                  <Input value={googleConfig.rootFolderId} onChange={e => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})} className="bg-black/40 h-14 text-white font-mono text-xs" placeholder="Cole a URL ou o ID da pasta raiz" />
+                  <p className={cn("text-[8px] font-bold uppercase", isRootFolderValid ? "text-primary/60" : "text-rose-400")}>Aceita URL ou ID. O sistema salva somente o ID real usado pela API do Drive.</p>
+                  {normalizedRootFolderId && (
+                    <div className="flex flex-wrap items-center gap-3 text-[9px] font-black uppercase tracking-wider">
+                      <span className="text-muted-foreground">ID operacional:</span>
+                      <code className="px-2 py-1 rounded bg-black/50 border border-white/5 text-primary">{normalizedRootFolderId}</code>
+                      {rootFolderUrl && (
+                        <a href={rootFolderUrl} target="_blank" rel="noreferrer" className="text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" /> ABRIR PASTA
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-6">
                 <div className="flex items-center gap-3">
                   <Lock className="h-4 w-4 text-primary" />
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Configuração OAuth 2.0</h4>
+                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Runtime OAuth / Firebase Auth</h4>
                 </div>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className={labelMini}>Client ID do Google Cloud</Label>
-                    <Input value={googleConfig.clientId} onChange={e => setGoogleConfig({...googleConfig, clientId: e.target.value})} className="bg-black/40 h-12 text-white font-mono text-xs" placeholder="000000000000-xxxxxxxxxxxx.apps.googleusercontent.com" />
-                  </div>
-                  <div className="space-y-3">
-                    <Label className={labelMini}>URIs de Redirecionamento Autorizados</Label>
-                    <div className="space-y-2">
-                      {REDIRECT_URIS.map(uri => (
-                        <div key={uri} className="flex items-center justify-between p-3 bg-black/60 rounded-lg border border-white/5">
-                          <code className="text-[10px] text-primary/80 font-mono">{uri}</code>
-                          <button onClick={() => { navigator.clipboard.writeText(uri); toast({title: "URI Copiada"}); }} className="text-white/20 hover:text-primary"><Copy className="h-3.5 w-3.5" /></button>
-                        </div>
-                      ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'Fluxo de autenticação em uso', value: googleRuntime.authFlow },
+                    { label: 'Firebase Auth Domain', value: googleRuntime.authDomain },
+                    { label: 'Projeto Firebase', value: googleRuntime.projectId },
+                    { label: 'Origem atual do app', value: googleRuntime.origin || 'Indisponível nesta sessão' },
+                  ].map((item) => (
+                    <div key={item.label} className="p-4 rounded-xl bg-black/50 border border-white/5 space-y-2">
+                      <Label className={labelMini}>{item.label}</Label>
+                      <div className="text-[11px] font-black text-white break-all">{item.value}</div>
                     </div>
+                  ))}
+                </div>
+                <div className="p-4 rounded-xl bg-black/50 border border-white/5 space-y-3">
+                  <Label className={labelMini}>Conta Google autenticada nesta sessão</Label>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-black text-white break-all">{connectedGoogleEmail || 'Nenhuma conta autenticada'}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+                        {googleConfig.masterEmail
+                          ? (isMasterEmailAligned
+                              ? 'Conta autenticada alinhada com o e-mail mestre configurado.'
+                              : 'A conta conectada no app é a que executa Calendar, Drive e Meet.')
+                          : 'Defina um e-mail mestre se quiser auditoria de alinhamento da conta operacional.'}
+                      </p>
+                    </div>
+                    <Badge className={cn(
+                      'h-7 px-3 text-[9px] font-black uppercase border',
+                      isMasterEmailAligned
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : googleConfig.masterEmail
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          : 'bg-white/5 text-white/60 border-white/10'
+                    )}>
+                      {isMasterEmailAligned ? 'ALINHADO' : googleConfig.masterEmail ? 'CONTA DIFERENTE' : 'SEM AUDITORIA'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className={labelMini}>Scopes solicitados pelo app</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {googleRuntime.scopes.map(scope => (
+                      <Badge key={scope} variant="outline" className="border-primary/20 bg-primary/10 text-primary text-[9px] font-black uppercase break-all py-1.5 px-3">
+                        {scope}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
                   { id: 'isDriveActive', label: 'Google Drive', icon: Database },
+                  { id: 'isDocsActive', label: 'Google Docs', icon: FileText },
                   { id: 'isCalendarActive', label: 'Google Calendar', icon: Calendar },
                   { id: 'isMeetActive', label: 'Google Meet', icon: Video },
                 ].map(service => (
@@ -518,6 +590,10 @@ function SettingsContent() {
                   </div>
                 ))}
               </div>
+
+              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">
+                Essas flags já controlam o comportamento real do app em Drive, Docs, Calendar e Meet.
+              </p>
 
               <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] px-10 shadow-2xl">
                 <Save className="h-5 w-5 mr-3" /> ATUALIZAR HUB DIGITAL

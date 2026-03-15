@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { useAuth as getAuth } from '@/firebase'
 import { Button } from '@/components/ui/button'
-import { storeGoogleToken } from '@/services/google-token'
+import { createGoogleWorkspaceProvider, storeGoogleToken } from '@/services/google-token'
 
 export default function GoogleLoginButton() {
   const router = useRouter()
@@ -23,9 +23,7 @@ export default function GoogleLoginButton() {
     setError(null)
 
     try {
-      const provider = new GoogleAuthProvider()
-      provider.addScope('https://www.googleapis.com/auth/calendar.events')
-      provider.addScope('https://www.googleapis.com/auth/drive.file')
+      const provider = createGoogleWorkspaceProvider()
       
       const result = await signInWithPopup(auth, provider)
       

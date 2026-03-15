@@ -91,8 +91,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { pushActToGoogleCalendar } from "@/services/google-calendar"
 import { getValidGoogleAccessToken } from "@/services/google-token"
+import { deleteActFromGoogleCalendar, syncActToGoogleCalendar, updateActInGoogleCalendar } from "@/services/google-calendar-sync"
+import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
 
 type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendimento'
 
@@ -103,7 +104,8 @@ export default function MasterAgendaPage() {
   const [createMode, setCreateMode] = useState<CreateMode>('atendimento')
   const [viewingEvent, setViewingEvent] = useState<any>(null)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
-  
+  const [editingCalendarEventId, setEditingCalendarEventId] = useState<string | null>(null)
+
   const [currentStep, setCurrentStep] = useState(1)
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false)
   const [loadingMeetingCep, setLoadingMeetingCep] = useState(false)
@@ -136,6 +138,10 @@ export default function MasterAgendaPage() {
   const auth = useAuth()
   const { user, profile } = useUser()
   const { toast } = useToast()
+
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleSettingsData } = useDoc(googleSettingsRef)
+  const googleSettings = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
 
   const handleMeetingCepBlur = async () => {
     const cep = newEventData.zipCode?.replace(/\D/g, "")
@@ -221,6 +227,7 @@ export default function MasterAgendaPage() {
     setCurrentStep(1)
     if (existingEvent) {
       setEditingEventId(existingEvent.id)
+      setEditingCalendarEventId(existingEvent.calendarEventId || null)
       const d = existingEvent.date || parseDate(existingEvent.startDateTime || existingEvent.dueDate)
       setNewEventData({
         ...existingEvent,
@@ -240,6 +247,7 @@ export default function MasterAgendaPage() {
       setViewingEvent(null) // Fecha o diálogo de visualização ao abrir edição
     } else {
       setEditingEventId(null)
+      setEditingCalendarEventId(null)
       setNewEventData({
         title: mode === 'atendimento' ? "REUNIÃO TÁTICA" : mode === 'audiencia' ? "AUDIÊNCIA UNA" : "",
         date: format(date, 'yyyy-MM-dd'),
@@ -278,7 +286,7 @@ export default function MasterAgendaPage() {
     let finalLocation = ""
     if (createMode === 'atendimento') {
       if (newEventData.meetingType === 'online') {
-        finalLocation = newEventData.location || 'Google Meet'
+        finalLocation = newEventData.location || (googleSettings.isMeetActive ? 'Google Meet' : 'Reunião Online')
       } else {
         if (newEventData.locationType === 'sede') {
           finalLocation = 'Sede RGMJ'
@@ -300,6 +308,16 @@ export default function MasterAgendaPage() {
     }
 
     let typeForGoogle: any = 'atendimento'
+    const calendarAct = {
+      title: newEventData.title.toUpperCase(),
+      description: newEventData.notes,
+      location: finalLocation,
+      startDateTime: createMode === 'prazo' ? (newEventData.date + "T00:00:00") : dateTime,
+      type: 'atendimento' as const,
+      processNumber: newEventData.processNumber,
+      clientName: newEventData.clientName,
+      useMeet: newEventData.autoMeet && (newEventData.meetingType === 'online' || createMode === 'audiencia')
+    }
 
     if (createMode === 'audiencia') {
       targetCollection = 'hearings'
@@ -340,6 +358,11 @@ export default function MasterAgendaPage() {
       typeForGoogle = 'freelance'
     }
 
+    calendarAct.type = typeForGoogle
+    const preparedGoogleToken = googleSettings.isCalendarActive
+      ? await getValidGoogleAccessToken(auth)
+      : null
+
     let finalDocId = "";
     if (editingEventId) {
       updateDocumentNonBlocking(doc(db, targetCollection, editingEventId), payload)
@@ -353,33 +376,43 @@ export default function MasterAgendaPage() {
     }
 
     let generatedMeetLink = "";
-    try {
-      const accessToken = await getValidGoogleAccessToken(auth);
-      if (accessToken) {
-        const calRes = await pushActToGoogleCalendar({
-          accessToken,
-          act: {
-            title: payload.title,
-            description: payload.notes,
-            location: payload.location,
-            startDateTime: createMode === 'prazo' ? (newEventData.date + "T00:00:00") : dateTime,
-            type: typeForGoogle,
-            processNumber: payload.processNumber,
-            clientName: payload.clientName,
-            useMeet: newEventData.autoMeet && (newEventData.meetingType === 'online' || createMode === 'audiencia')
-          }
+    const calendarSync = editingEventId && editingCalendarEventId
+      ? await updateActInGoogleCalendar({
+          auth,
+          calendarEventId: editingCalendarEventId,
+          accessToken: preparedGoogleToken,
+          act: calendarAct,
+          googleSettings,
         })
-        
-        if (calRes && (calRes.id || calRes.hangoutLink)) {
-          generatedMeetLink = calRes.hangoutLink || "";
-          updateDocumentNonBlocking(doc(db, targetCollection, finalDocId), {
-            meetingUrl: generatedMeetLink,
-            calendarEventId: calRes.id,
-            updatedAt: serverTimestamp()
-          })
-        }
-      }
-    } catch (e) { console.warn("Google Sync Error", e) }
+      : await syncActToGoogleCalendar({
+          auth,
+          accessToken: preparedGoogleToken,
+          act: calendarAct,
+          googleSettings,
+        })
+
+    if (calendarSync.status === 'synced') {
+      generatedMeetLink = calendarSync.meetingUrl || ""
+      updateDocumentNonBlocking(doc(db, targetCollection, finalDocId), {
+        meetingUrl: generatedMeetLink,
+        calendarEventId: calendarSync.calendarEventId,
+        calendarSyncStatus: 'synced',
+        calendarSyncError: null,
+        updatedAt: serverTimestamp()
+      })
+    } else {
+      updateDocumentNonBlocking(doc(db, targetCollection, finalDocId), {
+        calendarSyncStatus: calendarSync.status,
+        calendarSyncError: calendarSync.errorMessage || null,
+        updatedAt: serverTimestamp()
+      })
+
+      toast({
+        variant: 'destructive',
+        title: 'Ato salvo no sistema',
+        description: calendarSync.errorMessage || 'Google Calendar não sincronizou.'
+      })
+    }
 
     if (newEventData.partyContact || (createMode === 'atendimento' && newEventData.clientName)) {
       const contact = newEventData.partyContact || "";
@@ -396,11 +429,23 @@ export default function MasterAgendaPage() {
     setIsSyncingWorkspace(false)
     setIsCreateOpen(false)
     setEditingEventId(null)
+    setEditingCalendarEventId(null)
   }
 
-  const handleDeleteEvent = (event: any) => {
+  const handleDeleteEvent = async (event: any) => {
     if (!db || !event) return
     if (!confirm("Remover permanentemente da pauta?")) return
+
+    if (event.calendarEventId && googleSettings.isCalendarActive) {
+      const token = await getValidGoogleAccessToken(auth)
+      await deleteActFromGoogleCalendar({
+        auth,
+        calendarEventId: event.calendarEventId,
+        accessToken: token,
+        googleSettings,
+      })
+    }
+
     deleteDocumentNonBlocking(doc(db, event.collection, event.id))
     toast({ variant: "destructive", title: "Ato Removido" })
     setViewingEvent(null)

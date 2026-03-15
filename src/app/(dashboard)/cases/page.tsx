@@ -82,9 +82,10 @@ import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
-import { pushActToGoogleCalendar } from "@/services/google-calendar"
 import { getValidGoogleAccessToken } from "@/services/google-token"
+import { syncActToGoogleCalendar } from "@/services/google-calendar-sync"
 import { setupClientWorkspace } from "@/services/google-drive"
+import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
 
 const AREAS = [
   { id: "todos", label: "TODOS" },
@@ -154,7 +155,8 @@ export default function CasesPage() {
   const processes = processesData || []
 
   const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
-  const { data: googleConfig } = useDoc(googleSettingsRef)
+  const { data: googleSettingsData } = useDoc(googleSettingsRef)
+  const googleConfig = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
 
   const filteredProcesses = useMemo(() => {
     return processes.filter(proc => {
@@ -176,8 +178,18 @@ export default function CasesPage() {
   }, [filteredProcesses])
 
   const handleSyncDrive = async (proc: any) => {
-    if (!db || !proc || !googleConfig?.rootFolderId) {
+    if (!db || !proc) {
       toast({ variant: "destructive", title: "Configuração Pendente" })
+      return
+    }
+
+    if (!googleConfig.isDriveActive) {
+      toast({ variant: "destructive", title: "Google Drive Desativado", description: "Ative o Drive no Hub Google para liberar o sincronismo de dossiês." })
+      return
+    }
+
+    if (!googleConfig.rootFolderId) {
+      toast({ variant: "destructive", title: "Configuração Pendente", description: "Defina a pasta raiz do Google Drive nas configurações do sistema." })
       return
     }
 
@@ -189,7 +201,7 @@ export default function CasesPage() {
 
     setSyncingDriveId(proc.id)
     try {
-      await setupClientWorkspace({
+      const workspace = await setupClientWorkspace({
         accessToken,
         rootFolderId: googleConfig.rootFolderId,
         clientName: proc.clientName,
@@ -198,9 +210,18 @@ export default function CasesPage() {
           description: proc.description || "DEMANDA"
         }
       });
-      toast({ title: "Dossiê Sincronizado" })
+      updateDocumentNonBlocking(doc(db, "processes", proc.id), {
+        driveFolderId: workspace.processFolderId || workspace.clientFolderId,
+        driveFolderUrl: workspace.processFolderUrl || workspace.clientFolderUrl,
+        updatedAt: serverTimestamp()
+      })
+      toast({ title: "Dossiê Sincronizado", description: "Estrutura real criada no Google Drive." })
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro no Sincronismo" })
+      toast({
+        variant: "destructive",
+        title: "Erro no Sincronismo",
+        description: error instanceof Error ? error.message : "Falha ao criar a estrutura no Google Drive."
+      })
     } finally {
       setSyncingDriveId(null)
     }
@@ -212,7 +233,7 @@ export default function CasesPage() {
     
     let finalLocation = ""
     if (meetingData.type === 'online') {
-      finalLocation = meetingData.location || 'GOOGLE MEET RGMJ'
+      finalLocation = meetingData.location || (googleConfig.isMeetActive ? 'GOOGLE MEET RGMJ' : 'REUNIÃO ONLINE')
     } else {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
@@ -234,36 +255,50 @@ export default function CasesPage() {
       status: "Agendado",
       createdAt: serverTimestamp()
     }
+    const preparedGoogleToken = googleConfig.isCalendarActive
+      ? await getValidGoogleAccessToken(auth)
+      : null
     
     const docRefRes = await addDocumentNonBlocking(collection(db, "appointments"), payload)
     const docRefId = (docRefRes as any).id;
 
-    try {
-      const accessToken = await getValidGoogleAccessToken(auth);
-      if (accessToken) {
-        const calRes = await pushActToGoogleCalendar({
-          accessToken,
-          act: {
-            title: payload.title,
-            description: payload.notes,
-            location: payload.location,
-            startDateTime: dateTimeStr,
-            type: 'atendimento',
-            processNumber: activeActionProcess.processNumber,
-            clientName: payload.clientName,
-            useMeet: meetingData.type === 'online' && meetingData.autoMeet
-          }
-        })
-
-        if (calRes?.hangoutLink || calRes?.id) {
-          updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
-            meetingUrl: calRes.hangoutLink || "",
-            calendarEventId: calRes.id,
-            updatedAt: serverTimestamp()
-          })
-        }
+    const calendarSync = await syncActToGoogleCalendar({
+      auth,
+      accessToken: preparedGoogleToken,
+      googleSettings: googleConfig,
+      act: {
+        title: payload.title,
+        description: payload.notes,
+        location: payload.location,
+        startDateTime: dateTimeStr,
+        type: 'atendimento',
+        processNumber: activeActionProcess.processNumber,
+        clientName: payload.clientName,
+        useMeet: meetingData.type === 'online' && meetingData.autoMeet
       }
-    } catch (e) { console.warn("Calendar sync failed", e) }
+    })
+
+    if (calendarSync.status === 'synced') {
+      updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
+        meetingUrl: calendarSync.meetingUrl || "",
+        calendarEventId: calendarSync.calendarEventId,
+        calendarSyncStatus: 'synced',
+        calendarSyncError: null,
+        updatedAt: serverTimestamp()
+      })
+    } else {
+      updateDocumentNonBlocking(doc(db, "appointments", docRefId), {
+        calendarSyncStatus: calendarSync.status,
+        calendarSyncError: calendarSync.errorMessage || null,
+        updatedAt: serverTimestamp()
+      })
+
+      toast({
+        variant: 'destructive',
+        title: 'Atendimento salvo no sistema',
+        description: calendarSync.errorMessage || 'Google Calendar não sincronizou.'
+      })
+    }
 
     setIsSyncingAct(false)
     setIsMeetingOpen(false)

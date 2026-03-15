@@ -123,8 +123,9 @@ import { aiParseDjePublication } from "@/ai/flows/ai-parse-dje-publication"
 import { format, addDays, addBusinessDays, parseISO } from "date-fns"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
-import { pushActToGoogleCalendar } from "@/services/google-calendar"
 import { getValidGoogleAccessToken } from "@/services/google-token"
+import { syncActToGoogleCalendar } from "@/services/google-calendar-sync"
+import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -148,6 +149,10 @@ export default function LeadsPage() {
 
   const { data: leadsData, isLoading } = useCollection(leadsQuery)
   const leads = useMemo(() => (leadsData || []).filter(l => l.status !== 'arquivado'), [leadsData])
+
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleSettingsData } = useDoc(googleSettingsRef)
+  const googleSettings = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   
@@ -260,7 +265,7 @@ export default function LeadsPage() {
     
     let finalLocation = ""
     if (intakeData.type === 'online') {
-      finalLocation = 'GOOGLE MEET RGMJ'
+      finalLocation = googleSettings.isMeetActive ? 'GOOGLE MEET RGMJ' : 'REUNIÃO ONLINE'
     } else {
       if (intakeData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
@@ -282,6 +287,9 @@ export default function LeadsPage() {
       state: intakeData.state,
       updatedAt: serverTimestamp() 
     }
+    const preparedGoogleToken = googleSettings.isCalendarActive
+      ? await getValidGoogleAccessToken(auth)
+      : null
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
     
     const appointmentRes = await addDocumentNonBlocking(collection(db, "appointments"), { 
@@ -297,31 +305,43 @@ export default function LeadsPage() {
     const appointmentId = (appointmentRes as any).id;
 
     let meetLink = "";
-    try {
-      const accessToken = await getValidGoogleAccessToken(auth);
-      if (accessToken) {
-        const calRes = await pushActToGoogleCalendar({
-          accessToken,
-          act: {
-            title: "[TRIAGEM] " + activeLead.name,
-            description: "Atendimento inicial do lead RGMJ.",
-            location: finalLocation,
-            startDateTime: intakeData.date + "T" + intakeData.time + ":00",
-            type: 'atendimento',
-            clientName: activeLead.name,
-            useMeet: intakeData.type === 'online' && intakeData.autoMeet
-          }
-        })
-
-        if (calRes && (calRes.id || calRes.hangoutLink)) {
-          meetLink = calRes.hangoutLink || "";
-          updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
-            meetingUrl: meetLink,
-            updatedAt: serverTimestamp()
-          })
-        }
+    const calendarSync = await syncActToGoogleCalendar({
+      auth,
+      accessToken: preparedGoogleToken,
+      googleSettings,
+      act: {
+        title: "[TRIAGEM] " + activeLead.name,
+        description: "Atendimento inicial do lead RGMJ.",
+        location: finalLocation,
+        startDateTime: intakeData.date + "T" + intakeData.time + ":00",
+        type: 'atendimento',
+        clientName: activeLead.name,
+        useMeet: intakeData.type === 'online' && intakeData.autoMeet
       }
-    } catch (e) { console.warn("Calendar sync failed", e) }
+    })
+
+    if (calendarSync.status === 'synced') {
+      meetLink = calendarSync.meetingUrl || ""
+      updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
+        meetingUrl: meetLink,
+        calendarEventId: calendarSync.calendarEventId,
+        calendarSyncStatus: 'synced',
+        calendarSyncError: null,
+        updatedAt: serverTimestamp()
+      })
+    } else {
+      updateDocumentNonBlocking(doc(db, "appointments", appointmentId), {
+        calendarSyncStatus: calendarSync.status,
+        calendarSyncError: calendarSync.errorMessage || null,
+        updatedAt: serverTimestamp()
+      })
+
+      toast({
+        variant: 'destructive',
+        title: 'Triagem salva no sistema',
+        description: calendarSync.errorMessage || 'Google Calendar não sincronizou.'
+      })
+    }
 
     if (activeLead.phone) {
       const cleanPhone = activeLead.phone.replace(/\D/g, "");
