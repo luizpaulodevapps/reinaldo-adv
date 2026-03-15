@@ -202,7 +202,7 @@ export default function MasterAgendaPage() {
   }, [selectedDate, allEvents])
 
   const hasEventsOnDay = (day: Date) => {
-    const dayEvents = allEvents.filter(e => e.date && isSameDay(e.date, day))
+    const dayEvents = allEvents.filter(e => e.date && isSameDay(day, e.date))
     return {
       hasHearing: dayEvents.some(e => e.eventType === 'audiencia'),
       hasDeadline: dayEvents.some(e => e.eventType === 'prazo'),
@@ -593,10 +593,10 @@ export default function MasterAgendaPage() {
                     <div className="space-y-8 animate-in zoom-in-95 duration-300">
                       <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                       <RadioGroup value={newEventData.meetingType} onValueChange={(v: any) => setNewEventData({...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
-                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, meetingType: 'online'})}>
+                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, meetingType: 'online', location: 'Google Meet'})}>
                           <Video className={cn("h-8 w-8", newEventData.meetingType === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                         </div>
-                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, meetingType: 'presencial'})}>
+                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, meetingType: 'presencial', location: 'Sede RGMJ'})}>
                           <MapPin className={cn("h-8 w-8", newEventData.meetingType === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                         </div>
                       </RadioGroup>
@@ -634,17 +634,17 @@ export default function MasterAgendaPage() {
                       ) : (
                         <div className="space-y-6">
                           <RadioGroup value={newEventData.locationType} onValueChange={v => setNewEventData({...newEventData, locationType: v})} className="grid grid-cols-2 gap-4">
-                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-primary/20" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, locationType: 'sede', location: 'Sede RGMJ'})}>
                               <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
                             </div>
-                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-primary/20" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
                               <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                             </div>
                           </RadioGroup>
                           {newEventData.locationType === 'externo' && (
                             <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="space-y-2"><Label className={labelMini}>CEP</Label><div className="relative"><Input value={newEventData.zipCode} onChange={e => setNewEventData({...newEventData, zipCode: maskCEP(e.target.value)})} onBlur={handleMeetingCepBlur} className="bg-black/40 h-12 text-white font-mono rounded-xl" placeholder="00000-000" />{loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}</div></div>
+                                <div className="space-y-2"><Label className={labelMini}>CEP</Label><div className="relative"><Input value={newEventData.zipCode} onChange={e => setNewEventData({...newEventData, zipCode: maskCEP(e.target.value)})} onBlur={handleMeetingCepBlur} className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" placeholder="00000-000" />{loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}</div></div>
                                 <div className="md:col-span-2 space-y-2"><Label className={labelMini}>Logradouro</Label><Input value={newEventData.address} onChange={e => setNewEventData({...newEventData, address: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
                                 <div className="space-y-2"><Label className={labelMini}>Nº</Label><Input value={newEventData.number} onChange={e => setNewEventData({...newEventData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
                               </div>
@@ -726,6 +726,11 @@ export default function MasterAgendaPage() {
                 <div className="flex items-center gap-3">
                   <Badge className="bg-primary text-background text-[9px] font-black uppercase tracking-widest">{viewingEvent?.eventType?.toUpperCase()}</Badge>
                   <span className="text-[10px] font-black text-muted-foreground uppercase">Detalhes Estratégicos</span>
+                  {viewingEvent?.calendarEventId && (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[8px] font-black uppercase flex items-center gap-1.5 px-2">
+                      <CloudLightning className="h-3 w-3" /> SINCRONIZADO WORKSPACE
+                    </Badge>
+                  )}
                 </div>
                 <DialogTitle className="text-2xl font-black text-white uppercase mt-1 leading-none">{viewingEvent?.title}</DialogTitle>
               </div>

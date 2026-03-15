@@ -48,7 +48,8 @@ import {
   Tag,
   History,
   ListChecks,
-  RotateCcw
+  RotateCcw,
+  CloudLightning
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -418,15 +419,30 @@ export default function CasesPage() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[320px] bg-[#0d121f] border-white/10 text-white p-2 rounded-2xl shadow-2xl font-sans">
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer">
+                        <History className="h-5 w-5" /> DOSSIÊ COMPLETO
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setMeetingStep(1); setIsMeetingOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
                         <Calendar className="h-5 w-5" /> AGENDAR ATENDIMENTO
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer">
+                        <Navigation className="h-5 w-5" /> GESTÃO DE DILIGÊNCIAS
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setActiveActionProcess(proc); setIsDeadlineOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer">
                         <AlarmClock className="h-5 w-5" /> LANÇAR PRAZO FATAL
                       </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-500/10 text-amber-400 cursor-pointer">
+                        <Gavel className="h-5 w-5" /> PAUTA DE AUDIÊNCIA
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
+                        <DollarSign className="h-5 w-5" /> FLUXO FINANCEIRO
+                      </DropdownMenuItem>
                       <div className="h-px bg-white/5 my-2" />
                       <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer">
                         <Edit3 className="h-5 w-5" /> EDITAR PROCESSO
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-500 cursor-pointer">
+                        <Archive className="h-5 w-5" /> ARQUIVAR DOSSIÊ
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -513,11 +529,11 @@ export default function CasesPage() {
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={meetingData.type} onValueChange={(v: any) => setMeetingData({...meetingData, type: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
-                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
                       <Video className={cn("h-8 w-8", meetingData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                     </div>
-                    <div className={cn("p-8 rounded-3xl border-2 cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
                       <MapPin className={cn("h-8 w-8", meetingData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                     </div>
