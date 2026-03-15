@@ -204,6 +204,61 @@ function SettingsContent() {
     toast({ title: "Modelos de Documentos Atualizados" })
   }
 
+  // Estados Preferências de Notificação
+  const NOTIFICATION_TOPICS = [
+    { id: 'prazos', label: 'Prazos Judiciais', desc: 'Alertas de prazos a vencer e vencidos' },
+    { id: 'audiencias', label: 'Audiências', desc: 'Lembretes de audiências agendadas' },
+    { id: 'financeiro', label: 'Lançamentos Financeiros', desc: 'Entradas, saídas e títulos vencendo' },
+    { id: 'leads', label: 'Novos Leads / Triagem', desc: 'Novos leads e movimentações na triagem' },
+    { id: 'tarefas', label: 'Tarefas e Diligências', desc: 'Atualizações em tarefas e diligências atribuídas' },
+    { id: 'processos', label: 'Movimentações Processuais', desc: 'Publicações DJe e andamentos de processos' },
+    { id: 'sistema', label: 'Alertas do Sistema', desc: 'Erros, manutenção e avisos internos' },
+    { id: 'equipe', label: 'Atividade da Equipe', desc: 'Ações e atualizações dos membros da banca' },
+  ] as const
+
+  const defaultNotifPrefs = Object.fromEntries(
+    NOTIFICATION_TOPICS.map(t => [t.id, { app: true, email: false, push: false }])
+  )
+
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, { app: boolean; email: boolean; push: boolean }>>(defaultNotifPrefs)
+  const [isSavingNotifPrefs, setIsSavingNotifPrefs] = useState(false)
+
+  const notifPrefsRef = useMemoFirebase(() => (db && user) ? doc(db, 'notification_preferences', user.uid) : null, [db, user])
+  const { data: storedNotifPrefs } = useDoc(notifPrefsRef)
+
+  useEffect(() => {
+    if (storedNotifPrefs) {
+      setNotifPrefs(prev => {
+        const merged = { ...prev }
+        for (const topic of NOTIFICATION_TOPICS) {
+          if (storedNotifPrefs[topic.id]) {
+            merged[topic.id] = { ...prev[topic.id], ...storedNotifPrefs[topic.id] }
+          }
+        }
+        return merged
+      })
+    }
+  }, [storedNotifPrefs])
+
+  const toggleNotifPref = (topicId: string, channel: 'app' | 'email' | 'push') => {
+    setNotifPrefs(prev => ({
+      ...prev,
+      [topicId]: { ...prev[topicId], [channel]: !prev[topicId][channel] }
+    }))
+  }
+
+  const handleSaveNotifPrefs = () => {
+    if (!db || !user) return
+    setIsSavingNotifPrefs(true)
+    setDocumentNonBlocking(
+      doc(db, 'notification_preferences', user.uid),
+      { ...notifPrefs, userId: user.uid, updatedAt: serverTimestamp() },
+      { merge: true }
+    )
+    setTimeout(() => setIsSavingNotifPrefs(false), 500)
+    toast({ title: "Preferências de Notificação Salvas" })
+  }
+
   // Estados Customização Kit Cliente
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
@@ -412,6 +467,7 @@ function SettingsContent() {
             <TabsTrigger value="documentos" className={tabTriggerClass}>Recibos</TabsTrigger>
             <TabsTrigger value="tags" className={tabTriggerClass}>Tags</TabsTrigger>
             <TabsTrigger value="kit" className={tabTriggerClass}>Kit Cliente</TabsTrigger>
+            <TabsTrigger value="notificacoes" className={tabTriggerClass}>Notificações</TabsTrigger>
             <TabsTrigger value="licenca" className={tabTriggerClass}>Licença</TabsTrigger>
           </TabsList>
         </div>
@@ -680,6 +736,71 @@ function SettingsContent() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="notificacoes" className="mt-0 space-y-8">
+          <Card className="glass border-white/5 overflow-hidden shadow-2xl rounded-3xl">
+            <CardHeader className="p-8 border-b border-white/5 bg-[#0a0f1e] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-500 shadow-xl"><Bell className="h-6 w-6" /></div>
+                <div>
+                  <CardTitle className="text-xl font-black text-white uppercase tracking-tighter">Preferências de Notificação</CardTitle>
+                  <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-50">ESCOLHA QUAIS NOTIFICAÇÕES VOCÊ QUER RECEBER E POR ONDE.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-10">
+              <div className="rounded-2xl border border-white/5 overflow-hidden shadow-xl">
+                <div className="grid grid-cols-[1fr_120px_120px_120px] bg-white/[0.03] border-b border-white/5">
+                  <div className="px-8 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Tema</div>
+                  <div className="px-4 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] text-center">Aplicativo</div>
+                  <div className="px-4 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] text-center">E-mail</div>
+                  <div className="px-4 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] text-center">Push</div>
+                </div>
+                {NOTIFICATION_TOPICS.map((topic, idx) => (
+                  <div key={topic.id} className={cn("grid grid-cols-[1fr_120px_120px_120px] items-center transition-colors hover:bg-white/[0.02]", idx < NOTIFICATION_TOPICS.length - 1 && "border-b border-white/5")}>
+                    <div className="px-8 py-6">
+                      <p className="text-sm font-black text-white uppercase tracking-tight">{topic.label}</p>
+                      <p className="text-[9px] text-muted-foreground font-bold mt-1 uppercase tracking-wider opacity-60">{topic.desc}</p>
+                    </div>
+                    <div className="flex justify-center">
+                      <Switch
+                        checked={notifPrefs[topic.id]?.app ?? true}
+                        onCheckedChange={() => toggleNotifPref(topic.id, 'app')}
+                        className="data-[state=checked]:bg-emerald-500"
+                      />
+                    </div>
+                    <div className="flex justify-center">
+                      <Switch
+                        checked={notifPrefs[topic.id]?.email ?? false}
+                        onCheckedChange={() => toggleNotifPref(topic.id, 'email')}
+                        className="data-[state=checked]:bg-blue-500"
+                      />
+                    </div>
+                    <div className="flex justify-center">
+                      <Switch
+                        checked={notifPrefs[topic.id]?.push ?? false}
+                        onCheckedChange={() => toggleNotifPref(topic.id, 'push')}
+                        className="data-[state=checked]:bg-amber-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <Info className="h-5 w-5 text-primary/40" />
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">As preferências são salvas por usuário. Cada membro da equipe pode personalizar as suas.</p>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveNotifPrefs} disabled={isSavingNotifPrefs} className="gold-gradient h-16 rounded-xl font-black uppercase text-[11px] px-12 shadow-2xl hover:scale-[1.02] transition-all gap-3">
+                {isSavingNotifPrefs ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                SALVAR PREFERÊNCIAS DE NOTIFICAÇÃO
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="licenca" className="mt-0">

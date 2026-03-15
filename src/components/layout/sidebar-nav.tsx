@@ -61,6 +61,7 @@ const menuGroups = [
     items: [
       { name: "CLIENTES", href: "/clients", icon: Users },
       { name: "PROCESSOS", href: "/cases", icon: FolderOpen },
+      { name: "TRIAGEM", href: "/leads", icon: Zap },
       { name: "AGENDA", href: "/agenda", icon: CalendarDays },
     ]
   },
