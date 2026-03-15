@@ -600,7 +600,7 @@ export default function CasesPage() {
 
               {meetingStep === 5 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Resumo do Protocolo</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Resumo do Protocolo</Label>
                   <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
                     <div className="space-y-2">

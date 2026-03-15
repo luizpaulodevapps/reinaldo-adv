@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -461,10 +460,10 @@ export default function LeadsPage() {
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={intakeData.type} onValueChange={(v: any) => setIntakeData({...intakeData, type: v})} className="grid grid-cols-2 gap-6">
-                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'online' ? "bg-emerald-500/10 border-emerald-500" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'online'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'online'})}>
                       <Video className={cn("h-8 w-8", intakeData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                     </div>
-                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'presencial' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'presencial'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", intakeData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setIntakeData({...intakeData, type: 'presencial'})}>
                       <MapPin className={cn("h-8 w-8", intakeData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                     </div>
                   </RadioGroup>
@@ -527,7 +526,7 @@ export default function LeadsPage() {
                                   value={intakeData.zipCode} 
                                   onChange={e => setIntakeData({...intakeData, zipCode: maskCEP(e.target.value)})} 
                                   onBlur={handleIntakeCepBlur}
-                                  className="bg-black/40 h-12 text-white font-mono rounded-xl" 
+                                  className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" 
                                   placeholder="00000-000"
                                 />
                                 {loadingIntakeCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
@@ -565,7 +564,7 @@ export default function LeadsPage() {
 
               {intakeStep === 5 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block mb-8">5. Consolidação de Triagem</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Consolidação de Triagem</Label>
                   <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl">
                       <ShieldCheck className="h-8 w-8" />
