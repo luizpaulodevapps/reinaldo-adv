@@ -18,6 +18,7 @@ interface CalendarEventParams {
     processNumber?: string;
     clientName?: string;
     useMeet?: boolean;
+    attendeeEmail?: string;
   };
 }
 
@@ -91,6 +92,14 @@ function buildCalendarBody(act: CalendarEventParams['act']): any {
     };
   }
 
+  if (act.attendeeEmail) {
+    body.attendees = [
+      { email: act.attendeeEmail, responseStatus: 'accepted' },
+    ];
+    body.guestsCanModify = false;
+    body.guestsCanSeeOtherGuests = true;
+  }
+
   return body;
 }
 
@@ -102,7 +111,7 @@ export async function pushActToGoogleCalendar({ accessToken, act }: CalendarEven
   if (!accessToken) return { success: false, error: 'Token de acesso não fornecido.' };
 
   const response = await fetch(
-    'https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1',
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=${act.attendeeEmail ? 'all' : 'none'}`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -129,7 +138,7 @@ export async function updateGoogleCalendarEvent({
   act: CalendarEventParams['act'];
 }) {
   const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarEventId}?conferenceDataVersion=1`,
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(calendarEventId)}?conferenceDataVersion=1&sendUpdates=${act.attendeeEmail ? 'all' : 'none'}`,
     {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -154,7 +163,7 @@ export async function deleteGoogleCalendarEvent({
   calendarEventId: string;
 }) {
   const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarEventId}`,
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(calendarEventId)}?sendUpdates=all`,
     { method: 'DELETE', headers: { 'Authorization': `Bearer ${accessToken}` } }
   );
 

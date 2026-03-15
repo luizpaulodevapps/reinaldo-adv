@@ -126,6 +126,9 @@ export default function MasterAgendaPage() {
     publicationText: "",
     partyContact: "",
     assigneeId: "",
+    responsibleStaffId: "",
+    responsibleStaffName: "",
+    responsibleStaffEmail: "",
     zipCode: "",
     address: "",
     number: "",
@@ -237,6 +240,9 @@ export default function MasterAgendaPage() {
         locationType: existingEvent.locationType || "sede",
         autoMeet: existingEvent.autoMeet ?? true,
         calculationType: existingEvent.calculationType || "Dias Úteis (CPC/CLT)",
+        responsibleStaffId: existingEvent.responsibleStaffId || user?.uid || "",
+        responsibleStaffName: existingEvent.responsibleStaffName || profile?.name || "",
+        responsibleStaffEmail: existingEvent.responsibleStaffEmail || user?.email || "",
         zipCode: existingEvent.zipCode || "",
         address: existingEvent.address || "",
         number: existingEvent.number || "",
@@ -265,6 +271,9 @@ export default function MasterAgendaPage() {
         publicationText: "",
         partyContact: "",
         assigneeId: user?.uid || "",
+        responsibleStaffId: user?.uid || "",
+        responsibleStaffName: profile?.name || user?.displayName || "",
+        responsibleStaffEmail: user?.email || "",
         zipCode: "",
         address: "",
         number: "",
@@ -304,6 +313,9 @@ export default function MasterAgendaPage() {
       clientName: newEventData.clientName,
       processNumber: newEventData.processNumber,
       location: finalLocation,
+      responsibleStaffId: newEventData.responsibleStaffId,
+      responsibleStaffName: newEventData.responsibleStaffName,
+      responsibleStaffEmail: newEventData.responsibleStaffEmail,
       updatedAt: serverTimestamp()
     }
 
@@ -316,7 +328,8 @@ export default function MasterAgendaPage() {
       type: 'atendimento' as const,
       processNumber: newEventData.processNumber,
       clientName: newEventData.clientName,
-      useMeet: newEventData.autoMeet && (newEventData.meetingType === 'online' || createMode === 'audiencia')
+      useMeet: newEventData.autoMeet && (newEventData.meetingType === 'online' || createMode === 'audiencia'),
+      attendeeEmail: newEventData.responsibleStaffEmail || undefined,
     }
 
     if (createMode === 'audiencia') {
@@ -665,6 +678,22 @@ export default function MasterAgendaPage() {
                       <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação</Label>
                       <div className="space-y-6">
                         <div className="space-y-2"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+                        <div className="space-y-2">
+                          <Label className={labelMini}>Advogado Responsável *</Label>
+                          <Select value={newEventData.responsibleStaffId} onValueChange={(id: string) => {
+                            const selected = staffMembers?.find(s => s.id === id)
+                            setNewEventData({...newEventData, responsibleStaffId: id, responsibleStaffName: selected?.name || '', responsibleStaffEmail: selected?.email || id})
+                          }}>
+                            <SelectTrigger className="bg-black/40 h-14 text-white font-black border-white/10">
+                              <SelectValue placeholder="Selecione o advogado..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                              {(staffMembers || []).filter(s => s.isActive !== false).map(s => (
+                                <SelectItem key={s.id} value={s.id} className="text-xs font-black uppercase">{s.name} — {s.role?.toUpperCase()}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-2"><Label className={labelMini}>Notas Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Descreva os objetivos..." /></div>
                       </div>
                     </div>
@@ -723,6 +752,22 @@ export default function MasterAgendaPage() {
               {createMode !== 'atendimento' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                    <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
+                   <div className="space-y-3">
+                     <Label className={labelMini}>Advogado Responsável *</Label>
+                     <Select value={newEventData.responsibleStaffId} onValueChange={(id: string) => {
+                       const selected = staffMembers?.find(s => s.id === id)
+                       setNewEventData({...newEventData, responsibleStaffId: id, responsibleStaffName: selected?.name || '', responsibleStaffEmail: selected?.email || id})
+                     }}>
+                       <SelectTrigger className="bg-black/40 h-14 text-white font-black border-white/10">
+                         <SelectValue placeholder="Selecione o advogado..." />
+                       </SelectTrigger>
+                       <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                         {(staffMembers || []).filter(s => s.isActive !== false).map(s => (
+                           <SelectItem key={s.id} value={s.id} className="text-xs font-black uppercase">{s.name} — {s.role?.toUpperCase()}</SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
                    <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
                     <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
@@ -799,6 +844,14 @@ export default function MasterAgendaPage() {
                 <div className="space-y-2">
                   <Label className={labelMini}>Processo / CNJ</Label>
                   <p className="text-sm font-mono font-bold text-white/60 leading-none">{viewingEvent?.processNumber || '---'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <UserIcon className="h-6 w-6 text-primary" />
+                <div>
+                  <p className={labelMini}>Advogado Responsável</p>
+                  <p className="text-base font-black text-white uppercase leading-none">{viewingEvent?.responsibleStaffName || 'NÃO ATRIBUÍDO'}</p>
                 </div>
               </div>
 
