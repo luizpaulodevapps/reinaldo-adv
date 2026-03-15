@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -496,7 +497,7 @@ export default function LeadsPage() {
                   {intakeData.type === 'online' ? (
                     <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                       <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet RGMJ</h4>
-                      <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                      <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
                         <Switch checked={intakeData.autoMeet} onCheckedChange={v => setIntakeData({...intakeData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
                         <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
                       </div>

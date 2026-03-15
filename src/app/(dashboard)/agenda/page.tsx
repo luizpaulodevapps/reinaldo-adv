@@ -49,7 +49,9 @@ import {
   CalendarDays,
   ShieldCheck,
   FileText,
-  Save
+  Save,
+  Eye,
+  History
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -450,11 +452,14 @@ export default function MasterAgendaPage() {
               return (
                 <DropdownMenu key={i}>
                   <DropdownMenuTrigger asChild>
-                    <div className={cn(
-                      "min-h-[130px] p-4 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-white/5 group relative",
-                      !isCurrentMonth && "opacity-10 pointer-events-none",
-                      isSelected && "bg-primary/[0.03] ring-1 ring-inset ring-primary/30"
-                    )}>
+                    <div 
+                      onClick={() => setSelectedDate(day)}
+                      className={cn(
+                        "min-h-[130px] p-4 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-white/5 group relative",
+                        !isCurrentMonth && "opacity-10 pointer-events-none",
+                        isSelected && "bg-primary/[0.03] ring-1 ring-inset ring-primary/30"
+                      )}
+                    >
                       <span className={cn(
                         "text-xs font-black transition-all", 
                         isToday ? "bg-primary text-background h-6 w-6 rounded-full flex items-center justify-center scale-110 shadow-lg" : isSelected ? "text-primary scale-125 inline-block" : "text-muted-foreground group-hover:text-white"
@@ -473,6 +478,8 @@ export default function MasterAgendaPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-64 bg-[#0d121f] border-white/10 text-white rounded-xl p-2 shadow-2xl">
                     <DropdownMenuLabel className="text-[9px] font-black text-primary uppercase tracking-[0.2em] px-3 py-2">Comando de Pauta ({format(day, "dd/MM")})</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-white/5" />
+                    <DropdownMenuItem onClick={() => setSelectedDate(day)} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest h-11 rounded-lg hover:bg-primary/10 text-primary cursor-pointer"><Eye className="h-4 w-4" /> Ver Pauta do Dia</DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-white/5" />
                     <DropdownMenuItem onClick={() => handleOpenSchedule(day, 'audiencia')} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest h-11 rounded-lg hover:bg-rose-500/10 text-rose-400 cursor-pointer"><Gavel className="h-4 w-4" /> Audiência Interna</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleOpenSchedule(day, 'freelance')} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest h-11 rounded-lg hover:bg-cyan-500/10 text-cyan-400 cursor-pointer"><Handshake className="h-4 w-4" /> Audiência Freelance</DropdownMenuItem>
