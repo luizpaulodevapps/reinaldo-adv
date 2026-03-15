@@ -131,8 +131,6 @@ const columns = [
   { id: "distribuicao", title: "DISTRIBUIÇÃO", color: "text-purple-400" },
 ]
 
-const DOSSIER_TABS = ["overview", "atividades", "captura", "dossies", "burocracia", "revisao"]
-
 export default function LeadsPage() {
   const db = useFirestore()
   const { user, profile } = useUser()
@@ -166,9 +164,6 @@ export default function LeadsPage() {
   const [viewingInterview, setViewingInterview] = useState<any>(null)
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false)
   const [interviewAnalysis, setInterviewAnalysis] = useState<AnalyzeInterviewOutput | null>(null)
-
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
-  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
   const [isSchedulingIntake, setIsSchedulingIntake] = useState(false)
   const [intakeStep, setIntakeStep] = useState(1)
@@ -231,7 +226,7 @@ export default function LeadsPage() {
     if (cep.length !== 8) return
     setLoadingIntakeCep(true)
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
       const data = await response.json()
       if (!data.erro) {
         setIntakeData(prev => ({
@@ -266,7 +261,7 @@ export default function LeadsPage() {
       if (intakeData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        finalLocation = `${intakeData.address}, ${intakeData.number} - ${intakeData.neighborhood}, ${intakeData.city}/${intakeData.state}`
+        finalLocation = (intakeData.address || "") + ", " + (intakeData.number || "") + " - " + (intakeData.neighborhood || "") + ", " + (intakeData.city || "") + "/" + (intakeData.state || "")
       }
     }
     
@@ -286,9 +281,9 @@ export default function LeadsPage() {
     updateDocumentNonBlocking(doc(db, "leads", activeLead.id), payload)
     
     const appointmentRes = await addDocumentNonBlocking(collection(db, "appointments"), { 
-      title: `TRIAGEM: ${activeLead.name}`, 
+      title: "TRIAGEM: " + activeLead.name, 
       type: "Atendimento", 
-      startDateTime: `${intakeData.date}T${intakeData.time}:00`, 
+      startDateTime: intakeData.date + "T" + intakeData.time + ":00", 
       clientId: activeLead.id, 
       clientName: activeLead.name, 
       location: finalLocation, 
@@ -304,10 +299,10 @@ export default function LeadsPage() {
         const calRes = await pushActToGoogleCalendar({
           accessToken,
           act: {
-            title: `[TRIAGEM] ${activeLead.name}`,
-            description: `Atendimento inicial do lead RGMJ.`,
+            title: "[TRIAGEM] " + activeLead.name,
+            description: "Atendimento inicial do lead RGMJ.",
             location: finalLocation,
-            startDateTime: `${intakeData.date}T${intakeData.time}:00`,
+            startDateTime: intakeData.date + "T" + intakeData.time + ":00",
             type: 'atendimento',
             clientName: activeLead.name,
             useMeet: intakeData.type === 'online' && intakeData.autoMeet
@@ -326,10 +321,10 @@ export default function LeadsPage() {
 
     if (activeLead.phone) {
       const cleanPhone = activeLead.phone.replace(/\D/g, "");
-      const meetPart = meetLink ? ` Link da reunião: ${meetLink}` : "";
-      const locPart = intakeData.type === 'presencial' ? ` Local: ${finalLocation}` : "";
-      const msg = `Olá ${activeLead.name}! Seu atendimento de TRIAGEM foi agendado para o dia ${new Date(intakeData.date).toLocaleDateString('pt-BR')} às ${intakeData.time}.${locPart}${meetPart} Dr. Reinaldo - RGMJ.`
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
+      const meetPart = meetLink ? (" Link da reunião: " + meetLink) : "";
+      const locPart = intakeData.type === 'presencial' ? (" Local: " + finalLocation) : "";
+      const msg = "Olá " + activeLead.name + "! Seu atendimento de TRIAGEM foi agendado para o dia " + new Date(intakeData.date).toLocaleDateString('pt-BR') + " às " + intakeData.time + "." + locPart + meetPart + " Dr. Reinaldo - RGMJ."
+      window.open("https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(msg), "_blank")
     }
 
     setIsSyncingIntake(false)
@@ -401,7 +396,7 @@ export default function LeadsPage() {
                     <div className="space-y-1">
                       <SheetTitle className="text-2xl font-black uppercase text-white tracking-tight leading-none">{activeLead.name}</SheetTitle>
                       <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-widest opacity-50">
-                        {activeLead.scheduledDate ? `TRIAGEM AGENDADA: ${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : 'AGUARDANDO AGENDAMENTO'}
+                        {activeLead.scheduledDate ? "TRIAGEM AGENDADA: " + new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime : 'AGUARDANDO AGENDAMENTO'}
                       </SheetDescription>
                     </div>
                   </div>
@@ -424,11 +419,15 @@ export default function LeadsPage() {
                             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center"><ArrowRight className="h-5 w-5 text-amber-500" /></div>
                           </div>
                           <div className="space-y-4">
-                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? `${new Date(activeLead.scheduledDate).toLocaleDateString()} ${activeLead.scheduledTime}` : "AGUARDANDO DEFINIÇÃO"}</p>
+                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime : "AGUARDANDO DEFINIÇÃO"}</p>
                             <Badge variant="outline" className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] h-8 px-4 border-white/10">{activeLead.meetingLocation || "LOCAL NÃO INFORMADO"}</Badge>
                           </div>
                         </Card>
                       </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="atividades" className="animate-in fade-in duration-500 outline-none w-full">
+                      <ActivityManager leadId={activeLead.id} />
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -485,7 +484,7 @@ export default function LeadsPage() {
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação do Lead</Label>
                   <div className="space-y-6">
-                    <div className="space-y-2"><Label className={labelMini}>Identificação do Compromisso</Label><Input value={`TRIAGEM: ${activeLead?.name}`} className="bg-black/40 h-14 text-white font-black" disabled /></div>
+                    <div className="space-y-2"><Label className={labelMini}>Identificação do Compromisso</Label><Input value={"TRIAGEM: " + (activeLead?.name || "")} className="bg-black/40 h-14 text-white font-black" disabled /></div>
                     <div className="space-y-2"><Label className={labelMini}>Pauta / Observações</Label><Textarea value={intakeData.observations} onChange={e => setIntakeData({...intakeData, observations: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Assuntos a tratar no primeiro contato..." /></div>
                   </div>
                 </div>
@@ -572,11 +571,11 @@ export default function LeadsPage() {
                     </div>
                     <div className="space-y-2">
                       <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeLead?.name}</h4>
-                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{new Date(intakeData.date).toLocaleDateString()} às {intakeData.time}</p>
+                      <p className="text-sm font-bold text-primary uppercase tracking-widest">{intakeData.date} às {intakeData.time}</p>
                     </div>
                     <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
                       <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                        {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : `Atendimento Presencial em: ${intakeData.locationType === 'sede' ? 'Sede RGMJ' : `${intakeData.address}, ${intakeData.number}`}`}
+                        {intakeData.type === 'online' ? "Sincronismo Google Meet + Calendar Ativo." : ("Atendimento Presencial em: " + (intakeData.locationType === 'sede' ? 'Sede RGMJ' : (intakeData.address + ", " + intakeData.number)))}
                       </p>
                     </div>
                   </Card>

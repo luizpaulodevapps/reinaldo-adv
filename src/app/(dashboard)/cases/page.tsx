@@ -49,7 +49,8 @@ import {
   History,
   ListChecks,
   RotateCcw,
-  CloudLightning
+  CloudLightning,
+  Archive
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -142,29 +143,6 @@ export default function CasesPage() {
   const { user, profile } = useUser()
   const { toast } = useToast()
 
-  const handleMeetingCepBlur = async () => {
-    const cep = meetingData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
-    setLoadingMeetingCep(true)
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await response.json()
-      if (!data.erro) {
-        setMeetingData(prev => ({
-          ...prev,
-          address: data.logradouro.toUpperCase(),
-          neighborhood: data.bairro.toUpperCase(),
-          city: data.localidade.toUpperCase(),
-          state: data.uf.toUpperCase()
-        }))
-      }
-    } catch (e) {
-      console.error("CEP error")
-    } finally {
-      setLoadingMeetingCep(false)
-    }
-  }
-
   const processesQuery = useMemoFirebase(() => {
     if (!user || !db) return null
     return query(collection(db!, "processes"), orderBy("createdAt", "desc"), limit(listLimit))
@@ -237,13 +215,13 @@ export default function CasesPage() {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        finalLocation = `${meetingData.address}, ${meetingData.number} - ${meetingData.neighborhood}, ${meetingData.city}/${meetingData.state}`
+        finalLocation = (meetingData.address || "") + ", " + (meetingData.number || "") + " - " + (meetingData.neighborhood || "") + ", " + (meetingData.city || "") + "/" + (meetingData.state || "")
       }
     }
     
-    const dateTimeStr = `${meetingData.date}T${meetingData.time}:00`;
+    const dateTimeStr = meetingData.date + "T" + (meetingData.time || "09:00") + ":00";
     const payload: any = {
-      title: meetingData.title.toUpperCase() || `REUNIÃO: ${activeActionProcess.clientName}`,
+      title: meetingData.title.toUpperCase() || ("REUNIÃO: " + activeActionProcess.clientName),
       type: "Atendimento",
       startDateTime: dateTimeStr,
       clientName: activeActionProcess.clientName,
@@ -328,6 +306,29 @@ export default function CasesPage() {
   }
 
   const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
+
+  const handleMeetingCepBlur = async () => {
+    const cep = meetingData.zipCode.replace(/\D/g, "")
+    if (cep.length !== 8) return
+    setLoadingMeetingCep(true)
+    try {
+      const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
+      const data = await response.json()
+      if (!data.erro) {
+        setMeetingData(prev => ({
+          ...prev,
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }))
+      }
+    } catch (e) {
+      console.error("CEP error")
+    } finally {
+      setLoadingMeetingCep(false)
+    }
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
@@ -608,6 +609,11 @@ export default function CasesPage() {
                               <Input value={meetingData.number} onChange={e => setMeetingData({...meetingData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" />
                             </div>
                           </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2"><Label className={labelMini}>Bairro</Label><Input value={meetingData.neighborhood} onChange={e => setMeetingData({...meetingData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                            <div className="space-y-2"><Label className={labelMini}>Cidade</Label><Input value={meetingData.city} onChange={e => setMeetingData({...meetingData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                            <div className="space-y-2"><Label className={labelMini}>UF</Label><Input value={meetingData.state} onChange={e => setMeetingData({...meetingData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -617,12 +623,17 @@ export default function CasesPage() {
 
               {meetingStep === 5 && (
                 <div className="space-y-8 animate-in zoom-in-95 duration-300 text-center">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Resumo do Protocolo</Label>
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">5. Consolidação do Registro</Label>
                   <Card className="glass border-primary/30 bg-primary/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20 text-emerald-500 shadow-xl"><ShieldCheck className="h-8 w-8" /></div>
                     <div className="space-y-2">
                       <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{activeActionProcess?.clientName}</h4>
                       <p className="text-sm font-bold text-primary uppercase tracking-widest">{meetingData.date} às {meetingData.time}</p>
+                    </div>
+                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
+                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
+                        {meetingData.type === 'online' ? "Sincronismo Workspace Ativo. Meet link será injetado." : "Atendimento Presencial Selecionado."}
+                      </p>
                     </div>
                   </Card>
                 </div>
