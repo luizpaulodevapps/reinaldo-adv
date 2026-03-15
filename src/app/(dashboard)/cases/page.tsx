@@ -308,8 +308,8 @@ export default function CasesPage() {
   const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
 
   const handleMeetingCepBlur = async () => {
-    const cep = meetingData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
+    const cep = meetingData.zipCode?.replace(/\D/g, "")
+    if (!cep || cep.length !== 8) return
     setLoadingMeetingCep(true)
     try {
       const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
@@ -530,11 +530,11 @@ export default function CasesPage() {
                 <div className="space-y-8 animate-in zoom-in-95 duration-300">
                   <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
                   <RadioGroup value={meetingData.type} onValueChange={(v: any) => setMeetingData({...meetingData, type: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
-                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", meetingData.type === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'online', location: 'Google Meet'})}>
                       <Video className={cn("h-8 w-8", meetingData.type === 'online' ? "text-emerald-500" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                     </div>
-                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4 transition-all", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
+                    <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", meetingData.type === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, type: 'presencial', location: 'Sede RGMJ'})}>
                       <MapPin className={cn("h-8 w-8", meetingData.type === 'presencial' ? "text-primary" : "text-muted-foreground")} />
                       <span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                     </div>

@@ -68,7 +68,8 @@ import {
   CalendarDays,
   ChevronDown,
   Library,
-  Globe
+  Globe,
+  RotateCcw
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -136,6 +137,7 @@ export default function LeadsPage() {
   const { user, profile } = useUser()
   const { toast } = useToast()
   const [listLimit, setListLimit] = useState(50)
+  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null)
 
   const leadsQuery = useMemoFirebase(() => {
     if (!user || !db) return null
@@ -222,8 +224,8 @@ export default function LeadsPage() {
   }, [activeLead?.id])
 
   const handleIntakeCepBlur = async () => {
-    const cep = intakeData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
+    const cep = intakeData.zipCode?.replace(/\D/g, "")
+    if (!cep || cep.length !== 8) return
     setLoadingIntakeCep(true)
     try {
       const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
@@ -396,7 +398,7 @@ export default function LeadsPage() {
                     <div className="space-y-1">
                       <SheetTitle className="text-2xl font-black uppercase text-white tracking-tight leading-none">{activeLead.name}</SheetTitle>
                       <SheetDescription className="text-xs text-muted-foreground uppercase font-black tracking-widest opacity-50">
-                        {activeLead.scheduledDate ? "TRIAGEM AGENDADA: " + new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime : 'AGUARDANDO AGENDAMENTO'}
+                        {activeLead.scheduledDate ? ("TRIAGEM AGENDADA: " + new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime) : 'AGUARDANDO AGENDAMENTO'}
                       </SheetDescription>
                     </div>
                   </div>
@@ -419,7 +421,7 @@ export default function LeadsPage() {
                             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center"><ArrowRight className="h-5 w-5 text-amber-500" /></div>
                           </div>
                           <div className="space-y-4">
-                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime : "AGUARDANDO DEFINIÇÃO"}</p>
+                            <p className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{activeLead.scheduledDate ? (new Date(activeLead.scheduledDate).toLocaleDateString() + " " + activeLead.scheduledTime) : "AGUARDANDO DEFINIÇÃO"}</p>
                             <Badge variant="outline" className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] h-8 px-4 border-white/10">{activeLead.meetingLocation || "LOCAL NÃO INFORMADO"}</Badge>
                           </div>
                         </Card>

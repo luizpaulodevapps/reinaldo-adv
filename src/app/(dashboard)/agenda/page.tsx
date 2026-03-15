@@ -51,7 +51,9 @@ import {
   FileText,
   Save,
   Eye,
-  History
+  History,
+  Archive,
+  RotateCcw
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
@@ -101,7 +103,6 @@ export default function MasterAgendaPage() {
   const [viewingEvent, setViewingEvent] = useState<any>(null)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   
-  // Estados para Wizard
   const [currentStep, setCurrentStep] = useState(1)
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false)
   const [loadingMeetingCep, setLoadingMeetingCep] = useState(false)
@@ -135,11 +136,11 @@ export default function MasterAgendaPage() {
   const { toast } = useToast()
 
   const handleMeetingCepBlur = async () => {
-    const cep = newEventData.zipCode.replace(/\D/g, "")
-    if (cep.length !== 8) return
+    const cep = newEventData.zipCode?.replace(/\D/g, "")
+    if (!cep || cep.length !== 8) return
     setLoadingMeetingCep(true)
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
       const data = await response.json()
       if (!data.erro) {
         setNewEventData((prev: any) => ({
@@ -234,6 +235,7 @@ export default function MasterAgendaPage() {
         city: existingEvent.city || "",
         state: existingEvent.state || ""
       })
+      setViewingEvent(null) // Fecha o diálogo de visualização ao abrir edição
     } else {
       setEditingEventId(null)
       setNewEventData({
@@ -268,7 +270,7 @@ export default function MasterAgendaPage() {
     if (!db || !newEventData.date) return
     setIsSyncingWorkspace(true)
     
-    const dateTime = `${newEventData.date}T${newEventData.time || '09:00'}:00`
+    const dateTime = newEventData.date + "T" + (newEventData.time || '09:00') + ":00"
     let targetCollection = "appointments"
     
     let finalLocation = ""
@@ -279,7 +281,7 @@ export default function MasterAgendaPage() {
         if (newEventData.locationType === 'sede') {
           finalLocation = 'Sede RGMJ'
         } else {
-          finalLocation = `${newEventData.address}, ${newEventData.number} - ${newEventData.neighborhood}, ${newEventData.city}/${newEventData.state}`
+          finalLocation = (newEventData.address || "") + ", " + (newEventData.number || "") + " - " + (newEventData.neighborhood || "") + ", " + (newEventData.city || "") + "/" + (newEventData.state || "")
         }
       }
     } else {
@@ -358,7 +360,7 @@ export default function MasterAgendaPage() {
             title: payload.title,
             description: payload.notes,
             location: payload.location,
-            startDateTime: createMode === 'prazo' ? `${newEventData.date}T00:00:00` : dateTime,
+            startDateTime: createMode === 'prazo' ? (newEventData.date + "T00:00:00") : dateTime,
             type: typeForGoogle,
             processNumber: payload.processNumber,
             clientName: payload.clientName,
@@ -381,10 +383,10 @@ export default function MasterAgendaPage() {
       const contact = newEventData.partyContact || "";
       if (contact) {
         const cleanPhone = contact.replace(/\D/g, "");
-        const meetPart = generatedMeetLink ? ` Link da reunião: ${generatedMeetLink}` : "";
-        const locPart = createMode === 'atendimento' && newEventData.meetingType === 'presencial' ? ` Local: ${payload.location}` : "";
-        const msg = `Olá! Confirmamos o agendamento de ${payload.title} para o dia ${new Date(newEventData.date).toLocaleDateString('pt-BR')} às ${newEventData.time}.${locPart}${meetPart} Dr. Reinaldo - RGMJ.`
-        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank")
+        const meetPart = generatedMeetLink ? (" Link da reunião: " + generatedMeetLink) : "";
+        const locPart = createMode === 'atendimento' && newEventData.meetingType === 'presencial' ? (" Local: " + payload.location) : "";
+        const msg = "Olá! Confirmamos o agendamento de " + payload.title + " para o dia " + new Date(newEventData.date).toLocaleDateString('pt-BR') + " às " + newEventData.time + "." + locPart + meetPart + " Dr. Reinaldo - RGMJ."
+        window.open("https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(msg), "_blank")
       }
     }
 
@@ -428,7 +430,7 @@ export default function MasterAgendaPage() {
               { label: 'Atendimentos', color: 'bg-amber-500', glow: 'rgba(245,158,11,0.6)' },
             ].map(l => (
               <div key={l.label} className="flex items-center gap-2 shrink-0">
-                <div className={cn("h-2 w-2 rounded-full", l.color)} style={{ boxShadow: `0 0 8px ${l.glow}` }} />
+                <div className={cn("h-2 w-2 rounded-full", l.color)} style={{ boxShadow: "0 0 8px " + l.glow }} />
                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{l.label}</span>
               </div>
             ))}
@@ -777,7 +779,7 @@ export default function MasterAgendaPage() {
                       <MapPin className="h-5 w-5 text-primary" />
                       <span className="text-sm font-bold text-white uppercase leading-none">{viewingEvent.location}</span>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(viewingEvent.location)}`, "_blank")} className="h-10 w-10 text-primary hover:bg-primary/10 rounded-xl"><Navigation className="h-5 w-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(viewingEvent.location), "_blank")} className="h-10 w-10 text-primary hover:bg-primary/10 rounded-xl"><Navigation className="h-5 w-5" /></Button>
                   </div>
                 )}
               </div>
