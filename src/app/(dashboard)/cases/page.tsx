@@ -79,7 +79,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ProcessForm } from "@/components/cases/process-form"
 import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { format, addDays, addBusinessDays, parseISO } from "date-fns"
+import { format } from "date-fns"
 import { getValidGoogleAccessToken } from "@/services/google-token"
 import { syncActToGoogleCalendar, updateActInGoogleCalendar } from "@/services/google-calendar-sync"
 import { setupClientWorkspace } from "@/services/google-drive"
@@ -107,7 +107,6 @@ export default function CasesPage() {
   const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
   const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null)
   
-  const [isDeadlineOpen, setIsDeadlineOpen] = useState(false)
   const [isSyncingAct, setIsSyncingAct] = useState(false)
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
   const [loadingMeetingCep, setLoadingMeetingCep] = useState(false)
@@ -201,11 +200,11 @@ export default function CasesPage() {
       setEditingMeetingId(existing.id)
       setEditingCalendarId(existing.calendarEventId)
       setMeetingData({
-        title: existing.title,
-        date: existing.startDateTime.split('T')[0],
-        time: existing.startDateTime.split('T')[1].substring(0, 5),
+        title: existing.title || "REUNIÃO TÁTICA",
+        date: existing.startDateTime?.split('T')[0] || format(new Date(), 'yyyy-MM-dd'),
+        time: existing.startDateTime?.split('T')[1]?.substring(0, 5) || "09:00",
         type: existing.meetingType || "online",
-        location: existing.location,
+        location: existing.location || "Google Meet",
         locationType: existing.locationType || "sede",
         notes: existing.notes || "",
         autoMeet: existing.autoMeet ?? true,
@@ -253,11 +252,11 @@ export default function CasesPage() {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        finalLocation = (meetingData.address || "") + ", " + (meetingData.number || "") + " - " + (meetingData.neighborhood || "") + ", " + (meetingData.city || "") + "/" + (meetingData.state || "")
+        finalLocation = `${meetingData.address || ""}, ${meetingData.number || ""} - ${meetingData.neighborhood || ""}, ${meetingData.city || ""}/${meetingData.state || ""}`
       }
     }
     
-    const dateTimeStr = meetingData.date + "T" + (meetingData.time || "09:00") + ":00";
+    const dateTimeStr = `${meetingData.date}T${meetingData.time || "09:00"}:00`;
     const appRef = editingMeetingId ? doc(db, "appointments", editingMeetingId) : doc(collection(db, "appointments"));
     const finalDocId = appRef.id;
 
@@ -323,7 +322,7 @@ export default function CasesPage() {
     if (!cep || cep.length !== 8) return
     setLoadingMeetingCep(true)
     try {
-      const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await response.json()
       if (!data.erro) {
         setMeetingData(prev => ({
