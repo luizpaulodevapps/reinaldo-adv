@@ -4,6 +4,8 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { 
   Scale, 
   Search, 
@@ -52,8 +54,6 @@ import {
   CloudLightning,
   Archive
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, limit } from "firebase/firestore"
 import { cn, maskCurrency, parseCurrencyToNumber, maskCEP } from "@/lib/utils"
@@ -252,11 +252,17 @@ export default function CasesPage() {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
-        finalLocation = `${meetingData.address || ""}, ${meetingData.number || ""} - ${meetingData.neighborhood || ""}, ${meetingData.city || ""}/${meetingData.state || ""}`
+        const addr = meetingData.address || ""
+        const num = meetingData.number || ""
+        const neigh = meetingData.neighborhood || ""
+        const cit = meetingData.city || ""
+        const st = meetingData.state || ""
+        finalLocation = addr + ", " + num + " - " + neigh + ", " + cit + "/" + st
       }
     }
     
-    const dateTimeStr = `${meetingData.date}T${meetingData.time || "09:00"}:00`;
+    const timeVal = meetingData.time || "09:00"
+    const dateTimeStr = meetingData.date + "T" + timeVal + ":00"
     const appRef = editingMeetingId ? doc(db, "appointments", editingMeetingId) : doc(collection(db, "appointments"));
     const finalDocId = appRef.id;
 
@@ -322,7 +328,7 @@ export default function CasesPage() {
     if (!cep || cep.length !== 8) return
     setLoadingMeetingCep(true)
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const response = await fetch("https://viacep.com.br/ws/" + cep + "/json/")
       const data = await response.json()
       if (!data.erro) {
         setMeetingData(prev => ({

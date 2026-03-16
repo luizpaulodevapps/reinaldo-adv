@@ -65,7 +65,8 @@ import {
   Signature,
   ArrowUpRight,
   ArrowDownRight,
-  Gavel
+  Gavel,
+  Calculator
 } from "lucide-react"
 import { 
   Select, 
