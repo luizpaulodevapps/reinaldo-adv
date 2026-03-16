@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { DashboardClientLayout } from './dashboard-client-layout'
 
 export default function DashboardLayout({
@@ -5,5 +6,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <DashboardClientLayout>{children}</DashboardClientLayout>
+  return (
+    <Suspense>
+      <DashboardClientLayout>{children}</DashboardClientLayout>
+    </Suspense>
+  )
 }
