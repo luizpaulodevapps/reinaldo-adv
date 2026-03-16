@@ -56,11 +56,12 @@ export function createGoogleWorkspaceProvider() {
 }
 
 /**
- * Pilar 2 — Armazenamento do Refresh Token.
+ * Pilar 2 — Cache de Access Token no Firestore.
  *
- * Salva o token Google (access + refresh) no documento staff_profiles/{email}
- * no Firestore. Esse token é a "chave mestra" que permite gerar novas
- * sessões de acesso mesmo que o advogado esteja offline.
+ * Salva APENAS o access token Google no documento staff_profiles/{email}.
+ * O refresh_token REAL do Google é salvo exclusivamente pelo OAuth2
+ * Authorization Code Flow via /api/google/callback. Nunca misturar com
+ * o refreshToken do Firebase Auth (que é inútil para Google APIs).
  *
  * Chamado automaticamente no login via GoogleLoginButton.
  */
@@ -68,7 +69,6 @@ export function persistGoogleTokenToFirestore(
   firestore: Firestore,
   email: string,
   accessToken: string,
-  firebaseRefreshToken: string,
   expiresInSeconds = 3600
 ) {
   const emailId = email.toLowerCase().trim();
@@ -80,7 +80,6 @@ export function persistGoogleTokenToFirestore(
   setDocumentNonBlocking(profileRef, {
     googleAccessToken: accessToken,
     googleTokenExpiry: tokenExpiry,
-    googleRefreshToken: firebaseRefreshToken,
     googleTokenUpdatedAt: serverTimestamp(),
   }, { merge: true });
 }
@@ -118,9 +117,46 @@ export async function refreshGoogleAccessToken(auth: Auth): Promise<string | nul
 }
 
 /**
+ * Tenta refresh silencioso via servidor usando o refresh_token real do Google
+ * armazenado pelo fluxo OAuth2 (/api/google/callback).
+ * Retorna o novo access token ou null se falhar.
+ */
+async function tryServerSideRefresh(auth: Auth): Promise<string | null> {
+  try {
+    const user = auth.currentUser;
+    if (!user?.email) return null;
+
+    const idToken = await user.getIdToken();
+    const response = await fetch('/api/google/refresh-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ staffEmail: user.email }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.accessToken) {
+      storeGoogleToken(data.accessToken, data.expiresIn || 3500);
+      return data.accessToken;
+    }
+    return null;
+  } catch (error) {
+    console.warn('[tryServerSideRefresh] Falha no refresh server-side:', error);
+    return null;
+  }
+}
+
+/**
  * Retorna um access token válido para Google APIs.
- * Se o token armazenado estiver válido, retorna direto.
- * Se estiver expirado, faz re-autenticação automática.
+ * Estratégia de resolução em 3 camadas:
+ *   1. Cache local (localStorage) — se ainda válido, retorna direto.
+ *   2. Refresh server-side via /api/google/refresh-token — silencioso,
+ *      usa o refresh_token real do Google salvo pelo OAuth2 Code Flow.
+ *   3. Popup de re-autenticação — fallback interativo.
  * 
  * @param auth - Instância do Firebase Auth
  * @returns access token válido ou null se não conseguir obter
@@ -129,10 +165,15 @@ export async function getValidGoogleAccessToken(
   auth: Auth,
   options: GoogleAccessTokenOptions = {}
 ): Promise<string | null> {
+  // Camada 1: Cache local
   if (!options.forceRefresh && isTokenValid()) {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  // Token expirado ou inexistente — renova
+  // Camada 2: Refresh server-side (silencioso, sem popup)
+  const serverToken = await tryServerSideRefresh(auth);
+  if (serverToken) return serverToken;
+
+  // Camada 3: Fallback — popup de re-autenticação
   return refreshGoogleAccessToken(auth);
 }

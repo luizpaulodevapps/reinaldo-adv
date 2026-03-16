@@ -32,13 +32,15 @@ export default function GoogleLoginButton() {
       if (credential?.accessToken) {
         storeGoogleToken(credential.accessToken);
 
-        // Pilar 2 — Salva o access token imediato no Firestore (cache)
+        // Salva APENAS o access token no Firestore (cache).
+        // O refresh_token real do Google será salvo pelo OAuth2 Code Flow
+        // via /api/google/callback — NUNCA usar result.user.refreshToken
+        // (que é o refresh token do Firebase Auth, inútil para Google APIs).
         if (result.user.email && db) {
           persistGoogleTokenToFirestore(
             db,
             result.user.email,
-            credential.accessToken,
-            result.user.refreshToken
+            credential.accessToken
           );
         }
       }

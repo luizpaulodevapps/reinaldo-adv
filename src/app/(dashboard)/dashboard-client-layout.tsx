@@ -6,10 +6,11 @@ import { useFirebase, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/
 import { useEffect } from 'react';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Scale, ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export function DashboardClientLayout({
   children,
@@ -17,7 +18,30 @@ export function DashboardClientLayout({
   children: React.ReactNode
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
   const { user, isUserLoading, firestore: db, setProfile, profile, auth } = useFirebase();
+
+  // Feedback do fluxo OAuth2 do Google Workspace
+  useEffect(() => {
+    const googleStatus = searchParams.get('google_workspace');
+    if (!googleStatus) return;
+
+    const messages: Record<string, { title: string; description: string; variant?: 'destructive' | 'default' }> = {
+      connected: { title: 'Google Conectado', description: 'Calendar, Drive e Meet sincronizados com sucesso.' },
+      partial: { title: 'Conexão Parcial', description: 'O Google não retornou o refresh token. Tente desconectar e reconectar.', variant: 'destructive' },
+      denied: { title: 'Permissão Negada', description: 'Você negou o acesso ao Google Workspace. Reconecte em Configurações.', variant: 'destructive' },
+      error: { title: 'Erro na Conexão', description: 'Falha ao conectar com o Google. Tente novamente em Configurações.', variant: 'destructive' },
+    };
+
+    const msg = messages[googleStatus];
+    if (msg) {
+      toast({ title: msg.title, description: msg.description, variant: msg.variant });
+    }
+
+    // Limpa o query param sem recarregar a página
+    window.history.replaceState({}, '', window.location.pathname);
+  }, [searchParams, toast]);
 
   const OWNERS = [
     'luizao16@gmail.com', 

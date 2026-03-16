@@ -352,6 +352,18 @@ function SettingsContent() {
                 </div>
               </div>
               <Button onClick={handleSaveGoogleConfig} className="gold-gradient h-14 rounded-xl font-black uppercase text-[11px] px-10 shadow-2xl text-background"><Save className="h-5 w-5 mr-3" /> ATUALIZAR HUB DIGITAL</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const email = user?.email;
+                  if (email) {
+                    window.location.href = `/api/google/authorize?email=${encodeURIComponent(email)}`;
+                  }
+                }}
+                className="h-14 rounded-xl font-black uppercase text-[11px] px-10 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 ml-4"
+              >
+                <Key className="h-5 w-5 mr-3" /> RECONECTAR GOOGLE
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
