@@ -1,6 +1,8 @@
 'use client';
 
 import { Auth, GoogleAuthProvider, reauthenticateWithPopup, signInWithPopup } from 'firebase/auth';
+import { Firestore, doc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { GOOGLE_WORKSPACE_SCOPES } from '@/services/google-workspace';
 
 const TOKEN_KEY = 'google_access_token';
@@ -45,8 +47,42 @@ export function clearGoogleToken() {
 export function createGoogleWorkspaceProvider() {
   const provider = new GoogleAuthProvider();
   GOOGLE_WORKSPACE_SCOPES.forEach((scope) => provider.addScope(scope));
-  provider.setCustomParameters({ include_granted_scopes: 'true' });
+  provider.setCustomParameters({
+    include_granted_scopes: 'true',
+    access_type: 'offline',
+    prompt: 'consent',
+  });
   return provider;
+}
+
+/**
+ * Pilar 2 — Armazenamento do Refresh Token.
+ *
+ * Salva o token Google (access + refresh) no documento staff_profiles/{email}
+ * no Firestore. Esse token é a "chave mestra" que permite gerar novas
+ * sessões de acesso mesmo que o advogado esteja offline.
+ *
+ * Chamado automaticamente no login via GoogleLoginButton.
+ */
+export function persistGoogleTokenToFirestore(
+  firestore: Firestore,
+  email: string,
+  accessToken: string,
+  firebaseRefreshToken: string,
+  expiresInSeconds = 3600
+) {
+  const emailId = email.toLowerCase().trim();
+  if (!emailId) return;
+
+  const profileRef = doc(firestore, 'staff_profiles', emailId);
+  const tokenExpiry = new Date(Date.now() + expiresInSeconds * 1000);
+
+  setDocumentNonBlocking(profileRef, {
+    googleAccessToken: accessToken,
+    googleTokenExpiry: tokenExpiry,
+    googleRefreshToken: firebaseRefreshToken,
+    googleTokenUpdatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 /**

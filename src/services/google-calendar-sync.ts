@@ -1,9 +1,11 @@
 'use client';
 
 import { Auth } from 'firebase/auth';
+import { Firestore } from 'firebase/firestore';
 import { CalendarAct, GoogleCalendarApiError, deleteGoogleCalendarEvent, pushActToGoogleCalendar, updateGoogleCalendarEvent } from '@/services/google-calendar';
 import { clearGoogleToken, getValidGoogleAccessToken } from '@/services/google-token';
 import { GoogleWorkspaceSettings, normalizeGoogleWorkspaceSettings } from '@/services/google-workspace';
+import { resolveAccessTokenForStaff } from '@/services/google-impersonation';
 
 type GoogleCalendarSyncStatus = 'synced' | 'not_connected' | 'disabled' | 'failed';
 
@@ -44,8 +46,12 @@ export async function updateActInGoogleCalendar(params: {
   act: CalendarAct;
   accessToken?: string | null;
   googleSettings?: Partial<GoogleWorkspaceSettings> | null;
+  /** Pilar 3 — E-mail do advogado alvo para impersonificação (opcional) */
+  staffEmail?: string;
+  /** Firestore necessário quando staffEmail é fornecido */
+  firestore?: Firestore;
 }): Promise<GoogleCalendarSyncResult> {
-  const { auth, calendarEventId, act, accessToken, googleSettings } = params;
+  const { auth, calendarEventId, act, accessToken, googleSettings, staffEmail, firestore } = params;
   const settings = normalizeGoogleWorkspaceSettings(googleSettings);
 
   if (!settings.isCalendarActive) {
@@ -53,7 +59,19 @@ export async function updateActInGoogleCalendar(params: {
   }
 
   const actToSync = settings.isMeetActive ? act : { ...act, useMeet: false };
-  const token = accessToken ?? await getValidGoogleAccessToken(auth);
+
+  // Pilar 3: Se staffEmail fornecido, tenta impersonificar (com refresh server-side)
+  let token = accessToken ?? null;
+  if (!token && staffEmail && firestore) {
+    const impersonation = await resolveAccessTokenForStaff(firestore, staffEmail, auth.currentUser?.email || undefined, auth);
+    if (impersonation.error) {
+      return { status: 'failed', errorMessage: impersonation.error };
+    }
+    token = impersonation.accessToken;
+  }
+  if (!token) {
+    token = await getValidGoogleAccessToken(auth);
+  }
 
   if (!token) {
     return { status: 'not_connected', errorMessage: 'A conta Google precisa ser reconectada para sincronizar no Calendar.' };
@@ -84,15 +102,30 @@ export async function deleteActFromGoogleCalendar(params: {
   calendarEventId: string;
   accessToken?: string | null;
   googleSettings?: Partial<GoogleWorkspaceSettings> | null;
+  /** Pilar 3 — E-mail do advogado alvo para impersonificação (opcional) */
+  staffEmail?: string;
+  /** Firestore necessário quando staffEmail é fornecido */
+  firestore?: Firestore;
 }): Promise<GoogleCalendarSyncResult> {
-  const { auth, calendarEventId, accessToken, googleSettings } = params;
+  const { auth, calendarEventId, accessToken, googleSettings, staffEmail, firestore } = params;
   const settings = normalizeGoogleWorkspaceSettings(googleSettings);
 
   if (!settings.isCalendarActive) {
     return { status: 'disabled' };
   }
 
-  const token = accessToken ?? await getValidGoogleAccessToken(auth);
+  // Pilar 3: Se staffEmail fornecido, tenta impersonificar (com refresh server-side)
+  let token = accessToken ?? null;
+  if (!token && staffEmail && firestore) {
+    const impersonation = await resolveAccessTokenForStaff(firestore, staffEmail, auth.currentUser?.email || undefined, auth);
+    if (impersonation.error) {
+      return { status: 'failed', errorMessage: impersonation.error };
+    }
+    token = impersonation.accessToken;
+  }
+  if (!token) {
+    token = await getValidGoogleAccessToken(auth);
+  }
   if (!token) {
     return { status: 'not_connected', errorMessage: 'A conta Google precisa ser reconectada para remover do Calendar.' };
   }
@@ -122,8 +155,12 @@ export async function syncActToGoogleCalendar(params: {
   act: CalendarAct;
   accessToken?: string | null;
   googleSettings?: Partial<GoogleWorkspaceSettings> | null;
+  /** Pilar 3 — E-mail do advogado alvo para impersonificação (opcional) */
+  staffEmail?: string;
+  /** Firestore necessário quando staffEmail é fornecido */
+  firestore?: Firestore;
 }): Promise<GoogleCalendarSyncResult> {
-  const { auth, act, accessToken, googleSettings } = params;
+  const { auth, act, accessToken, googleSettings, staffEmail, firestore } = params;
   const settings = normalizeGoogleWorkspaceSettings(googleSettings);
 
   if (!settings.isCalendarActive) {
@@ -134,7 +171,19 @@ export async function syncActToGoogleCalendar(params: {
   }
 
   const actToSync = settings.isMeetActive ? act : { ...act, useMeet: false };
-  const initialToken = accessToken ?? await getValidGoogleAccessToken(auth);
+
+  // Pilar 3: Se staffEmail fornecido, tenta impersonificar (com refresh server-side)
+  let initialToken = accessToken ?? null;
+  if (!initialToken && staffEmail && firestore) {
+    const impersonation = await resolveAccessTokenForStaff(firestore, staffEmail, auth.currentUser?.email || undefined, auth);
+    if (impersonation.error) {
+      return { status: 'failed', errorMessage: impersonation.error };
+    }
+    initialToken = impersonation.accessToken;
+  }
+  if (!initialToken) {
+    initialToken = await getValidGoogleAccessToken(auth);
+  }
 
   if (!initialToken) {
     return {

@@ -78,6 +78,7 @@ function buildCalendarBody(act: CalendarEventParams['act']): any {
       useDefault: false,
       overrides: [
         { method: 'popup', minutes: 60 },
+        { method: 'popup', minutes: 360 },
         { method: 'email', minutes: 1440 },
       ],
     },

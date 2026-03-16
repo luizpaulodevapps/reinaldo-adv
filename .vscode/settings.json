@@ -4,6 +4,7 @@
             "approve": true,
             "matchCommandLine": true
         },
-        "npx next": true
+        "npx next": true,
+        "npm install": true
     }
 }

@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
-import { useAuth as getAuth } from '@/firebase'
+import { useFirebase } from '@/firebase'
 import { Button } from '@/components/ui/button'
-import { createGoogleWorkspaceProvider, storeGoogleToken } from '@/services/google-token'
+import { createGoogleWorkspaceProvider, storeGoogleToken, persistGoogleTokenToFirestore } from '@/services/google-token'
 
 export default function GoogleLoginButton() {
   const router = useRouter()
-  const auth = getAuth()
+  const { auth, firestore: db } = useFirebase()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,6 +31,27 @@ export default function GoogleLoginButton() {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         storeGoogleToken(credential.accessToken);
+
+        // Pilar 2 — Salva o access token imediato no Firestore (cache)
+        if (result.user.email && db) {
+          persistGoogleTokenToFirestore(
+            db,
+            result.user.email,
+            credential.accessToken,
+            result.user.refreshToken
+          );
+        }
+      }
+
+      // Pilar 2 — Inicia o fluxo OAuth2 Authorization Code para capturar
+      // o refresh_token REAL do Google. Isso redireciona para a tela de
+      // consentimento e volta para /api/google/callback, que salva o
+      // refresh_token no Firestore. Sem isso, a impersonificação só funciona
+      // enquanto o access_token (~1h) estiver válido.
+      if (result.user.email) {
+        const email = encodeURIComponent(result.user.email);
+        window.location.href = `/api/google/authorize?email=${email}`;
+        return; // O redirect cuida do restante
       }
 
       router.push('/dashboard')
