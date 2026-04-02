@@ -303,11 +303,11 @@ export default function LeadsPage() {
       updatedAt: serverTimestamp()
     }, { merge: true })
 
-    const preparedGoogleToken = googleSettings.isCalendarActive ? await getValidGoogleAccessToken(auth) : null;
     const calendarSync = await syncActToGoogleCalendar({
       auth,
-      accessToken: preparedGoogleToken,
       googleSettings,
+      staffEmail: user?.email ?? undefined,
+      firestore: db,
       act: {
         title: "[TRIAGEM] " + activeLead.name,
         description: "Atendimento inicial do lead RGMJ.",

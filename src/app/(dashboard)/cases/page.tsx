@@ -293,7 +293,6 @@ export default function CasesPage() {
 
     setDocumentNonBlocking(appRef, payload, { merge: true });
 
-    const preparedGoogleToken = googleConfig.isCalendarActive ? await getValidGoogleAccessToken(auth) : null;
     const actForGoogle = {
       title: payload.title,
       description: payload.notes,
@@ -306,8 +305,21 @@ export default function CasesPage() {
     }
 
     const calendarSync = editingCalendarId 
-      ? await updateActInGoogleCalendar({ auth, calendarEventId: editingCalendarId, accessToken: preparedGoogleToken, googleSettings: googleConfig, act: actForGoogle })
-      : await syncActToGoogleCalendar({ auth, accessToken: preparedGoogleToken, googleSettings: googleConfig, act: actForGoogle })
+      ? await updateActInGoogleCalendar({ 
+          auth, 
+          calendarEventId: editingCalendarId, 
+          googleSettings: googleConfig, 
+          act: actForGoogle,
+          staffEmail: activeActionProcess.responsibleStaffEmail ?? undefined,
+          firestore: db
+        })
+      : await syncActToGoogleCalendar({ 
+          auth, 
+          googleSettings: googleConfig, 
+          act: actForGoogle,
+          staffEmail: activeActionProcess.responsibleStaffEmail ?? undefined,
+          firestore: db
+        })
 
     if (calendarSync.status === 'synced') {
       updateDocumentNonBlocking(appRef, {

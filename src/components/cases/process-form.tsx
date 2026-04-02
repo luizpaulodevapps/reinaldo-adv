@@ -90,6 +90,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     city: "",
     responsibleStaffId: user?.uid || "",
     responsibleStaffName: profile?.name || user?.displayName || "MEMBRO DA EQUIPE",
+    responsibleStaffEmail: user?.email || "",
     description: "",
     strategyNotes: ""
   })
@@ -186,7 +187,8 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     setFormData(prev => ({
       ...prev,
       responsibleStaffId: id,
-      responsibleStaffName: selected?.name || "MEMBRO DA EQUIPE"
+      responsibleStaffName: selected?.name || "MEMBRO DA EQUIPE",
+      responsibleStaffEmail: selected?.email || id
     }))
   }
 

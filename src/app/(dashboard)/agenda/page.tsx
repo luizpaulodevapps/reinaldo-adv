@@ -372,10 +372,6 @@ export default function MasterAgendaPage() {
     }
 
     calendarAct.type = typeForGoogle
-    const preparedGoogleToken = googleSettings.isCalendarActive
-      ? await getValidGoogleAccessToken(auth)
-      : null
-
     let finalDocId = "";
     if (editingEventId) {
       updateDocumentNonBlocking(doc(db, targetCollection, editingEventId), payload)
@@ -393,15 +389,17 @@ export default function MasterAgendaPage() {
       ? await updateActInGoogleCalendar({
           auth,
           calendarEventId: editingCalendarEventId,
-          accessToken: preparedGoogleToken,
           act: calendarAct,
           googleSettings,
+          staffEmail: newEventData.responsibleStaffEmail ?? undefined,
+          firestore: db,
         })
       : await syncActToGoogleCalendar({
           auth,
-          accessToken: preparedGoogleToken,
           act: calendarAct,
           googleSettings,
+          staffEmail: newEventData.responsibleStaffEmail ?? undefined,
+          firestore: db,
         })
 
     if (calendarSync.status === 'synced') {
@@ -450,12 +448,12 @@ export default function MasterAgendaPage() {
     if (!confirm("Remover permanentemente da pauta?")) return
 
     if (event.calendarEventId && googleSettings.isCalendarActive) {
-      const token = await getValidGoogleAccessToken(auth)
       await deleteActFromGoogleCalendar({
         auth,
         calendarEventId: event.calendarEventId,
-        accessToken: token,
         googleSettings,
+        staffEmail: event.responsibleStaffEmail ?? undefined,
+        firestore: db,
       })
     }
 
