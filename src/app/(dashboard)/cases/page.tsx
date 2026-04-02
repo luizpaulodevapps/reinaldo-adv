@@ -341,12 +341,13 @@ export default function CasesPage() {
       if (meetingData.locationType === 'sede') {
         finalLocation = 'Sede RGMJ'
       } else {
+        const locName = meetingData.location ? `${meetingData.location}: ` : ""
         const addr = meetingData.address || ""
         const num = meetingData.number || ""
         const neigh = meetingData.neighborhood || ""
         const cit = meetingData.city || ""
         const st = meetingData.state || ""
-        finalLocation = addr + ", " + num + " - " + neigh + ", " + cit + "/" + st
+        finalLocation = `${locName}${addr}, ${num} - ${neigh}, ${cit}/${st}`.replace(/^,\s*|-\s*,/g, '').trim()
       }
     }
     
@@ -827,6 +828,59 @@ export default function CasesPage() {
                               <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                             </div>
                           </RadioGroup>
+
+                          {meetingData.locationType === 'externo' && (
+                            <div className="space-y-4 pt-4 animate-in slide-in-from-top-4 duration-500">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Nome do Local (Ex: Fórum Central)</Label>
+                                  <Input 
+                                    className="bg-black/40 h-12 text-white rounded-xl" 
+                                    value={meetingData.location} 
+                                    onChange={e => setMeetingData({...meetingData, location: e.target.value.toUpperCase()})}
+                                    placeholder="NOME DO LOCAL"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>CEP</Label>
+                                  <div className="relative">
+                                    <Input 
+                                      className="bg-black/40 h-12 text-white rounded-xl pr-10" 
+                                      value={meetingData.zipCode} 
+                                      onChange={e => setMeetingData({...meetingData, zipCode: e.target.value})}
+                                      onBlur={handleMeetingCepBlur}
+                                      placeholder="00000-000"
+                                    />
+                                    {loadingMeetingCep && <Loader2 className="absolute right-3 top-3.5 h-5 w-5 animate-spin text-primary" />}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2 space-y-2">
+                                  <Label className={labelMini}>Endereço</Label>
+                                  <Input className="bg-black/40 h-12 text-white rounded-xl" value={meetingData.address} onChange={e => setMeetingData({...meetingData, address: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Número</Label>
+                                  <Input className="bg-black/40 h-12 text-white rounded-xl" value={meetingData.number} onChange={e => setMeetingData({...meetingData, number: e.target.value})} />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Bairro</Label>
+                                  <Input className="bg-black/40 h-12 text-white rounded-xl" value={meetingData.neighborhood} onChange={e => setMeetingData({...meetingData, neighborhood: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>Cidade</Label>
+                                  <Input className="bg-black/40 h-12 text-white rounded-xl" value={meetingData.city} onChange={e => setMeetingData({...meetingData, city: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className={labelMini}>UF</Label>
+                                  <Input className="bg-black/40 h-12 text-white rounded-xl" value={meetingData.state} onChange={e => setMeetingData({...meetingData, state: e.target.value})} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </>

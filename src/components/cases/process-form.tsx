@@ -23,7 +23,9 @@ import {
   Loader2,
   MapPin,
   Library,
-  Tag
+  Tag,
+  Plus,
+  Trash2
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, DocumentReference, DocumentData } from "firebase/firestore"
@@ -69,17 +71,18 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   const [formData, setFormData] = useState({
     poloProcessual: "Polo Ativo (Autor/Reclamante)",
-    clientId: "",
-    clientName: "",
-    defendantName: "",
-    defendantDocument: "",
-    defendantZipCode: "",
-    defendantAddress: "",
-    defendantNumber: "",
-    defendantComplement: "",
-    defendantNeighborhood: "",
-    defendantCity: "",
-    defendantState: "",
+    clients: [] as { id: string, name: string }[],
+    defendants: [{
+      name: "",
+      document: "",
+      zipCode: "",
+      address: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: ""
+    }],
     processNumber: "",
     value: "",
     startDate: "",
@@ -115,9 +118,28 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
 
   useEffect(() => {
     if (initialData) {
+      // Migração de dados legais (single party -> multi party)
+      const clients = initialData.clients || 
+        (initialData.clientId ? [{ id: initialData.clientId, name: initialData.clientName }] : [])
+      
+      const defendants = initialData.defendants || 
+        (initialData.defendantName ? [{
+          name: initialData.defendantName,
+          document: initialData.defendantDocument,
+          zipCode: initialData.defendantZipCode,
+          address: initialData.defendantAddress,
+          number: initialData.defendantNumber,
+          complement: initialData.defendantComplement,
+          neighborhood: initialData.defendantNeighborhood,
+          city: initialData.defendantCity,
+          state: initialData.defendantState
+        }] : [{ name: "", document: "", zipCode: "", address: "", number: "", complement: "", neighborhood: "", city: "", state: "" }])
+
       setFormData(prev => ({
         ...prev,
-        ...initialData
+        ...initialData,
+        clients,
+        defendants
       }))
       if (initialData.court) {
         setCourtSearchTerm(initialData.court)
@@ -182,6 +204,16 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  // Sincronizar nomes principais para compatibilidade de listagem
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      clientName: prev.clients[0]?.name || "",
+      clientId: prev.clients[0]?.id || "",
+      defendantName: prev.defendants[0]?.name || ""
+    }))
+  }, [formData.clients, formData.defendants])
+
   const handleSelectStaff = (id: string) => {
     const selected = staffMembers?.find(s => s.id === id)
     setFormData(prev => ({
@@ -204,8 +236,8 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
     setIsCourtSearchOpen(false)
   }
 
-  const handleDefendantCepBlur = async () => {
-    const cep = formData.defendantZipCode.replace(/\D/g, "")
+  const handleDefendantCepBlur = async (index: number) => {
+    const cep = formData.defendants[index].zipCode.replace(/\D/g, "")
     if (cep.length !== 8) return
 
     setLoadingDefendantCep(true)
@@ -213,19 +245,68 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await response.json()
       if (!data.erro) {
-        setFormData(prev => ({
-          ...prev,
-          defendantAddress: data.logradouro.toUpperCase(),
-          defendantNeighborhood: data.bairro.toUpperCase(),
-          defendantCity: data.localidade.toUpperCase(),
-          defendantState: data.uf.toUpperCase()
-        }))
+        const newDefendants = [...formData.defendants]
+        newDefendants[index] = {
+          ...newDefendants[index],
+          address: data.logradouro.toUpperCase(),
+          neighborhood: data.bairro.toUpperCase(),
+          city: data.localidade.toUpperCase(),
+          state: data.uf.toUpperCase()
+        }
+        setFormData(prev => ({ ...prev, defendants: newDefendants }))
       }
     } catch (error) {
       console.error("CEP error")
     } finally {
       setLoadingDefendantCep(false)
     }
+  }
+
+  const addDefendant = () => {
+    setFormData(prev => ({
+      ...prev,
+      defendants: [...prev.defendants, {
+        name: "",
+        document: "",
+        zipCode: "",
+        address: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: ""
+      }]
+    }))
+  }
+
+  const removeDefendant = (index: number) => {
+    if (formData.defendants.length === 1) return
+    const newDefs = [...formData.defendants]
+    newDefs.splice(index, 1)
+    setFormData(prev => ({ ...prev, defendants: newDefs }))
+  }
+
+  const updateDefendantField = (index: number, field: string, value: string) => {
+    const newDefs = [...formData.defendants]
+    newDefs[index] = { ...newDefs[index], [field]: value }
+    setFormData(prev => ({ ...prev, defendants: newDefs }))
+  }
+
+  const addClientToProcess = (client: any) => {
+    if (formData.clients.some(c => c.id === client.id)) return
+    setFormData(prev => ({
+      ...prev,
+      clients: [...prev.clients, { id: client.id, name: client.name }]
+    }))
+    setShowResults(false)
+    setSearchTerm("")
+  }
+
+  const removeClientFromProcess = (clientId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      clients: prev.clients.filter(c => c.id !== clientId)
+    }))
   }
 
   const handleOpenQuickClient = () => {
@@ -255,8 +336,7 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
       const docRef = result as DocumentReference<any, DocumentData>;
       
       if (docRef && docRef.id) {
-        handleInputChange("clientId", docRef.id)
-        handleInputChange("clientName", newClient.name)
+        addClientToProcess({ id: docRef.id, name: newClient.name })
       }
       
       setIsQuickClientOpen(false)
@@ -339,18 +419,41 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3 relative">
-                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CLIENTE PRINCIPAL *</Label>
+
+                <div className="space-y-4">
+                  <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">AUTORES VINCULADOS ({formData.clients.length})</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {formData.clients.map(client => (
+                      <div key={client.id} className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl group animate-in zoom-in-95">
+                        <div className="flex items-center gap-3">
+                          <UserCheck className="h-4 w-4 text-primary" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-tight">{client.name}</span>
+                        </div>
+                        <button type="button" onClick={() => removeClientFromProcess(client.id)} className="h-6 w-6 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 transition-colors hover:text-white">
+                          <ChevronLeft className="h-3 w-3 rotate-45" />
+                        </button>
+                      </div>
+                    ))}
+                    {formData.clients.length === 0 && (
+                      <div className="col-span-full py-6 border-2 border-dashed border-white/5 rounded-xl flex flex-col items-center justify-center opacity-30">
+                        <Users className="h-6 w-6 mb-2" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-center">Nenhum autor selecionado</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3 relative pt-4 border-t border-white/5">
+                  <Label className="text-[11px] font-black text-primary uppercase tracking-widest">ADICIONAR AUTOR / CLIENTE *</Label>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="Pesquisar por nome ou CPF..." 
                       className="pl-12 bg-black/20 border-white/10 h-14 text-white text-sm font-bold"
-                      value={formData.clientName || searchTerm}
+                      value={searchTerm}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setSearchTerm(e.target.value)
                         setShowResults(true)
-                        if (formData.clientName) handleInputChange("clientName", "")
                       }}
                       onFocus={() => setShowResults(true)}
                     />
@@ -360,12 +463,12 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                       <div className="max-h-[300px] overflow-y-auto">
                         {filteredClients.length > 0 ? (
                           filteredClients.map(c => (
-                            <button type="button" key={c.id} onClick={() => { handleInputChange("clientId", c.id); handleInputChange("clientName", c.name); setShowResults(false); }} className="w-full p-5 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group">
+                            <button type="button" key={c.id} onClick={() => addClientToProcess(c)} className="w-full p-5 flex items-center justify-between hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left group">
                               <div>
                                 <p className="text-xs font-black text-white uppercase group-hover:text-primary transition-colors">{c.name}</p>
                                 <p className="text-[10px] font-mono text-muted-foreground font-bold mt-1">{c.documentNumber}</p>
                               </div>
-                              <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">Selecionar</Badge>
+                              <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary uppercase">Adicionar</Badge>
                             </button>
                           ))
                         ) : (
@@ -385,69 +488,93 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
           {currentStep === 2 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <StepHeader title="Polo Passivo" subtitle="Identifique a parte contrária da demanda" icon={Building2} />
-              <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
-                    <Input value={formData.defendantName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantName", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
-                  </div>
-                  <div className="space-y-3">
-                    <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
-                    <Input value={formData.defendantDocument} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("defendantDocument", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
-                  </div>
-                </div>
-
-                <div className="border-t border-white/5 pt-8 space-y-6">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Localização da Sede (Citação)</h4>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CEP</Label>
-                      <div className="relative">
-                        <Input 
-                          value={formData.defendantZipCode} 
-                          onChange={(e) => handleInputChange("defendantZipCode", e.target.value)} 
-                          onBlur={handleDefendantCepBlur}
-                          className="bg-black/20 border-white/10 h-12 text-white font-mono" 
-                          placeholder="00000-000"
-                        />
-                        {loadingDefendantCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+              <div className="space-y-6">
+                {formData.defendants.map((defendant, index) => (
+                  <div key={index} className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] space-y-8 shadow-2xl relative group animate-in slide-in-from-right-4 duration-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-black px-2">{index + 1}º RÉU</Badge>
                       </div>
+                      {formData.defendants.length > 1 && (
+                        <button type="button" onClick={() => removeDefendant(index)} className="text-rose-500 hover:bg-rose-500/10 p-2 rounded-xl transition-all opacity-40 group-hover:opacity-100">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
-                    <div className="md:col-span-2 space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ENDEREÇO (LOGRADOURO)</Label>
-                      <Input value={formData.defendantAddress} onChange={(e) => handleInputChange("defendantAddress", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="RUA, AVENIDA..." />
-                    </div>
-                    <div className="space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO</Label>
-                      <Input value={formData.defendantNumber} onChange={(e) => handleInputChange("defendantNumber", e.target.value)} className="bg-black/20 border-white/10 h-12 text-white" placeholder="123" />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">COMPLEMENTO</Label>
-                      <Input value={formData.defendantComplement} onChange={(e) => handleInputChange("defendantComplement", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="SALA, BLOCO..." />
-                    </div>
-                    <div className="space-y-3">
-                      <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">BAIRRO</Label>
-                      <Input value={formData.defendantNeighborhood} onChange={(e) => handleInputChange("defendantNeighborhood", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="BAIRRO..." />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CIDADE</Label>
-                        <Input value={formData.defendantCity} onChange={(e) => handleInputChange("defendantCity", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" />
+                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">RAZÃO SOCIAL / NOME DO RÉU *</Label>
+                        <Input value={defendant.name} onChange={(e) => updateDefendantField(index, "name", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-14 text-white font-bold" placeholder="EX: EMPRESA DE SERVIÇOS S.A." />
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
-                        <Input value={formData.defendantState} onChange={(e) => handleInputChange("defendantState", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" maxLength={2} />
+                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">DOCUMENTO (CPF / CNPJ)</Label>
+                        <Input value={defendant.document} onChange={(e) => updateDefendantField(index, "document", e.target.value)} className="bg-black/20 border-white/10 h-14 text-white font-mono" placeholder="00.000.000/0000-00" />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-white/5 pt-8 space-y-6">
+                      <div className="flex items-center gap-3">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Localização da Sede (Citação)</h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="space-y-3">
+                          <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CEP</Label>
+                          <div className="relative">
+                            <Input 
+                              value={defendant.zipCode} 
+                              onChange={(e) => updateDefendantField(index, "zipCode", e.target.value)} 
+                              onBlur={() => handleDefendantCepBlur(index)}
+                              className="bg-black/20 border-white/10 h-12 text-white font-mono" 
+                              placeholder="00000-000"
+                            />
+                            {loadingDefendantCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                          </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-3">
+                          <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">ENDEREÇO (LOGRADOURO)</Label>
+                          <Input value={defendant.address} onChange={(e) => updateDefendantField(index, "address", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="RUA, AVENIDA..." />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">NÚMERO</Label>
+                          <Input value={defendant.number} onChange={(e) => updateDefendantField(index, "number", e.target.value)} className="bg-black/20 border-white/10 h-12 text-white" placeholder="123" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-3">
+                          <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">COMPLEMENTO</Label>
+                          <Input value={defendant.complement} onChange={(e) => updateDefendantField(index, "complement", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="SALA, BLOCO..." />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">BAIRRO</Label>
+                          <Input value={defendant.neighborhood} onChange={(e) => updateDefendantField(index, "neighborhood", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" placeholder="BAIRRO..." />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">CIDADE</Label>
+                            <Input value={defendant.city} onChange={(e) => updateDefendantField(index, "city", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">UF</Label>
+                            <Input value={defendant.state} onChange={(e) => updateDefendantField(index, "state", e.target.value.toUpperCase())} className="bg-black/20 border-white/10 h-12 text-white" maxLength={2} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ))}
+
+                <button 
+                  type="button" 
+                  onClick={addDefendant}
+                  className="w-full py-8 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary/40 hover:text-primary transition-all group"
+                >
+                  <Plus className="h-6 w-6 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                  <span className="text-[11px] font-black uppercase tracking-widest">Adicionar Corréu (Litisconsórcio Passivo)</span>
+                </button>
               </div>
             </div>
           )}
