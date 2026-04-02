@@ -17,6 +17,7 @@ interface CalendarEventParams {
     type: 'audiencia' | 'prazo' | 'diligencia' | 'atendimento' | 'freelance';
     processNumber?: string;
     clientName?: string;
+    clientPhone?: string;
     useMeet?: boolean;
     attendeeEmail?: string;
   };
@@ -70,7 +71,19 @@ function buildCalendarBody(act: CalendarEventParams['act']): any {
   const body: any = {
     summary: act.title,
     location: act.location || '',
-    description: `${act.description || ''}\n\n--- DADOS RGMJ ---\nPROCESSO: ${act.processNumber || 'N/A'}\nCLIENTE: ${act.clientName || 'N/A'}\nTIPO: ${act.type.toUpperCase()}`,
+    description: [
+      act.description ? `📝 NOTAS: ${act.description}\n` : '',
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      '🏛️  RGMJ - INTELIGÊNCIA JURÍDICA',
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      `🆔 PROCESSO: ${act.processNumber || '---'}`,
+      `👤 CLIENTE: ${act.clientName || '---'}`,
+      act.clientPhone ? `📱 CONTATO: ${act.clientPhone}` : '',
+      `⚖️ ATIVIDADE: ${act.type.toUpperCase()}`,
+      `📍 LOCAL: ${act.location || 'NÃO ESPECIFICADO'}`,
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      '💎 Gerado automaticamente pelo Sistema Nego.',
+    ].filter(Boolean).join('\n'),
     start,
     end,
     colorId: COLOR_MAP[act.type] || "1",

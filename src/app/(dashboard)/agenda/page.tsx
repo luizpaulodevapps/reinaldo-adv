@@ -248,7 +248,8 @@ export default function MasterAgendaPage() {
         number: existingEvent.number || "",
         neighborhood: existingEvent.neighborhood || "",
         city: existingEvent.city || "",
-        state: existingEvent.state || ""
+        state: existingEvent.state || "",
+        clientPhone: existingEvent.clientPhone || ""
       })
       setViewingEvent(null) // Fecha o diálogo de visualização ao abrir edição
     } else {
@@ -279,7 +280,8 @@ export default function MasterAgendaPage() {
         number: "",
         neighborhood: "",
         city: "",
-        state: ""
+        state: "",
+        clientPhone: ""
       })
     }
     setIsCreateOpen(true)
@@ -316,6 +318,7 @@ export default function MasterAgendaPage() {
       responsibleStaffId: newEventData.responsibleStaffId,
       responsibleStaffName: newEventData.responsibleStaffName,
       responsibleStaffEmail: newEventData.responsibleStaffEmail,
+      clientPhone: newEventData.clientPhone,
       updatedAt: serverTimestamp()
     }
 
@@ -328,6 +331,7 @@ export default function MasterAgendaPage() {
       type: 'atendimento' as const,
       processNumber: newEventData.processNumber,
       clientName: newEventData.clientName,
+      clientPhone: newEventData.clientPhone,
       useMeet: newEventData.autoMeet && (newEventData.meetingType === 'online' || createMode === 'audiencia'),
       attendeeEmail: newEventData.responsibleStaffEmail || undefined,
     }
@@ -770,8 +774,11 @@ export default function MasterAgendaPage() {
                     <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
                     <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
                   </div>
-                  <div className="space-y-3"><Label className={labelMini}>Localização / Juízo</Label><Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold" /></div>
-                  <div className="space-y-3"><Label className={labelMini}>Notas / Referências</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[100px] text-white" /></div>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-3"><Label className={labelMini}>Telefone do Cliente</Label><Input placeholder="(00) 00000-0000" value={newEventData.clientPhone} onChange={e => setNewEventData({...newEventData, clientPhone: e.target.value})} className="bg-black/40 h-14 text-white font-bold" /></div>
+                    <div className="space-y-3"><Label className={labelMini}>Juízo / Localização / Vara</Label><Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold" /></div>
+                  </div>
+                  <div className="space-y-3"><Label className={labelMini}>Notas / Referências Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[100px] text-white" /></div>
                 </div>
               )}
             </div>

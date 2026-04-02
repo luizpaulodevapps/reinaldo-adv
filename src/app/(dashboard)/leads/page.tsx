@@ -310,11 +310,12 @@ export default function LeadsPage() {
       firestore: db,
       act: {
         title: "[TRIAGEM] " + activeLead.name,
-        description: "Atendimento inicial do lead RGMJ.",
+        description: `Triagem inicial do lead RGMJ.\n\nObservações: ${intakeData.observations || 'N/A'}`,
         location: finalLocation,
         startDateTime: dateTimeStr,
         type: 'atendimento',
         clientName: activeLead.name,
+        clientPhone: activeLead.phone || '',
         useMeet: intakeData.type === 'online' && intakeData.autoMeet
       }
     })

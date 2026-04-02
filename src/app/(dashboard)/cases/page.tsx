@@ -28,6 +28,7 @@ import {
   Sparkles,
   Navigation,
   Trash2,
+  Folder,
   Target,
   Building2,
   ExternalLink,
@@ -106,6 +107,7 @@ export default function CasesPage() {
   const [meetingStep, setMeetingStep] = useState(1)
   const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
   const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null)
+  const [actionMode, setActionMode] = useState<'atendimento' | 'diligencia' | 'prazo' | 'audiencia'>('atendimento')
   
   const [isSyncingAct, setIsSyncingAct] = useState(false)
   const [syncingDriveId, setSyncingDriveId] = useState<string | null>(null)
@@ -125,7 +127,19 @@ export default function CasesPage() {
     number: "",
     neighborhood: "",
     city: "",
-    state: ""
+    state: "",
+    // Campos Específicos de Diligência
+    diligenceType: "DESPACHO",
+    executorType: "ADVOGADO",
+    executorName: "", 
+    executorPhone: "",
+    urgency: "NORMAL",
+    checklistDocs: [] as string[],
+    reimbursement: "0",
+    courtPhone: "",
+    courtEmail: "",
+    instructions: "",
+    docsNeeded: ""
   })
 
   const db = useFirestore()
@@ -213,7 +227,18 @@ export default function CasesPage() {
         number: existing.number || "",
         neighborhood: existing.neighborhood || "",
         city: existing.city || "",
-        state: existing.state || ""
+        state: existing.state || "",
+        diligenceType: existing.diligenceType || "DESPACHO",
+        executorType: existing.executorType || "ADVOGADO",
+        executorName: existing.executorName || "",
+        executorPhone: existing.executorPhone || "",
+        urgency: existing.urgency || "NORMAL",
+        checklistDocs: existing.checklistDocs || [],
+        reimbursement: existing.reimbursement || "0",
+        courtPhone: existing.courtPhone || "",
+        courtEmail: existing.courtEmail || "",
+        instructions: existing.instructions || "",
+        docsNeeded: existing.docsNeeded || ""
       })
     } else {
       setEditingMeetingId(null)
@@ -232,10 +257,74 @@ export default function CasesPage() {
         number: "",
         neighborhood: "",
         city: "",
-        state: ""
+        state: "",
+        diligenceType: "DESPACHO",
+        executorType: "ADVOGADO",
+        executorName: profile?.name || "",
+        executorPhone: "",
+        urgency: "NORMAL",
+        checklistDocs: [],
+        reimbursement: "0",
+        courtPhone: "",
+        courtEmail: "",
+        instructions: "",
+        docsNeeded: ""
       })
     }
+    setActionMode('atendimento')
     setIsMeetingOpen(true)
+  }
+
+  const handleOpenAction = (proc: any, mode: 'diligencia' | 'prazo' | 'audiencia') => {
+    setActiveActionProcess(proc)
+    setActionMode(mode as any)
+    setMeetingStep(1)
+    setEditingMeetingId(null)
+    setEditingCalendarId(null)
+    setMeetingData({ 
+      title: mode === 'audiencia' ? "AUDIÊNCIA UNA" : mode === 'prazo' ? "PRAZO FATAL" : "DILIGÊNCIA EXTERNA", 
+      date: format(new Date(), 'yyyy-MM-dd'), 
+      time: "09:00", 
+      type: "presencial", 
+      location: "",
+      locationType: "externo",
+      notes: "",
+      autoMeet: false,
+      zipCode: "",
+      address: "",
+      number: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      diligenceType: mode === 'prazo' ? 'OUTROS' : 'DESPACHO',
+      executorType: "ADVOGADO",
+      executorName: profile?.name || "",
+      executorPhone: "",
+      urgency: "NORMAL",
+      checklistDocs: [],
+      reimbursement: "0",
+      courtPhone: "",
+      courtEmail: "",
+      instructions: "",
+      docsNeeded: ""
+    })
+    setIsMeetingOpen(true)
+  }
+
+  const handleArchiveProcess = async (procId: string) => {
+    if (!db) return
+    const confirmed = window.confirm("Deseja realmente arquivar este dossiê? Ele sairá da lista de ativos.")
+    if (!confirmed) return
+    
+    try {
+      await updateDocumentNonBlocking(doc(db, "processes", procId), {
+        status: "Arquivado",
+        updatedAt: serverTimestamp()
+      })
+      toast({ title: "Dossiê Arquivado" })
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro ao arquivar" })
+    }
   }
 
   const handleScheduleMeeting = async () => {
@@ -263,7 +352,13 @@ export default function CasesPage() {
     
     const timeVal = meetingData.time || "09:00"
     const dateTimeStr = meetingData.date + "T" + timeVal + ":00"
-    const appRef = editingMeetingId ? doc(db, "appointments", editingMeetingId) : doc(collection(db, "appointments"));
+    
+    let targetCollection = "appointments"
+    if (actionMode === 'diligencia') targetCollection = 'diligences'
+    if (actionMode === 'prazo') targetCollection = 'deadlines'
+    if (actionMode === 'audiencia') targetCollection = 'hearings'
+
+    const appRef = editingMeetingId ? doc(db, targetCollection, editingMeetingId) : doc(collection(db, targetCollection));
     const finalDocId = appRef.id;
 
     const payload: any = {
@@ -286,6 +381,14 @@ export default function CasesPage() {
       notes: meetingData.notes,
       autoMeet: meetingData.autoMeet,
       status: "Agendado",
+      // Diligence Fields
+      diligenceType: meetingData.diligenceType,
+      executorType: meetingData.executorType,
+      executorName: meetingData.executorName,
+      urgency: meetingData.urgency,
+      reimbursement: meetingData.reimbursement,
+      courtPhone: meetingData.courtPhone,
+      courtEmail: meetingData.courtEmail,
       updatedAt: serverTimestamp()
     }
 
@@ -295,12 +398,20 @@ export default function CasesPage() {
 
     const actForGoogle = {
       title: payload.title,
-      description: payload.notes,
+      description: actionMode === 'diligencia' ? `
+📋 NATUREZA: ${meetingData.diligenceType}
+👤 RESPONSÁVEL: ${meetingData.executorName} (${meetingData.executorType})
+🚨 URGÊNCIA: ${meetingData.urgency}
+📍 LOCAL: ${finalLocation}
+🛠️ INSTRUÇÕES: ${meetingData.notes}
+📱 CONTATO VARA: ${meetingData.courtPhone}
+`.trim() : payload.notes,
       location: payload.location,
-      startDateTime: dateTimeStr,
-      type: 'atendimento' as const,
+      startDateTime: actionMode === 'prazo' ? (meetingData.date + "T00:00:00") : dateTimeStr,
+      type: actionMode as any,
       processNumber: activeActionProcess.processNumber,
       clientName: payload.clientName,
+      clientPhone: activeActionProcess.clientPhone || '',
       useMeet: meetingData.type === 'online' && meetingData.autoMeet
     }
 
@@ -450,23 +561,23 @@ export default function CasesPage() {
                       <DropdownMenuItem onClick={() => handleOpenAtendimento(proc)} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
                         <Calendar className="h-5 w-5" /> AGENDAR ATENDIMENTO
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer">
+                      <DropdownMenuItem onClick={() => handleOpenAction(proc, 'diligencia')} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500/10 text-blue-400 cursor-pointer">
                         <Navigation className="h-5 w-5" /> GESTÃO DE DILIGÊNCIAS
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer">
+                      <DropdownMenuItem onClick={() => handleOpenAction(proc, 'prazo')} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-400 cursor-pointer">
                         <AlarmClock className="h-5 w-5" /> LANÇAR PRAZO FATAL
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-500/10 text-amber-400 cursor-pointer">
+                      <DropdownMenuItem onClick={() => handleOpenAction(proc, 'audiencia')} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-500/10 text-amber-400 cursor-pointer">
                         <Gavel className="h-5 w-5" /> PAUTA DE AUDIÊNCIA
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
+                      <DropdownMenuItem onClick={() => toast({ title: "Fluxo Financeiro em breve" })} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/10 text-emerald-400 cursor-pointer">
                         <DollarSign className="h-5 w-5" /> FLUXO FINANCEIRO
                       </DropdownMenuItem>
                       <div className="h-px bg-white/5 my-2" />
                       <DropdownMenuItem onClick={() => { setEditingProcess(proc); setIsSheetOpen(true); }} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 text-white/60 cursor-pointer">
                         <Edit3 className="h-5 w-5" /> EDITAR PROCESSO
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-500 cursor-pointer">
+                      <DropdownMenuItem onClick={() => handleArchiveProcess(proc.id)} className="flex items-center gap-4 py-4 px-5 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-500/10 text-rose-500 cursor-pointer">
                         <Archive className="h-5 w-5" /> ARQUIVAR DOSSIÊ
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -513,15 +624,26 @@ export default function CasesPage() {
 
               <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
                 <div className="flex gap-4">
-                  <Button 
-                    onClick={() => handleSyncDrive(proc)}
-                    disabled={syncingDriveId === proc.id}
-                    variant="outline" 
-                    className="h-11 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-primary hover:text-background transition-all"
-                  >
-                    {syncingDriveId === proc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderSync className="h-4 w-4" />}
-                    SINCRONIZAR DRIVE
-                  </Button>
+                  {proc.driveFolderUrl ? (
+                    <Button 
+                      onClick={() => window.open(proc.driveFolderUrl, '_blank')}
+                      variant="outline" 
+                      className="h-11 border-emerald-500/30 text-emerald-500 font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/10"
+                    >
+                      <Folder className="h-4 w-4" />
+                      VER DRIVE
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => handleSyncDrive(proc)}
+                      disabled={syncingDriveId === proc.id}
+                      variant="outline" 
+                      className="h-11 border-primary/30 text-primary font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-primary hover:text-background transition-all"
+                    >
+                      {syncingDriveId === proc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderSync className="h-4 w-4" />}
+                      SINCRONIZAR DRIVE
+                    </Button>
+                  )}
                   <Button variant="outline" className="h-11 border-white/10 text-white/40 font-black uppercase text-[10px] tracking-widest px-8 rounded-xl gap-3 hover:bg-white/5 transition-all">
                     <ExternalLink className="h-4 w-4" /> PORTAL JUDICIÁRIO
                   </Button>
@@ -536,15 +658,30 @@ export default function CasesPage() {
         <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[650px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[80vh]">
           <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
             <div className="flex items-center gap-6">
-              <div className={cn("w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500", isSyncingAct && "animate-pulse")}>
-                {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : <Calendar className="h-6 w-6" />}
+              <div className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center border",
+                actionMode === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
+                actionMode === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
+                actionMode === 'diligencia' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+              )}>
+                {isSyncingAct ? <Loader2 className="h-6 w-6 animate-spin" /> : 
+                 actionMode === 'audiencia' ? <Gavel className="h-6 w-6" /> :
+                 actionMode === 'prazo' ? <AlarmClock className="h-6 w-6" /> :
+                 actionMode === 'diligencia' ? <Navigation className="h-6 w-6" /> :
+                 <Calendar className="h-6 w-6" />}
               </div>
               <div>
                 <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">
-                  {editingMeetingId ? "Retificar Atendimento" : "Agendar Atendimento"}
+                  {editingMeetingId ? "Retificar Registro" : 
+                   actionMode === 'audiencia' ? "Pauta de Audiência" :
+                   actionMode === 'prazo' ? "Lançar Prazo Fatal" :
+                   actionMode === 'diligencia' ? "Gestão de Diligência" :
+                   "Agendar Atendimento"}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Passo {meetingStep} de 5</Badge>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Integração Workspace</span>
                 </div>
               </div>
             </div>
@@ -580,69 +717,119 @@ export default function CasesPage() {
 
               {meetingStep === 3 && (
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação & Pauta</Label>
-                  <div className="space-y-6">
-                    <div className="space-y-2"><Label className={labelMini}>Título da Pauta *</Label><Input value={meetingData.title} onChange={e => setMeetingData({...meetingData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black px-6 rounded-xl" placeholder="EX: REUNIÃO TÁTICA" /></div>
-                    <div className="space-y-2"><Label className={labelMini}>Notas Estratégicas</Label><Textarea value={meetingData.notes} onChange={e => setMeetingData({...meetingData, notes: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Descreva os objetivos da reunião..." /></div>
-                  </div>
+                  {actionMode === 'diligencia' ? (
+                    <>
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Natureza & Urgência</Label>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <Label className={labelMini}>Natureza da Diligência</Label>
+                          <Select value={meetingData.diligenceType} onValueChange={v => setMeetingData({...meetingData, diligenceType: v})}>
+                            <SelectTrigger className="bg-black/40 h-14 text-white border-white/10 rounded-xl">
+                              <SelectValue placeholder="Selecione a natureza..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0a0f1e] border-white/10 text-white">
+                              <SelectItem value="DESPACHO">DESPACHO COM MAGISTRADO</SelectItem>
+                              <SelectItem value="CALCULOS">CÁLCULOS JUDICIAIS</SelectItem>
+                              <SelectItem value="CARGA">CARGA DE PROCESSO</SelectItem>
+                              <SelectItem value="PROTOCOLO">PROTOCOLO FÍSICO</SelectItem>
+                              <SelectItem value="PERICIA">ACOMPANHAMENTO DE PERÍCIA</SelectItem>
+                              <SelectItem value="ALVARA">RETIRADA DE GUIA/ALVARÁ</SelectItem>
+                              <SelectItem value="CITACAO">CITAÇÃO/INTIMAÇÃO</SelectItem>
+                              <SelectItem value="OUTROS">OUTROS</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className={labelMini}>Status de Urgência</Label>
+                          <RadioGroup value={meetingData.urgency} onValueChange={v => setMeetingData({...meetingData, urgency: v})} className="grid grid-cols-3 gap-4">
+                            <div className={cn("p-4 rounded-xl border-2 text-center cursor-pointer transition-all", meetingData.urgency === 'NORMAL' ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, urgency: 'NORMAL'})}>
+                              <span className="text-[10px] font-black uppercase">Normal</span>
+                            </div>
+                            <div className={cn("p-4 rounded-xl border-2 text-center cursor-pointer transition-all", meetingData.urgency === 'URGENTE' ? "bg-amber-500/10 border-amber-500 text-amber-500" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, urgency: 'URGENTE'})}>
+                              <span className="text-[10px] font-black uppercase">Urgente</span>
+                            </div>
+                            <div className={cn("p-4 rounded-xl border-2 text-center cursor-pointer transition-all", meetingData.urgency === 'MAXIMA' ? "bg-rose-500/10 border-rose-500 text-rose-500 animate-pulse" : "bg-black/20 border-white/5")} onClick={() => setMeetingData({...meetingData, urgency: 'MAXIMA'})}>
+                              <span className="text-[10px] font-black uppercase">Prioridade Máxima</span>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação & Pauta</Label>
+                      <div className="space-y-6">
+                        <div className="space-y-2"><Label className={labelMini}>Título da Pauta *</Label><Input value={meetingData.title} onChange={e => setMeetingData({...meetingData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black px-6 rounded-xl" placeholder="EX: REUNIÃO TÁTICA" /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Notas Estratégicas</Label><Textarea value={meetingData.notes} onChange={e => setMeetingData({...meetingData, notes: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Descreva os objetivos da reunião..." /></div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               {meetingStep === 4 && (
                 <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Logística</Label>
-                  {meetingData.type === 'online' ? (
-                    <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
-                      <Video className="h-12 w-12 text-emerald-500 mx-auto" />
-                      <h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet Hub</h4>
-                      <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
-                        <Switch checked={meetingData.autoMeet} onCheckedChange={v => setMeetingData({...meetingData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
-                        <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
-                      </div>
-                    </Card>
-                  ) : (
-                    <div className="space-y-6">
-                      <RadioGroup value={meetingData.locationType} onValueChange={v => setMeetingData({...meetingData, locationType: v})} className="grid grid-cols-2 gap-4">
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
-                          <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
-                        </div>
-                        <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
-                          <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
-                        </div>
-                      </RadioGroup>
-                      {meetingData.locationType === 'externo' && (
-                        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="space-y-2">
-                              <Label className={labelMini}>CEP</Label>
-                              <div className="relative">
-                                <Input 
-                                  value={meetingData.zipCode} 
-                                  onChange={e => setMeetingData({...meetingData, zipCode: maskCEP(e.target.value)})} 
-                                  onBlur={handleMeetingCepBlur}
-                                  className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" 
-                                  placeholder="00000-000"
-                                />
-                                {loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}
+                  <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">4. Executor & Documentação</Label>
+                  {actionMode === 'diligencia' ? (
+                    <div className="space-y-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                             <Label className={labelMini}>Tipo de Executor</Label>
+                             <Select value={meetingData.executorType} onValueChange={v => setMeetingData({...meetingData, executorType: v})}>
+                                <SelectTrigger className="bg-black/40 h-12 text-white border-white/10 rounded-xl">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0a0f1e] border-white/10 text-white">
+                                   <SelectItem value="ADVOGADO">ADVOGADO</SelectItem>
+                                   <SelectItem value="ESTAGIARIO">ESTAGIÁRIO</SelectItem>
+                                   <SelectItem value="CORRESPONDENTE">CORRESPONDENTE</SelectItem>
+                                </SelectContent>
+                             </Select>
+                          </div>
+                          <div className="space-y-2">
+                             <Label className={labelMini}>Nome do Responsável</Label>
+                             <Input value={meetingData.executorName} onChange={e => setMeetingData({...meetingData, executorName: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
+                          </div>
+                       </div>
+                       <div className="space-y-4">
+                          <Label className={labelMini}>Checklist de Documentação Necessária</Label>
+                          <div className="grid grid-cols-2 gap-4">
+                            {["PROCURAÇÃO", "SUBSTABELECIMENTO", "OAB ORIGINAL", "GUIA PAGA", "PETIÇÃO IMPRESSA"].map(doc => (
+                              <div key={doc} className="flex items-center gap-3 p-4 bg-black/40 border border-white/5 rounded-xl">
+                                <Switch checked={meetingData.checklistDocs.includes(doc)} onCheckedChange={(checked) => {
+                                  const newDocs = checked ? [...meetingData.checklistDocs, doc] : meetingData.checklistDocs.filter(d => d !== doc)
+                                  setMeetingData({...meetingData, checklistDocs: newDocs})
+                                }} />
+                                <span className="text-[9px] font-black text-white/60 uppercase">{doc}</span>
                               </div>
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                              <Label className={labelMini}>Logradouro</Label>
-                              <Input value={meetingData.address} onChange={e => setMeetingData({...meetingData, address: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className={labelMini}>Nº</Label>
-                              <Input value={meetingData.number} onChange={e => setMeetingData({...meetingData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" />
-                            </div>
+                            ))}
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2"><Label className={labelMini}>Bairro</Label><Input value={meetingData.neighborhood} onChange={e => setMeetingData({...meetingData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
-                            <div className="space-y-2"><Label className={labelMini}>Cidade</Label><Input value={meetingData.city} onChange={e => setMeetingData({...meetingData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
-                            <div className="space-y-2"><Label className={labelMini}>UF</Label><Input value={meetingData.state} onChange={e => setMeetingData({...meetingData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                       </div>
+                    </div>
+                  ) : (
+                    <>
+                      {meetingData.type === 'online' ? (
+                        <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
+                          <Video className="h-12 w-12 text-emerald-500 mx-auto" />
+                          <h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet Hub</h4>
+                          <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
+                            <Switch checked={meetingData.autoMeet} onCheckedChange={v => setMeetingData({...meetingData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
+                            <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
                           </div>
+                        </Card>
+                      ) : (
+                        <div className="space-y-6">
+                          <RadioGroup value={meetingData.locationType} onValueChange={v => setMeetingData({...meetingData, locationType: v})} className="grid grid-cols-2 gap-4">
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", meetingData.locationType === 'sede' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                              <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
+                            </div>
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", meetingData.locationType === 'externo' ? "bg-primary/10 border-primary" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setMeetingData({...meetingData, locationType: 'externo'})}>
+                              <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
+                            </div>
+                          </RadioGroup>
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               )}
@@ -657,9 +844,32 @@ export default function CasesPage() {
                       <p className="text-sm font-bold text-primary uppercase tracking-widest">{meetingData.date} às {meetingData.time}</p>
                     </div>
                     <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
-                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
-                        {meetingData.type === 'online' ? "Sincronismo Workspace Ativo. O Meet link será gerado." : "Atendimento Presencial Programado."}
-                      </p>
+                        {actionMode === 'diligencia' ? (
+                          <>
+                            <div className="space-y-4 pt-4">
+                              <Label className={labelMini}>Previsão de Reembolso (Custos)</Label>
+                              <div className="relative">
+                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
+                                <Input 
+                                  value={meetingData.reimbursement} 
+                                  onChange={e => setMeetingData({...meetingData, reimbursement: e.target.value})} 
+                                  className="bg-black/80 border-emerald-500/30 h-14 pl-12 text-emerald-400 font-black rounded-xl text-xl" 
+                                  placeholder="0,00"
+                                />
+                              </div>
+                              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Inclua estacionamento, custas, cópias e transporte.</p>
+                            </div>
+                            <div className="h-px bg-white/5 my-6" />
+                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
+                              Diligência de {meetingData.diligenceType} <br/> 
+                              Responsável: {meetingData.executorName}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed">
+                            {meetingData.type === 'online' ? "Sincronismo Workspace Ativo. O Meet link será gerado." : "Atendimento Presencial Programado."}
+                          </p>
+                        )}
                     </div>
                   </Card>
                 </div>

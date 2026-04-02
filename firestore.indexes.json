@@ -1,19 +1,11 @@
 {
   "indexes": [
     {
-      "collectionGroup": "notifications",
+      "collectionGroup": "financial_titles",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "activities",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "leadId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "dueDate", "order": "DESCENDING" }
       ]
     },
     {
@@ -28,30 +20,24 @@
       "collectionGroup": "financial_titles",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "dueDate", "order": "DESCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "processes",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "clientId", "order": "ASCENDING" },
-        { "fieldPath": "dueDate", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "financial_titles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "dueDate", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "financial_titles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "dueDate", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "reimbursements",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "requesterId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "startDateTime", "order": "DESCENDING" }
       ]
     },
     {
@@ -63,39 +49,11 @@
       ]
     },
     {
-      "collectionGroup": "leads",
+      "collectionGroup": "hearings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "processes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "processes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "interviews",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "clientInterviews",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "startDateTime", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
       ]
     }
   ],
