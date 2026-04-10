@@ -142,6 +142,9 @@ export default function MasterAgendaPage() {
   const { user, profile } = useUser()
   const { toast } = useToast()
 
+  const isAdmin = profile?.role?.toLowerCase().includes('sócio') || profile?.role?.toLowerCase().includes('admin')
+  const [filterStaffId, setFilterStaffId] = useState<string>(isAdmin ? "all" : (user?.uid || "all"))
+
   const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
   const { data: googleSettingsData } = useDoc(googleSettingsRef)
   const googleSettings = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
@@ -204,8 +207,11 @@ export default function MasterAgendaPage() {
     const d = (deadlines || []).map(d => ({ ...d, eventType: 'prazo', collection: 'deadlines', date: parseDate(d.dueDate) }))
     const a = (appointments || []).map(a => ({ ...a, eventType: 'atendimento', collection: 'appointments', date: parseDate(a.startDateTime) }))
     const i = (internalDiligences || []).map(i => ({ ...i, eventType: 'diligencia', collection: 'diligences', date: parseDate(i.dueDate) }))
-    return [...h, ...d, ...a, ...i]
-  }, [hearings, deadlines, appointments, internalDiligences])
+    
+    const combined = [...h, ...d, ...a, ...i]
+    if (filterStaffId === 'all') return combined
+    return combined.filter(e => e.responsibleStaffId === filterStaffId)
+  }, [hearings, deadlines, appointments, internalDiligences, filterStaffId])
 
   const selectedDayEvents = useMemo(() => {
     return allEvents
@@ -476,6 +482,24 @@ export default function MasterAgendaPage() {
             <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
             </h2>
+            
+            {isAdmin && (
+              <Select value={filterStaffId} onValueChange={setFilterStaffId}>
+                <SelectTrigger className="w-[200px] h-10 bg-[#1a1f2e] border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3 w-3 text-primary" />
+                    <SelectValue placeholder="Visão da Equipe" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                  <SelectItem value="all" className="text-[10px] font-black uppercase">🌐 TODA A EQUIPE</SelectItem>
+                  {(staffMembers || []).map(s => (
+                    <SelectItem key={s.id} value={s.id} className="text-[10px] font-black uppercase">{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
             <div className="flex gap-1">
               <button className="h-10 w-10 text-white hover:bg-primary/10 hover:text-primary flex items-center justify-center rounded-xl" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-6 w-6" /></button>
               <Button variant="secondary" className="h-10 px-6 text-[10px] font-black uppercase bg-[#1a1f2e] text-white border border-white/10 rounded-xl" onClick={() => setCurrentMonth(new Date())}>Hoje</Button>

@@ -29,11 +29,11 @@ export function DashboardContent() {
 
   const canQuery = !!user && !!db
 
-  const leadsQuery = useMemoFirebase(() => canQuery ? collection(db, "leads") : null, [db, canQuery])
-  const casesQuery = useMemoFirebase(() => canQuery ? collection(db, "processes") : null, [db, canQuery])
+  const leadsQuery = useMemoFirebase(() => canQuery ? query(collection(db, "leads"), orderBy("updatedAt", "desc"), limit(50)) : null, [db, canQuery])
+  const casesQuery = useMemoFirebase(() => canQuery ? query(collection(db, "processes"), orderBy("createdAt", "desc"), limit(50)) : null, [db, canQuery])
   const deadlinesQuery = useMemoFirebase(() => canQuery ? query(collection(db, "deadlines"), where("status", "==", "Aberto"), limit(10)) : null, [db, canQuery])
   const hearingsQuery = useMemoFirebase(() => canQuery ? query(collection(db, "hearings"), orderBy("startDateTime", "asc"), limit(5)) : null, [db, canQuery])
-  const financialQuery = useMemoFirebase(() => canQuery ? collection(db, "financial_titles") : null, [db, canQuery])
+  const financialQuery = useMemoFirebase(() => canQuery ? query(collection(db, "financial_titles"), orderBy("dueDate", "desc"), limit(50)) : null, [db, canQuery])
 
   const { data: leads, isLoading: loadingLeads } = useCollection(leadsQuery)
   const { data: cases, isLoading: loadingCases } = useCollection(casesQuery)

@@ -30,6 +30,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend 
+} from "recharts"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, limit, where } from "firebase/firestore"
 import Link from "next/link"
@@ -37,7 +47,7 @@ import { cn } from "@/lib/utils"
 import { FinancialTitleForm } from "@/components/financial/financial-title-form"
 import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfWeek, endOfWeek, subDays, startOfDay } from "date-fns"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfWeek, endOfWeek, subDays, startOfDay, addDays, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
@@ -49,6 +59,7 @@ export default function BillingPage() {
   const [editingTitle, setEditingTitle] = useState<any>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [cycleMode, setCycleMode] = useState<CycleMode>("monthly")
+  const [quickFilter, setQuickFilter] = useState<{type?: string, status?: string} | null>(null)
   
   // Estado para Auditoria de Membro Específico
   const [selectedStaffMember, setSelectedStaffMember] = useState<any>(null)
@@ -107,34 +118,85 @@ export default function BillingPage() {
   const { data: teamMembers } = useCollection(staffQuery)
 
   const stats = useMemo(() => {
-    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, pendente: 0 }
+    if (!transactions) return { entradas: 0, saídas: 0, saldo: 0, pendenteEntrada: 0, pendenteSaída: 0, previsao: 0 }
     
     const entradas = transactions.filter(t => t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
     const saídas = transactions.filter(t => t.type?.includes('Saída')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-    const pendente = transactions.filter(t => t.status === 'Pendente' && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+    const pendenteEntrada = transactions.filter(t => t.status === 'Pendente' && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+    const pendenteSaída = transactions.filter(t => t.status === 'Pendente' && t.type?.includes('Saída')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
 
-    return { entradas, saídas, saldo: entradas - saídas, pendente }
+    return { 
+      entradas, 
+      saídas, 
+      saldo: entradas - saídas, 
+      pendenteEntrada,
+      pendenteSaída,
+      previsao: (entradas + pendenteEntrada) - (saídas + pendenteSaída)
+    }
   }, [transactions])
 
   const teamBalanceList = useMemo(() => {
     if (!teamMembers || !transactions || !isAdmin || selectedStaffMember) return []
     // Para a lista de equipe, calculamos os saldos baseados nos lançamentos totais daquele membro
     return teamMembers.map(member => {
-      const memberTrans = (transactions || []).filter(t => t.responsibleStaffId === member.id)
-      const pending = memberTrans.filter(t => t.status === 'Pendente' && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
-      const liquidated = memberTrans.filter(t => (t.status === 'Liquidado' || t.status === 'Recebido') && t.type?.includes('Entrada')).reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+      const email = member.id?.toLowerCase().trim()
+      const memberTrans = (transactions || []).filter(t => 
+        t.responsibleStaffId?.toLowerCase().trim() === email || 
+        t.responsibleStaffName === member.name
+      )
+      
+      // Nas carteiras de repasse, o "Pendente" do advogado é o que o escritório tem como "Saída Pendente" para ele
+      const pending = memberTrans
+        .filter(t => t.status === 'Pendente' && t.type?.includes('Saída') && t.category?.includes('REPASSE'))
+        .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+        
+      const liquidated = memberTrans
+        .filter(t => (t.status === 'Liquidado' || t.status === 'Pago') && t.type?.includes('Saída') && t.category?.includes('REPASSE'))
+        .reduce((acc, t) => acc + (Number(t.value) || 0), 0)
+        
       return { ...member, pending, liquidated }
     })
   }, [teamMembers, transactions, isAdmin, selectedStaffMember])
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return []
-    return transactions.filter(t => 
+    let result = transactions.filter(t => 
       t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.entityName?.toLowerCase().includes(searchTerm.toLowerCase())
     )
-  }, [transactions, searchTerm])
+
+    if (quickFilter) {
+      if (quickFilter.type) result = result.filter(t => t.type?.includes(quickFilter.type!))
+      if (quickFilter.status) result = result.filter(t => t.status === quickFilter.status)
+    }
+
+    return result
+  }, [transactions, searchTerm, quickFilter])
+
+  const chartData = useMemo(() => {
+    if (!transactions) return []
+    const days: Record<string, any> = {}
+    
+    // Inicializa todos os dias do período para não ter buracos no gráfico
+    const start = parseISO(dateRange.start)
+    const end = parseISO(dateRange.end)
+    for (let d = start; d <= end; d = addDays(d, 1)) {
+      const dayKey = format(d, 'dd/MM')
+      days[dayKey] = { name: dayKey, Entradas: 0, Saídas: 0, Saldo: 0 }
+    }
+
+    transactions.forEach(t => {
+      const dayKey = format(parseISO(t.dueDate), 'dd/MM')
+      if (days[dayKey]) {
+        if (t.type?.includes('Entrada')) days[dayKey].Entradas += Number(t.value) || 0
+        else days[dayKey].Saídas += Number(t.value) || 0
+        days[dayKey].Saldo = days[dayKey].Entradas - days[dayKey].Saídas
+      }
+    })
+
+    return Object.values(days)
+  }, [transactions, dateRange])
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
     if (!db) return
@@ -200,26 +262,95 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="glass border-primary/20 bg-primary/5 p-8 rounded-[2rem] flex flex-col justify-center shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Landmark className="h-12 w-12" /></div>
-          <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-3"><TrendingUp className="h-3.5 w-3.5" /> Patrimônio Líquido</p>
-          <div className={cn("text-3xl font-black tabular-nums tracking-tighter", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-          <p className="text-[8px] text-primary/40 font-bold uppercase mt-1 tracking-widest">Saldo real em caixa no ciclo</p>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card 
+          onClick={() => setQuickFilter(null)}
+          className={cn(
+            "glass p-6 rounded-2xl flex flex-col justify-center shadow-2xl relative overflow-hidden group cursor-pointer transition-all border-white/5",
+            !quickFilter ? "border-primary/40 bg-primary/10" : "hover:border-white/20"
+          )}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Landmark className="h-8 w-8" /></div>
+          <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-2 flex items-center gap-2">Fluxo Global</p>
+          <div className={cn("text-2xl font-black tabular-nums tracking-tighter", stats.saldo >= 0 ? "text-white" : "text-rose-400")}>R$ {stats.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
-        <Card className="glass border-emerald-500/20 bg-emerald-500/5 p-8 rounded-[2rem] flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-3"><ArrowUpRight className="h-3.5 w-3.5" /> Receita Bruta</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <Card 
+          onClick={() => setQuickFilter({type: 'Entrada'})}
+          className={cn(
+            "glass p-6 rounded-2xl flex flex-col justify-center shadow-xl cursor-pointer transition-all border-white/5",
+            quickFilter?.type === 'Entrada' ? "border-emerald-500/40 bg-emerald-500/10" : "hover:border-white/20"
+          )}
+        >
+          <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">Receita Bruto</p>
+          <div className="text-2xl font-black text-white tabular-nums tracking-tighter">R$ {stats.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
-        <Card className="glass border-rose-500/20 bg-rose-500/5 p-8 rounded-[2rem] flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-3 flex items-center gap-3"><ArrowDownRight className="h-3.5 w-3.5" /> Custo Operacional</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <Card 
+          onClick={() => setQuickFilter({type: 'Saída'})}
+          className={cn(
+            "glass p-6 rounded-2xl flex flex-col justify-center shadow-xl cursor-pointer transition-all border-white/5",
+            quickFilter?.type === 'Saída' ? "border-rose-500/40 bg-rose-500/10" : "hover:border-white/20"
+          )}
+        >
+          <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-2">Custo Operacional</p>
+          <div className="text-2xl font-black text-white tabular-nums tracking-tighter">R$ {stats.saídas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
-        <Card className="glass border-white/5 p-8 rounded-[2rem] flex flex-col justify-center shadow-xl">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-3"><AlertCircle className="h-3.5 w-3.5" /> Pendente Receber</p>
-          <div className="text-3xl font-black text-white tabular-nums tracking-tighter">R$ {stats.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <Card 
+          onClick={() => setQuickFilter({status: 'Pendente'})}
+          className={cn(
+            "glass p-6 rounded-2xl flex flex-col justify-center shadow-xl cursor-pointer transition-all border-white/5",
+            quickFilter?.status === 'Pendente' ? "border-amber-500/40 bg-amber-500/10" : "hover:border-white/20"
+          )}
+        >
+          <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-2">Pendente Receber</p>
+          <div className="text-2xl font-black text-white tabular-nums tracking-tighter">R$ {stats.pendenteEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        </Card>
+        <Card 
+          className="glass border-cyan-500/20 bg-cyan-500/5 p-6 rounded-2xl flex flex-col justify-center shadow-2xl relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10"><Target className="h-8 w-8 text-cyan-500" /></div>
+          <p className="text-[9px] font-black text-cyan-500 uppercase tracking-widest mb-2">Saúde de Ciclo</p>
+          <div className="text-2xl font-black text-white tabular-nums tracking-tighter">R$ {stats.previsao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
       </div>
+
+      <Card className="glass border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl bg-black/20 p-10">
+        <div className="flex items-center justify-between mb-10">
+           <div className="flex items-center gap-4">
+              <TrendingUp className="h-6 w-6 text-primary" />
+              <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">Fluxo de Caixa Consolidado</h3>
+           </div>
+           <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500/50" /><span className="text-[8px] font-black text-white/40 uppercase">Entradas</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-rose-500/50" /><span className="text-[8px] font-black text-white/40 uppercase">Saídas</span></div>
+           </div>
+        </div>
+        <div className="h-[350px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorSaídas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+              <XAxis dataKey="name" stroke="#ffffff20" fontSize={10} tickLine={false} axisLine={false} tick={{fill: '#ffffff40', fontWeight: 'bold'}} />
+              <YAxis stroke="#ffffff20" fontSize={10} tickLine={false} axisLine={false} tick={{fill: '#ffffff40', fontWeight: 'bold'}} tickFormatter={(v) => `R$ ${v}`} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#0a0f1e', border: '1px solid #ffffff10', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+                itemStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}
+                labelStyle={{ color: '#ffffff40', fontSize: '9px', fontWeight: '900', marginBottom: '8px' }}
+              />
+              <Area type="monotone" dataKey="Entradas" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorEntradas)" />
+              <Area type="monotone" dataKey="Saídas" stroke="#f43f5e" strokeWidth={4} fillOpacity={1} fill="url(#colorSaídas)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
 
       {/* SEÇÃO DE EQUIPE (EXCLUSIVA ADMIN NA BANCA) */}
       {isAdmin && !selectedStaffMember && (
@@ -292,70 +423,59 @@ export default function BillingPage() {
           </div>
         </div>
 
-        <div className="divide-y divide-white/5 min-h-[500px]">
-          {isLoadingTransactions ? (
-            <div className="py-32 flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sincronizando Livro Diário...</span>
-            </div>
-          ) : filteredTransactions.length > 0 ? (
-            <div className="bg-black/10">
-              {filteredTransactions.map(t => (
-                <div key={t.id} className="p-8 flex flex-col md:flex-row md:items-center justify-between hover:bg-white/[0.02] transition-all gap-8 border-b border-white/5 last:border-0 group">
-                  <div className="flex items-center gap-8">
-                    <div className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl transition-transform group-hover:scale-110",
-                      t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                    )}><DollarSign className="h-7 w-7" /></div>
-                    <div className="space-y-2">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/[0.02]">
+                <th className="p-6 text-[9px] font-black text-muted-foreground uppercase tracking-widest pl-10">Lançamento / Info</th>
+                <th className="p-6 text-[9px] font-black text-muted-foreground uppercase tracking-widest">Categoria</th>
+                <th className="p-6 text-[9px] font-black text-muted-foreground uppercase tracking-widest">Vencimento</th>
+                <th className="p-6 text-[9px] font-black text-muted-foreground uppercase tracking-widest">Cliente / Ente</th>
+                <th className="p-6 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-right pr-10">Valor Bruto</th>
+                <th className="p-6 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoadingTransactions ? (
+                <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></td></tr>
+              ) : filteredTransactions.length > 0 ? (
+                filteredTransactions.map(t => (
+                  <tr key={t.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="p-6 pl-10">
                       <div className="flex items-center gap-4">
-                        <h4 className="font-black text-white uppercase text-lg tracking-tight">{t.description}</h4>
-                        <Badge variant="outline" className="text-[9px] font-black border-white/10 text-muted-foreground uppercase px-3 h-6">{t.category}</Badge>
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center border",
+                          t.type?.includes("Saída") ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                        )}><DollarSign className="h-5 w-5" /></div>
+                        <div>
+                          <p className="text-[11px] font-black text-white uppercase tracking-tight">{t.description}</p>
+                          <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest opacity-40">ID: {t.id.slice(0,8)}</p>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-10 gap-y-2">
-                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2.5">
-                          <CalendarDays className="h-3.5 w-3.5 opacity-40 text-primary" /> VENC: {t.dueDate}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2.5">
-                          <Building2 className="h-3.5 w-3.5 opacity-40 text-primary" /> {t.clientName || t.entityName || "GERAL"}
-                        </p>
-                        {t.destinationBank && (
-                          <p className="text-[9px] text-emerald-500 font-bold uppercase flex items-center gap-2">
-                            <Landmark className="h-3.5 w-3.5" /> CRÉDITO: {t.destinationBank}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-12">
-                    <div className="text-right">
-                      <p className={cn("text-2xl font-black tabular-nums tracking-tighter", t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400")}>
+                    </td>
+                    <td className="p-6"><Badge variant="outline" className="text-[9px] font-black border-white/10 text-muted-foreground uppercase px-3">{t.category}</Badge></td>
+                    <td className="p-6 text-[10px] font-black text-white/60 font-mono">{t.dueDate}</td>
+                    <td className="p-6 text-[10px] font-black text-primary/70 uppercase truncate max-w-[200px]">{t.clientName || t.entityName || "GERAL"}</td>
+                    <td className="p-6 text-right pr-10">
+                       <p className={cn("text-sm font-black tabular-nums", t.type?.includes("Saída") ? "text-rose-400" : "text-emerald-400")}>
                         {t.type?.includes("Saída") ? "-" : "+"} R$ {(Number(t.value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <Badge className={cn(
-                        "text-[9px] font-black uppercase h-6 mt-2 px-3 border-0", 
-                        t.status === 'Pendente' ? "bg-amber-500/10 text-amber-500" : 
-                        t.status === 'Pago' || t.status === 'Recebido' || t.status === 'Liquidado' ? "bg-emerald-500/10 text-emerald-500" : "bg-white/5 text-muted-foreground"
-                      )}>
-                        {t.status}
-                      </Badge>
-                    </div>
-                    {isAdmin && t.status === 'Pendente' && (
-                      <div className="flex gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => handleUpdateStatus(t.id, t.type.includes('Entrada') ? 'Recebido' : 'Pago')} className="h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 rounded-xl"><Plus className="h-5 w-5" /></Button>
+                       </p>
+                    </td>
+                    <td className="p-6">
+                      <div className="flex items-center justify-center">
+                        <Badge className={cn(
+                          "text-[8px] font-black uppercase h-5 px-3 border-0", 
+                          t.status === 'Pendente' ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"
+                        )}>{t.status}</Badge>
                       </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-48 flex flex-col items-center justify-center opacity-20 space-y-6 text-center">
-              <Landmark className="h-24 w-24 mx-auto" />
-              <p className="text-sm font-black uppercase tracking-[0.5em]">Nenhuma atividade financeira no ciclo {cycleMode.toUpperCase()}.</p>
-            </div>
-          )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={6} className="py-32 text-center opacity-20 text-[10px] font-black uppercase tracking-widest italic">Silêncio no fluxo de caixa...</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </Card>
 

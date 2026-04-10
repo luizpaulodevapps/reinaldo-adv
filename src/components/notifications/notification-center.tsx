@@ -74,8 +74,8 @@ export function NotificationCenter() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all group">
-          <Bell className="h-5 w-5 text-white/60 group-hover:text-primary transition-colors" />
+        <button className="relative h-9 w-9 flex items-center justify-center rounded-xl hover:bg-white/5 transition-all group">
+          <Bell className="h-4.5 w-4.5 text-white/40 group-hover:text-gold-100 transition-colors" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white border-2 border-[#0a0a14] shadow-lg animate-in zoom-in">
               {unreadCount > 9 ? '9+' : unreadCount}

@@ -141,21 +141,23 @@ export function DashboardClientLayout({
               </div>
               <div className="hidden lg:flex items-center gap-3 border-l border-gold-200/10 pl-6 h-8">
                 <Scale className="text-gold-100 h-5 w-5" />
-                <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Comando RGMJ</span>
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Escritório R G J M</span>
               </div>
             </div>
             
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 bg-white/[0.03] p-1.5 rounded-2xl border border-white/5 shadow-2xl">
+              <NotificationCenter />
+              
               {profile?.isOwner && (
-                <div className="hidden xl:flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-200/10 border border-gold-200/20">
-                  <ShieldCheck className="h-3 w-3 text-gold-100" />
-                  <span className="text-[9px] font-black text-gold-100 uppercase tracking-widest">Sócio Fundador</span>
+                <div className="hidden xl:flex items-center gap-2 px-4 h-9 rounded-xl bg-gold-200/5 border border-gold-200/10 hover:bg-gold-200/10 transition-all cursor-default">
+                  <ShieldCheck className="h-3.5 w-3.5 text-gold-100/50" />
+                  <span className="text-[9px] font-black text-gold-100/70 uppercase tracking-widest">Sócio Fundador</span>
                 </div>
               )}
-              <NotificationCenter />
-              <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sincronizado</span>
+
+              <div className="hidden md:flex items-center gap-3 px-4 h-9 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/10">
+                <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <span className="text-[9px] font-black text-emerald-500/40 uppercase tracking-widest">Ativo</span>
               </div>
             </div>
           </header>

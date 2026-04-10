@@ -29,10 +29,14 @@ import {
   CalendarDays,
   Target,
   ChevronDown,
-  Library
+  Library,
+  Video,
+  MapPin,
+  AlarmClock,
+  ArrowRight
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
+import { collection, query, orderBy, doc, serverTimestamp, limit as firestoreLimit } from "firebase/firestore"
 import { format, parseISO, isBefore, startOfDay, isSameDay, addDays, addBusinessDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -61,7 +65,8 @@ export default function PrazosSubpage() {
   const [editingDeadline, setEditingDeadline] = useState<any>(null)
   const [viewingDeadline, setViewingDeadline] = useState<any>(null)
   
-  // Estados para Operação IA
+  // Estados para Controle de Fluxo Multi-Step
+  const [step, setStep] = useState(1)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deadlineDuration, setDeadlineDuration] = useState("")
 
@@ -72,6 +77,7 @@ export default function PrazosSubpage() {
     pubDate: format(new Date(), 'yyyy-MM-dd'),
     publicationText: "",
     calculationType: "Dias Úteis (CPC/CLT)",
+    modality: "VIRTUAL", // Novo campo
     strategicNotes: "",
     processId: "",
     status: "Aberto",
@@ -79,10 +85,16 @@ export default function PrazosSubpage() {
   })
 
   const deadlinesQuery = useMemoFirebase(() => {
-    if (!user || !db) return null
-    return query(collection(db!, "deadlines"), orderBy("dueDate", "asc"))
-  }, [db, user])
-  const { data: deadlines, isLoading } = useCollection(deadlinesQuery)
+    if (!db) return null
+    // Limitando em 150 para evitar travamento de renderização se a base for gigante
+    return query(collection(db, "deadlines"), orderBy("dueDate", "asc"), firestoreLimit(150))
+  }, [db])
+
+  const { data: deadlines, isLoading, error: queryError } = useCollection(deadlinesQuery)
+  
+  if (queryError) {
+    console.error("Erro de Índice no Firestore:", queryError)
+  }
 
   const activeDeadlines = useMemo(() => {
     if (!deadlines) return []
@@ -98,12 +110,14 @@ export default function PrazosSubpage() {
       pubDate: format(new Date(), 'yyyy-MM-dd'),
       publicationText: "",
       calculationType: "Dias Úteis (CPC/CLT)",
+      modality: "VIRTUAL",
       strategicNotes: "",
       processId: "",
       status: "Aberto",
       priority: "normal"
     })
     setDeadlineDuration("")
+    setStep(1) // Reset para o primeiro passo
     setIsDialogOpen(true)
   }
 
@@ -116,6 +130,7 @@ export default function PrazosSubpage() {
       pubDate: deadline.pubDate || format(new Date(), 'yyyy-MM-dd'),
       publicationText: deadline.publicationText || "",
       calculationType: deadline.calculationType || "Dias Úteis (CPC/CLT)",
+      modality: deadline.modality || "VIRTUAL",
       strategicNotes: deadline.strategicNotes || "",
       processId: deadline.processId || "",
       status: deadline.status || "Aberto",
@@ -449,195 +464,233 @@ export default function PrazosSubpage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE GESTÃO DE PRAZO (CRIAÇÃO/EDIÇÃO) */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] h-[90vh] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col">
-          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
-            <div className="flex flex-row items-center gap-5">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
-                <Clock className="h-6 w-6" />
+      {/* DIÁLOGO DE GESTÃO DE PRAZO (MULTI-STEP) */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open)
+        if (!open) setStep(1)
+      }}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[850px] w-[95vw] h-auto max-h-[90vh] p-0 overflow-hidden shadow-2xl rounded-[2.5rem] font-sans flex flex-col">
+          
+          {/* HEADER MULTI-STEP */}
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none">
+            <div className="flex flex-row items-center gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-[0_0_30px_rgba(245,208,48,0.1)]">
+                {step === 1 ? <AlarmClock className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
               </div>
               <div className="text-left">
                 <DialogTitle className="text-white font-black uppercase tracking-tighter text-2xl">
-                  {editingDeadline ? "Retificar Prazo Judicial" : "Lançar Prazo Judicial"}
+                  {step === 1 ? "LANÇAR PRAZO FATAL" : "Lançar Prazo Judicial"}
                 </DialogTitle>
-                <DialogDescription className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-50">
-                  CONTROLE TÁTICO DE VENCIMENTOS RGMJ.
-                </DialogDescription>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] px-3 h-5 rounded-md">
+                    PASSO {step} DE 5
+                  </Badge>
+                  <span className="text-[10px] text-white/30 font-bold uppercase tracking-[0.1em]">
+                    {step === 1 ? "INTEGRAÇÃO WORKSPACE" : "CONFIGURAÇÃO DE VENCIMENTOS"}
+                  </span>
+                </div>
               </div>
             </div>
+            <button onClick={() => setIsDialogOpen(false)} className="text-white/20 hover:text-white transition-colors">
+              <X className="h-6 w-6" />
+            </button>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="p-10 space-y-10 bg-[#0a0f1e]/50 pb-20">
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="p-12">
               
-              {/* SEÇÃO DESPACHO IA */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                    <FileText className="h-4 w-4" /> Texto da Publicação / Despacho
-                  </Label>
-                  <Button 
-                    onClick={handleAiParsePublication} 
-                    disabled={isAnalyzing || !formData.publicationText}
-                    variant="outline" 
-                    className="h-10 border-primary/30 text-primary font-black uppercase text-[9px] tracking-widest hover:bg-primary/10 transition-all gap-2"
-                  >
-                    {isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
-                    ANALISAR COM IA
-                  </Button>
-                </div>
-                <Textarea 
-                  placeholder="COLE AQUI O TEXTO OFICIAL DO DESPACHO..." 
-                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase"
-                  value={formData.publicationText}
-                  onChange={(e) => setFormData({...formData, publicationText: e.target.value.toUpperCase()})}
-                />
-              </div>
+              {/* PASSO 1: MODALIDADE */}
+              {step === 1 && (
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-sm font-black text-white/90 uppercase tracking-[0.3em]">1. QUAL A MODALIDADE?</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <button 
+                      onClick={() => setFormData({...formData, modality: 'VIRTUAL'})}
+                      className={cn(
+                        "group relative p-12 rounded-[2rem] border-2 transition-all flex flex-col items-center justify-center gap-6 overflow-hidden",
+                        formData.modality === 'VIRTUAL' 
+                          ? "bg-primary/5 border-primary shadow-[0_0_50px_rgba(245,208,48,0.1)]" 
+                          : "bg-white/[0.02] border-white/5 hover:border-white/20"
+                      )}
+                    >
+                      <Video className={cn("h-12 w-12 transition-transform group-hover:scale-110", formData.modality === 'VIRTUAL' ? "text-primary" : "text-white/20")} />
+                      <span className={cn("text-sm font-black uppercase tracking-[0.4em]", formData.modality === 'VIRTUAL' ? "text-white" : "text-white/40")}>Virtual</span>
+                    </button>
 
-              {/* TÍTULO E PROTOCOLO */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Título do Ato *</Label>
-                  <Input 
-                    value={formData.title} 
-                    onChange={(e) => setFormData({...formData, title: e.target.value.toUpperCase()})} 
-                    placeholder="EX: RÉPLICA À CONTESTAÇÃO" 
-                    className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase" 
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Protocolo CNJ</Label>
-                  <div className="relative">
-                    <Scale className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                    <Input 
-                      value={formData.processId} 
-                      onChange={(e) => setFormData({...formData, processId: e.target.value})} 
-                      placeholder="0000000-00.0000.0.00.0000"
-                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-mono text-xs" 
-                    />
+                    <button 
+                      onClick={() => setFormData({...formData, modality: 'PRESENCIAL'})}
+                      className={cn(
+                        "group relative p-12 rounded-[2rem] border-2 transition-all flex flex-col items-center justify-center gap-6 overflow-hidden",
+                        formData.modality === 'PRESENCIAL' 
+                          ? "bg-primary/5 border-primary shadow-[0_0_50px_rgba(245,208,48,0.1)]" 
+                          : "bg-white/[0.02] border-white/5 hover:border-white/20"
+                      )}
+                    >
+                      <MapPin className={cn("h-12 w-12 transition-transform group-hover:scale-110", formData.modality === 'PRESENCIAL' ? "text-primary" : "text-white/20")} />
+                      <span className={cn("text-sm font-black uppercase tracking-[0.4em]", formData.modality === 'PRESENCIAL' ? "text-white" : "text-white/40")}>Presencial</span>
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* METODOLOGIA E CALCULADORA */}
-              <div className="space-y-6">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Metodologia de Contagem</Label>
-                <RadioGroup 
-                  value={formData.calculationType} 
-                  onValueChange={(v) => setFormData({...formData, calculationType: v})}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                >
-                  <div className={cn(
-                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
-                    formData.calculationType === "Dias Úteis (CPC/CLT)" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
-                  )} onClick={() => setFormData({...formData, calculationType: "Dias Úteis (CPC/CLT)"})}>
-                    <RadioGroupItem value="Dias Úteis (CPC/CLT)" className="border-primary text-primary" />
-                    <div>
-                      <p className="text-[11px] font-black text-white uppercase">Dias Úteis (CPC/CLT)</p>
-                      <p className="text-[9px] text-muted-foreground uppercase mt-0.5">Exclui sábados e domingos</p>
+              {/* PASSO 2: DETALHES DO PRAZO */}
+              {step === 2 && (
+                <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex flex-col gap-1.5 border-l-4 border-primary pl-6 py-2">
+                    <h4 className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em]">Configure o compromisso fatal para:</h4>
+                    <p className="text-white text-base font-black uppercase leading-tight">
+                      {formData.processId ? `PROCESSO: ${formData.processId}` : "RT - KELLY PEREIRA DE CARVALHO X FUNDACAO DO ABC"}
+                    </p>
+                  </div>
+
+                  {/* Texto da Publicação IA */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-primary" /> Texto da Publicação / Despacho
+                      </Label>
+                      <Button 
+                        onClick={handleAiParsePublication} 
+                        disabled={isAnalyzing || !formData.publicationText}
+                        variant="outline" 
+                        className="h-10 bg-black/40 border-white/10 text-primary font-black uppercase text-[9px] tracking-widest hover:bg-primary/10 transition-all gap-2"
+                      >
+                        {isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                        ANALISAR COM IA
+                      </Button>
+                    </div>
+                    <Textarea 
+                      placeholder="Cole aqui o texto oficial do Diário da Justiça para que a IA ajude no preenchimento..." 
+                      className="bg-black/60 border-white/5 min-h-[140px] text-white/80 text-xs font-bold p-6 rounded-2xl resize-none placeholder:text-white/20"
+                      value={formData.publicationText}
+                      onChange={(e) => setFormData({...formData, publicationText: e.target.value.toUpperCase()})}
+                    />
+                  </div>
+
+                  {/* Tipo de Prazo e Resumo */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <div className="space-y-4">
+                      <Label className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Tipo de Prazo *</Label>
+                      <div className="relative">
+                        <select 
+                          className="w-full bg-black/60 border-white/5 h-14 pl-6 pr-12 text-white font-black text-xs uppercase rounded-xl appearance-none outline-none focus:border-primary/50 transition-colors"
+                          value={formData.title}
+                          onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        >
+                          <option value="">Selecione o tipo...</option>
+                          <option value="RÉPLICA À CONTESTAÇÃO">RÉPLICA À CONTESTAÇÃO</option>
+                          <option value="RECURSO ORDINÁRIO">RECURSO ORDINÁRIO</option>
+                          <option value="MANIFESTAÇÃO LAUDO">MANIFESTAÇÃO LAUDO</option>
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-xl bg-primary/5 border-2 border-primary shadow-lg flex flex-col items-center justify-center gap-1">
+                        <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em]">Dias Úteis</span>
+                        <div className="flex items-center gap-2">
+                          <Scale className="h-4 w-4 text-primary" />
+                          <span className="text-2xl font-black text-white">0</span>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center gap-1 opacity-40">
+                        <span className="text-[8px] font-black text-white/60 uppercase tracking-[0.2em]">Corridos</span>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          <span className="text-2xl font-black text-white">0</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className={cn(
-                    "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4",
-                    formData.calculationType === "Dias Corridos (Material)" ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-black/20 border-white/5"
-                  )} onClick={() => setFormData({...formData, calculationType: "Dias Corridos (Material)"})}>
-                    <RadioGroupItem value="Dias Corridos (Material)" className="border-primary text-primary" />
-                    <div>
-                      <p className="text-[11px] font-black text-white uppercase">Dias Corridos (Material)</p>
-                      <p className="text-[9px] text-muted-foreground uppercase mt-0.5">Conta todos os dias</p>
+
+                  {/* Metodologia */}
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Metodologia de Contagem</Label>
+                    <RadioGroup 
+                      value={formData.calculationType} 
+                      onValueChange={(v) => setFormData({...formData, calculationType: v})}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                    >
+                      <div className={cn(
+                        "p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-5",
+                        formData.calculationType === "Dias Úteis (CPC/CLT)" ? "bg-primary/5 border-primary shadow-xl" : "bg-black/40 border-white/5"
+                      )} onClick={() => setFormData({...formData, calculationType: "Dias Úteis (CPC/CLT)"})}>
+                        <RadioGroupItem value="Dias Úteis (CPC/CLT)" className="border-primary text-primary h-5 w-5" />
+                        <div>
+                          <p className="text-[12px] font-black text-white uppercase tracking-wider">Dias Úteis (CPC/CLT)</p>
+                          <p className="text-[9px] text-white/30 uppercase mt-1">Exclui sábados e domingos</p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "p-6 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-5",
+                        formData.calculationType === "Dias Corridos (Material)" ? "bg-primary/5 border-primary shadow-xl" : "bg-black/40 border-white/5"
+                      )} onClick={() => setFormData({...formData, calculationType: "Dias Corridos (Material)"})}>
+                        <RadioGroupItem value="Dias Corridos (Material)" className="border-primary text-primary h-5 w-5" />
+                        <div>
+                          <p className="text-[12px] font-black text-white uppercase tracking-wider">Dias Corridos (Material)</p>
+                          <p className="text-[9px] text-white/30 uppercase mt-1">Conta todos os dias</p>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Calculadora */}
+                  <div className="p-10 rounded-[2rem] border-2 border-primary/20 bg-primary/5 space-y-8 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                      <Calculator className="h-24 w-24 text-primary" />
+                    </div>
+                    <div className="flex items-center gap-4 relative z-10">
+                      <Calculator className="h-5 w-5 text-primary" />
+                      <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Calculadora de Vencimento</h4>
+                    </div>
+                    <div className="flex flex-col md:flex-row items-end gap-8 relative z-10">
+                      <div className="flex-1 space-y-3 w-full">
+                        <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Duração do Prazo (Dias)</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="Ex: 5, 15, 30..." 
+                          className="bg-black/60 border-white/5 h-16 text-white font-black text-2xl text-center rounded-2xl placeholder:text-white/10"
+                          value={deadlineDuration}
+                          onChange={(e) => setDeadlineDuration(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleApplyDeadlineCalculation}
+                        variant="ghost" 
+                        className="h-16 px-12 border-2 border-primary/40 text-primary font-black uppercase text-[10px] tracking-[0.2em] gap-3 hover:bg-primary hover:text-background transition-all rounded-2xl"
+                      >
+                        <Zap className="h-5 w-5" /> APLICAR PRAZO
+                      </Button>
                     </div>
                   </div>
-                </RadioGroup>
-              </div>
-
-              <div className="p-8 rounded-3xl border-2 border-primary/20 bg-primary/5 space-y-6 shadow-2xl">
-                <div className="flex items-center gap-3">
-                  <Calculator className="h-5 w-5 text-primary" />
-                  <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em]">Calculadora de Vencimento</h4>
                 </div>
-                <div className="flex flex-col md:flex-row items-end gap-6">
-                  <div className="flex-1 space-y-2 w-full">
-                    <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Duração do Prazo (Dias)</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="Ex: 5, 15, 30..." 
-                      className="bg-black/60 border-white/10 h-16 text-white font-black text-2xl text-center rounded-2xl"
-                      value={deadlineDuration}
-                      onChange={(e) => setDeadlineDuration(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleApplyDeadlineCalculation}
-                    variant="outline" 
-                    className="h-16 px-10 border-primary text-primary font-black uppercase text-xs tracking-widest gap-3 hover:bg-primary hover:text-background transition-all rounded-2xl"
-                  >
-                    <Zap className="h-5 w-5" /> APLICAR PRAZO
-                  </Button>
-                </div>
-              </div>
+              )}
 
-              {/* DATAS */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data da Publicação *</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                    <Input 
-                      type="date" 
-                      className="bg-black/40 border-white/10 h-14 pl-12 text-white font-bold rounded-xl" 
-                      value={formData.pubDate} 
-                      onChange={e => setFormData({...formData, pubDate: e.target.value})} 
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <TriangleAlert className="h-3.5 w-3.5" /> Data Fatal (Vencimento) *
-                  </Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-500/40" />
-                    <Input 
-                      type="date" 
-                      className="bg-black/40 border-rose-500/30 h-14 pl-12 text-rose-400 font-black rounded-xl focus:border-rose-500" 
-                      value={formData.dueDate} 
-                      onChange={e => setFormData({...formData, dueDate: e.target.value})} 
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* PROVIDÊNCIA E DETALHES */}
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Providência / Tarefa *</Label>
-                <Input 
-                  value={formData.description} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value.toUpperCase()})} 
-                  placeholder="O QUE PRECISA SER FEITO?" 
-                  className="bg-black/40 border-white/10 h-14 text-white font-black text-sm uppercase" 
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                  <Target className="h-4 w-4" /> Detalhes Estratégicos / Alertas
-                </Label>
-                <Textarea 
-                  value={formData.strategicNotes} 
-                  onChange={(e) => setFormData({...formData, strategicNotes: e.target.value.toUpperCase()})} 
-                  className="bg-black/40 border-white/10 min-h-[120px] text-white text-xs font-bold p-5 rounded-2xl resize-none uppercase" 
-                  placeholder="INSIRA ALERTAS PARA A AUDIÊNCIA OU TESES..."
-                />
-              </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none shadow-[0_-20px_50px_rgba(0,0,0,0.6)]">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-muted-foreground uppercase font-black text-[11px] tracking-widest px-8 h-12 hover:text-white transition-colors">Abortar</Button>
-            <Button onClick={handleSave} className="gold-gradient text-background font-black uppercase text-[11px] tracking-widest px-12 h-14 rounded-xl shadow-2xl hover:scale-105 transition-all">
-              <Save className="h-5 w-5 mr-3" /> {editingDeadline ? "ATUALIZAR REGISTRO" : "LANÇAR NO RADAR"}
+          <div className="p-10 bg-[#0a0f1e] border-t border-white/5 flex items-center justify-between flex-none">
+            <button 
+              onClick={() => step === 1 ? setIsDialogOpen(false) : setStep(1)} 
+              className="text-white/30 uppercase font-black text-[11px] tracking-[0.3em] px-8 h-12 hover:text-white transition-colors"
+            >
+              {step === 1 ? "CANCELAR" : "VOLTAR"}
+            </button>
+            <Button 
+              onClick={() => step === 1 ? setStep(2) : handleSave()}
+              className="gold-gradient text-background font-black uppercase text-[10px] tracking-[0.25em] px-12 h-16 rounded-2xl shadow-3xl hover:scale-105 transition-all flex items-center gap-4"
+            >
+              {step === 1 ? (
+                <>PRÓXIMO RITO <ArrowRight className="h-4 w-4" /></>
+              ) : (
+                <><Save className="h-5 w-5" /> CONFIRMAR LANÇAMENTO</>
+              )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

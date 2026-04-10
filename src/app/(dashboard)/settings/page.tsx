@@ -382,7 +382,14 @@ function SettingsContent() {
                   <div key={member.id} className="p-8 flex items-center justify-between hover:bg-white/[0.01] transition-all group">
                     <div className="flex items-center gap-6">
                       <Avatar className="h-14 w-14 border-2 border-primary/20"><AvatarFallback className="bg-secondary text-primary font-black uppercase">{member.name?.substring(0, 2)}</AvatarFallback></Avatar>
-                      <div className="space-y-1"><h4 className="font-black text-white uppercase text-lg tracking-tight group-hover:text-primary transition-colors">{member.name}</h4><Badge variant="outline" className="text-[9px] font-black border-white/10 text-muted-foreground uppercase">{member.role?.toUpperCase()}</Badge></div>
+                      <div className="space-y-1.5">
+                        <h4 className="font-black text-white uppercase text-lg tracking-tight group-hover:text-primary transition-colors">{member.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3 w-3 text-muted-foreground opacity-40" />
+                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-40">{member.email}</p>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] font-black border-white/10 text-muted-foreground uppercase mt-1">{member.role?.toUpperCase()}</Badge>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <Button variant="ghost" size="icon" onClick={() => { setEditingUser(member); setUserFormData({...member}); setIsUserDialogOpen(true); }} className="h-10 w-10 text-white/20 hover:text-white"><UserCog className="h-5 w-5" /></Button>
