@@ -200,10 +200,28 @@ export default function BillingPage() {
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
     if (!db) return
+    
+    const title = transactions?.find(t => t.id === id)
+
     updateDocumentNonBlocking(doc(db, "financial_titles", id), {
       status: newStatus,
       updatedAt: serverTimestamp()
     })
+
+    // Notificação de Liquidação
+    if (newStatus === 'Liquidado' && title && title.responsibleStaffId) {
+      addDocumentNonBlocking(collection(db, "notifications"), {
+        userId: title.responsibleStaffId,
+        title: "Repasse Liberado",
+        message: `O título ${title.description.toUpperCase()} foi marcado como liquidado.`,
+        type: "financial",
+        severity: "info",
+        read: false,
+        link: "/financial",
+        createdAt: serverTimestamp()
+      })
+    }
+
     toast({ title: "Título Atualizado" })
   }
 
@@ -490,12 +508,26 @@ export default function BillingPage() {
             <div className="p-10 bg-[#0a0f1e]/50">
               <FinancialTitleForm 
                 initialData={editingTitle} 
-                onSubmit={(data) => {
+                onSubmit={async (data) => {
                   if(editingTitle) {
                     const ref = doc(db!, "financial_titles", editingTitle.id);
                     updateDocumentNonBlocking(ref, {...data, value: data.numericValue, updatedAt: serverTimestamp()});
                   } else {
-                    addDocumentNonBlocking(collection(db!, "financial_titles"), {...data, value: data.numericValue, createdAt: serverTimestamp(), updatedAt: serverTimestamp()});
+                    const ref = await addDocumentNonBlocking(collection(db!, "financial_titles"), {...data, value: data.numericValue, createdAt: serverTimestamp(), updatedAt: serverTimestamp()});
+                    
+                    // Notificação de Novo Lançamento para o Responsável
+                    if (data.responsibleStaffId) {
+                      addDocumentNonBlocking(collection(db!, "notifications"), {
+                        userId: data.responsibleStaffId,
+                        title: "Novo Título Vinculado",
+                        message: `Um lançamento de R$ ${data.numericValue.toLocaleString('pt-BR')} foi atribuído à sua carteira.`,
+                        type: "financial",
+                        severity: "info",
+                        read: false,
+                        link: "/financial",
+                        createdAt: serverTimestamp()
+                      })
+                    }
                   }
                   setIsTitleDialogOpen(false);
                   toast({title: "Fluxo de Caixa Atualizado"});

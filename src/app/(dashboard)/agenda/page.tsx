@@ -446,6 +446,28 @@ export default function MasterAgendaPage() {
       }
     }
 
+    // Notificações de Agenda
+    if (user) {
+      const typeLabels = {
+        audiencia: 'Nova Audiência',
+        atendimento: 'Novo Atendimento',
+        prazo: 'Novo Prazo',
+        diligencia: 'Nova Diligência',
+        freelance: 'Audiência Freelance'
+      }
+      
+      addDocumentNonBlocking(collection(db, "notifications"), {
+        userId: newEventData.responsibleStaffId || user.uid,
+        title: typeLabels[createMode as keyof typeof typeLabels] || 'Agenda Atualizada',
+        message: `O ato ${payload.title} foi pautado para ${new Date(dateTime).toLocaleDateString('pt-BR')} às ${newEventData.time}.`,
+        type: createMode === 'prazo' ? 'deadline' : createMode === 'audiencia' ? 'hearing' : 'system',
+        severity: "info",
+        read: false,
+        link: "/agenda",
+        createdAt: serverTimestamp()
+      })
+    }
+
     toast({ title: editingEventId ? "Ato Retificado" : "Ato Injetado na Pauta" })
     setIsSyncingWorkspace(false)
     setIsCreateOpen(false)

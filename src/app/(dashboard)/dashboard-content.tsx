@@ -34,12 +34,14 @@ export function DashboardContent() {
   const deadlinesQuery = useMemoFirebase(() => canQuery ? query(collection(db, "deadlines"), where("status", "==", "Aberto"), limit(10)) : null, [db, canQuery])
   const hearingsQuery = useMemoFirebase(() => canQuery ? query(collection(db, "hearings"), orderBy("startDateTime", "asc"), limit(5)) : null, [db, canQuery])
   const financialQuery = useMemoFirebase(() => canQuery ? query(collection(db, "financial_titles"), orderBy("dueDate", "desc"), limit(50)) : null, [db, canQuery])
+  const notificationsQuery = useMemoFirebase(() => canQuery ? query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("createdAt", "desc"), limit(4)) : null, [db, canQuery, user])
 
   const { data: leads, isLoading: loadingLeads } = useCollection(leadsQuery)
   const { data: cases, isLoading: loadingCases } = useCollection(casesQuery)
   const { data: deadlines } = useCollection(deadlinesQuery)
   const { data: recentHearings, isLoading: loadingHearings } = useCollection(hearingsQuery)
   const { data: financial } = useCollection(financialQuery)
+  const { data: recentNotifications } = useCollection(notificationsQuery)
 
   const stats = useMemo(() => {
     const activeLeads = (leads || []).filter(l => l.status !== 'arquivado').length
@@ -173,6 +175,39 @@ export function DashboardContent() {
                 <Link href="/deadlines" className="flex items-center justify-center">Auditoria Completa <ArrowRight className="h-3.5 w-3.5 ml-3" /></Link>
               </Button>
             </CardContent>
+          </Card>
+
+          <Card className="bg-card border-white/5 p-8 space-y-6 shadow-2xl rounded-3xl">
+            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Log de Proatividade</h4>
+            <div className="space-y-4">
+              {recentNotifications && recentNotifications.length > 0 ? (
+                recentNotifications.map((n, i) => (
+                  <div key={i} className="flex gap-4 items-start group">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center border transition-all group-hover:scale-110",
+                      n.type === 'deadline' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
+                      n.type === 'lead' ? "bg-blue-500/10 border-blue-500/20 text-blue-400" :
+                      n.type === 'financial' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
+                      "bg-primary/10 border-primary/20 text-primary"
+                    )}>
+                      {n.type === 'deadline' ? <Clock className="h-3.5 w-3.5" /> :
+                       n.type === 'lead' ? <Zap className="h-3.5 w-3.5" /> :
+                       n.type === 'financial' ? <TrendingUp className="h-3.5 w-3.5" /> :
+                       <AlertCircle className="h-3.5 w-3.5" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-white uppercase truncate leading-tight">{n.title}</p>
+                      <p className="text-[9px] text-muted-foreground font-medium mt-1 truncate opacity-60">{n.message}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest text-center py-4 opacity-20">Sem alertas recentes</p>
+              )}
+            </div>
+            <Button variant="ghost" asChild className="w-full text-[9px] font-black uppercase tracking-widest text-muted-foreground h-10 hover:text-gold-100 hover:bg-gold-200/5 rounded-xl">
+              <Link href="/notifications">Ver Histórico <ChevronRight className="h-3.5 w-3.5 ml-2" /></Link>
+            </Button>
           </Card>
 
           <Card className="bg-card border-white/5 p-8 space-y-6 shadow-2xl rounded-3xl">

@@ -331,6 +331,21 @@ export default function LeadsPage() {
 
     setIsSyncingIntake(false)
     setIsSchedulingIntake(false)
+    
+    // Notificação de Agendamento
+    if (user) {
+      addDocumentNonBlocking(collection(db, "notifications"), {
+        userId: user.uid,
+        title: "Agendamento Realizado",
+        message: `Triagem agendada para ${activeLead.name.toUpperCase()} em ${intakeData.date} às ${intakeData.time}.`,
+        type: "lead",
+        severity: "info",
+        read: false,
+        link: "/leads",
+        createdAt: serverTimestamp()
+      })
+    }
+
     toast({ title: "Atendimento Protocolado" })
   }
 
@@ -338,8 +353,59 @@ export default function LeadsPage() {
   const handleDragOver = (e: React.DragEvent) => e.preventDefault()
   const handleDrop = async (status: string) => {
     if (!draggedLeadId || !db) return
+    
+    const lead = leads.find(l => l.id === draggedLeadId)
+    const oldStatus = lead?.status || "novo"
+    
+    if (oldStatus === status) return
+
     updateDocumentNonBlocking(doc(db, "leads", draggedLeadId), { status, updatedAt: serverTimestamp() })
+    
+    // Notificação de Mudança de Status
+    if (user && lead) {
+      const colTitle = columns.find(c => c.id === status)?.title || status.toUpperCase()
+      addDocumentNonBlocking(collection(db, "notifications"), {
+        userId: user.uid,
+        title: "Lead Movimentado",
+        message: `${lead.name.toUpperCase()} movido para a coluna ${colTitle}.`,
+        type: "lead",
+        severity: "info",
+        read: false,
+        link: "/leads",
+        createdAt: serverTimestamp()
+      })
+    }
+
     setDraggedLeadId(null)
+  }
+
+  const handleCreateLead = async (leadData: any) => {
+    if (!db || !user) return
+
+    const newLead = {
+      ...leadData,
+      status: "novo",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      createdBy: user.uid
+    }
+
+    const docRef = await addDocumentNonBlocking(collection(db, "leads"), newLead)
+    
+    // Notificação de Novo Lead
+    addDocumentNonBlocking(collection(db, "notifications"), {
+      userId: user.uid,
+      title: "Novo Lead Capturado",
+      message: `O lead ${leadData.name.toUpperCase()} foi inserido no funil de triagem.`,
+      type: "lead",
+      severity: "info",
+      read: false,
+      link: "/leads",
+      createdAt: serverTimestamp()
+    })
+
+    setIsNewEntryOpen(false)
+    toast({ title: "Lead Protocolado", description: "O novo atendimento foi injetado no funil." })
   }
 
   const labelMini = "text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 block"
@@ -386,6 +452,36 @@ export default function LeadsPage() {
           )
         })}
       </div>
+
+      <Dialog open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0a0f1e] sm:max-w-[700px] p-0 overflow-hidden shadow-2xl rounded-3xl font-sans flex flex-col h-[90vh]">
+          <div className="p-8 bg-[#0a0f1e] border-b border-white/5 flex items-center justify-between flex-none shadow-xl">
+            <div className="flex items-center gap-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xl">
+                <PlusCircle className="h-6 w-6" />
+              </div>
+              <div className="text-left">
+                <DialogTitle className="text-white font-headline text-2xl uppercase tracking-tighter">Novo Atendimento</DialogTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-[8px] font-black border-primary/20 text-primary uppercase">Protocolo de Entrada</Badge>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setIsNewEntryOpen(false)} className="text-white/20 hover:text-white transition-colors">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <LeadForm 
+            existingLeads={leads} 
+            onSubmit={handleCreateLead}
+            onSelectExisting={(l) => {
+              handleOpenLead(l)
+              setIsNewEntryOpen(false)
+            }}
+            onCancel={() => setIsNewEntryOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="glass border-white/10 p-0 bg-[#05070a] shadow-2xl flex flex-col h-full sm:max-w-[95vw] w-[95vw]">

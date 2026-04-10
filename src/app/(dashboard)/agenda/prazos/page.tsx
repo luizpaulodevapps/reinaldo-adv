@@ -206,6 +206,21 @@ export default function PrazosSubpage() {
         ...payload,
         createdAt: serverTimestamp()
       })
+
+      // Notificação de Novo Prazo
+      if (user) {
+        addDocumentNonBlocking(collection(db, "notifications"), {
+          userId: user.uid,
+          title: "Novo Prazo Injetado",
+          message: `O termo ${formData.title.toUpperCase()} foi adicionado ao radar fatal.`,
+          type: "deadline",
+          severity: "warning",
+          read: false,
+          link: "/agenda/prazos",
+          createdAt: serverTimestamp()
+        })
+      }
+
       toast({ title: "Prazo Injetado no Radar" })
     }
     setIsDialogOpen(false)
@@ -213,11 +228,29 @@ export default function PrazosSubpage() {
 
   const handleMarkAsDone = (id: string) => {
     if (!db) return
+    
+    const deadline = activeDeadlines.find(d => d.id === id)
+
     updateDocumentNonBlocking(doc(db, "deadlines", id), {
       status: "Concluído",
       completedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     })
+
+    // Notificação de Cumprimento
+    if (user && deadline) {
+      addDocumentNonBlocking(collection(db, "notifications"), {
+        userId: user.uid,
+        title: "Prazo Cumprido",
+        message: `O ato ${deadline.title.toUpperCase()} foi arquivado como concluído.`,
+        type: "deadline",
+        severity: "info",
+        read: false,
+        link: "/agenda/prazos",
+        createdAt: serverTimestamp()
+      })
+    }
+
     toast({ title: "Prazo Cumprido", description: "O ato foi arquivado com sucesso." })
   }
 
