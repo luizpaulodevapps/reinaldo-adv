@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,13 +27,33 @@ const AREAS = [
 ]
 
 export default function CasesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    }>
+      <CasesPageContent />
+    </Suspense>
+  )
+}
+
+function CasesPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const db = useFirestore()
   const { user } = useUser()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [activeArea, setActiveArea] = useState("todos")
+  
+  // Sincroniza o busca do URL com o estado interno
+  useEffect(() => {
+    const q = searchParams.get('search')
+    if (q) setSearchTerm(q)
+  }, [searchParams])
+
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingProcess, setEditingProcess] = useState<any>(null)

@@ -76,14 +76,15 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
 
   const processQuery = useMemoFirebase(() => {
     if (!user || !db) return null
-    return query(collection(db!, "legal_processes"), orderBy("processNumber", "asc"), limit(50))
+    return query(collection(db!, "legal_processes"), orderBy("processNumber", "asc"), limit(200))
   }, [db, user])
   const { data: processes } = useCollection(processQuery)
 
   const [processSearch, setProcessSearch] = useState("")
   const filteredProcesses = processes?.filter(p => 
     p.processNumber?.toLowerCase().includes(processSearch.toLowerCase()) ||
-    p.clientName?.toLowerCase().includes(processSearch.toLowerCase())
+    p.clientName?.toLowerCase().includes(processSearch.toLowerCase()) ||
+    p.description?.toLowerCase().includes(processSearch.toLowerCase())
   )
 
   useEffect(() => {
@@ -113,7 +114,7 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
 
   const expenseCategories = [
     { id: "Pessoal", label: "PESSOAL / RH", icon: UserCircle, subs: ["SALÁRIOS", "REPASSE ASSOCIADO", "ESTAGIÁRIOS", "ENCARGOS"] },
-    { id: "Operacional", label: "OPERACIONAL", icon: Building2, subs: ["ALUGUEL", "ENERGIA/INTERNET", "SOFTWARES", "LIMPEZA"] },
+    { id: "Operacional", label: "OPERACIONAL", icon: Building2, subs: ["ALUGUEL", "ENERGIA/INTERNET", "CONTAS DE CONSUMO (ÁGUA/LUZ)", "TELEFONIA / MÓVEL", "SOFTWARES", "LIMPEZA"] },
     { id: "Tributário", label: "TRIBUTÁRIO", icon: ShieldCheck, subs: ["ISS", "IRPJ", "DAS/SIMPLES", "TAXAS OAB"] },
     { id: "Marketing", label: "MARKETING", icon: Zap, subs: ["GOOGLE ADS", "SOCIAL MEDIA", "EVENTOS"] },
   ]
@@ -201,35 +202,53 @@ export function FinancialTitleForm({ initialData, onSubmit, onCancel }: Financia
 
       {/* VINCULAÇÃO JURÍDICA */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 rounded-[2rem] border border-white/5 bg-white/[0.02]">
-        <div className="space-y-3">
+        <div className="space-y-3 relative">
           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">Vincular Processo (CNJ ou Cliente)</Label>
-          <Select 
-            value={formData.processId} 
-            onValueChange={(v) => {
-              const p = processes?.find(proc => proc.id === v)
-              setFormData({...formData, processId: v, processNumber: p?.processNumber || "", clientName: p?.clientName || ""})
-            }}
-          >
-            <SelectTrigger className="bg-black/40 border-white/5 h-14 text-white font-black uppercase text-[11px] rounded-xl flex items-center gap-4">
-               <Gavel className="h-4 w-4 text-primary opacity-50" />
-               <SelectValue placeholder="PESQUISAR PROCESSO..." />
-            </SelectTrigger>
-            <SelectContent className="bg-[#0d121f] text-white">
-              <div className="p-2 sticky top-0 bg-[#0d121f] z-10 border-b border-white/5">
-                <Input 
-                  placeholder="FILTRAR..." 
-                  value={processSearch} 
-                  onChange={(e) => setProcessSearch(e.target.value.toUpperCase())}
-                  className="h-10 bg-black/40 border-white/5 text-[10px] font-black"
-                />
+          <div className="relative group">
+            <Gavel className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary opacity-50 z-20" />
+            <Input 
+              placeholder="DIGITE PARA BUSCAR PROCESSO..." 
+              value={formData.processNumber || processSearch} 
+              onChange={(e) => {
+                setProcessSearch(e.target.value)
+                if (formData.processId) setFormData({...formData, processId: "", processNumber: "", clientName: ""})
+              }}
+              className="bg-black/40 border-white/5 h-14 pl-14 text-white font-black uppercase text-[11px] rounded-xl focus:ring-primary/50 relative z-10"
+            />
+            {formData.processId && (
+              <button 
+                onClick={() => {
+                  setFormData({...formData, processId: "", processNumber: "", clientName: ""})
+                  setProcessSearch("")
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-primary/20 hover:bg-primary/40 p-1.5 rounded-full text-primary transition-all"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            
+            {(processSearch && !formData.processId) && (
+              <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0d121f] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[100] max-h-[300px] overflow-y-auto divide-y divide-white/5 animate-in fade-in zoom-in-95 duration-200">
+                {filteredProcesses && filteredProcesses.length > 0 ? (
+                  filteredProcesses.map(p => (
+                    <div 
+                      key={p.id}
+                      onClick={() => {
+                        setFormData({...formData, processId: p.id, processNumber: p.processNumber, clientName: p.clientName})
+                        setProcessSearch("")
+                      }}
+                      className="p-4 hover:bg-primary/10 cursor-pointer transition-colors group"
+                    >
+                      <p className="text-[10px] font-black text-white group-hover:text-primary transition-colors">{p.processNumber}</p>
+                      <p className="text-[8px] text-muted-foreground font-black uppercase mt-1 opacity-50">{p.clientName}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-10 text-center opacity-30 text-[9px] font-black uppercase italic">Nenhum processo encontrado...</div>
+                )}
               </div>
-              {filteredProcesses?.map(p => (
-                <SelectItem key={p.id} value={p.id} className="text-[9px] font-black uppercase py-3">
-                   {p.processNumber} - {p.clientName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            )}
+          </div>
         </div>
         <div className="space-y-3">
           <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">Advogado p/ Auditoria (Repasse)</Label>

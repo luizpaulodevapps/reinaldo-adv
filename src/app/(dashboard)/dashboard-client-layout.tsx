@@ -167,6 +167,36 @@ export function DashboardClientLayout({
               {children}
             </div>
           </main>
+
+          <footer className="w-full py-8 border-t border-gold-200/5 bg-[#05070a]/50 backdrop-blur-md">
+            <div className="max-w-[1800px] w-full mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex flex-col items-center md:items-start gap-2">
+                <div className="flex items-center gap-2">
+                  <Scale className="h-4 w-4 text-gold-100/40" />
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">RGMJ ADVOCACIA SOBERANA</span>
+                </div>
+                <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">© 2026 Todos os direitos reservados. Inteligência Juridica de Elite.</p>
+              </div>
+
+              <div className="flex items-center gap-8">
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">SISTEMA DE GESTÃO V.2.4</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[8px] font-bold text-emerald-500/60 uppercase tracking-widest">Servidores Online</span>
+                  </div>
+                </div>
+                
+                <div className="w-px h-8 bg-gold-200/10 hidden md:block" />
+
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center group cursor-pointer hover:bg-gold-200/10 transition-all">
+                    <ShieldCheck className="h-4 w-4 text-white/20 group-hover:text-gold-100 transition-colors" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     </SidebarProvider>

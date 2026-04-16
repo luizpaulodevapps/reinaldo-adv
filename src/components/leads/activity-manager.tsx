@@ -22,7 +22,8 @@ import {
   User, 
   Loader2, 
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ShieldAlert
 } from "lucide-react"
 import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase"
 import { collection, query, where, orderBy, serverTimestamp, doc } from "firebase/firestore"
@@ -42,6 +43,7 @@ const ACTIVITY_TYPES = [
   { id: "E-mail", icon: Mail, label: "E-mail" },
   { id: "WhatsApp", icon: MessageSquare, label: "WhatsApp" },
   { id: "Nota", icon: StickyNote, label: "Nota Interna" },
+  { id: "Sistema", icon: ShieldAlert, label: "Log de Sistema" },
 ]
 
 export function ActivityManager({ leadId }: ActivityManagerProps) {

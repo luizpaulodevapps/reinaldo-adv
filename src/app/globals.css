@@ -51,12 +51,13 @@
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-white;
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 }
 
 .font-headline {
-  @apply font-serif font-bold tracking-tight uppercase;
+  font-family: 'Outfit', sans-serif;
+  @apply font-bold tracking-tight uppercase;
 }
 
 .text-gradient-gold {

@@ -15,6 +15,7 @@ import {
   Users,
   ChevronRight,
   LayoutGrid,
+  List,
   MoreVertical,
   Edit3,
   Trash2,
@@ -70,6 +71,7 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<any>(null)
   const [selectedClientDossier, setSelectedClientDossier] = useState<any>(null)
   const [activeDossierTab, setActiveDossierTab] = useState("overview")
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   
   const [isNewProcessOpen, setIsNewProcessOpen] = useState(false)
   const [isNewFinancialOpen, setIsNewFinancialOpen] = useState(false)
@@ -111,6 +113,29 @@ export default function ClientsPage() {
     return query(collection(db, "appointments"), where("clientId", "==", selectedClientDossier.id))
   }, [db, selectedClientDossier])
   const { data: clientAgenda } = useCollection(clientAgendaQuery)
+  const clientHearingsQuery = useMemoFirebase(() => {
+    if (!db || !selectedClientDossier) return null
+    return query(collection(db, "hearings"), where("clientId", "==", selectedClientDossier.id))
+  }, [db, selectedClientDossier])
+  const { data: clientHearings } = useCollection(clientHearingsQuery)
+
+  const clientDeadlinesQuery = useMemoFirebase(() => {
+    if (!db || !selectedClientDossier) return null
+    return query(collection(db, "deadlines"), where("clientId", "==", selectedClientDossier.id))
+  }, [db, selectedClientDossier])
+  const { data: clientDeadlines } = useCollection(clientDeadlinesQuery)
+
+  const combinedClientAgenda = useMemo(() => {
+    const a = (clientAgenda || []).map(x => ({ ...x, eventType: 'atendimento' }))
+    const h = (clientHearings || []).map(x => ({ ...x, eventType: x.isFreelance ? 'freelance' : 'audiencia' }))
+    const d = (clientDeadlines || []).map(x => ({ ...x, eventType: 'prazo' }))
+
+    return [...a, ...h, ...d].sort((x, y) => {
+      const dx = new Date(x.startDateTime || x.dueDate || 0).getTime()
+      const dy = new Date(y.startDateTime || y.dueDate || 0).getTime()
+      return dy - dx
+    })
+  }, [clientAgenda, clientHearings, clientDeadlines])
 
   const clientFinancialQuery = useMemoFirebase(() => {
     if (!db || !selectedClientDossier) return null
@@ -396,21 +421,49 @@ export default function ClientsPage() {
             {clientProcesses && clientProcesses.length > 0 ? (
               <div className="grid grid-cols-1 gap-4">
                 {clientProcesses.map(proc => (
-                  <Card key={proc.id} className="glass border-white/5 p-6 hover:border-primary/30 transition-all group rounded-2xl shadow-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="text-[9px] font-black border-primary/20 text-primary uppercase">{proc.caseType}</Badge>
-                          <span className="text-xs font-mono font-bold text-muted-foreground">{proc.processNumber}</span>
-                        </div>
-                        <h4 className="text-lg font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">{proc.description}</h4>
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{proc.court} • {proc.vara}</p>
+                  <Link key={proc.id} href={`/cases?search=${proc.processNumber}`} className="block group">
+                    <Card className="glass border-white/5 p-8 hover:border-primary/30 transition-all rounded-[2rem] shadow-xl bg-white/[0.02] relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-all group-hover:scale-110">
+                        <Scale className="h-16 w-16" />
                       </div>
-                      <Button asChild variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground hover:text-primary rounded-xl">
-                        <Link href="/cases"><ChevronRight className="h-6 w-6" /></Link>
-                      </Button>
-                    </div>
-                  </Card>
+                      
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="text-[9px] font-black border-primary/20 text-primary uppercase px-3 h-6">{proc.caseType}</Badge>
+                            <span className="text-xs font-mono font-bold text-white/40 tracking-tighter">{proc.processNumber}</span>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-white/20 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="text-xl font-black text-white uppercase tracking-tighter leading-none group-hover:text-primary transition-colors">{proc.description}</h4>
+                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
+                            {proc.court} • {proc.vara}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-6 border-t border-white/5">
+                          <div>
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Parte Contrária</p>
+                            <p className="text-[11px] font-bold text-white uppercase truncate">{proc.defendantName || "---"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Valor da Causa</p>
+                            <p className="text-[11px] font-black text-emerald-500 tabular-nums">R$ {proc.value || "0,00"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Responsável</p>
+                            <p className="text-[11px] font-bold text-white/60 uppercase truncate">{proc.responsibleStaffName || "RGMJ"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Status</p>
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[8px] font-black uppercase h-5">ATIVO</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -422,20 +475,52 @@ export default function ClientsPage() {
           </TabsContent>
 
           <TabsContent value="agenda">
-            {clientAgenda && clientAgenda.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {clientAgenda.map(event => (
-                  <Card key={event.id} className="glass border-white/5 p-6 space-y-4 rounded-2xl shadow-lg">
+            {combinedClientAgenda.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {combinedClientAgenda.map(event => (
+                  <Card key={event.id} className={cn(
+                    "glass border-white/5 p-6 space-y-4 rounded-2xl shadow-lg hover:border-primary/20 transition-all",
+                    event.status === 'Realizado' && "opacity-60 bg-white/[0.01]"
+                  )}>
                     <div className="flex justify-between items-start">
-                      <Badge className="bg-amber-500/10 text-amber-500 border-0 text-[10px] font-black uppercase">{event.type}</Badge>
+                      <div className="flex items-center gap-3">
+                        <Badge className={cn(
+                          "bg-amber-500/10 text-amber-500 border-0 text-[10px] font-black uppercase",
+                          event.eventType === 'audiencia' && "bg-rose-500/10 text-rose-500",
+                          event.eventType === 'prazo' && "bg-primary/10 text-primary",
+                          event.eventType === 'freelance' && "bg-cyan-500/10 text-cyan-400"
+                        )}>
+                          {event.eventType}
+                        </Badge>
+                        {event.status === 'Realizado' && (
+                          <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[10px] font-black uppercase flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3 w-3" /> REALIZADO
+                          </Badge>
+                        )}
+                        {event.status !== 'Realizado' && new Date(event.startDateTime || event.dueDate) < new Date() && (
+                          <Badge className="bg-rose-500/10 text-rose-500 border-0 text-[10px] font-black uppercase">PENDENTE / ATRASADO</Badge>
+                        )}
+                      </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-black text-white uppercase">{event.startDateTime ? new Date(event.startDateTime).toLocaleDateString() : 'N/A'}</p>
+                        <p className="text-[10px] font-black text-white uppercase">{event.startDateTime || event.dueDate ? new Date(event.startDateTime || event.dueDate).toLocaleDateString('pt-BR') : 'N/A'}</p>
                         <p className="text-[9px] font-bold text-muted-foreground uppercase">{event.startDateTime ? new Date(event.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
                       </div>
                     </div>
-                    <h4 className="text-base font-bold text-white uppercase tracking-tight">{event.title}</h4>
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase border-t border-white/5 pt-4">
-                      <MapPin className="h-3.5 w-3.5" /> {event.location || "Local não informado"}
+                    
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <h4 className="text-lg font-bold text-white uppercase tracking-tight">{event.title}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{event.notes || event.description || "Nenhuma nota tática."}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6 text-[10px] text-muted-foreground font-bold uppercase border-t border-white/5 pt-4">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-primary" /> {event.location || "Local não informado"}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-primary" /> Criado em {event.createdAt?.toDate ? new Date(event.createdAt.toDate()).toLocaleDateString() : '---'}
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -501,6 +586,25 @@ export default function ClientsPage() {
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5 mr-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setViewMode('grid')} 
+              className={cn("h-9 w-9 rounded-lg transition-all", viewMode === 'grid' ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40 hover:text-white")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setViewMode('list')} 
+              className={cn("h-9 w-9 rounded-lg transition-all", viewMode === 'list' ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40 hover:text-white")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -519,63 +623,114 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Base RGMJ...</span>
+      {isLoading ? (
+        <div className="py-32 flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Base RGMJ...</span>
+        </div>
+      ) : filteredClients.length > 0 ? (
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredClients.map((client) => (
+              <Card 
+                key={client.id} 
+                className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl cursor-pointer"
+                onClick={() => handleOpenDossier(client)}
+              >
+                <CardContent className="p-8 space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-xl font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{client.name}</h3>
+                      <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white shrink-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
+                        <DropdownMenuItem onClick={() => handleOpenDossier(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                          <History className="h-4 w-4" /> Dossiê Completo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                          <Edit3 className="h-4 w-4" /> Ver Ficha Técnica
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleInactivateClient(client.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-amber-500 focus:text-amber-400">
+                          <UserX className="h-4 w-4" /> Inativar Cliente
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id); }} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
+                          <Trash2 className="h-4 w-4" /> Excluir Definitivamente
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                    <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-[0.2em]">
+                      <Zap className="h-3.5 w-3.5" /> ABRIR DOSSIÊ 360º
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        ) : filteredClients.length > 0 ? (
-          filteredClients.map((client) => (
-            <Card 
-              key={client.id} 
-              className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl cursor-pointer"
-              onClick={() => handleOpenDossier(client)}
-            >
-              <CardContent className="p-8 space-y-6">
-                <div className="flex justify-between items-start">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{client.name}</h3>
-                    <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white shrink-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
-                      <DropdownMenuItem onClick={() => handleOpenDossier(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
-                        <History className="h-4 w-4" /> Dossiê Completo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
-                        <Edit3 className="h-4 w-4" /> Ver Ficha Técnica
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleInactivateClient(client.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-amber-500 focus:text-amber-400">
-                        <UserX className="h-4 w-4" /> Inativar Cliente
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id); }} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
-                        <Trash2 className="h-4 w-4" /> Excluir Definitivamente
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                  <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-[0.2em]">
-                    <Zap className="h-3.5 w-3.5" /> ABRIR DOSSIÊ 360º
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          ))
         ) : (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[2rem] border-dashed border-2 border-white/5 opacity-20">
-            <Users className="h-16 w-16 text-muted-foreground" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center">Nenhum cliente ativo no radar</p>
+          <div className="glass border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="grid grid-cols-12 gap-4 p-5 bg-white/[0.03] border-b border-white/5 text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+              <div className="col-span-4">Cliente / Nome Completo</div>
+              <div className="col-span-2">CPF / CNPJ</div>
+              <div className="col-span-3">Contato Principal</div>
+              <div className="col-span-2">Área / Tipo</div>
+              <div className="col-span-1 text-right">Ações</div>
+            </div>
+            <div className="divide-y divide-white/5">
+              {filteredClients.map((client) => (
+                <div 
+                  key={client.id} 
+                  onClick={() => handleOpenDossier(client)}
+                  className="grid grid-cols-12 gap-4 p-5 hover:bg-white/[0.02] transition-all items-center cursor-pointer group"
+                >
+                  <div className="col-span-4">
+                    <h4 className="text-sm font-bold text-white uppercase group-hover:text-primary transition-colors">{client.name}</h4>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[10px] font-mono font-bold text-muted-foreground">{client.documentNumber}</span>
+                  </div>
+                  <div className="col-span-3">
+                    <span className="text-xs font-medium text-white/60">{client.email || client.phone || 'sem contato'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <Badge variant="outline" className="text-[8px] border-white/10 text-muted-foreground uppercase">{client.type === 'corporate' ? 'PJ' : 'PF'}</Badge>
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
+                        <DropdownMenuItem onClick={() => handleOpenDossier(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                          <History className="h-4 w-4" /> Dossiê Completo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
+                          <Edit3 className="h-4 w-4" /> Editar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        )
+      ) : (
+        <div className="py-32 flex flex-col items-center justify-center space-y-6 glass rounded-[2rem] border-dashed border-2 border-white/5 opacity-20">
+          <Users className="h-16 w-16 text-muted-foreground" />
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center">Nenhum cliente ativo no radar</p>
+        </div>
+      )}
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className={cn("glass border-white/10 p-0 overflow-hidden bg-[#0a0f1e] shadow-2xl flex flex-col h-full", getDrawerWidthClass())}>

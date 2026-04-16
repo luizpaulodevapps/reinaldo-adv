@@ -210,8 +210,17 @@ export default function MasterAgendaPage() {
     
     const combined = [...h, ...d, ...a, ...i]
     if (filterStaffId === 'all') return combined
-    return combined.filter(e => e.responsibleStaffId === filterStaffId)
-  }, [hearings, deadlines, appointments, internalDiligences, filterStaffId])
+
+    // Fallback: buscamos o nome do staff selecionado no filtro para comparar também por texto
+    const selectedStaff = staffMembers?.find(s => s.id === filterStaffId)
+    const selectedName = selectedStaff?.name?.toUpperCase()
+
+    return combined.filter(e => {
+      const matchesId = (e.responsibleStaffId === filterStaffId) || (e.assigneeId === filterStaffId)
+      const matchesName = selectedName && (e.responsibleStaffName?.toUpperCase() === selectedName)
+      return matchesId || matchesName
+    })
+  }, [hearings, deadlines, appointments, internalDiligences, filterStaffId, staffMembers])
 
   const selectedDayEvents = useMemo(() => {
     return allEvents
@@ -371,6 +380,7 @@ export default function MasterAgendaPage() {
       targetCollection = 'diligences'
       payload.dueDate = dateTime
       payload.assigneeId = newEventData.assigneeId
+      payload.responsibleStaffId = newEventData.assigneeId // Harmoniza para o filtro da agenda
       payload.status = "Pendente"
       typeForGoogle = 'diligencia'
     } else if (createMode === 'freelance') {
@@ -491,6 +501,33 @@ export default function MasterAgendaPage() {
 
     deleteDocumentNonBlocking(doc(db, event.collection, event.id))
     toast({ variant: "destructive", title: "Ato Removido" })
+    setViewingEvent(null)
+  }
+
+  const handleFinalizeEvent = async (event: any) => {
+    if (!db || !event) return
+    
+    updateDocumentNonBlocking(doc(db, event.collection, event.id), {
+      status: "Realizado",
+      completedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+
+    // Registrar no histórico de notificações/atividades se necessário
+    if (user) {
+      addDocumentNonBlocking(collection(db, "activities"), {
+        leadId: event.leadId || "",
+        type: "Sistema",
+        subject: `ATO REALIZADO: ${event.title}`,
+        description: `O compromisso foi marcado como realizado por ${user.displayName}.`,
+        responsibleId: user.uid,
+        responsibleName: user.displayName || "Sistema",
+        status: "Realizado",
+        createdAt: serverTimestamp()
+      })
+    }
+
+    toast({ title: "Ato Finalizado", description: "O registro foi marcado como realizado com sucesso." })
     setViewingEvent(null)
   }
 
@@ -871,6 +908,15 @@ export default function MasterAgendaPage() {
                 <div className="flex items-center gap-3">
                   <Badge className="bg-primary text-background text-[9px] font-black uppercase tracking-widest">{viewingEvent?.eventType?.toUpperCase()}</Badge>
                   <span className="text-[10px] font-black text-muted-foreground uppercase">Detalhes Estratégicos</span>
+                  {viewingEvent?.status === 'Realizado' ? (
+                    <Badge className="bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 px-3">
+                      <CheckCircle2 className="h-3 w-3" /> CONCLUÍDO
+                    </Badge>
+                  ) : viewingEvent?.date && viewingEvent.date < new Date() && (
+                    <Badge variant="destructive" className="bg-rose-500/20 text-rose-500 border-rose-500/30 text-[9px] font-black uppercase tracking-widest animate-pulse">
+                      AGUARDANDO FINALIZAÇÃO
+                    </Badge>
+                  )}
                   {viewingEvent?.calendarEventId && (
                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[8px] font-black uppercase flex items-center gap-1.5 px-2">
                       <CloudLightning className="h-3 w-3" /> SINCRONIZADO WORKSPACE
@@ -946,13 +992,25 @@ export default function MasterAgendaPage() {
 
           <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
             <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12 hover:text-white transition-colors">FECHAR</Button>
-            <Button 
-              variant="outline" 
-              onClick={() => handleOpenSchedule(viewingEvent.date || new Date(), viewingEvent.eventType, viewingEvent)}
-              className="border-primary/30 text-primary font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-primary hover:text-background transition-all"
-            >
-              <Edit3 className="h-4 w-4 mr-3" /> RETIFICAR ATO
-            </Button>
+            
+            <div className="flex items-center gap-4">
+              {viewingEvent?.status !== 'Realizado' && (
+                <Button 
+                  onClick={() => handleFinalizeEvent(viewingEvent)}
+                  className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-emerald-500 hover:text-white transition-all gap-2"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> FINALIZAR ATO
+                </Button>
+              )}
+
+              <Button 
+                variant="outline" 
+                onClick={() => handleOpenSchedule(viewingEvent.date || new Date(), viewingEvent.eventType, viewingEvent)}
+                className="border-primary/30 text-primary font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-primary hover:text-background transition-all"
+              >
+                <Edit3 className="h-4 w-4 mr-3" /> {viewingEvent?.status === 'Realizado' ? 'VER DADOS / REAGENDAR' : 'RETIFICAR / REAGENDAR'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

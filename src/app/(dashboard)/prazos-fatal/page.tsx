@@ -762,9 +762,15 @@ export default function PrazosFatalPage() {
                                     : "border-white/5 bg-black/20 text-white/20 hover:border-white/10"
                                 )}
                               >
-                                {t.icon}
-                                <span className="text-[9px] font-black uppercase tracking-widest">{t.id}</span>
-                              </button>
+                                 {t.icon}
+                                 <span className="text-[9px] font-black uppercase tracking-widest">{t.id}</span>
+                                 {meetingData.category === t.id && (
+                                   <div className={cn(
+                                     "absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full blur-[4px]",
+                                     meetingData.financeType === 'ENTRADA' ? "bg-emerald-500/60" : "bg-rose-500/60"
+                                   )}></div>
+                                 )}
+                               </button>
                             ))}
                           </div>
                         </div>
@@ -780,75 +786,111 @@ export default function PrazosFatalPage() {
                                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em]">{meetingData.financeType === 'ENTRADA' ? 'Fluxo de Ganhos' : 'Fluxo de Gastos'}</h4>
                                  </div>
                                  
-                                 <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                       <Label className={labelMini}>Valor da Operação (R$)</Label>
-                                       <Input 
-                                         className={cn(
-                                           "bg-white/[0.02] border-white/10 h-16 text-3xl font-black text-center rounded-2xl",
-                                           meetingData.financeType === 'ENTRADA' ? "text-emerald-400" : "text-rose-400"
-                                         )}
-                                         placeholder="R$ 0,00"
-                                         value={meetingData.value}
-                                         onChange={e => setMeetingData({...meetingData, value: maskCurrency(e.target.value)})}
-                                       />
-                                    </div>
-                                    <div className="space-y-2">
-                                       <Label className={labelMini}>Forma de Pagamento</Label>
-                                       <select 
-                                         value={meetingData.paymentMethod}
-                                         onChange={e => setMeetingData({...meetingData, paymentMethod: e.target.value})}
-                                         className="w-full bg-white/[0.02] border-white/10 h-16 rounded-2xl px-6 text-[11px] font-black uppercase text-white outline-none appearance-none"
-                                       >
-                                          <option value="PIX" className="bg-[#0a0f1e]">PIX / IMEDIATO</option>
-                                          <option value="BOLETO" className="bg-[#0a0f1e]">BOLETO BANCÁRIO</option>
-                                          <option value="TED" className="bg-[#0a0f1e]">TRANSFERÊNCIA (TED/DOC)</option>
-                                          <option value="ESPÉCIE" className="bg-[#0a0f1e]">DINHEIRO VIVO</option>
-                                       </select>
-                                    </div>
-                                 </div>
-
-                                 <div className="grid grid-cols-2 gap-10 items-end">
-                                    <div className="space-y-3">
-                                       <Label className={labelMini}>Parcelamento Estruturado</Label>
-                                       <div className="flex gap-1.5 h-12">
-                                          {[1, 2, 3, 5, 10, 12].map(n => (
-                                            <button 
-                                              key={n}
-                                              onClick={() => setMeetingData({...meetingData, installments: n})}
-                                              className={cn(
-                                                "flex-1 rounded-xl text-[9px] font-black transition-all border",
-                                                meetingData.installments === n ? "bg-white text-black border-white shadow-lg" : "bg-white/[0.02] text-white/20 border-white/5 hover:border-white/20"
-                                              )}
-                                            >
-                                              {n}X
-                                            </button>
-                                          ))}
-                                          <div className="w-px bg-white/5 mx-2 h-8 my-auto" />
+                                 <div className="space-y-10">
+                                    {/* LINHA 1: DEFINIÇÕES BÁSICAS */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                       <div className="space-y-3">
+                                          <Label className={labelMini}>Valor Total da Operação (R$)</Label>
                                           <Input 
-                                            type="number"
-                                            className="w-20 bg-white/[0.02] border-white/10 h-12 text-center font-black text-white rounded-xl text-lg"
-                                            value={meetingData.installments}
-                                            onChange={e => setMeetingData({...meetingData, installments: parseInt(e.target.value) || 1})}
+                                            className={cn(
+                                              "bg-white/[0.02] border-white/10 h-16 text-3xl font-black text-center rounded-2xl transition-all focus:ring-2",
+                                              meetingData.financeType === 'ENTRADA' ? "text-emerald-400 focus:ring-emerald-500/50" : "text-rose-400 focus:ring-rose-500/50"
+                                            )}
+                                            placeholder="R$ 0,00"
+                                            value={meetingData.value}
+                                            onChange={e => setMeetingData({...meetingData, value: maskCurrency(e.target.value)})}
                                           />
                                        </div>
+                                       <div className="space-y-3">
+                                          <Label className={labelMini}>Forma de Pagamento Principal</Label>
+                                          <select 
+                                            value={meetingData.paymentMethod}
+                                            onChange={e => setMeetingData({...meetingData, paymentMethod: e.target.value})}
+                                            className="w-full bg-white/[0.02] border-white/10 h-16 rounded-2xl px-6 text-xs font-black uppercase text-white outline-none appearance-none hover:bg-white/[0.04] transition-all cursor-pointer"
+                                          >
+                                             <option value="PIX" className="bg-[#0a0f1e]">PIX / IMEDIATO</option>
+                                             <option value="BOLETO" className="bg-[#0a0f1e]">BOLETO BANCÁRIO</option>
+                                             <option value="TED" className="bg-[#0a0f1e]">TRANSFERÊNCIA (TED/DOC)</option>
+                                             <option value="ESPÉCIE" className="bg-[#0a0f1e]">DINHEIRO VIVO</option>
+                                          </select>
+                                       </div>
                                     </div>
-                                    <div className="flex items-center justify-between bg-white/[0.02] h-12 rounded-xl px-12 border border-white/5 shadow-inner">
-                                       <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] leading-none">
-                                         {meetingData.financeType === 'ENTRADA' ? 'Incide Comissão?' : 'Reembolsável?'}
-                                       </span>
-                                       <button 
-                                         onClick={() => setMeetingData({...meetingData, hasCommission: !meetingData.hasCommission})}
-                                         className={cn(
-                                           "w-12 h-6 rounded-full transition-all flex items-center px-1.5 shadow-2xl", 
-                                           meetingData.hasCommission 
-                                            ? (meetingData.financeType === 'ENTRADA' ? "bg-emerald-500 shadow-emerald-500/20" : "bg-rose-500 shadow-rose-500/20") 
-                                            : "bg-white/10"
-                                          , meetingData.hasCommission ? "justify-end" : "justify-start"
-                                         )}
-                                       >
-                                          <div className="w-3.5 h-3.5 bg-white rounded-full shadow-lg" />
-                                       </button>
+
+                                    {/* LINHA 2: ESTRUTURA DE PARCELAMENTO */}
+                                    <div className="space-y-4">
+                                       <Label className={labelMini}>Estrutura de Parcelamento / Repetição</Label>
+                                       <div className="flex items-center gap-4 p-2.5 bg-black/40 rounded-2xl border border-white/5">
+                                          <div className="flex-1 grid grid-cols-6 gap-2">
+                                             {[1, 2, 3, 5, 10, 12].map(n => (
+                                               <button 
+                                                 key={n}
+                                                 onClick={() => setMeetingData({...meetingData, installments: n})}
+                                                 className={cn(
+                                                   "h-12 rounded-xl text-[11px] font-black transition-all duration-300",
+                                                   meetingData.installments === n 
+                                                     ? "gold-gradient text-background shadow-[0_4px_15px_rgba(223,200,142,0.3)] scale-105" 
+                                                     : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                                                 )}
+                                               >
+                                                 {n}X
+                                               </button>
+                                             ))}
+                                          </div>
+                                          <div className="w-[1px] bg-white/10 h-10" />
+                                          <div className="space-y-1">
+                                             <Label className="text-[7px] font-black text-white/20 uppercase text-center block">Outro</Label>
+                                             <Input 
+                                               type="number"
+                                               className="w-24 bg-white/5 border-white/10 h-10 text-center font-black text-white rounded-xl text-lg"
+                                               value={meetingData.installments}
+                                               onChange={e => setMeetingData({...meetingData, installments: parseInt(e.target.value) || 1})}
+                                             />
+                                          </div>
+                                       </div>
+                                    </div>
+
+                                    {/* LINHA 3: POLÍTICA JURÍDICA */}
+                                    <div 
+                                      onClick={() => setMeetingData({...meetingData, hasCommission: !meetingData.hasCommission})}
+                                      className={cn(
+                                        "flex items-center justify-between p-6 rounded-[2rem] border transition-all duration-500 cursor-pointer group shadow-2xl",
+                                        meetingData.hasCommission 
+                                          ? (meetingData.financeType === 'ENTRADA' ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20") 
+                                          : "bg-white/[0.01] border-white/5 hover:border-white/10"
+                                      )}
+                                    >
+                                       <div className="flex items-center gap-6">
+                                          <div className={cn(
+                                            "w-14 h-14 rounded-2xl flex items-center justify-center border transition-all",
+                                            meetingData.hasCommission 
+                                              ? (meetingData.financeType === 'ENTRADA' ? "bg-emerald-500 text-black" : "bg-rose-500 text-white") 
+                                              : "bg-white/5 border-white/5 text-white/20"
+                                          )}>
+                                             {meetingData.financeType === 'ENTRADA' ? <Handshake className="h-7 w-7" /> : <ShieldCheck className="h-7 w-7" />}
+                                          </div>
+                                          <div className="flex flex-col gap-1">
+                                             <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
+                                               {meetingData.financeType === 'ENTRADA' ? 'Incidência de Repasse' : 'Política de Reembolso Externo'}
+                                             </span>
+                                             <span className={cn(
+                                               "text-base font-black uppercase tracking-[0.1em] transition-colors",
+                                               meetingData.hasCommission 
+                                                 ? (meetingData.financeType === 'ENTRADA' ? "text-emerald-400" : "text-rose-400") 
+                                                 : "text-white/40"
+                                             )}>
+                                               {meetingData.financeType === 'ENTRADA' ? 'Habilitar Comissão Técnica' : 'Marcar como Reembolsável'}
+                                             </span>
+                                          </div>
+                                       </div>
+                                       <div className={cn(
+                                         "w-16 h-8 rounded-full transition-all flex items-center px-2", 
+                                         meetingData.hasCommission 
+                                          ? (meetingData.financeType === 'ENTRADA' ? "bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]" : "bg-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)]") 
+                                          : "bg-white/10"
+                                        , meetingData.hasCommission ? "justify-end" : "justify-start"
+                                       )}>
+                                          <div className="w-5 h-5 bg-white rounded-full shadow-lg" />
+                                       </div>
                                     </div>
                                  </div>
                               </div>
@@ -866,7 +908,10 @@ export default function PrazosFatalPage() {
                                       const parcelVal = (rawVal / 100 / (meetingData.installments || 1))
                                       
                                       return (
-                                        <div key={i} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-between group hover:bg-white/[0.04] transition-all">
+                                        <div key={i} className={cn(
+                                          "p-5 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-between group hover:bg-white/[0.06] hover:scale-[1.02] transition-all duration-300",
+                                          meetingData.financeType === 'ENTRADA' ? "border-l-2 border-l-emerald-500/40" : "border-l-2 border-l-rose-500/40"
+                                        )}>
                                            <div className="flex flex-col gap-1">
                                               <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Parcela {i+1}/{meetingData.installments}</span>
                                               <span className="text-[12px] font-black text-white tracking-widest">
@@ -874,7 +919,7 @@ export default function PrazosFatalPage() {
                                               </span>
                                            </div>
                                            <div className="flex flex-col items-end gap-1">
-                                              <span className="text-[8px] font-black text-emerald-500/20 uppercase">Valor</span>
+                                              <span className="text-[8px] font-black text-white/20 uppercase">Valor Líquido</span>
                                               <span className={cn("text-[13px] font-black font-mono", meetingData.financeType === 'ENTRADA' ? "text-emerald-400" : "text-rose-400")}>
                                                  R$ {parcelVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                               </span>
