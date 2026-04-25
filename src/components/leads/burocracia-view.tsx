@@ -34,7 +34,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { updateDocumentNonBlocking, useAuth, useDoc, useMemoFirebase } from "@/firebase"
 import { doc, serverTimestamp } from "firebase/firestore"
 import { useFirestore } from "@/firebase"
-import { setupClientWorkspace } from "@/services/google-drive"
+import { setupClientWorkspace, copyFile, replaceDocTags } from "@/services/google-drive"
 import { getValidGoogleAccessToken } from "@/services/google-token"
 import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
 
@@ -62,6 +62,7 @@ const DOCUMENT_KITS = {
 
 export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps) {
   const [syncing, setSyncing] = useState(false)
+  const [generating, setGenerating] = useState<string | null>(null)
   const { toast } = useToast()
   const db = useFirestore()
   const auth = useAuth()
@@ -106,7 +107,9 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
 
   const kit = DOCUMENT_KITS[lead?.type as keyof typeof DOCUMENT_KITS] || DOCUMENT_KITS["Geral"]
 
-  const handleGenerateDocument = (docId: string, title: string) => {
+  const handleGenerateDocument = async (docId: string, title: string) => {
+    if (!db || !lead) return
+
     if (!googleConfig.isDocsActive) {
       toast({
         variant: "destructive",
@@ -116,11 +119,54 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       return
     }
 
-    toast({
-      variant: "destructive",
-      title: "Automação Documental Indisponível",
-      description: `${title} ainda não possui um gerador real conectado a templates do Google Docs.`,
-    })
+    if (!lead.driveFolderId) {
+      toast({
+        variant: "destructive",
+        title: "Pasta não encontrada",
+        description: "Sincronize o Workspace primeiro para criar a pasta do cliente no Drive.",
+      })
+      return
+    }
+
+    const accessToken = await getValidGoogleAccessToken(auth)
+    if (!accessToken) {
+      toast({
+        variant: "destructive",
+        title: "Google Desconectado",
+        description: "Reconecte a conta Google para gerar documentos.",
+      })
+      return
+    }
+
+    setGenerating(docId)
+    try {
+      // 1. Localizar a pasta de destino (01_DISTRIBUICAO ou raiz da pasta do lead)
+      // No RGMJ, para leads, salvamos na pasta principal do cliente por enquanto
+      const destinationFolderId = lead.driveFolderId
+
+      // 2. Copiar o template
+      const fileName = `${title} - ${lead.name.toUpperCase()}`
+      const newDoc = await copyFile(accessToken, docId, destinationFolderId, fileName)
+      const newDocId = newDoc.id
+
+      // 3. Substituir Tags
+      await replaceDocTags(accessToken, newDocId, availableData)
+
+      toast({ 
+        title: "Documento Gerado", 
+        description: `${title} foi criado e salvo na pasta do Drive.` 
+      })
+
+      window.open(`https://docs.google.com/document/d/${newDocId}/edit`, "_blank")
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro na Geração",
+        description: error instanceof Error ? error.message : "Falha ao automatizar documento."
+      })
+    } finally {
+      setGenerating(null)
+    }
   }
 
   const handleManualSync = async () => {
@@ -161,12 +207,16 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
       return
     }
 
+    const isLead = lead.status !== "distribuicao" && lead.status !== "concluido"
+    const rootId = isLead ? (googleConfig.leadsFolderId || googleConfig.rootFolderId) : (googleConfig.clientsFolderId || googleConfig.rootFolderId)
+
     setSyncing(true)
     try {
       const workspace = await setupClientWorkspace({
         accessToken,
-        rootFolderId: googleConfig.rootFolderId,
+        rootFolderId: rootId,
         clientName: lead.name,
+        isLead,
         processInfo: lead.processNumber ? {
           number: lead.processNumber,
           description: lead.demandTitle || lead.notes?.substring(0, 30) || "DEMANDA"
@@ -310,9 +360,16 @@ export function BurocraciaView({ lead, interviews, onEdit }: BurocraciaViewProps
                     </div>
                     <Button 
                       onClick={() => handleGenerateDocument(doc.id, doc.title)}
+                      disabled={generating !== null}
                       className="h-9 px-5 font-black uppercase text-[10px] tracking-wider rounded-lg transition-all flex-none"
                     >
-                      {googleConfig.isDocsActive ? "AUTOMAÇÃO DOCS" : "DOCS OFF"}
+                      {generating === doc.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : googleConfig.isDocsActive ? (
+                        "AUTOMAÇÃO DOCS"
+                      ) : (
+                        "DOCS OFF"
+                      )}
                     </Button>
                   </CardContent>
                 </Card>

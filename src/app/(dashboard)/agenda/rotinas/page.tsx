@@ -19,6 +19,7 @@ import { useFirestore, useCollection, useUser, useMemoFirebase, updateDocumentNo
 import { collection, query, orderBy, doc, serverTimestamp } from "firebase/firestore"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
 export default function RotinasSubpage() {
@@ -32,10 +33,27 @@ export default function RotinasSubpage() {
   }, [db, user])
   const { data: executions, isLoading } = useCollection(executionsQuery)
 
+  const searchParams = useSearchParams()
+  const selectedAdvogado = searchParams.get("advogado")
+  const searchQuery = searchParams.get("q")
+
   const activeRotinas = useMemo(() => {
     if (!executions) return []
-    return executions.filter(e => e.status === "Em Execução")
-  }, [executions])
+    return executions
+      .filter(e => e.status === "Em Execução")
+      .filter(e => {
+        if (!selectedAdvogado) return true
+        return e.executorName === selectedAdvogado
+      })
+      .filter(e => {
+        if (!searchQuery) return true
+        const q = searchQuery.toLowerCase()
+        return (
+          e.title?.toLowerCase().includes(q) || 
+          e.category?.toLowerCase().includes(q)
+        )
+      })
+  }, [executions, selectedAdvogado, searchQuery])
 
   const handleMarkComplete = (id: string) => {
     if (!db) return

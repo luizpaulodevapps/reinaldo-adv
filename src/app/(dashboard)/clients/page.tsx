@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
 import { collection, query, orderBy, serverTimestamp, doc, where } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { 
@@ -189,10 +189,10 @@ export default function ClientsPage() {
     toast({ title: "Cliente Inativado", description: "O registro foi movido para a base passiva." })
   }
 
-  const handleSaveClient = (data: any) => {
+  const handleSaveClient = async (data: any) => {
     if (!user || !db) return
     const fullName = data.firstName || data.name || ""
-    const clientPayload = {
+    const clientPayload: any = {
       name: fullName.toUpperCase(),
       documentNumber: data.cpf || data.documentNumber || "",
       email: data.email || "",
@@ -203,14 +203,33 @@ export default function ClientsPage() {
       updatedAt: serverTimestamp(),
     }
 
+    // Preservar Drive IDs se vierem do Lead
+    if (data.driveFolderId) clientPayload.driveFolderId = data.driveFolderId
+    if (data.driveFolderUrl) clientPayload.driveFolderUrl = data.driveFolderUrl
+    if (data.leadId) clientPayload.leadId = data.leadId
+
     if (editingClient) {
       updateDocumentNonBlocking(doc(db!, "clients", editingClient.id), clientPayload)
       toast({ title: "Ficha Atualizada" })
     } else {
-      addDocumentNonBlocking(collection(db!, "clients"), {
+      const clientRef = doc(collection(db!, "clients"))
+      const clientDocId = clientRef.id
+      clientPayload.id = clientDocId
+      
+      setDocumentNonBlocking(clientRef, {
         ...clientPayload,
         createdAt: serverTimestamp(),
-      })
+      }, { merge: true })
+
+      // Se veio de um Lead, atualizar o Lead
+      if (data.leadId) {
+        updateDocumentNonBlocking(doc(db!, "leads", data.leadId), {
+          status: 'distribuído',
+          clientId: clientDocId,
+          updatedAt: serverTimestamp()
+        })
+      }
+
       toast({ title: "Cliente Cadastrado" })
     }
     setIsSheetOpen(false)

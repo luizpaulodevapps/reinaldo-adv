@@ -20,10 +20,14 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { LeadForm } from "@/components/leads/lead-form"
 import { collection, query, serverTimestamp, doc, limit, orderBy } from "firebase/firestore"
-import { useFirestore, useCollection, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
+import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { moveFile } from "@/services/google-drive"
+import { getValidGoogleAccessToken } from "@/services/google-token"
+import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
+import { useAuth } from "@/firebase"
 
 const columns = [
   { id: "novo", title: "NOVO LEAD", color: "text-blue-400" },
@@ -35,6 +39,7 @@ const columns = [
 export default function LeadsPage() {
   const db = useFirestore()
   const { user } = useUser()
+  const auth = useAuth()
   const { toast } = useToast()
   const router = useRouter()
   const [listLimit, setListLimit] = useState(50)
@@ -47,6 +52,10 @@ export default function LeadsPage() {
 
   const { data: leadsData } = useCollection(leadsQuery)
   const leads = useMemo(() => (leadsData || []).filter(l => l.status !== 'arquivado'), [leadsData])
+
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleSettingsData } = useDoc(googleSettingsRef)
+  const googleSettings = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
 
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false)
 
@@ -67,6 +76,23 @@ export default function LeadsPage() {
 
     updateDocumentNonBlocking(doc(db, "leads", draggedLeadId), { status, updatedAt: serverTimestamp() })
     
+    // Automação Google Drive: Mover de Leads para Clientes se for distribuído
+    if (status === 'distribuicao' && lead?.driveFolderId && lead?.driveStatus === 'pasta_lead') {
+      const accessToken = await getValidGoogleAccessToken(auth)
+      if (accessToken && googleSettings.clientsFolderId) {
+        try {
+          await moveFile(accessToken, lead.driveFolderId, googleSettings.clientsFolderId, googleSettings.leadsFolderId)
+          updateDocumentNonBlocking(doc(db, "leads", draggedLeadId), { 
+            driveStatus: 'pasta_cliente',
+            updatedAt: serverTimestamp() 
+          })
+          toast({ title: "Workspace Migrado", description: "A pasta do Drive foi movida para a raiz de Clientes Ativos." })
+        } catch (e) {
+          console.error("Erro ao mover pasta:", e)
+        }
+      }
+    }
+
     if (user && lead) {
       const colTitle = columns.find(c => c.id === status)?.title || status.toUpperCase()
       addDocumentNonBlocking(collection(db, "notifications"), {
@@ -150,6 +176,7 @@ export default function LeadsPage() {
                       </div>
                       <div className="flex items-center justify-between pt-4 border-t border-white/5">
                         <div className="flex gap-1.5 flex-wrap">
+                          {lead.driveFolderId && <Badge variant="outline" className="text-[7px] border-primary/20 text-primary bg-primary/5 uppercase font-black flex items-center gap-1">DRIVE OK</Badge>}
                           {lead.cpf && <Badge variant="outline" className="text-[7px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5 uppercase font-black">CPF OK</Badge>}
                           {lead.source && <Badge variant="outline" className="text-[7px] border-white/10 text-white/40 uppercase font-black">{lead.source}</Badge>}
                         </div>

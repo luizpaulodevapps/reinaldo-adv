@@ -185,6 +185,7 @@ function SettingsContent() {
     masterAgency: "0000",
     masterAccount: "00000-0",
     masterPix: "rgmj.adv@gmail.com",
+    masterHolderName: "REINALDO GONÇALVES MIGUEL DE JESUS",
     autoGenerateInvoices: true
   })
 
@@ -327,14 +328,22 @@ function SettingsContent() {
               </div>
             </CardHeader>
             <CardContent className="p-10 space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div className="space-y-3">
                   <Label className={labelMini}>E-mail Mestre (Admin Workspace)</Label>
                   <Input value={googleConfig.masterEmail} onChange={e => setGoogleConfig({...googleConfig, masterEmail: e.target.value.toLowerCase()})} className="bg-black/40 border-white/10 h-14 text-white font-bold" />
                 </div>
                 <div className="space-y-3">
-                  <Label className={labelMini}>Pasta Raiz Operacional (Google Drive)</Label>
+                  <Label className={labelMini}>Pasta Raiz Operacional (Geral)</Label>
                   <Input value={googleConfig.rootFolderId} onChange={e => setGoogleConfig({...googleConfig, rootFolderId: e.target.value})} className="bg-black/40 border-white/10 h-14 text-white font-mono text-xs" />
+                </div>
+                <div className="space-y-3">
+                  <Label className={labelMini}>Pasta Raiz: LEADS</Label>
+                  <Input value={googleConfig.leadsFolderId} onChange={e => setGoogleConfig({...googleConfig, leadsFolderId: e.target.value})} placeholder="ID da pasta para novos leads" className="bg-black/40 border-white/10 h-14 text-white font-mono text-xs" />
+                </div>
+                <div className="space-y-3">
+                  <Label className={labelMini}>Pasta Raiz: CLIENTES ATIVOS</Label>
+                  <Input value={googleConfig.clientsFolderId} onChange={e => setGoogleConfig({...googleConfig, clientsFolderId: e.target.value})} placeholder="ID da pasta para clientes distribuídos" className="bg-black/40 border-white/10 h-14 text-white font-mono text-xs" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -420,6 +429,11 @@ function SettingsContent() {
                   <Label className={labelMini}>Conta Mestre da Banca</Label>
                   <div className="space-y-4">
                     <Input value={financialSettings.masterBank} onChange={e => setFinancialSettings({...financialSettings, masterBank: e.target.value.toUpperCase()})} placeholder="NOME DO BANCO" className="bg-black/40 h-12 text-white font-bold uppercase" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input value={financialSettings.masterAgency} onChange={e => setFinancialSettings({...financialSettings, masterAgency: e.target.value})} placeholder="AGÊNCIA" className="bg-black/40 h-12 text-white font-bold" />
+                      <Input value={financialSettings.masterAccount} onChange={e => setFinancialSettings({...financialSettings, masterAccount: e.target.value})} placeholder="CONTA" className="bg-black/40 h-12 text-white font-bold" />
+                    </div>
+                    <Input value={financialSettings.masterHolderName} onChange={e => setFinancialSettings({...financialSettings, masterHolderName: e.target.value.toUpperCase()})} placeholder="NOME DO FAVORECIDO" className="bg-black/40 h-12 text-white font-bold uppercase" />
                     <Input value={financialSettings.masterPix} onChange={e => setFinancialSettings({...financialSettings, masterPix: e.target.value})} placeholder="CHAVE PIX PRINCIPAL" className="bg-black/40 h-12 text-white font-bold" />
                   </div>
                 </div>
@@ -519,7 +533,7 @@ function SettingsContent() {
             <CardContent className="p-10 space-y-10">
               <div className="p-8 rounded-[2rem] bg-primary/5 border border-primary/20 space-y-6">
                 <h3 className="text-xl font-black text-primary uppercase">PLANO SOBERANIA RGMJ</h3>
-                <p className="text-sm text-white/60 leading-relaxed uppercase font-bold">Licença vitalícia concedida à banca Reginaldo Gonçalves Miguel de Jesus. Uso restrito e protegido por ritos de segurança digital.</p>
+                <p className="text-sm text-white/60 leading-relaxed uppercase font-bold">Licença vitalícia concedida à banca Reinaldo Gonçalves Miguel de Jesus. Uso restrito e protegido por ritos de segurança digital.</p>
                 <div className="flex gap-4">
                   <Badge className="bg-emerald-500 text-white font-black px-4 py-1.5 rounded-full uppercase text-[10px]">ATIVO</Badge>
                   <Badge variant="outline" className="border-white/10 text-white/40 font-black px-4 py-1.5 rounded-full uppercase text-[10px]">VERSION 2.5.0</Badge>

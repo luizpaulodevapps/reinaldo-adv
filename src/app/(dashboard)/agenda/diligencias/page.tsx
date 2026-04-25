@@ -21,6 +21,7 @@ import { collection, query, orderBy, doc, serverTimestamp } from "firebase/fires
 import { format, parseISO, isBefore, startOfDay, isAfter, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
 export default function DiligenciasSubpage() {
@@ -34,6 +35,10 @@ export default function DiligenciasSubpage() {
   }, [db, user])
   const { data: diligences, isLoading } = useCollection(diligencesQuery)
 
+  const searchParams = useSearchParams()
+  const selectedAdvogado = searchParams.get("advogado")
+  const searchQuery = searchParams.get("q")
+
   const activeDiligences = useMemo(() => {
     if (!diligences) return []
     const today = startOfDay(new Date())
@@ -43,7 +48,20 @@ export default function DiligenciasSubpage() {
         const date = d.dueDate ? parseISO(d.dueDate) : null
         return date && (isSameDay(date, today) || isAfter(date, today) || isBefore(date, today))
       })
-  }, [diligences])
+      .filter(d => {
+        if (!selectedAdvogado) return true
+        return d.responsibleLawyer === selectedAdvogado || d.assigneeName === selectedAdvogado
+      })
+      .filter(d => {
+        if (!searchQuery) return true
+        const q = searchQuery.toLowerCase()
+        return (
+          d.title?.toLowerCase().includes(q) || 
+          d.clientName?.toLowerCase().includes(q) || 
+          d.processNumber?.toLowerCase().includes(q)
+        )
+      })
+  }, [diligences, selectedAdvogado, searchQuery])
 
   const handleComplete = (id: string) => {
     if (!db) return

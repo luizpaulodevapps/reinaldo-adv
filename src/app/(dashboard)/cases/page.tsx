@@ -16,6 +16,9 @@ import { cn, parseCurrencyToNumber } from "@/lib/utils"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProcessForm } from "@/components/cases/process-form"
+import { normalizeGoogleWorkspaceSettings, toGoogleDriveFolderUrl } from "@/services/google-workspace"
+import { getValidGoogleAccessToken } from "@/services/google-token"
+import * as DriveService from "@/services/google-drive"
 import { useToast } from "@/hooks/use-toast"
 
 const AREAS = [
@@ -44,6 +47,13 @@ function CasesPageContent() {
   const { toast } = useToast()
   const db = useFirestore()
   const { user } = useUser()
+  const auth = useAuth()
+  
+  const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
+  const { data: googleSettingsData } = useDoc(googleSettingsRef)
+  const googleSettings = useMemo(() => normalizeGoogleWorkspaceSettings(googleSettingsData), [googleSettingsData])
+
+  const [isSyncingDrive, setIsSyncingDrive] = useState<string | null>(null)
   
   const [searchTerm, setSearchTerm] = useState("")
   const [activeArea, setActiveArea] = useState("todos")
@@ -92,6 +102,74 @@ function CasesPageContent() {
       await updateDocumentNonBlocking(doc(db, "processes", procId), { status: "Arquivado", updatedAt: serverTimestamp() })
       toast({ title: "Arquivo Confirmado" })
     } catch (e) { toast({ variant: "destructive", title: "Erro ao arquivar" }) }
+  }
+
+  const handleSyncDrive = async (proc: any) => {
+    if (!db || !proc) return;
+
+    if (!googleSettings.isDriveActive) {
+      toast({ 
+        variant: "destructive", 
+        title: "Drive Desativado", 
+        description: "O módulo de Google Drive não está ativo nas configurações." 
+      })
+      return
+    }
+
+    const accessToken = await getValidGoogleAccessToken(auth)
+    if (!accessToken) {
+      toast({ variant: "destructive", title: "Sessão Expirada", description: "Reconecte sua conta Google." })
+      return
+    }
+
+    setIsSyncingDrive(proc.id)
+    try {
+      const rootId = googleSettings.clientsFolderId || googleSettings.rootFolderId;
+      if (!rootId) throw new Error("ID da pasta raiz não configurado.");
+
+      const folderName = proc.clientName?.toUpperCase() || "PROCESSO SEM NOME"
+      
+      toast({ title: "Verificando Drive...", description: "Localizando pasta do cliente..." })
+
+      const existingFolder = await DriveService.findFolderByName(accessToken, folderName, rootId)
+
+      let workspace;
+      if (existingFolder) {
+        workspace = {
+          success: true,
+          clientFolderId: existingFolder.id,
+          clientFolderUrl: toGoogleDriveFolderUrl(existingFolder.id),
+        }
+      } else {
+        workspace = await DriveService.setupClientWorkspace({
+          accessToken,
+          rootFolderId: rootId,
+          clientName: proc.clientName,
+          isLead: false,
+          processInfo: {
+            number: proc.processNumber || "S/N",
+            description: proc.demandTitle || "PROCESSO JUDICIAL"
+          }
+        })
+      }
+
+      const folderId = workspace.processFolderId || workspace.clientFolderId
+      const folderUrl = workspace.processFolderUrl || workspace.clientFolderUrl
+
+      await updateDocumentNonBlocking(doc(db, "processes", proc.id), {
+        driveFolderId: folderId,
+        driveFolderUrl: folderUrl,
+        updatedAt: serverTimestamp()
+      })
+
+      toast({ title: "Workspace Ativo", description: "Pasta sincronizada com sucesso!" })
+      if (folderUrl) window.open(folderUrl, "_blank")
+    } catch (e: any) {
+      console.error("Sync Drive Error:", e)
+      toast({ variant: "destructive", title: "Erro no Drive", description: e.message })
+    } finally {
+      setIsSyncingDrive(null)
+    }
   }
 
   const labelMini = "text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 block"
@@ -277,8 +355,27 @@ function CasesPageContent() {
 
               {/* Bottom Actions */}
               <div className="flex gap-4 pt-4">
-                <Button variant="outline" className="border-emerald-500/20 bg-emerald-500/5 text-emerald-500 text-[10px] font-black uppercase h-12 px-8 rounded-xl gap-3 hover:bg-emerald-500 hover:text-white transition-all">
-                  <Folder className="h-4 w-4" /> VER DRIVE
+                <Button 
+                  onClick={() => {
+                    const url = proc.driveFolderUrl || (proc.driveFolderId ? toGoogleDriveFolderUrl(proc.driveFolderId) : null);
+                    if (url) window.open(url, "_blank");
+                    else handleSyncDrive(proc);
+                  }}
+                  disabled={isSyncingDrive === proc.id}
+                  variant="outline" 
+                  className={cn(
+                    "h-12 px-8 rounded-xl gap-3 transition-all font-black text-[10px] uppercase",
+                    (proc.driveFolderId || proc.driveFolderUrl) 
+                      ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                      : "border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                  )}
+                >
+                  {isSyncingDrive === proc.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Folder className="h-4 w-4" />
+                  )}
+                  {(proc.driveFolderId || proc.driveFolderUrl) ? "VER DRIVE" : "ATIVAR DRIVE"}
                 </Button>
                 <Button variant="outline" className="border-white/10 bg-white/5 text-white/40 text-[10px] font-black uppercase h-12 px-8 rounded-xl gap-3 hover:bg-white/10 transition-all">
                   <ExternalLink className="h-4 w-4" /> PORTAL JUDICIÁRIO
@@ -301,13 +398,30 @@ function CasesPageContent() {
           </div>
           <ProcessForm 
             initialData={editingProcess}
-            onSubmit={(data) => {
+            onSubmit={async (data) => {
               if (editingProcess) {
-                updateDocumentNonBlocking(doc(db!, "processes", editingProcess.id), { ...data, updatedAt: serverTimestamp() })
+                await updateDocumentNonBlocking(doc(db!, "processes", editingProcess.id), { ...data, updatedAt: serverTimestamp() })
                 toast({ title: "Atualizado com Sucesso" })
               } else {
-                addDocumentNonBlocking(collection(db!, "processes"), { ...data, status: "Em Andamento", createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+                // Mapear nome do cliente para o campo raiz para facilitar busca e Drive
+                const clientName = data.clients?.[0]?.name || "CLIENTE NÃO INFORMADO"
+                const docRef = doc(collection(db!, "processes"))
+                const newProcess = { 
+                  ...data, 
+                  id: docRef.id,
+                  clientName, 
+                  status: "Em Andamento", 
+                  createdAt: serverTimestamp(), 
+                  updatedAt: serverTimestamp() 
+                }
+                
+                await setDocumentNonBlocking(docRef, newProcess, {})
                 toast({ title: "Processo Protocolado" })
+                
+                // Dispara criação do Drive imediatamente
+                if (googleSettings.isDriveActive) {
+                  handleSyncDrive(newProcess)
+                }
               }
               setIsSheetOpen(false)
             }}

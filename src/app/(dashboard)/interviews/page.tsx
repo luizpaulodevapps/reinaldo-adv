@@ -96,7 +96,7 @@ export default function InterviewsPage() {
     if (!interviewAnalysis) return
     
     const content = `
-REGINALDO GONÇALVES MIGUEL DE JESUS - ADVOCACIA ESTRATÉGICA
+REINALDO GONÇALVES MIGUEL DE JESUS - ADVOCACIA ESTRATÉGICA
 CLIENTE: ${viewingInterview?.clientName}
 QUALIFICAÇÃO: ${viewingInterview?.responses?.["IDENTIFICACAO: CPF"] || 'Não informado'}
 TIPO: ${viewingInterview?.interviewType}

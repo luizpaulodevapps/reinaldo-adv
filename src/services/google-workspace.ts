@@ -11,6 +11,8 @@ export const GOOGLE_WORKSPACE_AUTH_FLOW_LABEL = 'Firebase Auth com popup do Goog
 export interface GoogleWorkspaceSettings {
   masterEmail: string;
   rootFolderId: string;
+  leadsFolderId: string;
+  clientsFolderId: string;
   clientId: string;
   isDriveActive: boolean;
   isDocsActive: boolean;
@@ -22,6 +24,8 @@ export interface GoogleWorkspaceSettings {
 export const DEFAULT_GOOGLE_WORKSPACE_SETTINGS: GoogleWorkspaceSettings = {
   masterEmail: '',
   rootFolderId: '',
+  leadsFolderId: '',
+  clientsFolderId: '',
   clientId: '',
   isDriveActive: true,
   isDocsActive: true,
@@ -71,6 +75,8 @@ export function normalizeGoogleWorkspaceSettings(
     ...merged,
     masterEmail: merged.masterEmail.trim().toLowerCase(),
     rootFolderId: extractGoogleDriveFolderId(merged.rootFolderId || ''),
+    leadsFolderId: extractGoogleDriveFolderId(merged.leadsFolderId || ''),
+    clientsFolderId: extractGoogleDriveFolderId(merged.clientsFolderId || ''),
     clientId: (merged.clientId || '').trim(),
   };
 }

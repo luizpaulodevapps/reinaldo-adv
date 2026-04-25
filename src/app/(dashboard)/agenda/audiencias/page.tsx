@@ -25,6 +25,7 @@ import { collection, query, orderBy } from "firebase/firestore"
 import { format, parseISO, isAfter, startOfDay, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { useSearchParams } from "next/navigation"
 
 export default function AudienciasSubpage() {
   const db = useFirestore()
@@ -36,6 +37,10 @@ export default function AudienciasSubpage() {
   }, [db, user])
   const { data: hearings, isLoading } = useCollection(hearingsQuery)
 
+  const searchParams = useSearchParams()
+  const selectedAdvogado = searchParams.get("advogado")
+  const searchQuery = searchParams.get("q")
+
   const upcomingHearings = useMemo(() => {
     if (!hearings) return []
     const today = startOfDay(new Date())
@@ -45,7 +50,20 @@ export default function AudienciasSubpage() {
         return date && (isSameDay(date, today) || isAfter(date, today))
       })
       .filter(h => h.status !== "Realizada")
-  }, [hearings])
+      .filter(h => {
+        if (!selectedAdvogado) return true
+        return h.responsibleLawyer === selectedAdvogado
+      })
+      .filter(h => {
+        if (!searchQuery) return true
+        const q = searchQuery.toLowerCase()
+        return (
+          h.title?.toLowerCase().includes(q) || 
+          h.clientName?.toLowerCase().includes(q) || 
+          h.processNumber?.toLowerCase().includes(q)
+        )
+      })
+  }, [hearings, selectedAdvogado, searchQuery])
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">

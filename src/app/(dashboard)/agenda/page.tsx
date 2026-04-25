@@ -1,14 +1,14 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  Clock, 
-  MapPin, 
-  Scale, 
+import {
+  Clock,
+  MapPin,
+  Scale,
   Calendar as CalendarIcon,
   Loader2,
   ChevronLeft,
@@ -57,17 +57,17 @@ import {
 } from "lucide-react"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase"
 import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where } from "firebase/firestore"
-import { 
-  format, 
-  isSameDay, 
-  parseISO, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  addMonths, 
+import {
+  format,
+  isSameDay,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  addMonths,
   subMonths,
   addDays,
   addBusinessDays
@@ -94,6 +94,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { getValidGoogleAccessToken } from "@/services/google-token"
 import { deleteActFromGoogleCalendar, syncActToGoogleCalendar, updateActInGoogleCalendar } from "@/services/google-calendar-sync"
 import { normalizeGoogleWorkspaceSettings } from "@/services/google-workspace"
+
+import { useSearchParams } from "next/navigation"
 
 type CreateMode = 'audiencia' | 'freelance' | 'prazo' | 'diligencia' | 'atendimento'
 
@@ -143,7 +145,13 @@ export default function MasterAgendaPage() {
   const { toast } = useToast()
 
   const isAdmin = profile?.role?.toLowerCase().includes('sócio') || profile?.role?.toLowerCase().includes('admin')
-  const [filterStaffId, setFilterStaffId] = useState<string>(isAdmin ? "all" : (user?.uid || "all"))
+  const [filterStaffId, setFilterStaffId] = useState<string>("all")
+
+  const searchParams = useSearchParams()
+  const selectedAdvogadoName = searchParams.get("advogado")
+  const searchQuery = searchParams.get("q")
+
+
 
   const googleSettingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'google') : null, [db])
   const { data: googleSettingsData } = useDoc(googleSettingsRef)
@@ -174,6 +182,15 @@ export default function MasterAgendaPage() {
 
   const staffQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "staff_profiles"), orderBy("name", "asc")) : null, [db, user])
   const { data: staffMembers } = useCollection(staffQuery)
+
+  useEffect(() => {
+    if (selectedAdvogadoName && selectedAdvogadoName !== "todos") {
+      const staff = staffMembers?.find(s => s.name === selectedAdvogadoName)
+      if (staff) setFilterStaffId(staff.id)
+    } else {
+      setFilterStaffId(isAdmin ? "all" : (user?.uid || "all"))
+    }
+  }, [selectedAdvogadoName, staffMembers, isAdmin, user])
 
   const hearingsQuery = useMemoFirebase(() => (user && db) ? query(collection(db!, "hearings"), orderBy("startDateTime", "asc")) : null, [db, user])
   const { data: hearings } = useCollection(hearingsQuery)
@@ -207,20 +224,32 @@ export default function MasterAgendaPage() {
     const d = (deadlines || []).map(d => ({ ...d, eventType: 'prazo', collection: 'deadlines', date: parseDate(d.dueDate) }))
     const a = (appointments || []).map(a => ({ ...a, eventType: 'atendimento', collection: 'appointments', date: parseDate(a.startDateTime) }))
     const i = (internalDiligences || []).map(i => ({ ...i, eventType: 'diligencia', collection: 'diligences', date: parseDate(i.dueDate) }))
-    
+
     const combined = [...h, ...d, ...a, ...i]
-    if (filterStaffId === 'all') return combined
 
-    // Fallback: buscamos o nome do staff selecionado no filtro para comparar também por texto
-    const selectedStaff = staffMembers?.find(s => s.id === filterStaffId)
-    const selectedName = selectedStaff?.name?.toUpperCase()
+    let filtered = combined
+    if (filterStaffId !== 'all') {
+      const selectedStaff = staffMembers?.find(s => s.id === filterStaffId)
+      const selectedName = selectedStaff?.name?.toUpperCase()
 
-    return combined.filter(e => {
-      const matchesId = (e.responsibleStaffId === filterStaffId) || (e.assigneeId === filterStaffId)
-      const matchesName = selectedName && (e.responsibleStaffName?.toUpperCase() === selectedName)
-      return matchesId || matchesName
-    })
-  }, [hearings, deadlines, appointments, internalDiligences, filterStaffId, staffMembers])
+      filtered = combined.filter(e => {
+        const matchesId = (e.responsibleStaffId === filterStaffId) || (e.assigneeId === filterStaffId)
+        const matchesName = selectedName && (e.responsibleStaffName?.toUpperCase() === selectedName)
+        return matchesId || matchesName
+      })
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(e =>
+        e.title?.toLowerCase().includes(q) ||
+        e.clientName?.toLowerCase().includes(q) ||
+        e.processNumber?.toLowerCase().includes(q)
+      )
+    }
+
+    return filtered
+  }, [hearings, deadlines, appointments, internalDiligences, filterStaffId, staffMembers, searchQuery])
 
   const selectedDayEvents = useMemo(() => {
     return allEvents
@@ -305,10 +334,10 @@ export default function MasterAgendaPage() {
   const handleSaveEvent = async () => {
     if (!db || !newEventData.date) return
     setIsSyncingWorkspace(true)
-    
+
     const dateTime = newEventData.date + "T" + (newEventData.time || '09:00') + ":00"
     let targetCollection = "appointments"
-    
+
     let finalLocation = ""
     if (createMode === 'atendimento') {
       if (newEventData.meetingType === 'online') {
@@ -407,20 +436,20 @@ export default function MasterAgendaPage() {
     let generatedMeetLink = "";
     const calendarSync = editingEventId && editingCalendarEventId
       ? await updateActInGoogleCalendar({
-          auth,
-          calendarEventId: editingCalendarEventId,
-          act: calendarAct,
-          googleSettings,
-          staffEmail: newEventData.responsibleStaffEmail ?? undefined,
-          firestore: db,
-        })
+        auth,
+        calendarEventId: editingCalendarEventId,
+        act: calendarAct,
+        googleSettings,
+        staffEmail: newEventData.responsibleStaffEmail ?? undefined,
+        firestore: db,
+      })
       : await syncActToGoogleCalendar({
-          auth,
-          act: calendarAct,
-          googleSettings,
-          staffEmail: newEventData.responsibleStaffEmail ?? undefined,
-          firestore: db,
-        })
+        auth,
+        act: calendarAct,
+        googleSettings,
+        staffEmail: newEventData.responsibleStaffEmail ?? undefined,
+        firestore: db,
+      })
 
     if (calendarSync.status === 'synced') {
       generatedMeetLink = calendarSync.meetingUrl || ""
@@ -465,7 +494,7 @@ export default function MasterAgendaPage() {
         diligencia: 'Nova Diligência',
         freelance: 'Audiência Freelance'
       }
-      
+
       addDocumentNonBlocking(collection(db, "notifications"), {
         userId: newEventData.responsibleStaffId || user.uid,
         title: typeLabels[createMode as keyof typeof typeLabels] || 'Agenda Atualizada',
@@ -506,7 +535,7 @@ export default function MasterAgendaPage() {
 
   const handleFinalizeEvent = async (event: any) => {
     if (!db || !event) return
-    
+
     updateDocumentNonBlocking(doc(db, event.collection, event.id), {
       status: "Realizado",
       completedAt: serverTimestamp(),
@@ -541,7 +570,7 @@ export default function MasterAgendaPage() {
             <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
             </h2>
-            
+
             {isAdmin && (
               <Select value={filterStaffId} onValueChange={setFilterStaffId}>
                 <SelectTrigger className="w-[200px] h-10 bg-[#1a1f2e] border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
@@ -599,7 +628,7 @@ export default function MasterAgendaPage() {
               return (
                 <DropdownMenu key={i}>
                   <DropdownMenuTrigger asChild>
-                    <div 
+                    <div
                       onClick={() => setSelectedDate(day)}
                       className={cn(
                         "min-h-[130px] p-4 border-r border-b border-white/5 cursor-pointer transition-all hover:bg-white/5 group relative",
@@ -608,12 +637,12 @@ export default function MasterAgendaPage() {
                       )}
                     >
                       <span className={cn(
-                        "text-xs font-black transition-all", 
+                        "text-xs font-black transition-all",
                         isToday ? "bg-primary text-background h-6 w-6 rounded-full flex items-center justify-center scale-110 shadow-lg" : isSelected ? "text-primary scale-125 inline-block" : "text-muted-foreground group-hover:text-white"
                       )}>
                         {format(day, "d")}
                       </span>
-                      
+
                       <div className="mt-4 flex flex-wrap gap-1.5">
                         {hasHearing && <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />}
                         {hasFreelance && <div className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />}
@@ -653,15 +682,15 @@ export default function MasterAgendaPage() {
           <div className="space-y-4 pr-4">
             {selectedDayEvents.length > 0 ? (
               selectedDayEvents.map((event, idx) => (
-                <Card 
-                  key={idx} 
+                <Card
+                  key={idx}
                   className={cn(
                     "glass border-white/5 hover-gold transition-all shadow-xl rounded-2xl overflow-hidden bg-white/[0.02] cursor-pointer group relative",
-                    event.eventType === 'audiencia' ? 'border-l-4 border-l-rose-500' : 
-                    event.eventType === 'freelance' ? 'border-l-4 border-l-cyan-400' :
-                    event.eventType === 'prazo' ? 'border-l-4 border-l-primary' : 
-                    event.eventType === 'diligencia' ? 'border-l-4 border-l-blue-500' :
-                    'border-l-4 border-l-amber-500'
+                    event.eventType === 'audiencia' ? 'border-l-4 border-l-rose-500' :
+                      event.eventType === 'freelance' ? 'border-l-4 border-l-cyan-400' :
+                        event.eventType === 'prazo' ? 'border-l-4 border-l-primary' :
+                          event.eventType === 'diligencia' ? 'border-l-4 border-l-blue-500' :
+                            'border-l-4 border-l-amber-500'
                   )}
                   onClick={() => setViewingEvent(event)}
                 >
@@ -669,11 +698,11 @@ export default function MasterAgendaPage() {
                     <div className="flex items-center justify-between">
                       <Badge className={cn(
                         "text-[8px] font-black uppercase tracking-widest px-2 h-5 border-0",
-                        event.eventType === 'audiencia' ? 'bg-rose-500 text-white' : 
-                        event.eventType === 'freelance' ? 'bg-cyan-500 text-black' :
-                        event.eventType === 'prazo' ? 'bg-primary text-background' :
-                        event.eventType === 'diligencia' ? 'bg-blue-500 text-white' :
-                        'bg-amber-500 text-background'
+                        event.eventType === 'audiencia' ? 'bg-rose-500 text-white' :
+                          event.eventType === 'freelance' ? 'bg-cyan-500 text-black' :
+                            event.eventType === 'prazo' ? 'bg-primary text-background' :
+                              event.eventType === 'diligencia' ? 'bg-blue-500 text-white' :
+                                'bg-amber-500 text-background'
                       )}>
                         {event.eventType?.toUpperCase()}
                       </Badge>
@@ -681,7 +710,7 @@ export default function MasterAgendaPage() {
                         <Clock className="h-3 w-3" /> {event.date ? format(event.date, "HH:mm") : "--:--"}
                       </span>
                     </div>
-                    
+
                     <div className="space-y-1">
                       <h4 className="font-bold text-sm text-white uppercase tracking-tight leading-tight line-clamp-2">{event.title}</h4>
                       <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate">
@@ -714,8 +743,8 @@ export default function MasterAgendaPage() {
                 isSyncingWorkspace && "animate-pulse bg-emerald-500/20 border-emerald-500",
                 !isSyncingWorkspace && (
                   createMode === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
-                  createMode === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
-                  "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                    createMode === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
+                      "bg-amber-500/10 border-amber-500/20 text-amber-500"
                 )
               )}>
                 {isSyncingWorkspace ? <Loader2 className="h-6 w-6 animate-spin" /> : (createMode === 'audiencia' ? <Gavel className="h-6 w-6" /> : createMode === 'prazo' ? <Clock className="h-6 w-6" /> : <Target className="h-6 w-6" />)}
@@ -731,7 +760,7 @@ export default function MasterAgendaPage() {
               </div>
             </div>
           </div>
-          
+
           <ScrollArea className="flex-1 bg-[#0a0f1e]/50">
             <div className="p-10 space-y-10">
               {createMode === 'atendimento' && (
@@ -739,11 +768,11 @@ export default function MasterAgendaPage() {
                   {currentStep === 1 && (
                     <div className="space-y-8 animate-in zoom-in-95 duration-300">
                       <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">1. Qual a Modalidade?</Label>
-                      <RadioGroup value={newEventData.meetingType} onValueChange={(v: any) => setNewEventData({...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ'})} className="grid grid-cols-2 gap-6">
-                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, meetingType: 'online', location: 'Google Meet'})}>
+                      <RadioGroup value={newEventData.meetingType} onValueChange={(v: any) => setNewEventData({ ...newEventData, meetingType: v, location: v === 'online' ? 'Google Meet' : 'Sede RGMJ' })} className="grid grid-cols-2 gap-6">
+                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'online' ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({ ...newEventData, meetingType: 'online', location: 'Google Meet' })}>
                           <Video className={cn("h-8 w-8", newEventData.meetingType === 'online' ? "text-emerald-500" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Virtual</span>
                         </div>
-                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, meetingType: 'presencial', location: 'Sede RGMJ'})}>
+                        <div className={cn("p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center gap-4", newEventData.meetingType === 'presencial' ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(245,208,48,0.2)]" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({ ...newEventData, meetingType: 'presencial', location: 'Sede RGMJ' })}>
                           <MapPin className={cn("h-8 w-8", newEventData.meetingType === 'presencial' ? "text-primary" : "text-muted-foreground")} /><span className="text-sm font-black text-white uppercase tracking-widest">Presencial</span>
                         </div>
                       </RadioGroup>
@@ -753,8 +782,8 @@ export default function MasterAgendaPage() {
                     <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                       <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">2. Cronograma</Label>
                       <div className="grid grid-cols-2 gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-2xl shadow-xl">
-                        <div className="space-y-2"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-14 text-white font-bold" /></div>
-                        <div className="space-y-2"><Label className={labelMini}>Hora</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-14 text-white font-bold" /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({ ...newEventData, date: e.target.value })} className="bg-black/40 h-14 text-white font-bold" /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Hora</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({ ...newEventData, time: e.target.value })} className="bg-black/40 h-14 text-white font-bold" /></div>
                       </div>
                     </div>
                   )}
@@ -762,12 +791,12 @@ export default function MasterAgendaPage() {
                     <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                       <Label className="text-xs font-black text-primary uppercase tracking-[0.3em] block text-center mb-8">3. Identificação</Label>
                       <div className="space-y-6">
-                        <div className="space-y-2"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-black" /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({ ...newEventData, title: e.target.value.toUpperCase() })} className="bg-black/40 h-14 text-white font-black" /></div>
                         <div className="space-y-2">
                           <Label className={labelMini}>Advogado Responsável *</Label>
                           <Select value={newEventData.responsibleStaffId} onValueChange={(id: string) => {
                             const selected = staffMembers?.find(s => s.id === id)
-                            setNewEventData({...newEventData, responsibleStaffId: id, responsibleStaffName: selected?.name || '', responsibleStaffEmail: selected?.email || id})
+                            setNewEventData({ ...newEventData, responsibleStaffId: id, responsibleStaffName: selected?.name || '', responsibleStaffEmail: selected?.email || id })
                           }}>
                             <SelectTrigger className="bg-black/40 h-14 text-white font-black border-white/10">
                               <SelectValue placeholder="Selecione o advogado..." />
@@ -779,7 +808,7 @@ export default function MasterAgendaPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2"><Label className={labelMini}>Notas Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Descreva os objetivos..." /></div>
+                        <div className="space-y-2"><Label className={labelMini}>Notas Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({ ...newEventData, notes: e.target.value })} className="bg-black/40 min-h-[150px] text-white p-6 rounded-2xl" placeholder="Descreva os objetivos..." /></div>
                       </div>
                     </div>
                   )}
@@ -790,31 +819,31 @@ export default function MasterAgendaPage() {
                         <Card className="p-10 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 text-center space-y-6 shadow-2xl">
                           <Video className="h-12 w-12 text-emerald-500 mx-auto" /><h4 className="text-xl font-black text-white uppercase tracking-widest">Google Meet Hub</h4>
                           <div className="flex items-center justify-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5 shadow-inner">
-                            <Switch checked={newEventData.autoMeet} onCheckedChange={v => setNewEventData({...newEventData, autoMeet: v})} className="data-[state=checked]:bg-emerald-500" />
+                            <Switch checked={newEventData.autoMeet} onCheckedChange={v => setNewEventData({ ...newEventData, autoMeet: v })} className="data-[state=checked]:bg-emerald-500" />
                             <Label className="text-[10px] font-black text-white uppercase">Gerar Link via Workspace?</Label>
                           </div>
                         </Card>
                       ) : (
                         <div className="space-y-6">
-                          <RadioGroup value={newEventData.locationType} onValueChange={v => setNewEventData({...newEventData, locationType: v})} className="grid grid-cols-2 gap-4">
-                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-primary/20" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, locationType: 'sede', location: 'Sede RGMJ'})}>
+                          <RadioGroup value={newEventData.locationType} onValueChange={v => setNewEventData({ ...newEventData, locationType: v })} className="grid grid-cols-2 gap-4">
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", newEventData.locationType === 'sede' ? "bg-primary/10 border-primary shadow-primary/20" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({ ...newEventData, locationType: 'sede', location: 'Sede RGMJ' })}>
                               <Building2 className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Sede RGMJ</span>
                             </div>
-                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-primary/20" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({...newEventData, locationType: 'externo'})}>
+                            <div className={cn("p-6 rounded-2xl border-2 cursor-pointer flex items-center gap-3 transition-all shadow-lg", newEventData.locationType === 'externo' ? "bg-primary/10 border-primary shadow-primary/20" : "bg-black/20 border-white/5 hover:border-white/20")} onClick={() => setNewEventData({ ...newEventData, locationType: 'externo' })}>
                               <MapPin className="h-4 w-4 text-primary" /><span className="text-[10px] font-black text-white uppercase tracking-widest">Externo</span>
                             </div>
                           </RadioGroup>
                           {newEventData.locationType === 'externo' && (
                             <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="space-y-2"><Label className={labelMini}>CEP</Label><div className="relative"><Input value={newEventData.zipCode} onChange={e => setNewEventData({...newEventData, zipCode: maskCEP(e.target.value)})} onBlur={handleMeetingCepBlur} className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" placeholder="00000-000" />{loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}</div></div>
-                                <div className="md:col-span-2 space-y-2"><Label className={labelMini}>Logradouro</Label><Input value={newEventData.address} onChange={e => setNewEventData({...newEventData, address: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
-                                <div className="space-y-2"><Label className={labelMini}>Nº</Label><Input value={newEventData.number} onChange={e => setNewEventData({...newEventData, number: e.target.value})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>CEP</Label><div className="relative"><Input value={newEventData.zipCode} onChange={e => setNewEventData({ ...newEventData, zipCode: maskCEP(e.target.value) })} onBlur={handleMeetingCepBlur} className="bg-black/40 border-white/10 h-12 text-white font-mono rounded-xl" placeholder="00000-000" />{loadingMeetingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />}</div></div>
+                                <div className="md:col-span-2 space-y-2"><Label className={labelMini}>Logradouro</Label><Input value={newEventData.address} onChange={e => setNewEventData({ ...newEventData, address: e.target.value.toUpperCase() })} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>Nº</Label><Input value={newEventData.number} onChange={e => setNewEventData({ ...newEventData, number: e.target.value })} className="bg-black/40 h-12 text-white rounded-xl" /></div>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-2"><Label className={labelMini}>Bairro</Label><Input value={newEventData.neighborhood} onChange={e => setNewEventData({...newEventData, neighborhood: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
-                                <div className="space-y-2"><Label className={labelMini}>Cidade</Label><Input value={newEventData.city} onChange={e => setNewEventData({...newEventData, city: e.target.value.toUpperCase()})} className="bg-black/40 h-12 text-white rounded-xl" /></div>
-                                <div className="space-y-2"><Label className={labelMini}>UF</Label><Input value={newEventData.state} onChange={e => setNewEventData({...newEventData, state: e.target.value.toUpperCase()})} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>Bairro</Label><Input value={newEventData.neighborhood} onChange={e => setNewEventData({ ...newEventData, neighborhood: e.target.value.toUpperCase() })} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>Cidade</Label><Input value={newEventData.city} onChange={e => setNewEventData({ ...newEventData, city: e.target.value.toUpperCase() })} className="bg-black/40 h-12 text-white rounded-xl" /></div>
+                                <div className="space-y-2"><Label className={labelMini}>UF</Label><Input value={newEventData.state} onChange={e => setNewEventData({ ...newEventData, state: e.target.value.toUpperCase() })} maxLength={2} className="bg-black/40 h-12 text-white rounded-xl" /></div>
                               </div>
                             </div>
                           )}
@@ -836,32 +865,32 @@ export default function MasterAgendaPage() {
               )}
               {createMode !== 'atendimento' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
-                   <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({...newEventData, title: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
-                   <div className="space-y-3">
-                     <Label className={labelMini}>Advogado Responsável *</Label>
-                     <Select value={newEventData.responsibleStaffId} onValueChange={(id: string) => {
-                       const selected = staffMembers?.find(s => s.id === id)
-                       setNewEventData({...newEventData, responsibleStaffId: id, responsibleStaffName: selected?.name || '', responsibleStaffEmail: selected?.email || id})
-                     }}>
-                       <SelectTrigger className="bg-black/40 h-14 text-white font-black border-white/10">
-                         <SelectValue placeholder="Selecione o advogado..." />
-                       </SelectTrigger>
-                       <SelectContent className="bg-[#0d121f] border-white/10 text-white">
-                         {(staffMembers || []).filter(s => s.isActive !== false).map(s => (
-                           <SelectItem key={s.id} value={s.id} className="text-xs font-black uppercase">{s.name} — {s.role?.toUpperCase()}</SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({...newEventData, date: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
-                    <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({...newEventData, time: e.target.value})} className="bg-black/40 h-12 text-white" /></div>
+                  <div className="space-y-3"><Label className={labelMini}>Título do Ato *</Label><Input value={newEventData.title} onChange={e => setNewEventData({ ...newEventData, title: e.target.value.toUpperCase() })} className="bg-black/40 border-white/10 h-14 text-white font-black" /></div>
+                  <div className="space-y-3">
+                    <Label className={labelMini}>Advogado Responsável *</Label>
+                    <Select value={newEventData.responsibleStaffId} onValueChange={(id: string) => {
+                      const selected = staffMembers?.find(s => s.id === id)
+                      setNewEventData({ ...newEventData, responsibleStaffId: id, responsibleStaffName: selected?.name || '', responsibleStaffEmail: selected?.email || id })
+                    }}>
+                      <SelectTrigger className="bg-black/40 h-14 text-white font-black border-white/10">
+                        <SelectValue placeholder="Selecione o advogado..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0d121f] border-white/10 text-white">
+                        {(staffMembers || []).filter(s => s.isActive !== false).map(s => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs font-black uppercase">{s.name} — {s.role?.toUpperCase()}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3"><Label className={labelMini}>Telefone do Cliente</Label><Input placeholder="(00) 00000-0000" value={newEventData.clientPhone} onChange={e => setNewEventData({...newEventData, clientPhone: e.target.value})} className="bg-black/40 h-14 text-white font-bold" /></div>
-                    <div className="space-y-3"><Label className={labelMini}>Juízo / Localização / Vara</Label><Input value={newEventData.location} onChange={e => setNewEventData({...newEventData, location: e.target.value.toUpperCase()})} className="bg-black/40 h-14 text-white font-bold" /></div>
+                    <div className="space-y-3"><Label className={labelMini}>Data</Label><Input type="date" value={newEventData.date} onChange={e => setNewEventData({ ...newEventData, date: e.target.value })} className="bg-black/40 h-12 text-white" /></div>
+                    <div className="space-y-3"><Label className={labelMini}>Horário</Label><Input type="time" value={newEventData.time} onChange={e => setNewEventData({ ...newEventData, time: e.target.value })} className="bg-black/40 h-12 text-white" /></div>
                   </div>
-                  <div className="space-y-3"><Label className={labelMini}>Notas / Referências Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({...newEventData, notes: e.target.value})} className="bg-black/40 min-h-[100px] text-white" /></div>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-3"><Label className={labelMini}>Telefone do Cliente</Label><Input placeholder="(00) 00000-0000" value={newEventData.clientPhone} onChange={e => setNewEventData({ ...newEventData, clientPhone: e.target.value })} className="bg-black/40 h-14 text-white font-bold" /></div>
+                    <div className="space-y-3"><Label className={labelMini}>Juízo / Localização / Vara</Label><Input value={newEventData.location} onChange={e => setNewEventData({ ...newEventData, location: e.target.value.toUpperCase() })} className="bg-black/40 h-14 text-white font-bold" /></div>
+                  </div>
+                  <div className="space-y-3"><Label className={labelMini}>Notas / Referências Estratégicas</Label><Textarea value={newEventData.notes} onChange={e => setNewEventData({ ...newEventData, notes: e.target.value })} className="bg-black/40 min-h-[100px] text-white" /></div>
                 </div>
               )}
             </div>
@@ -898,9 +927,9 @@ export default function MasterAgendaPage() {
             <div className="flex items-center gap-6">
               <div className={cn(
                 "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-2xl",
-                viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : 
-                viewingEvent?.eventType === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
-                "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                viewingEvent?.eventType === 'audiencia' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
+                  viewingEvent?.eventType === 'prazo' ? "bg-primary/10 border-primary/20 text-primary" :
+                    "bg-amber-500/10 border-amber-500/20 text-amber-500"
               )}>
                 {viewingEvent?.eventType === 'audiencia' ? <Gavel className="h-7 w-7" /> : viewingEvent?.eventType === 'prazo' ? <Clock className="h-7 w-7" /> : <Target className="h-7 w-7" />}
               </div>
@@ -992,10 +1021,10 @@ export default function MasterAgendaPage() {
 
           <div className="p-8 bg-black/40 border-t border-white/5 flex items-center justify-between flex-none rounded-b-3xl">
             <Button variant="ghost" onClick={() => setViewingEvent(null)} className="text-muted-foreground uppercase font-black text-[11px] px-8 h-12 hover:text-white transition-colors">FECHAR</Button>
-            
+
             <div className="flex items-center gap-4">
               {viewingEvent?.status !== 'Realizado' && (
-                <Button 
+                <Button
                   onClick={() => handleFinalizeEvent(viewingEvent)}
                   className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-emerald-500 hover:text-white transition-all gap-2"
                 >
@@ -1003,8 +1032,8 @@ export default function MasterAgendaPage() {
                 </Button>
               )}
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => handleOpenSchedule(viewingEvent.date || new Date(), viewingEvent.eventType, viewingEvent)}
                 className="border-primary/30 text-primary font-black uppercase text-[11px] px-10 h-12 rounded-xl hover:bg-primary hover:text-background transition-all"
               >

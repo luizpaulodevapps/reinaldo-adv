@@ -12,7 +12,8 @@ import { Loader2, Search, CheckCircle2, ShieldAlert, User, Building2, MapPin, Wa
 import { useToast } from "@/hooks/use-toast"
 import { cn, maskPhone, maskCEP, maskCPFOrCNPJ } from "@/lib/utils"
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase"
-import { collection, query } from "firebase/firestore"
+import { collection, query, where, getDocs } from "firebase/firestore"
+import { ShieldCheck, AlertCircle, RefreshCw } from "lucide-react"
 
 interface ClientFormProps {
   initialData?: any
@@ -26,6 +27,8 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
   const { user } = useUser()
   const [loadingCep, setLoadingCep] = useState(false)
   const [activeTab, setActiveTab] = useState("identidade")
+  const [matchedLead, setMatchedLead] = useState<any>(null)
+  const [isSearchingLead, setIsSearchingLead] = useState(false)
   
   const canQuery = !!user && !!db
 
@@ -60,7 +63,10 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
     bankAgency: "",
     bankAccount: "",
     pixKeyType: "CPF",
-    pixKey: ""
+    pixKey: "",
+    leadId: "",
+    driveFolderId: "",
+    driveFolderUrl: ""
   })
 
   useEffect(() => {
@@ -76,6 +82,55 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    
+    // Lookup de Lead se for CPF ou Telefone
+    if (field === "cpf" || field === "phone") {
+      const cleanVal = value.replace(/\D/g, "")
+      if (cleanVal.length >= 10) { // Telefone (10/11) ou CPF (11)
+        searchMatchingLead(field, value)
+      }
+    }
+  }
+
+  const searchMatchingLead = async (field: string, value: string) => {
+    if (!db) return
+    setIsSearchingLead(true)
+    try {
+      const leadsRef = collection(db, "leads")
+      const q = query(leadsRef, where(field === "cpf" ? "cpf" : "phone", "==", value))
+      const querySnapshot = await getDocs(q)
+      
+      if (!querySnapshot.empty) {
+        const leadDoc = querySnapshot.docs[0]
+        setMatchedLead({ id: leadDoc.id, ...leadDoc.data() })
+      } else {
+        setMatchedLead(null)
+      }
+    } catch (e) { 
+      console.error(e) 
+    } finally {
+      setIsSearchingLead(false)
+    }
+  }
+
+  const handleImportLeadData = () => {
+    if (!matchedLead) return
+    setFormData(prev => ({
+      ...prev,
+      firstName: matchedLead.name || prev.firstName,
+      cpf: matchedLead.cpf || prev.cpf,
+      email: matchedLead.email || prev.email,
+      phone: matchedLead.phone || prev.phone,
+      address: matchedLead.address || prev.address,
+      zipCode: matchedLead.zipCode || prev.zipCode,
+      city: matchedLead.city || prev.city,
+      state: matchedLead.state || prev.state,
+      leadId: matchedLead.id,
+      driveFolderId: matchedLead.driveFolderId || prev.driveFolderId,
+      driveFolderUrl: matchedLead.driveFolderUrl || prev.driveFolderUrl
+    }))
+    toast({ title: "Dados Importados", description: `As informações de ${matchedLead.name} foram carregadas.` })
+    setMatchedLead(null)
   }
 
   const handleCepBlur = async () => {
@@ -136,10 +191,28 @@ export function ClientForm({ initialData, onSubmit, onCancel }: ClientFormProps)
           
           <div className={cn(activeTab !== "identidade" && "hidden")}>
             <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-              <div className="flex items-center gap-3 mb-2">
-                <Fingerprint className="h-5 w-5 text-primary" />
-                <h3 className="text-xs font-black text-white uppercase tracking-widest">Identidade Oficial</h3>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <Fingerprint className="h-5 w-5 text-primary" />
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Identidade Oficial</h3>
+                </div>
+                {isSearchingLead && <Loader2 className="h-4 w-4 animate-spin text-primary/40" />}
               </div>
+
+              {matchedLead && (
+                <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between animate-in zoom-in-95 duration-300">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase leading-none">Lead Encontrado!</p>
+                      <p className="text-[9px] font-bold text-primary uppercase mt-1">{matchedLead.name}</p>
+                    </div>
+                  </div>
+                  <Button onClick={handleImportLeadData} size="sm" className="h-8 gold-gradient text-background font-black text-[9px] uppercase tracking-widest gap-2">
+                    <RefreshCw className="h-3 w-3" /> Importar Dados
+                  </Button>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className={labelMini}>Natureza Jurídica</Label>

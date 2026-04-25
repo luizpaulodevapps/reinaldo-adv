@@ -721,7 +721,13 @@ export function ProcessForm({ initialData, onSubmit, onCancel }: ProcessFormProp
                           <SelectItem key={member.id} value={member.id}>
                             <div className="flex flex-col items-start gap-0.5">
                               <span className="font-bold uppercase text-xs">{member.name}</span>
-                              <span className="text-[9px] opacity-40 font-black uppercase tracking-widest">{member.role}</span>
+                              <span className="text-[9px] opacity-40 font-black uppercase tracking-widest">
+                                {member.role === 'ADMIN' ? 'ADMINISTRADOR' : 
+                                 member.role === 'LAWYER' ? 'ADVOGADO' : 
+                                 member.role === 'ASSISTANT' ? 'ASSISTENTE' : 
+                                 member.role === 'LEGAL_SUPPORT' ? 'APOIO JURÍDICO' : 
+                                 member.role}
+                              </span>
                             </div>
                           </SelectItem>
                         ))

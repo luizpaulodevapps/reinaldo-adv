@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast"
 
 interface ActivityManagerProps {
   leadId: string
+  onNavigateToTab?: (tab: string) => void
 }
 
 const ACTIVITY_TYPES = [
@@ -46,7 +47,7 @@ const ACTIVITY_TYPES = [
   { id: "Sistema", icon: ShieldAlert, label: "Log de Sistema" },
 ]
 
-export function ActivityManager({ leadId }: ActivityManagerProps) {
+export function ActivityManager({ leadId, onNavigateToTab }: ActivityManagerProps) {
   const db = useFirestore()
   const { user } = useUser()
   const { toast } = useToast()
@@ -180,6 +181,14 @@ export function ActivityManager({ leadId }: ActivityManagerProps) {
                               className="text-[9px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-colors"
                             >
                               Finalizar
+                            </button>
+                          )}
+                          {act.type === 'Entrevista' && onNavigateToTab && (
+                            <button 
+                              onClick={() => onNavigateToTab('entrevista')}
+                              className="text-[9px] font-black text-primary hover:text-primary/80 uppercase tracking-widest transition-colors"
+                            >
+                              Ver Resumo
                             </button>
                           )}
                         </div>

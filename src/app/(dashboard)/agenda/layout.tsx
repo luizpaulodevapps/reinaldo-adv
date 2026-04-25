@@ -16,6 +16,17 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase"
+import { collection, query, orderBy } from "firebase/firestore"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
 const tabs = [
   { name: "AGENDA GERAL", href: "/agenda", icon: CalendarDays },
@@ -27,6 +38,15 @@ const tabs = [
 
 export default function AgendaLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const db = useFirestore()
+
+  const staffQuery = useMemoFirebase(() => {
+    if (!db) return null
+    return query(collection(db, "staff_profiles"), orderBy("name", "asc"))
+  }, [db])
+  const { data: staff } = useCollection(staffQuery)
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
@@ -42,12 +62,44 @@ export default function AgendaLayout({ children }: { children: React.ReactNode }
           <p className="text-muted-foreground text-[10px] uppercase tracking-[0.3em] font-black opacity-60">Gestão integrada de atos, prazos e diligências.</p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+          {/* Filtro de Advogado Sempre Visível */}
+          <div className="w-full md:w-56">
+            <Select 
+              value={searchParams.get("advogado") || "todos"} 
+              onValueChange={(val) => {
+                const params = new URLSearchParams(searchParams.toString())
+                if (val === "todos") params.delete("advogado")
+                else params.set("advogado", val)
+                router.push(`${pathname}?${params.toString()}`)
+              }}
+            >
+              <SelectTrigger className="glass border-white/10 h-12 text-[10px] font-black uppercase text-white tracking-widest px-4">
+                <SelectValue placeholder="FILTRAR POR ADVOGADO" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0a0f1e] border-white/10 text-white">
+                <SelectItem value="todos" className="text-[10px] font-black uppercase">👤 TODOS OS ADVOGADOS</SelectItem>
+                {staff?.map(s => (
+                  <SelectItem key={s.id} value={s.name} className="text-[10px] font-black uppercase">
+                    ⚖️ {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Filtro rápido global..." 
               className="pl-12 glass border-white/5 h-12 text-xs text-white focus:ring-primary/50"
+              value={searchParams.get("q") || ""}
+              onChange={(e) => {
+                const params = new URLSearchParams(searchParams.toString())
+                if (!e.target.value) params.delete("q")
+                else params.set("q", e.target.value)
+                router.push(`${pathname}?${params.toString()}`)
+              }}
             />
           </div>
           <Button variant="outline" className="glass border-white/10 h-12 px-6 gap-2 text-[10px] font-black uppercase tracking-widest hover:border-primary/40">
@@ -59,20 +111,20 @@ export default function AgendaLayout({ children }: { children: React.ReactNode }
       {/* Container de Abas Estilo Imagem de Referência */}
       <div className="bg-[#0d1117]/80 border border-white/5 p-1.5 flex items-center rounded-2xl overflow-x-auto scrollbar-hide shadow-2xl backdrop-blur-xl">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.href
+          const isActive = pathname === tab.href || (tab.href !== "/agenda" && pathname.startsWith(tab.href))
           return (
-            <Link key={tab.href} href={tab.href} className="flex-1 min-w-[200px]">
-              <button
-                className={cn(
-                  "w-full h-12 rounded-[0.8rem] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-300",
-                  isActive 
-                    ? "gold-gradient text-background shadow-[0_0_25px_rgba(245,208,48,0.25)] scale-[1.02]" 
-                    : "text-muted-foreground hover:text-white hover:bg-white/5"
-                )}
-              >
-                <tab.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-background" : "text-primary/40")} />
-                {tab.name}
-              </button>
+            <Link 
+              key={tab.href} 
+              href={tab.href} 
+              className={cn(
+                "flex-1 min-w-[200px] h-12 rounded-[0.8rem] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-300",
+                isActive 
+                  ? "gold-gradient text-background shadow-[0_0_25px_rgba(245,208,48,0.25)] scale-[1.02] z-10" 
+                  : "text-muted-foreground hover:text-white hover:bg-white/5"
+              )}
+            >
+              <tab.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-background" : "text-primary/40")} />
+              {tab.name}
             </Link>
           )
         })}

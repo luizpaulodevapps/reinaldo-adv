@@ -41,6 +41,7 @@ import { format, parseISO, isBefore, startOfDay, isSameDay, addDays, addBusiness
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { useSearchParams } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -96,10 +97,28 @@ export default function PrazosSubpage() {
     console.error("Erro de Índice no Firestore:", queryError)
   }
 
+  const searchParams = useSearchParams()
+  const selectedAdvogado = searchParams.get("advogado")
+  const searchQuery = searchParams.get("q")
+
   const activeDeadlines = useMemo(() => {
     if (!deadlines) return []
-    return deadlines.filter(d => d.status === "Aberto")
-  }, [deadlines])
+    return deadlines
+      .filter(d => d.status === "Aberto")
+      .filter(d => {
+        if (!selectedAdvogado) return true
+        return d.responsibleLawyer === selectedAdvogado
+      })
+      .filter(d => {
+        if (!searchQuery) return true
+        const q = searchQuery.toLowerCase()
+        return (
+          d.title?.toLowerCase().includes(q) || 
+          d.description?.toLowerCase().includes(q) || 
+          d.processId?.toLowerCase().includes(q)
+        )
+      })
+  }, [deadlines, selectedAdvogado, searchQuery])
 
   const handleOpenCreate = () => {
     setEditingDeadline(null)
