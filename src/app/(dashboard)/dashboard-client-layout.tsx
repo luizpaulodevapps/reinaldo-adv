@@ -173,9 +173,9 @@ export function DashboardClientLayout({
               <div className="flex flex-col items-center md:items-start gap-2">
                 <div className="flex items-center gap-2">
                   <Scale className="h-4 w-4 text-gold-100/40" />
-                  <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">RGMJ ADVOCACIA SOBERANA</span>
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">RGMJ ADVOCACIA</span>
                 </div>
-                <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">© 2026 Todos os direitos reservados. Inteligência Juridica de Elite.</p>
+                <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">© 2026 Todos os direitos reservados. Inteligência Juridica.</p>
               </div>
 
               <div className="flex items-center gap-8">

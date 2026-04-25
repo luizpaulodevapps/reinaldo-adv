@@ -23,76 +23,74 @@ export default function LoginPage() {
 
   if (isUserLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#213b37] to-[#0A2C29]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="inline-block">
-            <div className="w-12 h-12 rounded-full border-4 border-[#818258]/20 border-t-[#818258] animate-spin" />
+            <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
           </div>
-          <p className="text-white/60 text-sm">Carregando...</p>
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Sincronizando Sistema...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#213b37] to-[#0A2C29] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 font-sans">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#818258]/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-32 right-20 w-96 h-96 bg-[#213b37]/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-32 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
         {/* Card Container */}
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 sm:p-12 shadow-2xl">
+        <div className="bg-card/50 backdrop-blur-xl border border-gold-200/10 rounded-3xl p-8 sm:p-12 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
           {/* Logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <Logo />
-            <h1 className="text-2xl sm:text-3xl font-serif font-semibold text-white mt-4">
-              Dr. Reinaldo
+            <h1 className="text-3xl font-black text-white mt-6 uppercase tracking-tighter">
+              DR. <span className="text-gold-100">REINALDO</span>
             </h1>
-            <p className="text-white/60 text-sm mt-1">
-              Assessoria Jurídica Especializada
+            <p className="text-gold-100/40 text-[10px] font-black uppercase tracking-[0.3em] mt-2">
+              Assessoria Jurídica de Alto Padrão
             </p>
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-transparent via-[#818258]/30 to-transparent my-8" />
+          <div className="h-px bg-gradient-to-r from-transparent via-gold-200/20 to-transparent my-10" />
 
           {/* Login Form */}
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-white font-semibold text-lg">Acesso ao Portal</h2>
-              <p className="text-white/60 text-sm">
-                Faça login com sua conta Google para acessar o dashboard
+          <div className="space-y-8">
+            <div className="space-y-3 text-center">
+              <h2 className="text-white font-black text-xs uppercase tracking-widest">Acesso ao Comando</h2>
+              <p className="text-white/40 text-[11px] font-medium leading-relaxed">
+                Autentique-se via Google para acessar o <br/>painel estratégico de operações.
               </p>
             </div>
 
             {/* Google Button */}
-            <GoogleLoginButton />
+            <div className="flex justify-center">
+              <GoogleLoginButton />
+            </div>
           </div>
 
           {/* Footer Info */}
-          <div className="mt-8 pt-8 border-t border-white/10">
-            <p className="text-white/50 text-xs text-center leading-relaxed">
-              Ao fazer login, você concorda com nossos{' '}
-              <span className="text-[#818258] hover:underline cursor-pointer">
-                Termos de Serviço
-              </span>
+          <div className="mt-10 pt-8 border-t border-white/5">
+            <p className="text-white/30 text-[9px] font-bold text-center leading-relaxed uppercase tracking-wider">
+              Ao acessar, você concorda com nossos <br/>
+              <a href="#" className="text-gold-100/60 hover:text-gold-100 transition-colors">Termos de Serviço</a>
               {' '}e{' '}
-              <span className="text-[#818258] hover:underline cursor-pointer">
-                Política de Privacidade
-              </span>
+              <a href="#" className="text-gold-100/60 hover:text-gold-100 transition-colors">Privacidade</a>
             </p>
           </div>
         </div>
 
         {/* Bottom Link */}
-        <div className="text-center mt-8">
-          <p className="text-white/60 text-sm">
-            Não é um usuário autorizado?{' '}
-            <a href="/" className="text-[#818258] hover:text-[#bbbd7e] transition">
-              Voltar para home
+        <div className="text-center mt-10">
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">
+            Acesso Restrito?{' '}
+            <a href="/" className="text-gold-100 hover:tracking-[0.2em] transition-all duration-300">
+              Retornar à Base
             </a>
           </p>
         </div>

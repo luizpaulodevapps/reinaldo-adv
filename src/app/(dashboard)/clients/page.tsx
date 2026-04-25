@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { motion, AnimatePresence } from "framer-motion"
 import { 
   Sheet, 
   SheetContent, 
@@ -64,6 +65,7 @@ import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { addMonths, format, parseISO } from "date-fns"
+import { Progress } from "@/components/ui/progress"
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -164,6 +166,20 @@ export default function ClientsPage() {
 
     return { totalHonorarios: honorarios, totalPendente: pendente, totalDespesas: despesas, totalAcordos: acordos }
   }, [clientTransactions])
+
+  const calculateCompletion = (client: any) => {
+    const fields = [
+      client.name,
+      client.documentNumber,
+      client.email,
+      client.phone,
+      client.registrationData?.address,
+      client.registrationData?.civilStatus,
+      client.registrationData?.profession
+    ]
+    const filled = fields.filter(f => !!f && f !== "").length
+    return Math.round((filled / fields.length) * 100)
+  }
 
   const handleOpenCreate = () => {
     setEditingClient(null)
@@ -285,27 +301,60 @@ export default function ClientsPage() {
   if (selectedClientDossier) {
     return (
       <div className="space-y-8 animate-in fade-in duration-500 font-sans">
-        <div className="flex items-center justify-between border-b border-white/5 pb-8">
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" onClick={() => setSelectedClientDossier(null)} className="h-12 w-12 rounded-xl text-primary hover:bg-primary/10">
-              <ArrowLeft className="h-6 w-6" />
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 border-b border-gold-200/10 pb-10">
+          <div className="flex items-center gap-8">
+            <Button variant="ghost" onClick={() => setSelectedClientDossier(null)} className="h-14 w-14 rounded-2xl text-gold-100 bg-gold-200/5 border border-gold-200/10 hover:bg-gold-200/20 transition-all group">
+              <ArrowLeft className="h-6 w-6 group-hover:-translate-x-1 transition-transform" />
             </Button>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-black text-white uppercase tracking-tighter">{selectedClientDossier.name}</h1>
-                <Badge variant="outline" className="text-[9px] font-black border-primary/30 text-primary px-3 h-6">DOSSIÊ 360º</Badge>
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 rounded-3xl bg-secondary border border-gold-200/10 flex items-center justify-center text-gold-100 text-3xl font-black shadow-2xl">
+                {selectedClientDossier.name.charAt(0)}
               </div>
-              <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest opacity-60">
-                CPF/CNPJ: {selectedClientDossier.documentNumber} • Cadastrado em {selectedClientDossier.createdAt?.toDate ? new Date(selectedClientDossier.createdAt.toDate()).toLocaleDateString() : 'N/A'}
-              </p>
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">{selectedClientDossier.name}</h1>
+                  <Badge variant="outline" className="text-[10px] font-black border-gold-100/30 text-gold-100 px-4 h-7 rounded-full bg-gold-200/5">DOSSIÊ 360º</Badge>
+                </div>
+                <div className="flex items-center gap-4 text-gold-100/40 text-[11px] font-bold uppercase tracking-widest">
+                   <span>ID: {selectedClientDossier.documentNumber}</span>
+                   <span className="w-1 h-1 rounded-full bg-gold-100/20" />
+                   <span>INÍCIO: {selectedClientDossier.createdAt?.toDate ? new Date(selectedClientDossier.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
+                   <span className="w-1 h-1 rounded-full bg-gold-100/20" />
+                   <span className="text-emerald-500">{calculateCompletion(selectedClientDossier)}% COMPLETO</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button onClick={() => handleOpenEdit(selectedClientDossier)} variant="outline" className="glass border-white/10 text-[10px] font-black uppercase tracking-widest h-11 px-6 rounded-xl gap-2 hover:bg-white/5 transition-all">
-              <Edit3 className="h-4 w-4" /> Editar Ficha
+
+          <div className="flex flex-col gap-2 w-full lg:w-48">
+             <div className="flex justify-between text-[8px] font-black text-gold-100/40 uppercase tracking-widest">
+                <span>Integridade da Ficha</span>
+                <span>{calculateCompletion(selectedClientDossier)}%</span>
+             </div>
+             <Progress value={calculateCompletion(selectedClientDossier)} className="h-1.5 bg-white/5" />
+          </div>
+          
+          <div className="grid grid-cols-3 gap-6 w-full lg:w-auto">
+             <div className="px-6 py-4 bg-white/[0.02] border border-white/5 rounded-2xl text-center">
+                <p className="text-xl font-black text-white tabular-nums">{clientProcesses?.length || 0}</p>
+                <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">Dossiês</p>
+             </div>
+             <div className="px-6 py-4 bg-white/[0.02] border border-white/5 rounded-2xl text-center">
+                <p className="text-xl font-black text-emerald-500 tabular-nums">{combinedClientAgenda.length || 0}</p>
+                <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">Eventos</p>
+             </div>
+             <div className="px-6 py-4 bg-gold-200/5 border border-gold-200/10 rounded-2xl text-center">
+                <p className="text-xl font-black text-gold-100 tabular-nums">R$ {financialStats.totalHonorarios.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
+                <p className="text-[9px] font-bold text-gold-100/40 uppercase tracking-widest mt-1">Saldo</p>
+             </div>
+          </div>
+
+          <div className="flex gap-4 w-full lg:w-auto">
+            <Button onClick={() => handleOpenEdit(selectedClientDossier)} variant="outline" className="flex-1 lg:flex-none glass border-white/10 text-[10px] font-black uppercase tracking-widest h-12 px-8 rounded-xl gap-2 hover:bg-gold-200/5 hover:border-gold-200/30 transition-all">
+              <Edit3 className="h-4 w-4 text-gold-100" /> Editar
             </Button>
-            <Button onClick={() => setIsNewProcessOpen(true)} className="gold-gradient text-background font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl shadow-xl hover:scale-105 transition-all">
-              <Plus className="h-4 w-4" /> Novo Processo
+            <Button onClick={() => setIsNewProcessOpen(true)} className="flex-1 lg:flex-none gold-gradient text-background font-black text-[10px] uppercase tracking-widest h-12 px-8 rounded-xl shadow-xl hover:scale-105 transition-all">
+              <Plus className="h-4 w-4" /> Novo Ativo
             </Button>
           </div>
         </div>
@@ -592,25 +641,27 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-sans">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-muted-foreground/50 mb-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-gold-200/10 pb-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gold-100/40">
             <LayoutGrid className="h-3 w-3" />
-            <Link href="/" className="hover:text-primary transition-colors">Início</Link>
+            <Link href="/" className="hover:text-gold-100 transition-colors">Início</Link>
             <ChevronRight className="h-2 w-2" />
-            <span className="text-white uppercase tracking-tighter">Base de Clientes</span>
+            <span className="text-white">Base de Clientes</span>
           </div>
-          <h1 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Clientes Ativos</h1>
-          <p className="text-muted-foreground uppercase tracking-widest text-[10px] font-black opacity-60">Gestão estratégica RGMJ.</p>
+          <h1 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">
+            CLIENTES <span className="text-gradient-gold">ATIVOS</span>
+          </h1>
+          <p className="text-gold-100/40 uppercase tracking-[0.3em] text-[10px] font-bold">Gestão Estratégica RGMJ</p>
         </div>
         
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5 mr-2">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="flex items-center bg-white/5 p-1.5 rounded-xl border border-white/5 shadow-2xl backdrop-blur-md">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => setViewMode('grid')} 
-              className={cn("h-9 w-9 rounded-lg transition-all", viewMode === 'grid' ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40 hover:text-white")}
+              className={cn("h-10 w-10 rounded-lg transition-all", viewMode === 'grid' ? "bg-gold-200/10 text-gold-100 border border-gold-200/20" : "text-white/20 hover:text-white")}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -618,24 +669,23 @@ export default function ClientsPage() {
               variant="ghost" 
               size="icon" 
               onClick={() => setViewMode('list')} 
-              className={cn("h-9 w-9 rounded-lg transition-all", viewMode === 'list' ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40 hover:text-white")}
+              className={cn("h-10 w-10 rounded-lg transition-all", viewMode === 'list' ? "bg-gold-200/10 text-gold-100 border border-gold-200/20" : "text-white/20 hover:text-white")}
             >
               <List className="h-4 w-4" />
             </Button>
           </div>
-
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-1 md:w-72">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gold-100/30" />
             <Input 
               placeholder="Pesquisar por nome ou CPF..." 
-              className="pl-10 glass border-white/5 h-11 text-xs text-white focus:ring-primary/50"
+              className="pl-12 glass border-white/10 h-12 text-xs text-white focus:ring-gold-100/50 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Button 
             onClick={handleOpenCreate}
-            className="gold-gradient text-background font-black gap-2 px-8 h-11 uppercase text-[10px] tracking-widest rounded-lg shadow-xl"
+            className="w-full sm:w-auto gold-gradient text-background font-black gap-2 px-8 h-12 uppercase text-[10px] tracking-widest rounded-xl shadow-xl hover:scale-105 transition-all"
           >
             <UserPlus className="h-4 w-4" /> Novo Cliente
           </Button>
@@ -649,50 +699,87 @@ export default function ClientsPage() {
         </div>
       ) : filteredClients.length > 0 ? (
         viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredClients.map((client) => (
-              <Card 
-                key={client.id} 
-                className="glass border-primary/10 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl cursor-pointer"
-                onClick={() => handleOpenDossier(client)}
-              >
-                <CardContent className="p-8 space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-xl font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">{client.name}</h3>
-                      <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-tighter mt-1">{client.documentNumber}</p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#0d121f] border-white/10 text-white">
-                        <DropdownMenuItem onClick={() => handleOpenDossier(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
-                          <History className="h-4 w-4" /> Dossiê Completo
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer">
-                          <Edit3 className="h-4 w-4" /> Ver Ficha Técnica
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInactivateClient(client.id)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-amber-500 focus:text-amber-400">
-                          <UserX className="h-4 w-4" /> Inativar Cliente
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id); }} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest cursor-pointer text-rose-500 focus:text-rose-400">
-                          <Trash2 className="h-4 w-4" /> Excluir Definitivamente
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                    <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-[0.2em]">
-                      <Zap className="h-3.5 w-3.5" /> ABRIR DOSSIÊ 360º
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <AnimatePresence>
+              {filteredClients.map((client, i) => (
+                <motion.div
+                  key={client.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.05, duration: 0.5 }}
+                >
+                  <Card 
+                    className="bg-card/40 backdrop-blur-xl border-white/5 hover-gold transition-all duration-500 group relative overflow-hidden flex flex-col shadow-2xl cursor-pointer rounded-3xl"
+                    onClick={() => handleOpenDossier(client)}
+                  >
+                    <CardContent className="p-8 space-y-6">
+                      <div className="flex justify-between items-start">
+                        <div className="flex gap-4 items-center min-w-0">
+                          <div className="relative">
+                            <div className="w-14 h-14 rounded-2xl bg-secondary border border-white/10 flex items-center justify-center text-gold-100 font-black text-xl shadow-2xl shrink-0 group-hover:border-gold-200/40 transition-colors">
+                              {client.name?.charAt(0).toUpperCase()}
+                            </div>
+                            {calculateCompletion(client) < 100 && (
+                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-background border border-white/10 rounded-full flex items-center justify-center">
+                                <div className="w-3 h-3 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-xl font-bold text-white uppercase tracking-tight truncate group-hover:text-gold-100 transition-colors">{client.name}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-[8px] border-white/10 text-white/40 uppercase px-2 h-5 font-bold tracking-widest">{client.type === 'corporate' ? 'PJ' : 'PF'}</Badge>
+                              <p className="text-[10px] font-mono font-bold text-white/20 uppercase tracking-tighter">{calculateCompletion(client)}% preenchido</p>
+                            </div>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-white shrink-0 hover:bg-white/5 rounded-xl">
+                              <MoreVertical className="h-5 w-5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-[#0d121f] border-gold-200/10 text-white rounded-xl shadow-2xl p-2">
+                            <DropdownMenuItem onClick={() => handleOpenDossier(client)} className="flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-gold-200/10 rounded-lg">
+                              <History className="h-4 w-4 text-gold-100" /> Dossiê Completo
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenEdit(client)} className="flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-gold-200/10 rounded-lg">
+                              <Edit3 className="h-4 w-4 text-gold-100" /> Ver Ficha Técnica
+                            </DropdownMenuItem>
+                            <div className="h-px bg-white/5 my-2" />
+                            <DropdownMenuItem onClick={() => handleInactivateClient(client.id)} className="flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-widest cursor-pointer text-amber-500 hover:bg-amber-500/5 rounded-lg">
+                              <UserX className="h-4 w-4" /> Inativar Cliente
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id); }} className="flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-widest cursor-pointer text-rose-500 hover:bg-rose-500/5 rounded-lg">
+                              <Trash2 className="h-4 w-4" /> Excluir Definitivamente
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      <div className="flex gap-4 items-center">
+                         <div className="bg-white/5 px-4 py-2 rounded-xl border border-white/5 flex flex-col items-center">
+                            <span className="text-gold-100 text-sm font-black">---</span>
+                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Processos</span>
+                         </div>
+                         <div className="bg-white/5 px-4 py-2 rounded-xl border border-white/5 flex flex-col items-center">
+                            <span className="text-emerald-500 text-sm font-black">---</span>
+                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Ativos</span>
+                         </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                        <div className="flex items-center gap-2 text-[9px] font-black text-white/30 group-hover:text-gold-100 transition-colors uppercase tracking-[0.3em]">
+                          <Zap className="h-4 w-4" /> ABRIR DOSSIÊ 360º
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-gold-100 transition-all group-hover:translate-x-1" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         ) : (
           <div className="glass border-white/5 rounded-2xl overflow-hidden shadow-2xl">

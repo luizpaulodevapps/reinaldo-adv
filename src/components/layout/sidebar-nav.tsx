@@ -128,7 +128,7 @@ export function SidebarNav() {
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden animate-in fade-in duration-500">
               <span className="text-sm font-bold text-white uppercase tracking-wider leading-none font-serif">RGMJ</span>
-              <span className="text-[8px] text-gold-100 font-black uppercase tracking-[0.4em] mt-1.5 opacity-60">Advocacia de Elite</span>
+              <span className="text-[8px] text-gold-100 font-black uppercase tracking-[0.4em] mt-1.5 opacity-60">Advocacia</span>
             </div>
           )}
         </div>
